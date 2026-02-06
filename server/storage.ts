@@ -1,38 +1,78 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
+import { 
+  songs, lyrics, 
+  type Song, type InsertSong, 
+  type Lyric, type InsertLyric 
+} from "@shared/schema";
 
-// modify the interface with any CRUD methods
-// you might need
+// Re-export auth/chat storage
+export { authStorage } from "./replit_integrations/auth/storage";
+export { chatStorage } from "./replit_integrations/chat/storage";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Songs
+  createSong(song: InsertSong): Promise<Song>;
+  getSong(id: number): Promise<Song | undefined>;
+  getUserSongs(userId: string): Promise<Song[]>;
+  updateSongStatus(id: number, status: string, audioUrl?: string, error?: string): Promise<Song>;
+  deleteSong(id: number): Promise<void>;
+
+  // Lyrics
+  createLyric(lyric: InsertLyric): Promise<Lyric>;
+  getLyricsBySongId(songId: number): Promise<Lyric[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  // Songs
+  async createSong(insertSong: InsertSong): Promise<Song> {
+    const [song] = await db.insert(songs).values(insertSong).returning();
+    return song;
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getSong(id: number): Promise<Song | undefined> {
+    const [song] = await db.select().from(songs).where(eq(songs.id, id));
+    return song;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async getUserSongs(userId: string): Promise<Song[]> {
+    return await db
+      .select()
+      .from(songs)
+      .where(eq(songs.userId, userId))
+      .orderBy(desc(songs.createdAt));
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async updateSongStatus(id: number, status: string, audioUrl?: string, error?: string): Promise<Song> {
+    const [updated] = await db
+      .update(songs)
+      .set({ 
+        status, 
+        audioUrl, 
+        error 
+      })
+      .where(eq(songs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteSong(id: number): Promise<void> {
+    await db.delete(songs).where(eq(songs.id, id));
+  }
+
+  // Lyrics
+  async createLyric(insertLyric: InsertLyric): Promise<Lyric> {
+    const [lyric] = await db.insert(lyrics).values(insertLyric).returning();
+    return lyric;
+  }
+
+  async getLyricsBySongId(songId: number): Promise<Lyric[]> {
+    return await db
+      .select()
+      .from(lyrics)
+      .where(eq(lyrics.songId, songId))
+      .orderBy(desc(lyrics.createdAt));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
