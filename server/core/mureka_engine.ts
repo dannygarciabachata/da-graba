@@ -216,12 +216,12 @@ Baby tu eres mi mayor`,
 
 export function buildMurekaPrompt(userPrompt: string, style: string): string {
   const stylePrompts: Record<string, string> = {
-    "heart-mula": "bachata, Dominican guitar, requinto, bongo, guira, romantic, emotional, 72 BPM, male vocal, intimate studio recording",
-    "bachata-romantic": "bachata, romantic guitar, soft percussion, bongo, guira, emotional male vocal, 75 BPM, intimate",
-    "bachata-dance": "bachata, upbeat guitar, fast guira, bongo slap, dance, party, energetic male vocal, 90 BPM",
-    "bachata-bolero": "bachata bolero, slow romantic, acoustic guitar, requinto, soft piano, emotional male vocal, 70 BPM",
-    "trio-serenade": "Latin trio, requinto lead, classical guitar, romantic serenade, bolero rhythm, male vocal harmony, 70 BPM",
-    "bachata-urbana": "modern bachata, urban, electric guitar, Dominican percussion, R&B influence, male vocal, 85 BPM",
+    "heart-mula": "Dominican bachata, tight guitar and bongo groove, requinto melody, cohesive ensemble, emotional male vocal in Spanish, professionally mixed, 72 BPM",
+    "bachata-romantic": "romantic bachata, soft guitar rhythm with gentle bongo, emotional male vocal in Spanish, intimate balanced mix, 75 BPM",
+    "bachata-dance": "upbeat bachata, driving guitar and guira groove locked together, energetic male vocal in Spanish, tight band sound, 90 BPM",
+    "bachata-bolero": "slow bachata bolero, gentle guitar arpeggios, requinto melody, emotional male vocal in Spanish, intimate cohesive sound, 70 BPM",
+    "trio-serenade": "Latin trio serenade, three guitars in harmony, requinto lead, male vocal harmony in Spanish, tight acoustic arrangement, 70 BPM",
+    "bachata-urbana": "modern urban bachata, electric guitar with reverb, bongo and trap hi-hats blended, R&B male vocal in Spanish, polished production, 85 BPM",
   };
 
   const basePrompt = stylePrompts[style] || stylePrompts["heart-mula"];

@@ -70,26 +70,42 @@ async function generateSmartPrompt(
   return { enhancedPrompt: finalPrompt, generatedLyrics };
 }
 
-function cleanPromptForMusicGen(rawPrompt: string): string {
-  const parts = rawPrompt
-    .replace(/high fidelity|masterpiece|studio quality|studio intimate/gi, "")
+function buildMusicGenPrompt(rawPrompt: string, style: string): string {
+  const musicGenStyles: Record<string, string> = {
+    "heart-mula":
+      "Dominican bachata, acoustic guitar fingerpicking rhythm, bongo groove, warm bass, cohesive tight band sound, emotional Latin music, professionally produced, 72 BPM",
+    "bachata-romantic":
+      "romantic bachata, soft acoustic guitar strumming, gentle bongo and guira rhythm, warm intimate Latin music, well-mixed, 75 BPM",
+    "bachata-dance":
+      "upbeat bachata, energetic guitar strumming, fast bongo and guira groove, fun Latin dance music, tight ensemble, 90 BPM",
+    "bachata-bolero":
+      "slow bachata bolero, gentle acoustic guitar arpeggios, soft bongo rhythm, emotional intimate Latin music, 70 BPM",
+    "trio-serenade":
+      "Latin trio, three acoustic guitars playing together in harmony, romantic bolero rhythm, intimate serenade, 70 BPM",
+    "bachata-urbana":
+      "modern urban bachata, electric guitar with reverb, bongo mixed with subtle trap beats, deep bass groove, polished Latin R&B, 85 BPM",
+  };
+
+  const styleDesc = musicGenStyles[style] || musicGenStyles["heart-mula"];
+
+  const cleanUserPrompt = rawPrompt
+    .replace(/high fidelity|masterpiece|studio quality|studio intimate|professionally mixed|cohesive ensemble/gi, "")
     .replace(/,\s*,/g, ",")
     .replace(/\s+/g, " ")
-    .trim();
-  
-  if (parts.length > 200) {
-    return parts.substring(0, 200).replace(/,\s*$/, "").trim();
-  }
-  return parts;
+    .trim()
+    .substring(0, 80);
+
+  return `${cleanUserPrompt}, ${styleDesc}`.substring(0, 250);
 }
 
 async function generateWithReplicate(
   prompt: string,
-  duration: number
+  duration: number,
+  style: string = "heart-mula"
 ): Promise<{ audioUrl: string; provider: "replicate" }> {
-  const cleanPrompt = cleanPromptForMusicGen(prompt);
+  const cleanPrompt = buildMusicGenPrompt(prompt, style);
   console.log(`[Worker] Generating audio with Replicate MusicGen (stereo-large)...`);
-  console.log(`[Worker] Clean prompt (${cleanPrompt.length} chars): ${cleanPrompt}`);
+  console.log(`[Worker] MusicGen prompt (${cleanPrompt.length} chars): ${cleanPrompt}`);
 
   const output = await replicate.run(
     "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
@@ -98,10 +114,10 @@ async function generateWithReplicate(
         model_version: "stereo-large",
         prompt: cleanPrompt,
         duration: Math.min(duration, 30),
-        temperature: 1.0,
+        temperature: 0.7,
         top_k: 250,
         top_p: 0.0,
-        classifier_free_guidance: 3,
+        classifier_free_guidance: 4,
         output_format: "wav",
         normalization_strategy: "loudness",
       },
@@ -173,10 +189,10 @@ export async function processMusicGeneration(
         const muMsg = muErr.message || "";
         console.log(`[Worker] Mureka unavailable: ${muMsg.substring(0, 120)}`);
 
-        // 3. Try Replicate (instrumental with OpenAI-enhanced prompt)
+        // 3. Try Replicate (instrumental with style-optimized prompt)
         try {
-          console.log(`[Worker] Using Replicate MusicGen with AI-enhanced prompt...`);
-          const repResult = await generateWithReplicate(enhancedPrompt, duration);
+          console.log(`[Worker] Using Replicate MusicGen with style-optimized prompt...`);
+          const repResult = await generateWithReplicate(enhancedPrompt, duration, style);
           const localUrl = await downloadAndSaveAudio(repResult.audioUrl);
           result = { audioUrl: localUrl, provider: "replicate" };
         } catch (repErr: any) {

@@ -11,22 +11,22 @@ function getApiKey(): string {
 export function buildElevenLabsPrompt(userPrompt: string, style: string, lyrics?: string): string {
   const stylePrompts: Record<string, string> = {
     "heart-mula":
-      "Dominican Bachata, acoustic guitar fingerpicking, requinto melody, bongo heartbeat, guira metallic pulse, warm bass, soft piano, emotional male vocal in Spanish, intimate studio recording, 72 BPM, D minor",
+      "Dominican Bachata. Tight acoustic guitar fingerpicking as the rhythmic foundation. Requinto plays melodic lead only in intro and breaks. Bongo and guira locked together in a steady groove. Warm bass supports the rhythm. Soft piano chords for harmony. Emotional male vocal in Spanish front and center. All instruments play as one cohesive band. Professionally mixed intimate studio recording. 72 BPM, D minor.",
     "bachata-romantic":
-      "Romantic Dominican Bachata, soft acoustic guitar, requinto intro solo, gentle bongo, guira, emotional male vocal in Spanish, tender and intimate, 75 BPM, A minor",
+      "Romantic Dominican Bachata. Soft acoustic guitar strumming sets the rhythm. Requinto intro solo then blends back. Gentle bongo and guira keep steady time. Emotional male vocal in Spanish is the focus. Instruments support the voice, never compete. Tender intimate feel. Well-balanced professional mix. 75 BPM, A minor.",
     "bachata-dance":
-      "Upbeat Dominican Bachata, fast strumming guitar, energetic guira pattern, bongo slap, conga, party dance energy, male vocal in Spanish, fun and flirty, 90 BPM, C major",
+      "Upbeat Dominican Bachata. Driving guitar strumming with energy. Guira and bongo locked in a fast groove. Conga accents on key beats. Energetic male vocal in Spanish. Fun party atmosphere. Tight ensemble playing together. Polished production with punchy mix. 90 BPM, C major.",
     "bachata-bolero":
-      "Bachata Bolero, slow romantic acoustic guitar, requinto crying melody, soft piano chords, minimal percussion, deeply emotional male vocal in Spanish, sorrowful and nostalgic, 70 BPM, D minor",
+      "Bachata Bolero. Slow gentle acoustic guitar arpeggios as foundation. Requinto plays a crying melodic line. Soft piano chords underneath. Minimal bongo keeping soft time. Deeply emotional male vocal in Spanish carries the song. Instruments blend into a warm intimate soundscape. Sorrowful and nostalgic. Professional studio quality. 70 BPM, D minor.",
     "trio-serenade":
-      "Latin Trio Serenade, requinto lead guitar, two classical guitars harmony, romantic bolero rhythm, three male voices harmonizing in Spanish, intimate moonlight serenade, 70 BPM, E minor",
+      "Latin Trio Serenade. Requinto plays lead melody. Two classical guitars provide rhythm and harmony together. Romantic bolero feel. Three male voices harmonizing in Spanish. Tight three-guitar arrangement where all parts interlock. Intimate moonlight serenade atmosphere. Balanced acoustic recording. 70 BPM, E minor.",
     "bachata-urbana":
-      "Modern Urban Bachata, electric guitar with reverb, Dominican percussion mixed with trap hi-hats, 808 bass, R&B influenced male vocal in Spanish, polished modern production, 85 BPM, G minor",
+      "Modern Urban Bachata. Electric guitar with reverb as the main melodic element. Dominican bongo and guira blended smoothly with subtle trap hi-hats. Deep 808 bass groove. R&B influenced male vocal in Spanish. All elements mixed together into a polished modern production. Clean balanced stereo mix. 85 BPM, G minor.",
   };
 
   const base = stylePrompts[style] || stylePrompts["heart-mula"];
 
-  let prompt = `${userPrompt}. Style: ${base}`;
+  let prompt = `${userPrompt}. ${base}`;
 
   if (lyrics) {
     prompt += `\n\nLyrics:\n${lyrics}`;
