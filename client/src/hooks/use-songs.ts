@@ -12,10 +12,10 @@ export function useSongs() {
       if (!res.ok) throw new Error("Failed to fetch songs");
       return api.songs.list.responses[200].parse(await res.json());
     },
-    // Poll every 5 seconds if there are pending songs to check status
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
+      const data = query.state.data;
       if (!data) return false;
-      const hasPending = data.some(song => song.status === 'pending' || song.status === 'processing');
+      const hasPending = data.some((song: any) => song.status === 'pending' || song.status === 'processing');
       return hasPending ? 5000 : false;
     }
   });
