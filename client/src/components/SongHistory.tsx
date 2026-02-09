@@ -42,7 +42,7 @@ export function SongHistory({ currentSongId, onSelectSong }: SongHistoryProps) {
             data-testid={`card-song-${song.id}`}
           >
             <div className="flex justify-between items-start mb-2 gap-2">
-              <h4 className="font-medium text-sm line-clamp-2 pr-2 flex-1">{song.prompt}</h4>
+              <h4 className="font-medium text-sm line-clamp-2 pr-2 flex-1">{song.title || song.prompt}</h4>
               <Button
                 size="icon"
                 variant="ghost"

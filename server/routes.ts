@@ -43,21 +43,43 @@ export async function registerRoutes(
 
     try {
       const input = api.songs.generate.input.parse(req.body);
-      const style = (req.body.style as string) || "heart-mula";
       const duration = (req.body.duration as number) || 15;
       const lyrics = (req.body.lyrics as string) || undefined;
+      const mode = input.mode || "standard";
+      const style = input.style || "heart-mula";
+      const genre = input.genre || undefined;
 
-      const hasBachataKeywords = /bachata|bongo|guira|dominican|latino|requinto/i.test(input.prompt);
-      const shouldForceBachata = input.isBachata || hasBachataKeywords;
+      let finalPrompt: string;
+      let songTitle: string;
+      let shouldForceBachata: boolean;
 
-      const finalPrompt = shouldForceBachata
-        ? buildMusicGenPrompt(input.prompt, style)
-        : input.prompt;
+      if (mode === "aggregate") {
+        songTitle = (input.title || input.prompt || "Untitled").trim();
+        const genreLabel = genre || "Bachata";
+        const isBachataGenre = /bachata/i.test(genreLabel);
+        
+        if (isBachataGenre) {
+          finalPrompt = buildMusicGenPrompt(`${songTitle}, ${genreLabel} style`, style);
+        } else {
+          const styleDesc = PROMPT_VERSIONS[style] || "";
+          finalPrompt = `${songTitle}, ${genreLabel} style, ${styleDesc}, high fidelity, studio quality`;
+        }
+        shouldForceBachata = isBachataGenre;
+      } else {
+        songTitle = input.prompt.slice(0, 50) + (input.prompt.length > 50 ? "..." : "");
+        const hasBachataKeywords = /bachata|bongo|guira|dominican|latino|requinto/i.test(input.prompt);
+        shouldForceBachata = input.isBachata || hasBachataKeywords;
+        finalPrompt = shouldForceBachata
+          ? buildMusicGenPrompt(input.prompt, style)
+          : input.prompt;
+      }
 
       const song = await storage.createSong({
         userId,
-        title: input.prompt.slice(0, 50) + (input.prompt.length > 50 ? "..." : ""),
+        title: songTitle,
         prompt: finalPrompt,
+        genre: genre || null,
+        mode,
       });
 
       processMusicGeneration(song.id, finalPrompt, {

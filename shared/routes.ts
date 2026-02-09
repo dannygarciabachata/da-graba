@@ -46,8 +46,12 @@ export const api = {
       method: 'POST' as const,
       path: '/api/songs/generate',
       input: z.object({
-        prompt: z.string().min(3),
+        prompt: z.string().min(1),
         isBachata: z.boolean().default(true),
+        mode: z.enum(["standard", "aggregate"]).default("standard"),
+        title: z.string().optional(),
+        genre: z.string().optional(),
+        style: z.string().optional(),
       }),
       responses: {
         202: z.custom<typeof songs.$inferSelect>(), // Accepted/Processing

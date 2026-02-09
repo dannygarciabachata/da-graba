@@ -11,15 +11,17 @@ export * from "./models/chat";
 
 export const songs = pgTable("songs", {
   id: serial("id").primaryKey(),
-  userId: text("user_id").notNull(), // Links to Replit Auth user ID
+  userId: text("user_id").notNull(),
   title: text("title").notNull().default("Untitled Track"),
   prompt: text("prompt").notNull(),
+  genre: text("genre"),
   audioUrl: text("audio_url"),
   imageUrl: text("image_url"),
-  duration: integer("duration"), // in seconds
-  status: text("status").notNull().default("pending"), // pending, processing, completed, failed
+  duration: integer("duration"),
+  status: text("status").notNull().default("pending"),
   error: text("error"),
   isPublic: boolean("is_public").default(false),
+  mode: text("mode").default("standard"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -92,6 +94,9 @@ export type GenerateSongRequest = {
   style?: string;
   duration?: number;
   lyrics?: string;
+  mode?: "standard" | "aggregate";
+  title?: string;
+  genre?: string;
 };
 
 export type GenerateLyricsRequest = {
