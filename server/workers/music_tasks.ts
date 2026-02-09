@@ -28,6 +28,18 @@ function saveAudioFile(buffer: Buffer, extension: string = "mp3"): string {
   return `/audio/${filename}`;
 }
 
+async function downloadAndSaveAudio(remoteUrl: string): Promise<string> {
+  console.log(`[Worker] Downloading audio from: ${remoteUrl}`);
+  const response = await fetch(remoteUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download audio: ${response.status}`);
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const ext = remoteUrl.includes(".wav") ? "wav" : "mp3";
+  return saveAudioFile(buffer, ext);
+}
+
 async function generateWithReplicate(
   prompt: string,
   duration: number
@@ -113,6 +125,7 @@ export async function processMusicGeneration(
       // 2. Try Mureka (secondary)
       try {
         console.log(`[Worker] Falling back to Mureka AI...`);
+        let murekaResult: { audioUrl: string; provider: string };
         if (lyrics) {
           const murekaPrompt = buildMurekaPrompt(finalPrompt, style);
           const task = await startSongGeneration(lyrics, murekaPrompt, "auto");
@@ -120,10 +133,12 @@ export async function processMusicGeneration(
           if (!completed.choices || completed.choices.length === 0) {
             throw new Error("Mureka returned no audio choices");
           }
-          result = { audioUrl: completed.choices[0].url, provider: "mureka" };
+          murekaResult = { audioUrl: completed.choices[0].url, provider: "mureka" };
         } else {
-          result = await generateWithMureka(finalPrompt, style);
+          murekaResult = await generateWithMureka(finalPrompt, style);
         }
+        const localMurekaUrl = await downloadAndSaveAudio(murekaResult.audioUrl);
+        result = { audioUrl: localMurekaUrl, provider: "mureka" };
       } catch (muErr: any) {
         const muMsg = muErr.message || "";
         console.log(`[Worker] Mureka failed: ${muMsg}`);
@@ -131,7 +146,9 @@ export async function processMusicGeneration(
         // 3. Try Replicate (last resort)
         try {
           console.log(`[Worker] Falling back to Replicate...`);
-          result = await generateWithReplicate(finalPrompt, duration);
+          const repResult = await generateWithReplicate(finalPrompt, duration);
+          const localRepUrl = await downloadAndSaveAudio(repResult.audioUrl);
+          result = { audioUrl: localRepUrl, provider: "replicate" };
         } catch (repErr: any) {
           throw new Error(
             `All music providers failed. ElevenLabs: ${elMsg.substring(0, 100)}. Mureka: ${muMsg.substring(0, 100)}. Replicate: ${repErr.message?.substring(0, 100)}`
