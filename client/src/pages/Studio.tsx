@@ -54,7 +54,7 @@ function TrackStrip({
   const Icon = STEM_ICONS[track.type] || Music;
   const color = STEM_COLORS[track.type] || "#00F3FF";
 
-  const effectivelyMuted = track.isMuted || isSoloedByOther;
+  const effectivelyMuted = isSoloedByOther || (track.isMuted && !track.isSolo);
 
   useEffect(() => {
     if (!waveRef.current || !track.audioUrl || track.status !== "completed") return;
@@ -129,6 +129,11 @@ function TrackStrip({
             )}
             {isFailed && (
               <span className="text-[10px] text-destructive">Failed</span>
+            )}
+            {track.status === "completed" && track.isSolo && (
+              <span className="text-[10px] text-yellow-500 uppercase tracking-wider font-bold">
+                SOLO
+              </span>
             )}
             {effectivelyMuted && track.status === "completed" && (
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
@@ -272,7 +277,7 @@ export default function StudioPage() {
 
       for (const track of completedTracks) {
         if (!track.audioUrl) continue;
-        const response = await fetch(track.audioUrl);
+        const response = await fetch(track.audioUrl, { credentials: "include" });
         const blob = await response.blob();
         zip.file(`${songName}_${track.name}.wav`, blob);
       }
@@ -291,13 +296,6 @@ export default function StudioPage() {
     } finally {
       setIsDownloadingAll(false);
     }
-  };
-
-  const isTrackAudible = (track: Track): boolean => {
-    if (track.status !== "completed") return false;
-    if (track.isMuted) return false;
-    if (anySoloed && !track.isSolo) return false;
-    return true;
   };
 
   return (
@@ -517,8 +515,8 @@ export default function StudioPage() {
                       <TrackStrip
                         key={track.id}
                         track={track}
-                        isPlaying={isPlaying && isTrackAudible(track)}
-                        isSoloedByOther={anySoloed && !track.isSolo}
+                        isPlaying={isPlaying && track.status === "completed"}
+                        isSoloedByOther={track.status === "completed" && anySoloed && !track.isSolo}
                         onToggleMute={() => handleToggleMute(track)}
                         onToggleSolo={() => handleToggleSolo(track)}
                         onVolumeChange={(vol) => handleVolumeChange(track, vol)}
