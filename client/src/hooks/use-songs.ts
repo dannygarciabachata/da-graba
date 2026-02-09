@@ -60,8 +60,8 @@ export function useGenerateSong() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.songs.list.path] });
       toast({
-        title: "Generation Started",
-        description: "Your track is being composed by the AI engine.",
+        title: "Heart Mula Activated",
+        description: "Your track is being composed by the DGB Studio engine.",
       });
     },
     onError: (error: Error) => {

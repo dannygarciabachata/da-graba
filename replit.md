@@ -1,7 +1,7 @@
-# DGB Audio - Danny Garcia Bachata
+# DGB Audio - Heart Mula Music Engine
 
 ## Overview
-AI-powered music generation platform tailored for Bachata music. Uses Replicate (meta/musicgen-large) for music generation and OpenAI (GPT-5.1) for lyrics writing.
+AI-powered music generation platform tailored for Bachata music by Danny Garcia. The "Heart Mula" engine uses Replicate (meta/musicgen-large) for music generation and OpenAI (GPT-5.1) for lyrics writing, with a structured prompt system for authentic Dominican Bachata sound.
 
 ## Architecture
 - **Frontend**: React + Vite + TailwindCSS + Shadcn UI
@@ -11,9 +11,21 @@ AI-powered music generation platform tailored for Bachata music. Uses Replicate 
 - **Music AI**: Replicate API (meta/musicgen-large)
 - **Lyrics AI**: OpenAI via Replit AI Integrations (GPT-5.1)
 
+## Core Engines (server/core/)
+- **prompt_engine.ts** - Versioned music prompts (Heart Mula, Romantic, Dance, Bolero, Urbana, Serenade), lyrics system prompts, structured JSON config generation
+- **music_engine.ts** - MusicGen wrapper with Replicate integration
+- **antigravity_engine.ts** - Creative AI engine for lyrics and full arrangement configs via OpenAI
+- **quiz_engine.ts** - Bachata knowledge quiz system (static bank + AI-generated questions)
+
+## Workers (server/workers/)
+- **music_tasks.ts** - Background async music generation with status tracking
+
 ## Key Features
-- Music generation with "Bachata Mode" that forces Dominican-style instruments
-- AI lyrics generator (romantic, dance, heartbreak styles)
+- "Heart Mula" branded music engine with style presets selector
+- Bachata Mode auto-detection (keywords like "bachata", "bongo", "guira" auto-force Dominican instruments)
+- 6 style presets: Heart Mula Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana
+- AI lyrics generator (romantic, dance, heartbreak styles) with Frank Reyes/Romeo Santos influences
+- Bachata Quiz with 10-question knowledge bank (history, instruments, artists, rhythm, culture)
 - Waveform audio player (wavesurfer.js)
 - Song history with polling for processing status
 - User authentication via Replit Auth
@@ -21,25 +33,33 @@ AI-powered music generation platform tailored for Bachata music. Uses Replicate 
 ## Project Structure
 ```
 client/src/
-  pages/Landing.tsx       - Landing page with hero
-  pages/Dashboard.tsx     - Main dashboard (auth required)
-  components/MusicGenerator.tsx  - Music generation panel
+  pages/Landing.tsx              - Landing page with Heart Mula branding
+  pages/Dashboard.tsx            - Main dashboard with Lyrics/Quiz tabs
+  components/MusicGenerator.tsx  - Heart Mula music generation panel
   components/LyricsGenerator.tsx - Lyrics AI editor
   components/AudioPlayer.tsx     - Waveform player
   components/SongHistory.tsx     - Track history list
-  hooks/use-songs.ts     - Song CRUD hooks
-  hooks/use-lyrics.ts    - Lyrics generation hook
-  hooks/use-auth.ts      - Auth state hook
+  components/BachataQuiz.tsx     - Interactive Bachata quiz
+  hooks/use-songs.ts             - Song CRUD hooks
+  hooks/use-lyrics.ts            - Lyrics generation hook
+  hooks/use-auth.ts              - Auth state hook
 
 server/
-  routes.ts              - API routes (songs, lyrics, auth)
-  storage.ts             - Database storage layer
-  db.ts                  - Database connection
-  replit_integrations/   - Auth, chat, audio, image modules
+  core/
+    prompt_engine.ts             - Versioned prompts & structured config
+    music_engine.ts              - MusicGen wrapper
+    antigravity_engine.ts        - Creative AI (lyrics + arrangements)
+    quiz_engine.ts               - Quiz logic & question bank
+  workers/
+    music_tasks.ts               - Background music generation
+  routes.ts                      - API routes (music, lyrics, quiz, auth)
+  storage.ts                     - Database storage layer (IStorage interface)
+  db.ts                          - Database connection
+  replit_integrations/           - Auth, chat modules
 
 shared/
-  schema.ts              - Drizzle schema (songs, lyrics, users, sessions)
-  routes.ts              - API contract with Zod validation
+  schema.ts                      - Drizzle schema (songs, lyrics, quiz_results, users, sessions)
+  routes.ts                      - API contract with Zod validation
 ```
 
 ## Theme
@@ -50,11 +70,15 @@ shared/
 - Font: Inter + JetBrains Mono
 
 ## API Endpoints
-- `POST /api/songs/generate` - Generate music via Replicate
+- `POST /api/songs/generate` - Generate music (supports style, duration, auto-bachata detection)
 - `GET /api/songs` - List user's songs
 - `GET /api/songs/:id` - Get single song
 - `DELETE /api/songs/:id` - Delete song
-- `POST /api/lyrics/generate` - Generate lyrics via OpenAI
+- `POST /api/lyrics/generate` - Generate lyrics via Heart Mula AI
+- `GET /api/quiz` - Get random quiz questions (supports ?category=&count=)
+- `POST /api/quiz/submit` - Submit quiz answers (validated with Zod)
+- `GET /api/quiz/results` - Get user's quiz history
+- `GET /api/quiz/styles` - List available music style presets
 
 ## Environment Variables
 - `DATABASE_URL` - PostgreSQL connection

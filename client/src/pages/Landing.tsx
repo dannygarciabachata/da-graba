@@ -40,7 +40,7 @@ export default function Landing() {
             className="space-y-8"
           >
             <div className="inline-block px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-4">
-              AI-Powered Music Generation
+              Heart Mula Music Engine
             </div>
             
             <h1 className="text-5xl lg:text-7xl font-bold tracking-tight leading-tight">
@@ -51,7 +51,7 @@ export default function Landing() {
             </h1>
             
             <p className="text-xl text-muted-foreground max-w-xl leading-relaxed">
-              Generate studio-quality Bachata tracks and romantic lyrics instantly. Powered by advanced AI models tailored for the DGB sound.
+              Generate studio-quality Bachata tracks and romantic lyrics with the Heart Mula engine. Dominican soul, AI precision, DGB sound.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
@@ -104,7 +104,7 @@ export default function Landing() {
                     </div>
                     <div className="text-left">
                       <p className="text-xs text-muted-foreground">Lyrics Gen</p>
-                      <p className="text-sm font-bold">GPT-4o Integration</p>
+                      <p className="text-sm font-bold">Heart Mula AI</p>
                     </div>
                   </div>
                   <Wand2 className="w-5 h-5 text-white/20" />
