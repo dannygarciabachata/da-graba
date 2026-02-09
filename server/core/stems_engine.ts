@@ -68,8 +68,8 @@ export async function processStemSeparation(
       {
         input: {
           audio: fullAudioUrl,
-          model: "htdemucs",
-          stem: "all",
+          model_name: "htdemucs",
+          output_format: "wav",
         },
       }
     );
