@@ -70,19 +70,40 @@ async function generateSmartPrompt(
   return { enhancedPrompt: finalPrompt, generatedLyrics };
 }
 
+function cleanPromptForMusicGen(rawPrompt: string): string {
+  const parts = rawPrompt
+    .replace(/high fidelity|masterpiece|studio quality|studio intimate/gi, "")
+    .replace(/,\s*,/g, ",")
+    .replace(/\s+/g, " ")
+    .trim();
+  
+  if (parts.length > 200) {
+    return parts.substring(0, 200).replace(/,\s*$/, "").trim();
+  }
+  return parts;
+}
+
 async function generateWithReplicate(
   prompt: string,
   duration: number
 ): Promise<{ audioUrl: string; provider: "replicate" }> {
-  console.log(`[Worker] Generating audio with Replicate MusicGen...`);
+  const cleanPrompt = cleanPromptForMusicGen(prompt);
+  console.log(`[Worker] Generating audio with Replicate MusicGen (stereo-large)...`);
+  console.log(`[Worker] Clean prompt (${cleanPrompt.length} chars): ${cleanPrompt}`);
 
   const output = await replicate.run(
-    "meta/musicgen:b05b1dff1d8c6dc63d14b0cdb42135378dcb87f6373b0d3d341ede46e59e2b38",
+    "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
     {
       input: {
-        model_version: "stereo-melody-large",
-        prompt,
-        duration,
+        model_version: "stereo-large",
+        prompt: cleanPrompt,
+        duration: Math.min(duration, 30),
+        temperature: 1.0,
+        top_k: 250,
+        top_p: 0.0,
+        classifier_free_guidance: 3,
+        output_format: "wav",
+        normalization_strategy: "loudness",
       },
     }
   );
@@ -105,8 +126,8 @@ export async function processMusicGeneration(
 
   try {
     console.log(`[Worker] Starting music generation for song ${songId}`);
-    console.log(`[Worker] User prompt: ${finalPrompt}`);
-    console.log(`[Worker] Style: ${style}`);
+    console.log(`[Worker] Prompt (${finalPrompt.length} chars): ${finalPrompt.substring(0, 150)}`);
+    console.log(`[Worker] Style: ${style}, Duration: ${duration}s`);
 
     await storage.updateSongStatus(songId, "processing");
 

@@ -60,12 +60,12 @@ export interface MusicPromptConfig {
 }
 
 export const PROMPT_VERSIONS: Record<string, string> = {
-  "bachata-romantic": "Dominican bachata guitar, requinto solo intro, bongo, guira, conga, smooth bassline, piano soft harmony, romantic emotional intimate, 75 BPM, minor key, high fidelity, studio quality",
-  "bachata-dance": "Dominican bachata guitar, fast guira pattern, bongo slap, conga rhythm, energetic bassline, piano montuno, upbeat party dance, 90 BPM, major key, high fidelity",
-  "bachata-bolero": "Romantic Latin Trio, requinto guitar intro, acoustic guitars main, soft piano harmony, warm subtle bass, bongos guira conga timbal light ornaments, emotional intimate nostalgic, 75 BPM, minor key, high fidelity",
-  "trio-serenade": "Mexican trio style, requinto lead, classical guitars, romantic serenade, bolero rhythm, 70 BPM, minor key, intimate recording, high fidelity",
-  "heart-mula": "Heart Mula signature sound, deep emotional bachata, requinto crying melody, acoustic guitar fingerpicking, bongo heartbeat rhythm, guira whisper pulse, piano tenderness, warm bass embrace, 72 BPM, Dm minor, studio intimate, high fidelity masterpiece",
-  "bachata-urbana": "Modern urban bachata, electric guitar accents, Dominican percussion, trap-influenced hi-hats, 808 bass blend, romantic R&B vocals, 85 BPM, minor key, polished production",
+  "bachata-romantic": "romantic Dominican bachata, acoustic guitar, requinto melody, bongo, guira, smooth bass, piano, 75 BPM, A minor",
+  "bachata-dance": "upbeat Dominican bachata, fast guitar strumming, guira, bongo slap, conga, energetic bass, piano montuno, 90 BPM, C major",
+  "bachata-bolero": "slow bachata bolero, acoustic guitar arpeggios, requinto, soft piano chords, warm bass, gentle bongo, 70 BPM, D minor",
+  "trio-serenade": "Latin trio serenade, requinto lead guitar, classical guitars, romantic bolero rhythm, 70 BPM, E minor",
+  "heart-mula": "emotional Dominican bachata, acoustic guitar fingerpicking, requinto melody, bongo rhythm, guira, piano, warm bass, 72 BPM, D minor",
+  "bachata-urbana": "modern urban bachata, electric guitar with reverb, Dominican percussion, trap hi-hats, 808 bass, R&B style, 85 BPM, G minor",
 };
 
 export function buildMusicGenPrompt(userPrompt: string, style: string = "bachata-romantic"): string {

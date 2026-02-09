@@ -10,6 +10,20 @@ import { buildMusicGenPrompt, PROMPT_VERSIONS } from "./core/prompt_engine";
 import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engine";
 import { processStemSeparation } from "./core/stems_engine";
 
+async function recoverStuckSongs() {
+  try {
+    const { db } = await import("./db");
+    const { songs } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    await db.update(songs)
+      .set({ status: "failed", error: "Generation interrupted - please try again" })
+      .where(eq(songs.status, "processing"));
+    console.log("[Recovery] Checked for stuck processing songs");
+  } catch (err) {
+    console.log("[Recovery] Could not check stuck songs:", (err as any).message);
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -17,6 +31,8 @@ export async function registerRoutes(
   
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  recoverStuckSongs();
 
   // ========== MUSIC ROUTES ==========
 
