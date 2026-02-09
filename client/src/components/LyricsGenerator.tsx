@@ -47,7 +47,7 @@ export function LyricsGenerator() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-4">
         <div className="space-y-2">
           <Label>Theme / Mood</Label>
           <Input 
@@ -55,12 +55,13 @@ export function LyricsGenerator() {
             onChange={(e) => setTheme(e.target.value)}
             placeholder="Lost love..."
             className="bg-black/20 border-white/10"
+            data-testid="input-lyrics-theme"
           />
         </div>
         <div className="space-y-2">
           <Label>Style</Label>
           <Select value={style} onValueChange={(v: any) => setStyle(v)}>
-            <SelectTrigger className="bg-black/20 border-white/10">
+            <SelectTrigger className="bg-black/20 border-white/10" data-testid="select-lyrics-style">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -97,8 +98,9 @@ export function LyricsGenerator() {
           <Button
             size="icon"
             variant="ghost"
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute top-2 right-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
             onClick={copyToClipboard}
+            data-testid="button-copy-lyrics"
           >
             <Copy className="h-4 w-4" />
           </Button>

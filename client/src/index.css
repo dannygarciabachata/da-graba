@@ -265,3 +265,7 @@
 .animate-spin-slow {
   animation: spin-slow 8s linear infinite;
 }
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

@@ -6,31 +6,44 @@ import { AudioPlayer } from "@/components/AudioPlayer";
 import { SongHistory } from "@/components/SongHistory";
 import { BachataQuiz } from "@/components/BachataQuiz";
 import { Button } from "@/components/ui/button";
-import { LogOut, Disc, Music, PenLine, HelpCircle } from "lucide-react";
+import { LogOut, Disc, Music, PenLine, HelpCircle, Headphones, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
+type MobileTab = "studio" | "player" | "lyrics" | "quiz";
 type RightPanelTab = "lyrics" | "quiz";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const [currentSong, setCurrentSong] = useState<any>(null);
   const [rightTab, setRightTab] = useState<RightPanelTab>("lyrics");
+  const [mobileTab, setMobileTab] = useState<MobileTab>("studio");
 
   if (!user) return null;
 
+  const mobileNavItems = [
+    { id: "studio" as MobileTab, label: "Studio", icon: Sparkles },
+    { id: "player" as MobileTab, label: "Player", icon: Headphones },
+    { id: "lyrics" as MobileTab, label: "Lyrics", icon: PenLine },
+    { id: "quiz" as MobileTab, label: "Quiz", icon: HelpCircle },
+  ];
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans overflow-hidden">
-      <header className="h-16 border-b border-white/5 bg-black/50 backdrop-blur-md px-6 flex items-center justify-between gap-4 z-50">
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-tr from-primary to-blue-600 p-2 rounded-lg">
-            <Disc className="h-5 w-5 text-white animate-spin-slow" />
+      <header className="h-14 md:h-16 border-b border-white/5 bg-black/50 backdrop-blur-md px-4 md:px-6 flex items-center justify-between gap-2 z-50 sticky top-0">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="bg-gradient-to-tr from-primary to-blue-600 p-1.5 md:p-2 rounded-lg">
+            <Disc className="h-4 w-4 md:h-5 md:w-5 text-white animate-spin-slow" />
           </div>
-          <span className="text-lg font-bold tracking-tight">DGB Audio <span className="text-primary text-xs font-normal px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">PRO</span></span>
+          <span className="text-base md:text-lg font-bold tracking-tight">
+            DGB Audio
+            <span className="text-primary text-[10px] md:text-xs font-normal px-1.5 md:px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 ml-1.5">PRO</span>
+          </span>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-white/5 border border-white/5">
+        <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-full bg-white/5 border border-white/5">
             <Avatar className="h-6 w-6">
               <AvatarImage src={user.profileImageUrl || undefined} />
               <AvatarFallback className="text-xs bg-primary text-black font-bold">
@@ -45,8 +58,9 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="flex-1 container max-w-[1600px] mx-auto p-6 grid grid-cols-12 gap-6 overflow-hidden h-[calc(100vh-4rem)]">
-        <div className="col-span-12 lg:col-span-3 flex flex-col gap-6 h-full overflow-hidden">
+      {/* Desktop Layout */}
+      <main className="hidden lg:grid flex-1 container max-w-[1600px] mx-auto p-6 grid-cols-12 gap-6 overflow-hidden h-[calc(100vh-4rem)]">
+        <div className="col-span-3 flex flex-col gap-6 h-full overflow-hidden">
           <div className="flex-shrink-0">
             <MusicGenerator />
           </div>
@@ -56,8 +70,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="col-span-12 lg:col-span-6 flex flex-col gap-6 justify-center">
-          <motion.div 
+        <div className="col-span-6 flex flex-col gap-6 justify-center">
+          <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", duration: 0.8 }}
@@ -76,14 +90,13 @@ export default function Dashboard() {
               </div>
             </div>
           </motion.div>
-
-          <AudioPlayer 
-            url={currentSong?.audioUrl} 
-            title={currentSong?.title || "Untitled Track"} 
+          <AudioPlayer
+            url={currentSong?.audioUrl}
+            title={currentSong?.title || "Untitled Track"}
           />
         </div>
 
-        <div className="col-span-12 lg:col-span-3 h-full overflow-hidden flex flex-col">
+        <div className="col-span-3 h-full overflow-hidden flex flex-col">
           <div className="flex gap-1 mb-4 bg-white/5 rounded-lg p-1">
             <Button
               variant={rightTab === "lyrics" ? "default" : "ghost"}
@@ -111,6 +124,109 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* Mobile Layout */}
+      <main className="flex-1 lg:hidden overflow-auto pb-20">
+        <div className="p-4">
+          {mobileTab === "studio" && (
+            <motion.div
+              key="studio"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4"
+            >
+              <MusicGenerator />
+              <div className="glass-panel rounded-2xl p-4">
+                <h3 className="font-bold text-sm text-muted-foreground uppercase tracking-wider mb-4 px-2">Recent Tracks</h3>
+                <SongHistory currentSongId={currentSong?.id} onSelectSong={(song) => { setCurrentSong(song); setMobileTab("player"); }} />
+              </div>
+            </motion.div>
+          )}
+
+          {mobileTab === "player" && (
+            <motion.div
+              key="player"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4"
+            >
+              <div className="aspect-square max-h-[50vh] w-full rounded-2xl bg-gradient-to-br from-gray-900 to-black border border-white/5 shadow-2xl overflow-hidden relative">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,243,255,0.1),transparent_70%)] animate-pulse" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {currentSong?.imageUrl ? (
+                    <img src={currentSong.imageUrl} alt="Album Art" className="w-40 h-40 rounded-xl shadow-2xl object-cover" />
+                  ) : (
+                    <div className="w-40 h-40 rounded-full border-4 border-white/5 flex items-center justify-center animate-spin-slow">
+                      <div className="w-32 h-32 rounded-full border-2 border-primary/20 border-dashed" />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <AudioPlayer
+                url={currentSong?.audioUrl}
+                title={currentSong?.title || "Untitled Track"}
+              />
+              <div className="glass-panel rounded-2xl p-4">
+                <h3 className="font-bold text-sm text-muted-foreground uppercase tracking-wider mb-4 px-2">Recent Tracks</h3>
+                <SongHistory currentSongId={currentSong?.id} onSelectSong={setCurrentSong} />
+              </div>
+            </motion.div>
+          )}
+
+          {mobileTab === "lyrics" && (
+            <motion.div
+              key="lyrics"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="min-h-[70vh]"
+            >
+              <LyricsGenerator />
+            </motion.div>
+          )}
+
+          {mobileTab === "quiz" && (
+            <motion.div
+              key="quiz"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="min-h-[70vh]"
+            >
+              <BachataQuiz />
+            </motion.div>
+          )}
+        </div>
+      </main>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10 safe-area-bottom" data-testid="nav-mobile-bottom">
+        <div className="flex items-center justify-around px-2 py-1">
+          {mobileNavItems.map((item) => {
+            const isActive = mobileTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setMobileTab(item.id)}
+                className={cn(
+                  "relative flex flex-col items-center gap-0.5 py-2 px-3 rounded-xl transition-all min-w-[60px]",
+                  isActive
+                    ? "text-primary"
+                    : "text-muted-foreground"
+                )}
+                data-testid={`button-mobile-tab-${item.id}`}
+              >
+                <item.icon className={cn("h-5 w-5", isActive && "drop-shadow-[0_0_6px_rgba(0,243,255,0.5)]")} />
+                <span className={cn("text-[10px] font-medium", isActive && "text-primary")}>{item.label}</span>
+                {isActive && (
+                  <motion.div
+                    layoutId="mobile-tab-indicator"
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full"
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

@@ -27,7 +27,7 @@ export function AudioPlayer({ url, title }: AudioPlayerProps) {
       cursorColor: '#FFFFFF',
       barWidth: 2,
       barGap: 3,
-      height: 120,
+      height: 80,
       normalize: true,
       url: url,
     });
@@ -73,11 +73,11 @@ export function AudioPlayer({ url, title }: AudioPlayerProps) {
 
   if (!url) {
     return (
-      <div className="glass-panel rounded-2xl p-8 flex flex-col items-center justify-center h-[300px] text-muted-foreground border-dashed border-2 border-white/5">
-        <div className="p-4 bg-white/5 rounded-full mb-4 animate-pulse">
-          <Play className="w-8 h-8 opacity-50" />
+      <div className="glass-panel rounded-2xl p-6 md:p-8 flex flex-col items-center justify-center h-[180px] md:h-[300px] text-muted-foreground border-dashed border-2 border-white/5">
+        <div className="p-3 md:p-4 bg-white/5 rounded-full mb-3 md:mb-4 animate-pulse">
+          <Play className="w-6 h-6 md:w-8 md:h-8 opacity-50" />
         </div>
-        <p>Select or generate a track to play</p>
+        <p className="text-sm md:text-base text-center">Select or generate a track to play</p>
       </div>
     );
   }
@@ -86,36 +86,37 @@ export function AudioPlayer({ url, title }: AudioPlayerProps) {
     <motion.div 
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="glass-panel rounded-2xl p-6 space-y-6"
+      className="glass-panel rounded-2xl p-4 md:p-6 space-y-4 md:space-y-6"
     >
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="text-xl font-bold">{title}</h3>
-          <p className="text-sm text-primary">Now Playing</p>
+      <div className="flex justify-between items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-base md:text-xl font-bold truncate">{title}</h3>
+          <p className="text-xs md:text-sm text-primary">Now Playing</p>
         </div>
-        <Button size="icon" variant="ghost" onClick={handleDownload} className="text-muted-foreground hover:text-primary">
+        <Button size="icon" variant="ghost" onClick={handleDownload} className="text-muted-foreground flex-shrink-0" data-testid="button-download-track">
           <Download className="w-5 h-5" />
         </Button>
       </div>
 
       <div ref={containerRef} className="w-full opacity-0 transition-opacity duration-500" style={{ opacity: isReady ? 1 : 0 }} />
       {!isReady && (
-        <div className="h-[120px] w-full flex items-center justify-center bg-black/20 rounded-lg">
+        <div className="h-[80px] w-full flex items-center justify-center bg-black/20 rounded-lg">
           <span className="text-xs text-muted-foreground animate-pulse">Loading waveform...</span>
         </div>
       )}
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-4 md:gap-6">
         <Button 
           size="icon" 
           onClick={togglePlay}
-          className="h-14 w-14 rounded-full bg-white text-black hover:bg-white/90 shadow-lg shadow-white/10 hover:scale-105 transition-transform"
+          className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-white text-black shadow-lg shadow-white/10"
+          data-testid="button-play-pause"
         >
-          {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-1" />}
+          {isPlaying ? <Pause className="w-5 h-5 md:w-6 md:h-6 fill-current" /> : <Play className="w-5 h-5 md:w-6 md:h-6 fill-current ml-0.5" />}
         </Button>
 
-        <div className="flex-1 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={toggleMute} className="h-8 w-8 text-muted-foreground">
+        <div className="flex-1 flex items-center gap-2 md:gap-3">
+          <Button variant="ghost" size="icon" onClick={toggleMute} className="text-muted-foreground flex-shrink-0" data-testid="button-mute">
             {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </Button>
           <Slider 
@@ -123,7 +124,7 @@ export function AudioPlayer({ url, title }: AudioPlayerProps) {
             max={1} 
             step={0.01} 
             onValueChange={handleVolume}
-            className="w-32" 
+            className="flex-1 max-w-[150px]" 
           />
         </div>
       </div>

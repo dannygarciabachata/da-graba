@@ -27,29 +27,31 @@ export function SongHistory({ currentSongId, onSelectSong }: SongHistoryProps) {
   }
 
   return (
-    <ScrollArea className="h-full pr-4">
-      <div className="space-y-3">
+    <ScrollArea className="h-full pr-2 md:pr-4">
+      <div className="space-y-2 md:space-y-3">
         {songs.map((song) => (
           <div 
             key={song.id}
             className={cn(
-              "group relative p-4 rounded-xl border transition-all duration-200 cursor-pointer",
+              "group relative p-3 md:p-4 rounded-xl border transition-all duration-200 cursor-pointer",
               song.id === currentSongId 
                 ? "bg-primary/10 border-primary/50 shadow-[0_0_15px_-5px_var(--primary)]" 
-                : "bg-card border-white/5 hover:bg-white/5 hover:border-white/10"
+                : "bg-card border-white/5 hover-elevate"
             )}
             onClick={() => song.status === 'completed' && onSelectSong(song)}
+            data-testid={`card-song-${song.id}`}
           >
-            <div className="flex justify-between items-start mb-2">
-              <h4 className="font-medium text-sm line-clamp-1 pr-8">{song.prompt}</h4>
+            <div className="flex justify-between items-start mb-2 gap-2">
+              <h4 className="font-medium text-sm line-clamp-2 pr-2 flex-1">{song.prompt}</h4>
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-6 w-6 text-muted-foreground hover:text-destructive absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-7 w-7 text-muted-foreground flex-shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                 onClick={(e) => {
                   e.stopPropagation();
                   deleteSong(song.id);
                 }}
+                data-testid={`button-delete-song-${song.id}`}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
