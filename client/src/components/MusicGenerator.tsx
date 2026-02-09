@@ -5,32 +5,40 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Heart } from "lucide-react";
+import { Loader2, Sparkles, Heart, Music } from "lucide-react";
 import { motion } from "framer-motion";
 
 const STYLE_OPTIONS = [
+  { value: "heart-mula", label: "Heart Mula Signature" },
   { value: "bachata-romantic", label: "Romantic Bachata" },
   { value: "bachata-dance", label: "Dance Bachata" },
   { value: "bachata-bolero", label: "Bachata Bolero" },
   { value: "trio-serenade", label: "Trio Serenade" },
-  { value: "heart-mula", label: "Heart Mula Signature" },
   { value: "bachata-urbana", label: "Bachata Urbana" },
 ];
 
 export function MusicGenerator() {
   const [prompt, setPrompt] = useState("");
+  const [lyrics, setLyrics] = useState("");
   const [isBachata, setIsBachata] = useState(true);
   const [style, setStyle] = useState("heart-mula");
+  const [showLyrics, setShowLyrics] = useState(false);
   const { mutate: generate, isPending } = useGenerateSong();
 
   const handleGenerate = () => {
     if (!prompt.trim()) return;
-    generate({ prompt, isBachata, style });
+    generate({
+      prompt,
+      isBachata,
+      style,
+      ...(showLyrics && lyrics.trim() ? { lyrics: lyrics.trim() } : {}),
+    });
     setPrompt("");
+    setLyrics("");
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="glass-panel rounded-2xl p-6 h-full flex flex-col"
@@ -59,6 +67,40 @@ export function MusicGenerator() {
             className="bg-black/20 border-border focus:border-primary/50 focus:ring-primary/20 min-h-[100px] resize-none text-base"
             data-testid="input-music-prompt"
           />
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium text-foreground/80">Custom Lyrics</Label>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowLyrics(!showLyrics)}
+              className="text-xs text-muted-foreground"
+              data-testid="button-toggle-lyrics"
+            >
+              <Music className="w-3 h-3 mr-1" />
+              {showLyrics ? "Hide" : "Add Lyrics"}
+            </Button>
+          </div>
+          {showLyrics && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <Textarea
+                placeholder={"[Verse]\nBajo la luna de Santo Domingo\nTu mirada me tiene cautivo...\n\n[Chorus]\nBailamos bachata toda la noche..."}
+                value={lyrics}
+                onChange={(e) => setLyrics(e.target.value)}
+                className="bg-black/20 border-border focus:border-primary/50 focus:ring-primary/20 min-h-[120px] resize-none text-sm font-mono"
+                data-testid="input-music-lyrics"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Leave empty for auto-generated Bachata lyrics
+              </p>
+            </motion.div>
+          )}
         </div>
 
         <div className="space-y-2">

@@ -43,8 +43,9 @@ export async function registerRoutes(
 
     try {
       const input = api.songs.generate.input.parse(req.body);
-      const style = (req.body.style as string) || "bachata-romantic";
+      const style = (req.body.style as string) || "heart-mula";
       const duration = (req.body.duration as number) || 15;
+      const lyrics = (req.body.lyrics as string) || undefined;
 
       const hasBachataKeywords = /bachata|bongo|guira|dominican|latino|requinto/i.test(input.prompt);
       const shouldForceBachata = input.isBachata || hasBachataKeywords;
@@ -60,9 +61,10 @@ export async function registerRoutes(
       });
 
       processMusicGeneration(song.id, finalPrompt, {
-        isBachata: false,
+        isBachata: shouldForceBachata,
         style,
         duration,
+        lyrics,
       });
 
       res.status(202).json(song);

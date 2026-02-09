@@ -1,5 +1,11 @@
 import Replicate from "replicate";
 import { storage } from "../storage";
+import {
+  startSongGeneration,
+  pollSongUntilDone,
+  buildBachataLyrics,
+  buildMurekaPrompt,
+} from "../core/mureka_engine";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
@@ -7,8 +13,6 @@ import crypto from "crypto";
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
 });
-
-const HF_API_URL = "https://router.huggingface.co/hf-inference/models/facebook/musicgen-small";
 
 async function generateWithReplicate(
   prompt: string,
@@ -31,64 +35,28 @@ async function generateWithReplicate(
   return { audioUrl, provider: "replicate" };
 }
 
-async function generateWithHuggingFace(
+async function generateWithMureka(
   prompt: string,
-  duration: number
-): Promise<{ audioUrl: string; provider: "huggingface" }> {
-  console.log(`[Worker] Using Hugging Face MusicGen`);
+  style: string
+): Promise<{ audioUrl: string; provider: "mureka" }> {
+  console.log(`[Worker] Using Mureka AI for song generation`);
 
-  const hfToken = process.env.HF_TOKEN;
-  if (!hfToken) {
-    throw new Error("HF_TOKEN not set");
+  const lyrics = buildBachataLyrics(prompt, style);
+  const murekaPrompt = buildMurekaPrompt(prompt, style);
+
+  const task = await startSongGeneration(lyrics, murekaPrompt, "auto");
+
+  const completed = await pollSongUntilDone(task.id, 300000, 5000);
+
+  if (!completed.choices || completed.choices.length === 0) {
+    throw new Error("Mureka returned no audio choices");
   }
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${hfToken}`,
-  };
+  const audioUrl = completed.choices[0].url;
+  console.log(`[Worker] Mureka audio URL: ${audioUrl}`);
+  console.log(`[Worker] Mureka audio duration: ${completed.choices[0].duration}s`);
 
-  const maxTokens = Math.min(Math.floor(duration * 50), 1500);
-
-  const response = await fetch(HF_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      inputs: prompt,
-      parameters: {
-        max_new_tokens: maxTokens,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[Worker] HF API error ${response.status}: ${errorText}`);
-
-    if (response.status === 503) {
-      let waitTime = 30;
-      try {
-        const parsed = JSON.parse(errorText);
-        if (parsed.estimated_time) waitTime = Math.ceil(parsed.estimated_time);
-      } catch {}
-      throw new Error(`Model is loading, please try again in ~${waitTime} seconds`);
-    }
-    throw new Error(`Hugging Face API error: ${response.status} - ${errorText}`);
-  }
-
-  const audioDir = path.join(process.cwd(), "public", "audio");
-  if (!fs.existsSync(audioDir)) {
-    fs.mkdirSync(audioDir, { recursive: true });
-  }
-
-  const filename = `hm_${crypto.randomBytes(8).toString("hex")}.wav`;
-  const filepath = path.join(audioDir, filename);
-
-  const buffer = Buffer.from(await response.arrayBuffer());
-  fs.writeFileSync(filepath, buffer);
-
-  console.log(`[Worker] HF audio saved: ${filepath} (${buffer.length} bytes)`);
-
-  return { audioUrl: `/audio/${filename}`, provider: "huggingface" };
+  return { audioUrl, provider: "mureka" };
 }
 
 export async function processMusicGeneration(
@@ -98,37 +66,48 @@ export async function processMusicGeneration(
     isBachata?: boolean;
     style?: string;
     duration?: number;
+    lyrics?: string;
   } = {}
 ): Promise<void> {
-  const { duration = 15 } = options;
+  const { duration = 15, style = "heart-mula", lyrics } = options;
 
   try {
     console.log(`[Worker] Starting music generation for song ${songId}`);
     console.log(`[Worker] Prompt: ${finalPrompt}`);
+    console.log(`[Worker] Style: ${style}`);
 
     await storage.updateSongStatus(songId, "processing");
 
     let result: { audioUrl: string; provider: string };
 
     try {
-      result = await generateWithReplicate(finalPrompt, duration);
+      if (lyrics) {
+        const murekaPrompt = buildMurekaPrompt(finalPrompt, style);
+        const task = await startSongGeneration(lyrics, murekaPrompt, "auto");
+        const completed = await pollSongUntilDone(task.id, 300000, 5000);
+        if (!completed.choices || completed.choices.length === 0) {
+          throw new Error("Mureka returned no audio choices");
+        }
+        result = { audioUrl: completed.choices[0].url, provider: "mureka" };
+      } else {
+        result = await generateWithMureka(finalPrompt, style);
+      }
     } catch (err: any) {
       const msg = err.message || "";
-      if (msg.includes("402") || msg.includes("401") || msg.includes("Insufficient") || msg.includes("Unauthenticated")) {
-        console.log(`[Worker] Replicate unavailable (${msg}), falling back to Hugging Face`);
+      console.log(`[Worker] Mureka failed: ${msg}`);
+
+      if (msg.includes("MUREKA_QUOTA_EXCEEDED") || msg.includes("MUREKA_AUTH_ERROR")) {
+        console.log(`[Worker] Mureka unavailable, falling back to Replicate`);
         try {
-          result = await generateWithHuggingFace(finalPrompt, Math.min(duration, 15));
-        } catch (hfErr: any) {
-          console.error(`[Worker] HF fallback also failed:`, hfErr.message);
-          const hfMsg = hfErr.message || "";
-          if (hfMsg.includes("404") || hfMsg.includes("410") || hfMsg.includes("HF_ENDPOINT_DEPRECATED")) {
+          result = await generateWithReplicate(finalPrompt, duration);
+        } catch (repErr: any) {
+          const repMsg = repErr.message || "";
+          if (repMsg.includes("402") || repMsg.includes("401") || repMsg.includes("Insufficient")) {
             throw new Error(
-              "Replicate needs credits (replicate.com/account/billing). Hugging Face free tier is currently unavailable."
+              "All music providers need credits. Add credits at platform.mureka.ai (Mureka) or replicate.com/account/billing (Replicate)"
             );
           }
-          throw new Error(
-            "Music generation failed. Add credits at replicate.com/account/billing"
-          );
+          throw repErr;
         }
       } else {
         throw err;
@@ -140,12 +119,7 @@ export async function processMusicGeneration(
     await storage.updateSongStatus(songId, "completed", result.audioUrl);
   } catch (err: any) {
     console.error(`[Worker] Music generation failed for song ${songId}:`, err);
-    let errorMessage = err.message || "Generation failed";
-    await storage.updateSongStatus(
-      songId,
-      "failed",
-      undefined,
-      errorMessage
-    );
+    const errorMessage = err.message || "Generation failed";
+    await storage.updateSongStatus(songId, "failed", undefined, errorMessage);
   }
 }

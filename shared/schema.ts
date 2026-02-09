@@ -91,6 +91,7 @@ export type GenerateSongRequest = {
   isBachata?: boolean;
   style?: string;
   duration?: number;
+  lyrics?: string;
 };
 
 export type GenerateLyricsRequest = {
