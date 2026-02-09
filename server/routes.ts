@@ -57,7 +57,6 @@ export async function registerRoutes(
         userId,
         title: input.prompt.slice(0, 50) + (input.prompt.length > 50 ? "..." : ""),
         prompt: finalPrompt,
-        status: "processing",
       });
 
       processMusicGeneration(song.id, finalPrompt, {
