@@ -8,6 +8,8 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
 });
 
+const HF_API_URL = "https://router.huggingface.co/hf-inference/models/facebook/musicgen-small";
+
 async function generateWithReplicate(
   prompt: string,
   duration: number
@@ -33,31 +35,30 @@ async function generateWithHuggingFace(
   prompt: string,
   duration: number
 ): Promise<{ audioUrl: string; provider: "huggingface" }> {
-  console.log(`[Worker] Using Hugging Face MusicGen (free tier)`);
+  console.log(`[Worker] Using Hugging Face MusicGen`);
 
   const hfToken = process.env.HF_TOKEN;
+  if (!hfToken) {
+    throw new Error("HF_TOKEN not set");
+  }
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "Authorization": `Bearer ${hfToken}`,
   };
-  if (hfToken) {
-    headers["Authorization"] = `Bearer ${hfToken}`;
-  }
 
   const maxTokens = Math.min(Math.floor(duration * 50), 1500);
 
-  const response = await fetch(
-    "https://api-inference.huggingface.co/models/facebook/musicgen-small",
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        inputs: prompt,
-        parameters: {
-          max_new_tokens: maxTokens,
-        },
-      }),
-    }
-  );
+  const response = await fetch(HF_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      inputs: prompt,
+      parameters: {
+        max_new_tokens: maxTokens,
+      },
+    }),
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -115,7 +116,20 @@ export async function processMusicGeneration(
       const msg = err.message || "";
       if (msg.includes("402") || msg.includes("401") || msg.includes("Insufficient") || msg.includes("Unauthenticated")) {
         console.log(`[Worker] Replicate unavailable (${msg}), falling back to Hugging Face`);
-        result = await generateWithHuggingFace(finalPrompt, Math.min(duration, 15));
+        try {
+          result = await generateWithHuggingFace(finalPrompt, Math.min(duration, 15));
+        } catch (hfErr: any) {
+          console.error(`[Worker] HF fallback also failed:`, hfErr.message);
+          const hfMsg = hfErr.message || "";
+          if (hfMsg.includes("404") || hfMsg.includes("410") || hfMsg.includes("HF_ENDPOINT_DEPRECATED")) {
+            throw new Error(
+              "Replicate needs credits (replicate.com/account/billing). Hugging Face free tier is currently unavailable."
+            );
+          }
+          throw new Error(
+            "Music generation failed. Add credits at replicate.com/account/billing"
+          );
+        }
       } else {
         throw err;
       }
@@ -127,13 +141,6 @@ export async function processMusicGeneration(
   } catch (err: any) {
     console.error(`[Worker] Music generation failed for song ${songId}:`, err);
     let errorMessage = err.message || "Generation failed";
-    if (errorMessage.includes("402") || errorMessage.includes("Insufficient credit")) {
-      errorMessage = "Both Replicate and Hugging Face generation failed. Please try again in a moment.";
-    } else if (errorMessage.includes("401") || errorMessage.includes("Unauthenticated")) {
-      errorMessage = "API authentication failed. Please check your API tokens.";
-    } else if (errorMessage.includes("Model is loading")) {
-      errorMessage = errorMessage;
-    }
     await storage.updateSongStatus(
       songId,
       "failed",
