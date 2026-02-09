@@ -6,6 +6,7 @@ import {
   buildBachataLyrics,
   buildMurekaPrompt,
 } from "../core/mureka_engine";
+import { generateWithElevenLabs } from "../core/elevenlabs_engine";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
@@ -13,6 +14,19 @@ import crypto from "crypto";
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
 });
+
+const AUDIO_DIR = path.join(process.cwd(), "public", "audio");
+if (!fs.existsSync(AUDIO_DIR)) {
+  fs.mkdirSync(AUDIO_DIR, { recursive: true });
+}
+
+function saveAudioFile(buffer: Buffer, extension: string = "mp3"): string {
+  const filename = `${crypto.randomUUID()}.${extension}`;
+  const filePath = path.join(AUDIO_DIR, filename);
+  fs.writeFileSync(filePath, buffer);
+  console.log(`[Worker] Saved audio file: ${filePath} (${buffer.length} bytes)`);
+  return `/audio/${filename}`;
+}
 
 async function generateWithReplicate(
   prompt: string,
@@ -80,37 +94,49 @@ export async function processMusicGeneration(
 
     let result: { audioUrl: string; provider: string };
 
-    try {
-      if (lyrics) {
-        const murekaPrompt = buildMurekaPrompt(finalPrompt, style);
-        const task = await startSongGeneration(lyrics, murekaPrompt, "auto");
-        const completed = await pollSongUntilDone(task.id, 300000, 5000);
-        if (!completed.choices || completed.choices.length === 0) {
-          throw new Error("Mureka returned no audio choices");
-        }
-        result = { audioUrl: completed.choices[0].url, provider: "mureka" };
-      } else {
-        result = await generateWithMureka(finalPrompt, style);
-      }
-    } catch (err: any) {
-      const msg = err.message || "";
-      console.log(`[Worker] Mureka failed: ${msg}`);
+    // Provider chain: ElevenLabs → Mureka → Replicate
+    const durationMs = Math.max(duration * 1000, 30000);
 
-      if (msg.includes("MUREKA_QUOTA_EXCEEDED") || msg.includes("MUREKA_AUTH_ERROR")) {
-        console.log(`[Worker] Mureka unavailable, falling back to Replicate`);
+    // 1. Try ElevenLabs (primary)
+    try {
+      console.log(`[Worker] Trying ElevenLabs Music (primary)...`);
+      const elResult = await generateWithElevenLabs(finalPrompt, style, {
+        lyrics,
+        durationMs,
+      });
+      const audioUrl = saveAudioFile(elResult.audioBuffer, "mp3");
+      result = { audioUrl, provider: "elevenlabs" };
+    } catch (elErr: any) {
+      const elMsg = elErr.message || "";
+      console.log(`[Worker] ElevenLabs failed: ${elMsg}`);
+
+      // 2. Try Mureka (secondary)
+      try {
+        console.log(`[Worker] Falling back to Mureka AI...`);
+        if (lyrics) {
+          const murekaPrompt = buildMurekaPrompt(finalPrompt, style);
+          const task = await startSongGeneration(lyrics, murekaPrompt, "auto");
+          const completed = await pollSongUntilDone(task.id, 300000, 5000);
+          if (!completed.choices || completed.choices.length === 0) {
+            throw new Error("Mureka returned no audio choices");
+          }
+          result = { audioUrl: completed.choices[0].url, provider: "mureka" };
+        } else {
+          result = await generateWithMureka(finalPrompt, style);
+        }
+      } catch (muErr: any) {
+        const muMsg = muErr.message || "";
+        console.log(`[Worker] Mureka failed: ${muMsg}`);
+
+        // 3. Try Replicate (last resort)
         try {
+          console.log(`[Worker] Falling back to Replicate...`);
           result = await generateWithReplicate(finalPrompt, duration);
         } catch (repErr: any) {
-          const repMsg = repErr.message || "";
-          if (repMsg.includes("402") || repMsg.includes("401") || repMsg.includes("Insufficient")) {
-            throw new Error(
-              "All music providers need credits. Add credits at platform.mureka.ai (Mureka) or replicate.com/account/billing (Replicate)"
-            );
-          }
-          throw repErr;
+          throw new Error(
+            `All music providers failed. ElevenLabs: ${elMsg.substring(0, 100)}. Mureka: ${muMsg.substring(0, 100)}. Replicate: ${repErr.message?.substring(0, 100)}`
+          );
         }
-      } else {
-        throw err;
       }
     }
 
