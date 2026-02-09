@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSongs } from "@/hooks/use-songs";
 import { useSongTracks, useSeparateStems, useUpdateTrack } from "@/hooks/use-tracks";
@@ -8,7 +8,8 @@ import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   LogOut, Disc, Play, Pause, Square, Volume2, VolumeX, Mic, Drum,
-  Guitar, Music, Loader2, Scissors, ArrowLeft, ChevronRight, Download
+  Guitar, Music, Loader2, Scissors, ArrowLeft, ChevronRight, Download,
+  Package
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import type { Track } from "@shared/schema";
 import WaveSurfer from "wavesurfer.js";
+import JSZip from "jszip";
 
 const STEM_ICONS: Record<string, typeof Mic> = {
   vocals: Mic,
@@ -34,12 +36,14 @@ const STEM_COLORS: Record<string, string> = {
 function TrackStrip({
   track,
   isPlaying,
+  isSoloedByOther,
   onToggleMute,
   onToggleSolo,
   onVolumeChange,
 }: {
   track: Track;
   isPlaying: boolean;
+  isSoloedByOther: boolean;
   onToggleMute: () => void;
   onToggleSolo: () => void;
   onVolumeChange: (vol: number) => void;
@@ -49,6 +53,8 @@ function TrackStrip({
   const [waveReady, setWaveReady] = useState(false);
   const Icon = STEM_ICONS[track.type] || Music;
   const color = STEM_COLORS[track.type] || "#00F3FF";
+
+  const effectivelyMuted = track.isMuted || isSoloedByOther;
 
   useEffect(() => {
     if (!waveRef.current || !track.audioUrl || track.status !== "completed") return;
@@ -78,9 +84,9 @@ function TrackStrip({
 
   useEffect(() => {
     if (!wsRef.current || !waveReady) return;
-    const vol = track.isMuted ? 0 : (track.volume ?? 100) / 100;
+    const vol = effectivelyMuted ? 0 : (track.volume ?? 100) / 100;
     wsRef.current.setVolume(vol);
-  }, [track.isMuted, track.volume, waveReady]);
+  }, [effectivelyMuted, track.volume, waveReady]);
 
   useEffect(() => {
     if (!wsRef.current || !waveReady) return;
@@ -95,7 +101,13 @@ function TrackStrip({
   const isFailed = track.status === "failed";
 
   return (
-    <Card className="p-3 md:p-4 border-white/5 bg-card" data-testid={`track-strip-${track.type}`}>
+    <Card
+      className={cn(
+        "p-3 md:p-4 border-white/5 bg-card transition-opacity duration-200",
+        isSoloedByOther && !track.isSolo && "opacity-40"
+      )}
+      data-testid={`track-strip-${track.type}`}
+    >
       <div className="flex items-center gap-3 md:gap-4">
         <div
           className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
@@ -117,6 +129,11 @@ function TrackStrip({
             )}
             {isFailed && (
               <span className="text-[10px] text-destructive">Failed</span>
+            )}
+            {effectivelyMuted && track.status === "completed" && (
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                {isSoloedByOther ? "Solo Off" : "Muted"}
+              </span>
             )}
           </div>
 
@@ -150,7 +167,7 @@ function TrackStrip({
           <Button
             size="sm"
             variant={track.isMuted ? "default" : "outline"}
-            className={cn("text-xs gap-1", track.isMuted && "bg-destructive/80 hover:bg-destructive")}
+            className={cn("text-xs gap-1", track.isMuted && "bg-destructive/80")}
             onClick={onToggleMute}
             data-testid={`button-mute-${track.type}`}
           >
@@ -160,7 +177,7 @@ function TrackStrip({
           <Button
             size="sm"
             variant={track.isSolo ? "default" : "outline"}
-            className={cn("text-xs gap-1", track.isSolo && "bg-yellow-600 hover:bg-yellow-700")}
+            className={cn("text-xs gap-1", track.isSolo && "bg-yellow-600")}
             onClick={onToggleSolo}
             data-testid={`button-solo-${track.type}`}
           >
@@ -181,9 +198,9 @@ function TrackStrip({
           </div>
           {track.audioUrl && (
             <Button
-              size="icon"
-              variant="ghost"
-              className="ml-auto"
+              size="sm"
+              variant="outline"
+              className="gap-1 text-xs"
               onClick={() => {
                 const link = document.createElement("a");
                 link.href = track.audioUrl!;
@@ -194,7 +211,8 @@ function TrackStrip({
               }}
               data-testid={`button-download-${track.type}`}
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-3 h-3" />
+              WAV
             </Button>
           )}
         </div>
@@ -210,6 +228,7 @@ export default function StudioPage() {
   const [selectedSongId, setSelectedSongId] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showSongList, setShowSongList] = useState(true);
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const { data: songTracks, isLoading: tracksLoading } = useSongTracks(selectedSongId);
   const { mutate: separateStems, isPending: isSeparating } = useSeparateStems();
   const { mutate: updateTrack } = useUpdateTrack();
@@ -218,6 +237,9 @@ export default function StudioPage() {
   const selectedSong = completedSongs.find((s) => s.id === selectedSongId);
   const hasTracks = songTracks && songTracks.length > 0;
   const allTracksReady = songTracks?.every((t) => t.status === "completed") ?? false;
+  const completedTracks = songTracks?.filter((t) => t.status === "completed" && t.audioUrl) ?? [];
+
+  const anySoloed = songTracks?.some((t) => t.isSolo) ?? false;
 
   if (!user) return null;
 
@@ -238,6 +260,44 @@ export default function StudioPage() {
 
   const handleVolumeChange = (track: Track, vol: number) => {
     updateTrack({ id: track.id, volume: vol });
+  };
+
+  const handleDownloadAll = async () => {
+    if (completedTracks.length === 0 || !selectedSong) return;
+    setIsDownloadingAll(true);
+
+    try {
+      const zip = new JSZip();
+      const songName = selectedSong.title.replace(/[^a-zA-Z0-9\s-]/g, "").trim() || "stems";
+
+      for (const track of completedTracks) {
+        if (!track.audioUrl) continue;
+        const response = await fetch(track.audioUrl);
+        const blob = await response.blob();
+        zip.file(`${songName}_${track.name}.wav`, blob);
+      }
+
+      const content = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(content);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${songName}_stems.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download stems:", err);
+    } finally {
+      setIsDownloadingAll(false);
+    }
+  };
+
+  const isTrackAudible = (track: Track): boolean => {
+    if (track.status !== "completed") return false;
+    if (track.isMuted) return false;
+    if (anySoloed && !track.isSolo) return false;
+    return true;
   };
 
   return (
@@ -280,7 +340,6 @@ export default function StudioPage() {
       </header>
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Song Picker Panel */}
         <div
           className={cn(
             "lg:w-80 lg:border-r border-white/5 flex flex-col bg-black/30",
@@ -341,7 +400,6 @@ export default function StudioPage() {
           </ScrollArea>
         </div>
 
-        {/* Multitrack Panel */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {!selectedSong ? (
             <div className="flex-1 flex items-center justify-center p-8">
@@ -357,7 +415,6 @@ export default function StudioPage() {
             </div>
           ) : (
             <>
-              {/* Song Header */}
               <div className="p-4 border-b border-white/5 flex items-center gap-3 flex-wrap">
                 <Button
                   variant="ghost"
@@ -419,7 +476,6 @@ export default function StudioPage() {
                 )}
               </div>
 
-              {/* Tracks */}
               <ScrollArea className="flex-1 p-4">
                 {tracksLoading ? (
                   <div className="flex justify-center p-8">
@@ -461,12 +517,41 @@ export default function StudioPage() {
                       <TrackStrip
                         key={track.id}
                         track={track}
-                        isPlaying={isPlaying && !track.isMuted && track.status === "completed"}
+                        isPlaying={isPlaying && isTrackAudible(track)}
+                        isSoloedByOther={anySoloed && !track.isSolo}
                         onToggleMute={() => handleToggleMute(track)}
                         onToggleSolo={() => handleToggleSolo(track)}
                         onVolumeChange={(vol) => handleVolumeChange(track, vol)}
                       />
                     ))}
+
+                    {completedTracks.length > 0 && (
+                      <Card className="p-4 border-white/5 bg-card">
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <div>
+                            <h3 className="text-sm font-bold" data-testid="text-download-section-title">
+                              Download Stems
+                            </h3>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {completedTracks.length} tracks available in WAV format
+                            </p>
+                          </div>
+                          <Button
+                            onClick={handleDownloadAll}
+                            disabled={isDownloadingAll}
+                            className="gap-2"
+                            data-testid="button-download-all-stems"
+                          >
+                            {isDownloadingAll ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Package className="w-4 h-4" />
+                            )}
+                            {isDownloadingAll ? "Creating ZIP..." : "Download All (ZIP)"}
+                          </Button>
+                        </div>
+                      </Card>
+                    )}
                   </motion.div>
                 )}
               </ScrollArea>
