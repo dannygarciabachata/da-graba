@@ -38,6 +38,7 @@ export const lyrics = pgTable("lyrics", {
 // === RELATIONS ===
 export const songsRelations = relations(songs, ({ many }) => ({
   lyrics: many(lyrics),
+  tracks: many(tracks),
 }));
 
 export const lyricsRelations = relations(lyrics, ({ one }) => ({
@@ -60,6 +61,40 @@ export const insertLyricsSchema = createInsertSchema(lyrics).omit({
   id: true, 
   createdAt: true 
 });
+
+// === TRACKS TABLE (Individual stems per song) ===
+export const tracks = pgTable("tracks", {
+  id: serial("id").primaryKey(),
+  songId: integer("song_id").notNull().references(() => songs.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  audioUrl: text("audio_url"),
+  status: text("status").notNull().default("pending"),
+  error: text("error"),
+  volume: integer("volume").default(100),
+  isMuted: boolean("is_muted").default(false),
+  isSolo: boolean("is_solo").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const tracksRelations = relations(tracks, ({ one }) => ({
+  song: one(songs, {
+    fields: [tracks.songId],
+    references: [songs.id],
+  }),
+}));
+
+export const insertTrackSchema = createInsertSchema(tracks).omit({
+  id: true,
+  createdAt: true,
+  status: true,
+  audioUrl: true,
+  error: true,
+});
+
+export type Track = typeof tracks.$inferSelect;
+export type InsertTrack = z.infer<typeof insertTrackSchema>;
 
 // === QUIZ TABLE ===
 export const quizResults = pgTable("quiz_results", {

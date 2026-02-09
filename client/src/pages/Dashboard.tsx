@@ -6,16 +6,18 @@ import { AudioPlayer } from "@/components/AudioPlayer";
 import { SongHistory } from "@/components/SongHistory";
 import { BachataQuiz } from "@/components/BachataQuiz";
 import { Button } from "@/components/ui/button";
-import { LogOut, Disc, Music, PenLine, HelpCircle, Headphones, Sparkles } from "lucide-react";
+import { LogOut, Disc, Music, PenLine, HelpCircle, Headphones, Sparkles, Scissors } from "lucide-react";
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 
 type MobileTab = "studio" | "player" | "lyrics" | "quiz";
 type RightPanelTab = "lyrics" | "quiz";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
+  const [, setLocation] = useLocation();
   const [currentSong, setCurrentSong] = useState<any>(null);
   const [rightTab, setRightTab] = useState<RightPanelTab>("lyrics");
   const [mobileTab, setMobileTab] = useState<MobileTab>("studio");
@@ -28,6 +30,8 @@ export default function Dashboard() {
     { id: "lyrics" as MobileTab, label: "Lyrics", icon: PenLine },
     { id: "quiz" as MobileTab, label: "Quiz", icon: HelpCircle },
   ];
+
+  const handleOpenMultitrackStudio = () => setLocation("/studio");
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans overflow-hidden">
@@ -43,6 +47,16 @@ export default function Dashboard() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs hidden md:flex"
+            onClick={() => setLocation("/studio")}
+            data-testid="button-open-studio"
+          >
+            <Scissors className="h-3.5 w-3.5" />
+            Multitrack Studio
+          </Button>
           <div className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-full bg-white/5 border border-white/5">
             <Avatar className="h-6 w-6">
               <AvatarImage src={user.profileImageUrl || undefined} />

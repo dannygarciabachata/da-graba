@@ -1,9 +1,10 @@
 import { useSongs, useDeleteSong } from "@/hooks/use-songs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Loader2, Play, Trash2, Clock, AlertCircle } from "lucide-react";
+import { Loader2, Play, Trash2, Clock, AlertCircle, Scissors } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 
 interface SongHistoryProps {
   currentSongId: number | null;
@@ -13,6 +14,7 @@ interface SongHistoryProps {
 export function SongHistory({ currentSongId, onSelectSong }: SongHistoryProps) {
   const { data: songs, isLoading } = useSongs();
   const { mutate: deleteSong } = useDeleteSong();
+  const [, setLocation] = useLocation();
 
   if (isLoading) {
     return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-muted-foreground" /></div>;
@@ -43,18 +45,34 @@ export function SongHistory({ currentSongId, onSelectSong }: SongHistoryProps) {
           >
             <div className="flex justify-between items-start mb-2 gap-2">
               <h4 className="font-medium text-sm line-clamp-2 pr-2 flex-1">{song.title || song.prompt}</h4>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7 text-muted-foreground flex-shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteSong(song.id);
-                }}
-                data-testid={`button-delete-song-${song.id}`}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {song.status === 'completed' && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-primary md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLocation("/studio");
+                    }}
+                    data-testid={`button-studio-song-${song.id}`}
+                  >
+                    <Scissors className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-muted-foreground flex-shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteSong(song.id);
+                  }}
+                  data-testid={`button-delete-song-${song.id}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
             
             <div className="flex items-center justify-between text-xs text-muted-foreground">

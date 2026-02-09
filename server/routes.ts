@@ -8,6 +8,7 @@ import { processMusicGeneration } from "./workers/music_tasks";
 import { generateCreativeLyrics } from "./core/antigravity_engine";
 import { buildMusicGenPrompt, PROMPT_VERSIONS } from "./core/prompt_engine";
 import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engine";
+import { processStemSeparation } from "./core/stems_engine";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -107,6 +108,73 @@ export async function registerRoutes(
     if (song.userId !== userId) return res.sendStatus(403);
     await storage.deleteSong(song.id);
     res.sendStatus(204);
+  });
+
+  // ========== TRACKS / STEMS ROUTES ==========
+
+  app.post("/api/songs/:id/stems", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const songId = Number(req.params.id);
+    const song = await storage.getSong(songId);
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    if (song.status !== "completed" || !song.audioUrl) {
+      return res.status(400).json({ message: "Song must be completed with audio before stem separation" });
+    }
+
+    const existingTracks = await storage.getTracksBySongId(songId);
+    if (existingTracks.length > 0) {
+      return res.status(400).json({ message: "Stems already exist for this song", tracks: existingTracks });
+    }
+
+    processStemSeparation(songId, song.audioUrl, userId);
+    res.status(202).json({ message: "Stem separation started", songId });
+  });
+
+  app.get("/api/songs/:id/tracks", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const songId = Number(req.params.id);
+    const song = await storage.getSong(songId);
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId && !song.isPublic) return res.sendStatus(403);
+    const songTracks = await storage.getTracksBySongId(songId);
+    res.json(songTracks);
+  });
+
+  app.get("/api/tracks", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const userTracks = await storage.getUserTracks(userId);
+    res.json(userTracks);
+  });
+
+  const trackSettingsSchema = z.object({
+    volume: z.number().min(0).max(100).optional(),
+    isMuted: z.boolean().optional(),
+    isSolo: z.boolean().optional(),
+  });
+
+  app.patch("/api/tracks/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const trackId = Number(req.params.id);
+
+    const track = await storage.getTrack(trackId);
+    if (!track) return res.sendStatus(404);
+    if (track.userId !== userId) return res.sendStatus(403);
+
+    try {
+      const settings = trackSettingsSchema.parse(req.body);
+      const updated = await storage.updateTrackSettings(trackId, settings);
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Failed to update track settings" });
+    }
   });
 
   // ========== LYRICS ROUTES ==========

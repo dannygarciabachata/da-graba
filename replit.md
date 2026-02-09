@@ -18,18 +18,23 @@ AI-powered music generation platform tailored for Bachata music by Danny Garcia.
 - **music_engine.ts** - Multi-provider orchestrator
 - **antigravity_engine.ts** - Creative AI engine for lyrics and full arrangement configs via OpenAI
 - **quiz_engine.ts** - Bachata knowledge quiz system (static bank + AI-generated questions)
+- **stems_engine.ts** - AI stem separation using Replicate Demucs (splits songs into vocals, drums, bass, other)
 
 ## Workers (server/workers/)
 - **music_tasks.ts** - Background async music generation: OpenAI creates lyrics + enhanced prompt, then ElevenLabs → Mureka → Replicate for audio
 
 ## Key Features
 - "Heart Mula" branded music engine with style presets selector
+- Dual generation modes: Aggregate (quick title+genre+style) and Standard (detailed prompt)
 - Bachata Mode auto-detection (keywords like "bachata", "bongo", "guira" auto-force Dominican instruments)
 - 6 style presets: Heart Mula Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana
+- Multitrack Studio: AI stem separation (Replicate Demucs) splits songs into Vocals, Drums, Bass, Melody
+- Individual track controls: volume, mute, solo per stem with waveform visualization
 - AI lyrics generator (romantic, dance, heartbreak styles) with Frank Reyes/Romeo Santos influences
 - Bachata Quiz with 10-question knowledge bank (history, instruments, artists, rhythm, culture)
 - Waveform audio player (wavesurfer.js)
 - Song history with polling for processing status
+- Mobile-first responsive design with bottom tab navigation
 - User authentication via Replit Auth
 
 ## Project Structure
@@ -37,12 +42,14 @@ AI-powered music generation platform tailored for Bachata music by Danny Garcia.
 client/src/
   pages/Landing.tsx              - Landing page with Heart Mula branding
   pages/Dashboard.tsx            - Main dashboard with Lyrics/Quiz tabs
-  components/MusicGenerator.tsx  - Heart Mula music generation panel
+  pages/Studio.tsx               - Multitrack studio with stem separation
+  components/MusicGenerator.tsx  - Heart Mula music generation panel (Aggregate + Standard modes)
   components/LyricsGenerator.tsx - Lyrics AI editor
   components/AudioPlayer.tsx     - Waveform player
-  components/SongHistory.tsx     - Track history list
+  components/SongHistory.tsx     - Track history list with Studio link
   components/BachataQuiz.tsx     - Interactive Bachata quiz
   hooks/use-songs.ts             - Song CRUD hooks
+  hooks/use-tracks.ts            - Track/stem CRUD hooks
   hooks/use-lyrics.ts            - Lyrics generation hook
   hooks/use-auth.ts              - Auth state hook
 
@@ -52,15 +59,16 @@ server/
     music_engine.ts              - MusicGen wrapper
     antigravity_engine.ts        - Creative AI (lyrics + arrangements)
     quiz_engine.ts               - Quiz logic & question bank
+    stems_engine.ts              - AI stem separation (Replicate Demucs)
   workers/
     music_tasks.ts               - Background music generation
-  routes.ts                      - API routes (music, lyrics, quiz, auth)
+  routes.ts                      - API routes (music, lyrics, quiz, tracks, auth)
   storage.ts                     - Database storage layer (IStorage interface)
   db.ts                          - Database connection
   replit_integrations/           - Auth, chat modules
 
 shared/
-  schema.ts                      - Drizzle schema (songs, lyrics, quiz_results, users, sessions)
+  schema.ts                      - Drizzle schema (songs, tracks, lyrics, quiz_results, users, sessions)
   routes.ts                      - API contract with Zod validation
 ```
 
@@ -76,6 +84,10 @@ shared/
 - `GET /api/songs` - List user's songs
 - `GET /api/songs/:id` - Get single song
 - `DELETE /api/songs/:id` - Delete song
+- `POST /api/songs/:id/stems` - Trigger AI stem separation (Replicate Demucs) for a completed song
+- `GET /api/songs/:id/tracks` - Get individual tracks/stems for a song
+- `GET /api/tracks` - List all user's tracks
+- `PATCH /api/tracks/:id` - Update track settings (volume, mute, solo)
 - `POST /api/lyrics/generate` - Generate lyrics via Heart Mula AI
 - `GET /api/quiz` - Get random quiz questions (supports ?category=&count=)
 - `POST /api/quiz/submit` - Submit quiz answers (validated with Zod)
