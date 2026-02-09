@@ -20,7 +20,7 @@ AI-powered music generation platform tailored for Bachata music by Danny Garcia.
 - **quiz_engine.ts** - Bachata knowledge quiz system (static bank + AI-generated questions)
 
 ## Workers (server/workers/)
-- **music_tasks.ts** - Background async music generation with status tracking
+- **music_tasks.ts** - Background async music generation: OpenAI creates lyrics + enhanced prompt, then ElevenLabs → Mureka → Replicate for audio
 
 ## Key Features
 - "Heart Mula" branded music engine with style presets selector

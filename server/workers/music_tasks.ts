@@ -1,12 +1,13 @@
 import Replicate from "replicate";
 import { storage } from "../storage";
+import { generateWithElevenLabs } from "../core/elevenlabs_engine";
 import {
   startSongGeneration,
   pollSongUntilDone,
   buildBachataLyrics,
   buildMurekaPrompt,
 } from "../core/mureka_engine";
-import { generateWithElevenLabs } from "../core/elevenlabs_engine";
+import { generateCreativeLyrics } from "../core/antigravity_engine";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
@@ -40,11 +41,40 @@ async function downloadAndSaveAudio(remoteUrl: string): Promise<string> {
   return saveAudioFile(buffer, ext);
 }
 
+function mapStyleToLyricsStyle(style: string): "romantic" | "dance" | "heartbreak" {
+  if (style === "bachata-dance") return "dance";
+  if (style === "bachata-bolero") return "heartbreak";
+  return "romantic";
+}
+
+async function generateSmartPrompt(
+  finalPrompt: string,
+  style: string,
+  userLyrics?: string
+): Promise<{ enhancedPrompt: string; generatedLyrics: string }> {
+  console.log(`[Worker] Using OpenAI to craft lyrics for the song...`);
+
+  let generatedLyrics = userLyrics || "";
+
+  if (!userLyrics) {
+    try {
+      const lyricsStyle = mapStyleToLyricsStyle(style);
+      generatedLyrics = await generateCreativeLyrics(finalPrompt, lyricsStyle);
+      console.log(`[Worker] OpenAI generated ${generatedLyrics.length} chars of lyrics`);
+    } catch (err: any) {
+      console.log(`[Worker] OpenAI lyrics generation failed: ${err.message}, using template lyrics`);
+      generatedLyrics = "";
+    }
+  }
+
+  return { enhancedPrompt: finalPrompt, generatedLyrics };
+}
+
 async function generateWithReplicate(
   prompt: string,
   duration: number
 ): Promise<{ audioUrl: string; provider: "replicate" }> {
-  console.log(`[Worker] Trying Replicate MusicGen...`);
+  console.log(`[Worker] Generating audio with Replicate MusicGen...`);
 
   const output = await replicate.run(
     "meta/musicgen:b05b1dff1d8c6dc63d14b0cdb42135378dcb87f6373b0d3d341ede46e59e2b38",
@@ -61,30 +91,6 @@ async function generateWithReplicate(
   return { audioUrl, provider: "replicate" };
 }
 
-async function generateWithMureka(
-  prompt: string,
-  style: string
-): Promise<{ audioUrl: string; provider: "mureka" }> {
-  console.log(`[Worker] Using Mureka AI for song generation`);
-
-  const lyrics = buildBachataLyrics(prompt, style);
-  const murekaPrompt = buildMurekaPrompt(prompt, style);
-
-  const task = await startSongGeneration(lyrics, murekaPrompt, "auto");
-
-  const completed = await pollSongUntilDone(task.id, 300000, 5000);
-
-  if (!completed.choices || completed.choices.length === 0) {
-    throw new Error("Mureka returned no audio choices");
-  }
-
-  const audioUrl = completed.choices[0].url;
-  console.log(`[Worker] Mureka audio URL: ${audioUrl}`);
-  console.log(`[Worker] Mureka audio duration: ${completed.choices[0].duration}s`);
-
-  return { audioUrl, provider: "mureka" };
-}
-
 export async function processMusicGeneration(
   songId: number,
   finalPrompt: string,
@@ -95,70 +101,72 @@ export async function processMusicGeneration(
     lyrics?: string;
   } = {}
 ): Promise<void> {
-  const { duration = 15, style = "heart-mula", lyrics } = options;
+  const { duration = 30, style = "heart-mula", lyrics } = options;
 
   try {
     console.log(`[Worker] Starting music generation for song ${songId}`);
-    console.log(`[Worker] Prompt: ${finalPrompt}`);
+    console.log(`[Worker] User prompt: ${finalPrompt}`);
     console.log(`[Worker] Style: ${style}`);
 
     await storage.updateSongStatus(songId, "processing");
 
+    const { enhancedPrompt, generatedLyrics } = await generateSmartPrompt(
+      finalPrompt,
+      style,
+      lyrics
+    );
+
+    console.log(`[Worker] Enhanced prompt: ${enhancedPrompt.substring(0, 200)}...`);
+    if (generatedLyrics) {
+      console.log(`[Worker] Lyrics ready (${generatedLyrics.length} chars)`);
+    }
+
     let result: { audioUrl: string; provider: string };
 
-    // Provider chain: ElevenLabs → Mureka → Replicate
-    const durationMs = Math.max(duration * 1000, 30000);
-
-    // 1. Try ElevenLabs (primary)
+    // 1. Try ElevenLabs (full song with vocals + lyrics)
     try {
       console.log(`[Worker] Trying ElevenLabs Music (primary)...`);
       const elResult = await generateWithElevenLabs(finalPrompt, style, {
-        lyrics,
-        durationMs,
+        lyrics: generatedLyrics || undefined,
+        durationMs: Math.max(duration * 1000, 30000),
       });
       const audioUrl = saveAudioFile(elResult.audioBuffer, "mp3");
       result = { audioUrl, provider: "elevenlabs" };
     } catch (elErr: any) {
       const elMsg = elErr.message || "";
-      console.log(`[Worker] ElevenLabs failed: ${elMsg}`);
+      console.log(`[Worker] ElevenLabs unavailable: ${elMsg.substring(0, 120)}`);
 
-      // 2. Try Mureka (secondary)
+      // 2. Try Mureka (full song with vocals)
       try {
-        console.log(`[Worker] Falling back to Mureka AI...`);
-        let murekaResult: { audioUrl: string; provider: string };
-        if (lyrics) {
-          const murekaPrompt = buildMurekaPrompt(finalPrompt, style);
-          const task = await startSongGeneration(lyrics, murekaPrompt, "auto");
-          const completed = await pollSongUntilDone(task.id, 300000, 5000);
-          if (!completed.choices || completed.choices.length === 0) {
-            throw new Error("Mureka returned no audio choices");
-          }
-          murekaResult = { audioUrl: completed.choices[0].url, provider: "mureka" };
-        } else {
-          murekaResult = await generateWithMureka(finalPrompt, style);
+        console.log(`[Worker] Trying Mureka AI (secondary)...`);
+        const murekaLyrics = generatedLyrics || buildBachataLyrics(finalPrompt, style);
+        const murekaPrompt = buildMurekaPrompt(finalPrompt, style);
+        const task = await startSongGeneration(murekaLyrics, murekaPrompt, "auto");
+        const completed = await pollSongUntilDone(task.id, 300000, 5000);
+        if (!completed.choices || completed.choices.length === 0) {
+          throw new Error("Mureka returned no audio choices");
         }
-        const localMurekaUrl = await downloadAndSaveAudio(murekaResult.audioUrl);
-        result = { audioUrl: localMurekaUrl, provider: "mureka" };
+        const localUrl = await downloadAndSaveAudio(completed.choices[0].url);
+        result = { audioUrl: localUrl, provider: "mureka" };
       } catch (muErr: any) {
         const muMsg = muErr.message || "";
-        console.log(`[Worker] Mureka failed: ${muMsg}`);
+        console.log(`[Worker] Mureka unavailable: ${muMsg.substring(0, 120)}`);
 
-        // 3. Try Replicate (last resort)
+        // 3. Try Replicate (instrumental with OpenAI-enhanced prompt)
         try {
-          console.log(`[Worker] Falling back to Replicate...`);
-          const repResult = await generateWithReplicate(finalPrompt, duration);
-          const localRepUrl = await downloadAndSaveAudio(repResult.audioUrl);
-          result = { audioUrl: localRepUrl, provider: "replicate" };
+          console.log(`[Worker] Using Replicate MusicGen with AI-enhanced prompt...`);
+          const repResult = await generateWithReplicate(enhancedPrompt, duration);
+          const localUrl = await downloadAndSaveAudio(repResult.audioUrl);
+          result = { audioUrl: localUrl, provider: "replicate" };
         } catch (repErr: any) {
           throw new Error(
-            `All music providers failed. ElevenLabs: ${elMsg.substring(0, 100)}. Mureka: ${muMsg.substring(0, 100)}. Replicate: ${repErr.message?.substring(0, 100)}`
+            `All music providers failed. ElevenLabs: ${elMsg.substring(0, 80)}. Mureka: ${muMsg.substring(0, 80)}. Replicate: ${repErr.message?.substring(0, 80)}`
           );
         }
       }
     }
 
     console.log(`[Worker] Music generated via ${result.provider} for song ${songId}: ${result.audioUrl}`);
-
     await storage.updateSongStatus(songId, "completed", result.audioUrl);
   } catch (err: any) {
     console.error(`[Worker] Music generation failed for song ${songId}:`, err);
