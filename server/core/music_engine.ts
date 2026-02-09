@@ -35,10 +35,10 @@ export async function generateMusic(
   console.log(`[MusicEngine] Config:`, JSON.stringify(config, null, 2));
 
   const output = await replicate.run(
-    "meta/musicgen-large:1a581232847c94313f8c85848c41463e26466f8e77c5952d7e97f0a92e1062b8",
+    "meta/musicgen:b05b1dff1d8c6dc63d14b0cdb42135378dcb87f6373b0d3d341ede46e59e2b38",
     {
       input: {
-        model_version: "large",
+        model_version: "stereo-melody-large",
         prompt: finalPrompt,
         duration,
       },

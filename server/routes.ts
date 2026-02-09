@@ -92,12 +92,15 @@ export async function registerRoutes(
     const userId = (req.user as any).claims.sub;
 
     try {
+      console.log(`[Lyrics] Generating lyrics for user ${userId}`, req.body);
       const input = api.lyrics.generate.input.parse(req.body);
 
       const lyricsContent = await generateCreativeLyrics(
         input.theme,
         input.style as "romantic" | "dance" | "heartbreak"
       );
+
+      console.log(`[Lyrics] Generated ${lyricsContent.length} chars of lyrics`);
 
       const lyric = await storage.createLyric({
         userId,
@@ -108,12 +111,12 @@ export async function registerRoutes(
       });
 
       res.json(lyric);
-    } catch (err) {
+    } catch (err: any) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
       }
-      console.error(err);
-      res.status(500).json({ message: "Internal server error" });
+      console.error("[Lyrics] Error:", err.message || err);
+      res.status(500).json({ message: err.message || "Internal server error" });
     }
   });
 
