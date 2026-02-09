@@ -59,6 +59,22 @@ export const insertLyricsSchema = createInsertSchema(lyrics).omit({
   createdAt: true 
 });
 
+// === QUIZ TABLE ===
+export const quizResults = pgTable("quiz_results", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  score: integer("score").notNull(),
+  total: integer("total").notNull(),
+  percentage: integer("percentage").notNull(),
+  category: text("category"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertQuizResultSchema = createInsertSchema(quizResults).omit({
+  id: true,
+  createdAt: true,
+});
+
 // === EXPLICIT API CONTRACT TYPES ===
 
 // Base types
@@ -66,16 +82,25 @@ export type Song = typeof songs.$inferSelect;
 export type InsertSong = z.infer<typeof insertSongSchema>;
 export type Lyric = typeof lyrics.$inferSelect;
 export type InsertLyric = z.infer<typeof insertLyricsSchema>;
+export type QuizResult = typeof quizResults.$inferSelect;
+export type InsertQuizResult = z.infer<typeof insertQuizResultSchema>;
 
 // Request types
 export type GenerateSongRequest = {
   prompt: string;
-  isBachata?: boolean; // If true, force bachata prompt injection
+  isBachata?: boolean;
+  style?: string;
+  duration?: number;
 };
 
 export type GenerateLyricsRequest = {
   theme: string;
   style?: "romantic" | "dance" | "heartbreak";
+};
+
+export type SubmitQuizRequest = {
+  answers: Record<number, number>;
+  category?: string;
 };
 
 // Response types

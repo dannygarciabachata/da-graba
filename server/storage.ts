@@ -1,30 +1,30 @@
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 import { 
-  songs, lyrics, 
+  songs, lyrics, quizResults,
   type Song, type InsertSong, 
-  type Lyric, type InsertLyric 
+  type Lyric, type InsertLyric,
+  type QuizResult, type InsertQuizResult
 } from "@shared/schema";
 
-// Re-export auth/chat storage
 export { authStorage } from "./replit_integrations/auth/storage";
 export { chatStorage } from "./replit_integrations/chat/storage";
 
 export interface IStorage {
-  // Songs
   createSong(song: InsertSong): Promise<Song>;
   getSong(id: number): Promise<Song | undefined>;
   getUserSongs(userId: string): Promise<Song[]>;
   updateSongStatus(id: number, status: string, audioUrl?: string, error?: string): Promise<Song>;
   deleteSong(id: number): Promise<void>;
 
-  // Lyrics
   createLyric(lyric: InsertLyric): Promise<Lyric>;
   getLyricsBySongId(songId: number): Promise<Lyric[]>;
+
+  saveQuizResult(result: InsertQuizResult): Promise<QuizResult>;
+  getUserQuizResults(userId: string): Promise<QuizResult[]>;
 }
 
 export class DatabaseStorage implements IStorage {
-  // Songs
   async createSong(insertSong: InsertSong): Promise<Song> {
     const [song] = await db.insert(songs).values(insertSong).returning();
     return song;
@@ -46,11 +46,7 @@ export class DatabaseStorage implements IStorage {
   async updateSongStatus(id: number, status: string, audioUrl?: string, error?: string): Promise<Song> {
     const [updated] = await db
       .update(songs)
-      .set({ 
-        status, 
-        audioUrl, 
-        error 
-      })
+      .set({ status, audioUrl, error })
       .where(eq(songs.id, id))
       .returning();
     return updated;
@@ -60,7 +56,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(songs).where(eq(songs.id, id));
   }
 
-  // Lyrics
   async createLyric(insertLyric: InsertLyric): Promise<Lyric> {
     const [lyric] = await db.insert(lyrics).values(insertLyric).returning();
     return lyric;
@@ -72,6 +67,19 @@ export class DatabaseStorage implements IStorage {
       .from(lyrics)
       .where(eq(lyrics.songId, songId))
       .orderBy(desc(lyrics.createdAt));
+  }
+
+  async saveQuizResult(result: InsertQuizResult): Promise<QuizResult> {
+    const [saved] = await db.insert(quizResults).values(result).returning();
+    return saved;
+  }
+
+  async getUserQuizResults(userId: string): Promise<QuizResult[]> {
+    return await db
+      .select()
+      .from(quizResults)
+      .where(eq(quizResults.userId, userId))
+      .orderBy(desc(quizResults.createdAt));
   }
 }
 
