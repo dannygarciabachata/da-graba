@@ -9,6 +9,11 @@ import { generateCreativeLyrics } from "./core/antigravity_engine";
 import { buildMusicGenPrompt, PROMPT_VERSIONS } from "./core/prompt_engine";
 import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engine";
 import { processStemSeparation } from "./core/stems_engine";
+import { processHummingToMusic } from "./workers/sample_tasks";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { v4 as uuidv4 } from "uuid";
 
 async function recoverStuckSongs() {
   try {
@@ -287,6 +292,211 @@ export async function registerRoutes(
 
   app.get("/api/quiz/styles", (_req, res) => {
     res.json(Object.keys(PROMPT_VERSIONS));
+  });
+
+  // ========== SAMPLE LAB ROUTES ==========
+
+  const audioDir = path.join(process.cwd(), "public", "audio");
+  if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
+
+  const upload = multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, audioDir),
+      filename: (_req, _file, cb) => {
+        const ext = path.extname(_file.originalname) || ".wav";
+        cb(null, `${uuidv4()}${ext}`);
+      },
+    }),
+    limits: { fileSize: 50 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const allowed = [".wav", ".mp3", ".ogg", ".webm", ".m4a", ".flac"];
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (allowed.includes(ext) || file.mimetype.startsWith("audio/")) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only audio files are allowed"));
+      }
+    },
+  });
+
+  app.get("/api/samples", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const userSamples = await storage.getUserSamples(userId);
+    res.json(userSamples);
+  });
+
+  const uploadSchema = z.object({
+    name: z.string().min(1).max(200).optional(),
+    bpm: z.coerce.number().int().min(20).max(300).optional(),
+    key: z.string().max(10).optional(),
+    duration: z.coerce.number().min(0).max(3600).optional(),
+  });
+
+  app.post("/api/samples/upload", upload.single("audio"), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No audio file provided" });
+    }
+
+    try {
+      const parsed = uploadSchema.parse(req.body);
+      const name = parsed.name || req.file.originalname || "Untitled Sample";
+      const audioUrl = `/audio/${req.file.filename}`;
+
+      const sample = await storage.createSample({
+        userId,
+        name,
+        type: "audio",
+        sourceType: "upload",
+        audioUrl,
+        status: "ready",
+        bpm: parsed.bpm ?? null,
+        key: parsed.key ?? null,
+        duration: parsed.duration ? Math.round(parsed.duration) : null,
+        parentId: null,
+        position: 0,
+      });
+
+      res.status(201).json(sample);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      console.error("[SampleLab] Upload error:", err.message);
+      res.status(500).json({ message: "Failed to save sample" });
+    }
+  });
+
+  const recordSchema = z.object({
+    audioData: z.string().min(1),
+    name: z.string().max(200).optional(),
+    duration: z.number().min(0).max(3600).optional(),
+  });
+
+  app.post("/api/samples/record", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+
+    try {
+      const parsed = recordSchema.parse(req.body);
+
+      const base64Data = parsed.audioData.replace(/^data:audio\/\w+;base64,/, "");
+      const buffer = Buffer.from(base64Data, "base64");
+      const fileName = `${uuidv4()}.webm`;
+      const filePath = path.join(audioDir, fileName);
+      fs.writeFileSync(filePath, buffer);
+
+      const sample = await storage.createSample({
+        userId,
+        name: parsed.name || "Recording",
+        type: "audio",
+        sourceType: "recording",
+        audioUrl: `/audio/${fileName}`,
+        status: "ready",
+        duration: parsed.duration ? Math.round(parsed.duration) : null,
+        bpm: null,
+        key: null,
+        parentId: null,
+        position: 0,
+      });
+
+      res.status(201).json(sample);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      console.error("[SampleLab] Record error:", err.message);
+      res.status(500).json({ message: "Failed to save recording" });
+    }
+  });
+
+  const hummingSchema = z.object({
+    sampleId: z.number(),
+    prompt: z.string().min(1),
+    style: z.string().optional(),
+    duration: z.number().min(5).max(30).optional(),
+  });
+
+  app.post("/api/samples/transform", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+
+    try {
+      const input = hummingSchema.parse(req.body);
+      const sourceSample = await storage.getSample(input.sampleId);
+      if (!sourceSample) return res.sendStatus(404);
+      if (sourceSample.userId !== userId) return res.sendStatus(403);
+      if (!sourceSample.audioUrl) return res.status(400).json({ message: "Source sample has no audio" });
+
+      const style = input.style || "heart-mula";
+      const promptWithStyle = buildMusicGenPrompt(input.prompt, style);
+
+      const newSample = await storage.createSample({
+        userId,
+        name: `${sourceSample.name} (AI Transform)`,
+        type: "audio",
+        sourceType: "ai-transform",
+        parentId: sourceSample.id,
+        bpm: null,
+        key: null,
+        duration: null,
+        position: 0,
+      });
+
+      processHummingToMusic(
+        newSample.id,
+        sourceSample.audioUrl,
+        promptWithStyle,
+        input.duration || 15
+      );
+
+      res.status(202).json(newSample);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      console.error("[SampleLab] Transform error:", err.message);
+      res.status(500).json({ message: "Failed to start transformation" });
+    }
+  });
+
+  app.delete("/api/samples/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const sample = await storage.getSample(Number(req.params.id));
+    if (!sample) return res.sendStatus(404);
+    if (sample.userId !== userId) return res.sendStatus(403);
+    await storage.deleteSample(sample.id);
+    res.sendStatus(204);
+  });
+
+  const updateSampleSchema = z.object({
+    name: z.string().min(1).max(200).optional(),
+    bpm: z.number().int().min(20).max(300).optional(),
+    key: z.string().max(10).optional(),
+    position: z.number().int().min(0).optional(),
+  });
+
+  app.patch("/api/samples/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const sample = await storage.getSample(Number(req.params.id));
+    if (!sample) return res.sendStatus(404);
+    if (sample.userId !== userId) return res.sendStatus(403);
+
+    try {
+      const parsed = updateSampleSchema.parse(req.body);
+      const updated = await storage.updateSample(sample.id, parsed);
+      res.json(updated);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Failed to update sample" });
+    }
   });
 
   return httpServer;

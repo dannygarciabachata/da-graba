@@ -51,6 +51,16 @@ export default function Dashboard() {
             variant="outline"
             size="sm"
             className="gap-1.5 text-xs hidden md:flex"
+            onClick={() => setLocation("/sample-lab")}
+            data-testid="button-open-samplelab"
+          >
+            <Music className="h-3.5 w-3.5" />
+            Sample Lab
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs hidden md:flex"
             onClick={() => setLocation("/studio")}
             data-testid="button-open-studio"
           >

@@ -1,11 +1,12 @@
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
 import { 
-  songs, lyrics, quizResults, tracks,
+  songs, lyrics, quizResults, tracks, samples,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
-  type Track, type InsertTrack
+  type Track, type InsertTrack,
+  type Sample, type InsertSample
 } from "@shared/schema";
 
 export { authStorage } from "./replit_integrations/auth/storage";
@@ -31,6 +32,12 @@ export interface IStorage {
 
   saveQuizResult(result: InsertQuizResult): Promise<QuizResult>;
   getUserQuizResults(userId: string): Promise<QuizResult[]>;
+
+  createSample(sample: InsertSample & { audioUrl?: string; status?: string }): Promise<Sample>;
+  getSample(id: number): Promise<Sample | undefined>;
+  getUserSamples(userId: string): Promise<Sample[]>;
+  updateSample(id: number, data: Partial<Sample>): Promise<Sample>;
+  deleteSample(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -138,6 +145,44 @@ export class DatabaseStorage implements IStorage {
       .from(quizResults)
       .where(eq(quizResults.userId, userId))
       .orderBy(desc(quizResults.createdAt));
+  }
+
+  async createSample(data: InsertSample & { audioUrl?: string; status?: string }): Promise<Sample> {
+    const [sample] = await db.insert(samples).values(data).returning();
+    return sample;
+  }
+
+  async getSample(id: number): Promise<Sample | undefined> {
+    const [sample] = await db.select().from(samples).where(eq(samples.id, id));
+    return sample;
+  }
+
+  async getUserSamples(userId: string): Promise<Sample[]> {
+    return await db
+      .select()
+      .from(samples)
+      .where(eq(samples.userId, userId))
+      .orderBy(desc(samples.createdAt));
+  }
+
+  async updateSample(id: number, data: Partial<Sample>): Promise<Sample> {
+    const [updated] = await db
+      .update(samples)
+      .set(data)
+      .where(eq(samples.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteSample(id: number): Promise<void> {
+    const [sample] = await db.select().from(samples).where(eq(samples.id, id));
+    if (sample?.audioUrl && sample.audioUrl.startsWith("/audio/")) {
+      const fs = await import("fs");
+      const path = await import("path");
+      const filePath = path.default.join(process.cwd(), "public", sample.audioUrl);
+      try { fs.default.unlinkSync(filePath); } catch {}
+    }
+    await db.delete(samples).where(eq(samples.id, id));
   }
 }
 

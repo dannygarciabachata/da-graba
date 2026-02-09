@@ -22,6 +22,7 @@ AI-powered music generation platform tailored for Bachata music by Danny Garcia.
 
 ## Workers (server/workers/)
 - **music_tasks.ts** - Background async music generation: OpenAI creates lyrics + enhanced prompt, then ElevenLabs → Mureka → Replicate for audio
+- **sample_tasks.ts** - Humming-to-music AI transformation using Replicate MusicGen melody-conditioned model
 
 ## Key Features
 - "Heart Mula" branded music engine with style presets selector
@@ -36,6 +37,7 @@ AI-powered music generation platform tailored for Bachata music by Danny Garcia.
 - Song history with polling for processing status
 - Mobile-first responsive design with bottom tab navigation
 - User authentication via Replit Auth
+- Sample Lab: Audio recording, file upload, humming-to-music AI transformation, clip timeline, transport controls with BPM
 
 ## Project Structure
 ```
@@ -43,6 +45,7 @@ client/src/
   pages/Landing.tsx              - Landing page with Heart Mula branding
   pages/Dashboard.tsx            - Main dashboard with Lyrics/Quiz tabs
   pages/Studio.tsx               - Multitrack studio with stem separation
+  pages/SampleLab.tsx            - Sample Lab with recording, upload, AI transform, timeline
   components/MusicGenerator.tsx  - Heart Mula music generation panel (Aggregate + Standard modes)
   components/LyricsGenerator.tsx - Lyrics AI editor
   components/AudioPlayer.tsx     - Waveform player
@@ -51,6 +54,7 @@ client/src/
   hooks/use-songs.ts             - Song CRUD hooks
   hooks/use-tracks.ts            - Track/stem CRUD hooks
   hooks/use-lyrics.ts            - Lyrics generation hook
+  hooks/use-samples.ts           - Sample Lab CRUD hooks
   hooks/use-auth.ts              - Auth state hook
 
 server/
@@ -62,7 +66,8 @@ server/
     stems_engine.ts              - AI stem separation (Replicate Demucs)
   workers/
     music_tasks.ts               - Background music generation
-  routes.ts                      - API routes (music, lyrics, quiz, tracks, auth)
+    sample_tasks.ts              - Humming-to-music AI worker
+  routes.ts                      - API routes (music, lyrics, quiz, tracks, samples, auth)
   storage.ts                     - Database storage layer (IStorage interface)
   db.ts                          - Database connection
   replit_integrations/           - Auth, chat modules
@@ -93,6 +98,12 @@ shared/
 - `POST /api/quiz/submit` - Submit quiz answers (validated with Zod)
 - `GET /api/quiz/results` - Get user's quiz history
 - `GET /api/quiz/styles` - List available music style presets
+- `GET /api/samples` - List user's samples
+- `POST /api/samples/upload` - Upload audio file (multipart/form-data with multer)
+- `POST /api/samples/record` - Save browser recording (base64 audio data)
+- `POST /api/samples/transform` - Humming-to-music AI transform (Replicate MusicGen melody-conditioned)
+- `DELETE /api/samples/:id` - Delete sample (also removes audio file)
+- `PATCH /api/samples/:id` - Update sample metadata (name, bpm, key, position)
 
 ## Environment Variables
 - `DATABASE_URL` - PostgreSQL connection

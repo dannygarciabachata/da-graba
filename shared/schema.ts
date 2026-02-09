@@ -96,6 +96,35 @@ export const insertTrackSchema = createInsertSchema(tracks).omit({
 export type Track = typeof tracks.$inferSelect;
 export type InsertTrack = z.infer<typeof insertTrackSchema>;
 
+// === SAMPLES TABLE (Sample Lab) ===
+export const samples = pgTable("samples", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull().default("Untitled Sample"),
+  type: text("type").notNull().default("audio"),
+  sourceType: text("source_type").notNull().default("upload"),
+  audioUrl: text("audio_url"),
+  duration: integer("duration"),
+  bpm: integer("bpm"),
+  key: text("key"),
+  status: text("status").notNull().default("ready"),
+  error: text("error"),
+  parentId: integer("parent_id"),
+  position: integer("position").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSampleSchema = createInsertSchema(samples).omit({
+  id: true,
+  createdAt: true,
+  status: true,
+  audioUrl: true,
+  error: true,
+});
+
+export type Sample = typeof samples.$inferSelect;
+export type InsertSample = z.infer<typeof insertSampleSchema>;
+
 // === QUIZ TABLE ===
 export const quizResults = pgTable("quiz_results", {
   id: serial("id").primaryKey(),
