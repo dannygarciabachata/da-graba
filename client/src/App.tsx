@@ -1,22 +1,78 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { useAuth } from "@/hooks/use-auth";
 import Landing from "@/pages/Landing";
-import Dashboard from "@/pages/Dashboard";
+import CreatePage from "@/pages/CreatePage";
+import LibraryPage from "@/pages/LibraryPage";
+import LyricsPage from "@/pages/LyricsPage";
+import QuizPage from "@/pages/QuizPage";
 import StudioPage from "@/pages/Studio";
 import SampleLab from "@/pages/SampleLab";
 import NotFound from "@/pages/not-found";
 
+function AuthenticatedLayout() {
+  const style = {
+    "--sidebar-width": "15rem",
+    "--sidebar-width-icon": "3rem",
+  };
+
+  return (
+    <SidebarProvider style={style as React.CSSProperties}>
+      <div className="flex h-screen w-full">
+        <AppSidebar />
+        <div className="flex flex-col flex-1 min-w-0">
+          <header className="h-12 flex items-center px-3 border-b border-white/5 bg-background/80 backdrop-blur-md sticky top-0 z-40 lg:hidden">
+            <SidebarTrigger data-testid="button-sidebar-toggle" />
+          </header>
+          <main className="flex-1 overflow-auto">
+            <Switch>
+              <Route path="/create" component={CreatePage} />
+              <Route path="/dashboard"><Redirect to="/create" /></Route>
+              <Route path="/library" component={LibraryPage} />
+              <Route path="/lyrics" component={LyricsPage} />
+              <Route path="/quiz" component={QuizPage} />
+              <Route path="/studio" component={StudioPage} />
+              <Route path="/sample-lab" component={SampleLab} />
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
 function Router() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center text-primary">
+        Loading DGB Audio...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Switch>
+        <Route path="/" component={Landing} />
+        <Route><Redirect to="/" /></Route>
+      </Switch>
+    );
+  }
+
   return (
     <Switch>
-      <Route path="/" component={Landing} />
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/studio" component={StudioPage} />
-      <Route path="/sample-lab" component={SampleLab} />
-      <Route component={NotFound} />
+      <Route path="/"><Redirect to="/create" /></Route>
+      <Route>
+        <AuthenticatedLayout />
+      </Route>
     </Switch>
   );
 }

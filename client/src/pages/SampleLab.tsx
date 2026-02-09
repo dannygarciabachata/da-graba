@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Disc, ArrowLeft, Mic, MicOff, Upload, Play, Pause, Square, Trash2,
+  Mic, MicOff, Upload, Play, Pause, Square, Trash2,
   Wand2, Loader2, Music, FileAudio, Clock, ChevronRight, Volume2,
   SkipBack, SkipForward, Repeat
 } from "lucide-react";
@@ -457,38 +457,19 @@ export default function SampleLab() {
   const mobileTab = activeTab;
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans overflow-hidden">
-      <header className="h-14 md:h-16 border-b border-white/5 bg-black/50 backdrop-blur-md px-4 md:px-6 flex items-center justify-between gap-2 z-50 sticky top-0">
-        <div className="flex items-center gap-2 md:gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setLocation("/dashboard")}
-            data-testid="button-back-dashboard"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="bg-gradient-to-tr from-purple-600 to-pink-500 p-1.5 md:p-2 rounded-lg">
-            <Music className="h-4 w-4 md:h-5 md:w-5 text-white" />
+    <div className="h-full bg-background text-foreground flex flex-col font-sans overflow-hidden">
+      <div className="px-4 md:px-6 py-4 border-b border-white/5">
+        <div className="flex items-center gap-3">
+          <Music className="h-5 w-5 text-purple-400" />
+          <div>
+            <h1 className="text-lg font-bold" data-testid="text-samplelab-title">
+              Sample Lab
+              <span className="text-purple-400 text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 ml-1.5">BETA</span>
+            </h1>
+            <p className="text-xs text-muted-foreground">Record, upload & transform audio with AI</p>
           </div>
-          <span className="text-base md:text-lg font-bold tracking-tight">
-            Sample Lab
-            <span className="text-purple-400 text-[10px] md:text-xs font-normal px-1.5 md:px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 ml-1.5">BETA</span>
-          </span>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-xs hidden md:flex"
-            onClick={() => setLocation("/dashboard")}
-            data-testid="button-goto-dashboard"
-          >
-            <Disc className="h-3.5 w-3.5" />
-            Dashboard
-          </Button>
-        </div>
-      </header>
+      </div>
 
       <div className="hidden lg:flex flex-1 overflow-hidden">
         <div className="w-80 border-r border-white/5 flex flex-col bg-black/20">

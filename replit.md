@@ -39,14 +39,27 @@ AI-powered music generation platform tailored for Bachata music by Danny Garcia.
 - User authentication via Replit Auth
 - Sample Lab: Audio recording, file upload, humming-to-music AI transformation, clip timeline, transport controls with BPM
 
+## Layout Architecture (Suno-inspired)
+- **Left Sidebar**: Shadcn sidebar with nav (Create, Library, Lyrics, Quiz, Studio, Sample Lab), user profile, DGB branding
+- **Main Content Area**: Full-width page content for each route
+- **Create Page**: Centered Suno-style prompt with Simple/Custom toggle, style preset badges, recent creations grid
+- **Library Page**: Song list feed with inline player
+- **Landing**: Public landing page for unauthenticated users
+
 ## Project Structure
 ```
 client/src/
+  App.tsx                        - Root with SidebarProvider layout for authenticated users
+  components/app-sidebar.tsx     - Shadcn sidebar with navigation & user profile
   pages/Landing.tsx              - Landing page with Heart Mula branding
-  pages/Dashboard.tsx            - Main dashboard with Lyrics/Quiz tabs
+  pages/CreatePage.tsx           - Suno-style music creation (Simple/Custom modes)
+  pages/LibraryPage.tsx          - Song library with inline player
+  pages/LyricsPage.tsx           - Lyrics generation page
+  pages/QuizPage.tsx             - Bachata quiz page
   pages/Studio.tsx               - Multitrack studio with stem separation
   pages/SampleLab.tsx            - Sample Lab with recording, upload, AI transform, timeline
-  components/MusicGenerator.tsx  - Heart Mula music generation panel (Aggregate + Standard modes)
+  pages/Dashboard.tsx            - (legacy, redirects to /create)
+  components/MusicGenerator.tsx  - Heart Mula music generation panel (legacy component)
   components/LyricsGenerator.tsx - Lyrics AI editor
   components/AudioPlayer.tsx     - Waveform player
   components/SongHistory.tsx     - Track history list with Studio link

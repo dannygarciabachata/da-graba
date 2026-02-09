@@ -7,12 +7,11 @@ import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  LogOut, Disc, Play, Pause, Square, Volume2, VolumeX, Mic, Drum,
+  Play, Pause, Square, Volume2, VolumeX, Mic, Drum,
   Guitar, Music, Loader2, Scissors, ArrowLeft, ChevronRight, Download,
   Package, SkipBack
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import type { Track } from "@shared/schema";
@@ -225,7 +224,7 @@ function TrackStrip({
 }
 
 export default function StudioPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { data: songs, isLoading: songsLoading } = useSongs();
   const [selectedSongId, setSelectedSongId] = useState<number | null>(null);
@@ -393,43 +392,16 @@ export default function StudioPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
-      <header className="h-14 md:h-16 border-b border-white/5 bg-black/50 backdrop-blur-md px-4 md:px-6 flex items-center justify-between gap-2 z-50 sticky top-0">
-        <div className="flex items-center gap-2 md:gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setLocation("/dashboard")}
-            data-testid="button-back-dashboard"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="bg-gradient-to-tr from-primary to-blue-600 p-1.5 md:p-2 rounded-lg">
-            <Disc className="h-4 w-4 md:h-5 md:w-5 text-white animate-spin-slow" />
+    <div className="h-full bg-background text-foreground flex flex-col font-sans">
+      <div className="px-4 md:px-6 py-4 border-b border-white/5">
+        <div className="flex items-center gap-3">
+          <Scissors className="h-5 w-5 text-primary" />
+          <div>
+            <h1 className="text-lg font-bold" data-testid="text-studio-title">Multitrack Studio</h1>
+            <p className="text-xs text-muted-foreground">AI-powered stem separation & mixing</p>
           </div>
-          <span className="text-base md:text-lg font-bold tracking-tight">
-            DGB Studio
-            <span className="text-primary text-[10px] md:text-xs font-normal px-1.5 md:px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 ml-1.5">
-              MULTITRACK
-            </span>
-          </span>
         </div>
-
-        <div className="flex items-center gap-2 md:gap-4">
-          <div className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-full bg-white/5 border border-white/5">
-            <Avatar className="h-6 w-6">
-              <AvatarImage src={user.profileImageUrl || undefined} />
-              <AvatarFallback className="text-xs bg-primary text-black font-bold">
-                {user.firstName?.[0]}{user.lastName?.[0]}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-sm font-medium hidden md:block">{user.firstName} {user.lastName}</span>
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => logout()} className="text-muted-foreground" data-testid="button-logout-studio">
-            <LogOut className="h-5 w-5" />
-          </Button>
-        </div>
-      </header>
+      </div>
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         <div
