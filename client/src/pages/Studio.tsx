@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSongs } from "@/hooks/use-songs";
 import { useSongTracks, useSeparateStems, useUpdateTrack } from "@/hooks/use-tracks";
@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   LogOut, Disc, Play, Pause, Square, Volume2, VolumeX, Mic, Drum,
   Guitar, Music, Loader2, Scissors, ArrowLeft, ChevronRight, Download,
-  Package
+  Package, SkipBack
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -35,18 +35,20 @@ const STEM_COLORS: Record<string, string> = {
 
 function TrackStrip({
   track,
-  isPlaying,
+  audioRef,
   isSoloedByOther,
   onToggleMute,
   onToggleSolo,
   onVolumeChange,
+  onSeek,
 }: {
   track: Track;
-  isPlaying: boolean;
+  audioRef: HTMLAudioElement | null;
   isSoloedByOther: boolean;
   onToggleMute: () => void;
   onToggleSolo: () => void;
   onVolumeChange: (vol: number) => void;
+  onSeek: (progress: number) => void;
 }) {
   const waveRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WaveSurfer | null>(null);
@@ -57,22 +59,27 @@ function TrackStrip({
   const effectivelyMuted = isSoloedByOther || (track.isMuted && !track.isSolo);
 
   useEffect(() => {
-    if (!waveRef.current || !track.audioUrl || track.status !== "completed") return;
+    if (!waveRef.current || !track.audioUrl || track.status !== "completed" || !audioRef) return;
 
     const ws = WaveSurfer.create({
       container: waveRef.current,
       waveColor: `${color}40`,
       progressColor: color,
-      cursorColor: "transparent",
+      cursorColor: "#ffffff40",
       barWidth: 2,
       barGap: 2,
       height: 48,
-      normalize: true,
-      interact: false,
-      url: track.audioUrl,
+      normalize: false,
+      interact: true,
+      media: audioRef,
     });
 
     ws.on("ready", () => setWaveReady(true));
+    ws.on("seeking", (currentTime: number) => {
+      if (audioRef && audioRef.duration) {
+        onSeek(currentTime / audioRef.duration);
+      }
+    });
     wsRef.current = ws;
 
     return () => {
@@ -80,22 +87,13 @@ function TrackStrip({
       wsRef.current = null;
       setWaveReady(false);
     };
-  }, [track.audioUrl, track.status, color]);
+  }, [track.audioUrl, track.status, color, audioRef]);
 
   useEffect(() => {
-    if (!wsRef.current || !waveReady) return;
+    if (!audioRef) return;
     const vol = effectivelyMuted ? 0 : (track.volume ?? 100) / 100;
-    wsRef.current.setVolume(vol);
-  }, [effectivelyMuted, track.volume, waveReady]);
-
-  useEffect(() => {
-    if (!wsRef.current || !waveReady) return;
-    if (isPlaying) {
-      wsRef.current.play();
-    } else {
-      wsRef.current.pause();
-    }
-  }, [isPlaying, waveReady]);
+    audioRef.volume = vol;
+  }, [effectivelyMuted, track.volume, audioRef]);
 
   const isPending = track.status === "pending" || track.status === "processing";
   const isFailed = track.status === "failed";
@@ -238,6 +236,9 @@ export default function StudioPage() {
   const { mutate: separateStems, isPending: isSeparating } = useSeparateStems();
   const { mutate: updateTrack } = useUpdateTrack();
 
+  const audioElementsRef = useRef<Map<number, HTMLAudioElement>>(new Map());
+  const [audioReady, setAudioReady] = useState<Set<number>>(new Set());
+
   const completedSongs = songs?.filter((s) => s.status === "completed" && s.audioUrl) ?? [];
   const selectedSong = completedSongs.find((s) => s.id === selectedSongId);
   const hasTracks = songTracks && songTracks.length > 0;
@@ -245,6 +246,99 @@ export default function StudioPage() {
   const completedTracks = songTracks?.filter((t) => t.status === "completed" && t.audioUrl) ?? [];
 
   const anySoloed = songTracks?.some((t) => t.isSolo) ?? false;
+
+  useEffect(() => {
+    const map = audioElementsRef.current;
+    const currentIds = new Set(completedTracks.map((t) => t.id));
+
+    for (const track of completedTracks) {
+      if (!track.audioUrl) continue;
+      if (map.has(track.id)) continue;
+      const audio = new Audio();
+      audio.crossOrigin = "anonymous";
+      audio.preload = "auto";
+      audio.src = track.audioUrl;
+      audio.addEventListener("canplaythrough", () => {
+        setAudioReady((prev) => new Set(prev).add(track.id));
+      }, { once: true });
+      map.set(track.id, audio);
+    }
+
+    Array.from(map.entries()).forEach(([id, audio]) => {
+      if (!currentIds.has(id)) {
+        audio.pause();
+        audio.src = "";
+        map.delete(id);
+      }
+    });
+
+    setAudioReady((prev) => {
+      const next = new Set<number>();
+      prev.forEach((id) => {
+        if (currentIds.has(id)) next.add(id);
+      });
+      return next;
+    });
+
+    return () => {};
+  }, [completedTracks.map((t) => `${t.id}:${t.audioUrl}`).join(",")]);
+
+  useEffect(() => {
+    return () => {
+      Array.from(audioElementsRef.current.values()).forEach((audio) => {
+        audio.pause();
+        audio.src = "";
+      });
+      audioElementsRef.current.clear();
+    };
+  }, [selectedSongId]);
+
+  const allAudioReady = completedTracks.length > 0 && completedTracks.every((t) => audioReady.has(t.id));
+
+  const syncPlayAll = useCallback(() => {
+    const elements = audioElementsRef.current;
+    const audios = completedTracks.map((t) => elements.get(t.id)).filter(Boolean) as HTMLAudioElement[];
+    if (audios.length === 0) return;
+
+    const masterTime = audios[0].currentTime;
+    for (const audio of audios) {
+      if (Math.abs(audio.currentTime - masterTime) > 0.05) {
+        audio.currentTime = masterTime;
+      }
+    }
+
+    Promise.all(audios.map((a) => a.play()))
+      .then(() => setIsPlaying(true))
+      .catch(() => {
+        for (const audio of audios) {
+          audio.play().catch(() => {});
+        }
+        setIsPlaying(true);
+      });
+  }, [completedTracks]);
+
+  const pauseAll = useCallback(() => {
+    Array.from(audioElementsRef.current.values()).forEach((audio) => {
+      audio.pause();
+    });
+    setIsPlaying(false);
+  }, []);
+
+  const stopAll = useCallback(() => {
+    Array.from(audioElementsRef.current.values()).forEach((audio) => {
+      audio.pause();
+      audio.currentTime = 0;
+    });
+    setIsPlaying(false);
+  }, []);
+
+  const seekAll = useCallback((progress: number) => {
+    Array.from(audioElementsRef.current.values()).forEach((audio) => {
+      if (audio.duration && isFinite(audio.duration)) {
+        audio.currentTime = progress * audio.duration;
+      }
+    });
+  }, []);
 
   if (!user) return null;
 
@@ -373,8 +467,8 @@ export default function StudioPage() {
                         : "bg-card border-white/5 hover-elevate"
                     )}
                     onClick={() => {
+                      pauseAll();
                       setSelectedSongId(song.id);
-                      setIsPlaying(false);
                       setShowSongList(false);
                     }}
                     data-testid={`card-studio-song-${song.id}`}
@@ -452,7 +546,16 @@ export default function StudioPage() {
                   <div className="flex items-center gap-2">
                     <Button
                       size="icon"
-                      onClick={() => setIsPlaying(!isPlaying)}
+                      variant="outline"
+                      onClick={stopAll}
+                      data-testid="button-studio-rewind"
+                    >
+                      <SkipBack className="w-4 h-4 fill-current" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      onClick={() => (isPlaying ? pauseAll() : syncPlayAll())}
+                      disabled={!allAudioReady}
                       className="rounded-full bg-white text-black shadow-lg shadow-white/10"
                       data-testid="button-studio-play"
                     >
@@ -465,7 +568,7 @@ export default function StudioPage() {
                     <Button
                       size="icon"
                       variant="outline"
-                      onClick={() => setIsPlaying(false)}
+                      onClick={stopAll}
                       data-testid="button-studio-stop"
                     >
                       <Square className="w-4 h-4 fill-current" />
@@ -515,11 +618,12 @@ export default function StudioPage() {
                       <TrackStrip
                         key={track.id}
                         track={track}
-                        isPlaying={isPlaying && track.status === "completed"}
+                        audioRef={audioElementsRef.current.get(track.id) ?? null}
                         isSoloedByOther={track.status === "completed" && anySoloed && !track.isSolo}
                         onToggleMute={() => handleToggleMute(track)}
                         onToggleSolo={() => handleToggleSolo(track)}
                         onVolumeChange={(vol) => handleVolumeChange(track, vol)}
+                        onSeek={seekAll}
                       />
                     ))}
 
