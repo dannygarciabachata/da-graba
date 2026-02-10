@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import WaveSurfer from "wavesurfer.js";
 import { Play, Pause, Download, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,52 +13,124 @@ interface AudioPlayerProps {
 export function AudioPlayer({ url, title }: AudioPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
   const [isReady, setIsReady] = useState(false);
+  const [waveformReady, setWaveformReady] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   useEffect(() => {
-    if (!containerRef.current || !url) return;
+    if (!url) return;
 
-    wavesurfer.current = WaveSurfer.create({
-      container: containerRef.current,
-      waveColor: '#333',
-      progressColor: '#00F3FF',
-      cursorColor: '#FFFFFF',
-      barWidth: 2,
-      barGap: 3,
-      height: 80,
-      normalize: true,
-      url: url,
-    });
+    setIsReady(false);
+    setWaveformReady(false);
+    setHasError(false);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
 
-    wavesurfer.current.on('ready', () => setIsReady(true));
-    wavesurfer.current.on('play', () => setIsPlaying(true));
-    wavesurfer.current.on('pause', () => setIsPlaying(false));
-    wavesurfer.current.on('finish', () => setIsPlaying(false));
+    const audio = new Audio(url);
+    audio.preload = "auto";
+    audioRef.current = audio;
+
+    const onCanPlay = () => setIsReady(true);
+    const onLoadedMetadata = () => setDuration(audio.duration || 0);
+    const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onEnded = () => setIsPlaying(false);
+    const onError = () => {
+      console.error("[AudioPlayer] HTML Audio error loading:", url);
+      setHasError(true);
+    };
+
+    audio.addEventListener("canplay", onCanPlay);
+    audio.addEventListener("loadedmetadata", onLoadedMetadata);
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    audio.addEventListener("ended", onEnded);
+    audio.addEventListener("error", onError);
+
+    if (containerRef.current) {
+      try {
+        wavesurfer.current = WaveSurfer.create({
+          container: containerRef.current,
+          waveColor: '#333',
+          progressColor: '#00F3FF',
+          cursorColor: '#FFFFFF',
+          barWidth: 2,
+          barGap: 3,
+          height: 80,
+          normalize: true,
+          media: audio,
+        });
+
+        wavesurfer.current.on('ready', () => setWaveformReady(true));
+        wavesurfer.current.on('error', (err) => {
+          console.warn("[AudioPlayer] WaveSurfer error (fallback to basic player):", err);
+        });
+      } catch (err) {
+        console.warn("[AudioPlayer] WaveSurfer init failed, using basic player:", err);
+      }
+    }
 
     return () => {
+      audio.pause();
+      audio.removeEventListener("canplay", onCanPlay);
+      audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+      audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("error", onError);
+      audio.src = "";
+      audioRef.current = null;
       wavesurfer.current?.destroy();
+      wavesurfer.current = null;
     };
   }, [url]);
 
-  const togglePlay = () => wavesurfer.current?.playPause();
+  const togglePlay = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) {
+      audio.play().catch((err) => {
+        console.error("[AudioPlayer] Play failed:", err);
+      });
+    } else {
+      audio.pause();
+    }
+  }, []);
 
-  const handleVolume = (val: number[]) => {
+  const handleVolume = useCallback((val: number[]) => {
     const newVol = val[0];
     setVolume(newVol);
-    wavesurfer.current?.setVolume(newVol);
-  };
+    if (audioRef.current) {
+      audioRef.current.volume = newVol;
+    }
+  }, []);
 
-  const toggleMute = () => {
+  const toggleMute = useCallback(() => {
     if (volume > 0) {
       setVolume(0);
-      wavesurfer.current?.setVolume(0);
+      if (audioRef.current) audioRef.current.volume = 0;
     } else {
       setVolume(1);
-      wavesurfer.current?.setVolume(1);
+      if (audioRef.current) audioRef.current.volume = 1;
     }
-  };
+  }, [volume]);
+
+  const handleSeek = useCallback((val: number[]) => {
+    const audio = audioRef.current;
+    if (!audio || !duration) return;
+    const seekTime = val[0] * duration;
+    audio.currentTime = seekTime;
+    setCurrentTime(seekTime);
+  }, [duration]);
 
   const handleDownload = () => {
     if (url) {
@@ -69,6 +141,13 @@ export function AudioPlayer({ url, title }: AudioPlayerProps) {
       link.click();
       document.body.removeChild(link);
     }
+  };
+
+  const formatTime = (t: number) => {
+    if (!t || !isFinite(t)) return "0:00";
+    const min = Math.floor(t / 60);
+    const sec = Math.floor(t % 60);
+    return `${min}:${sec.toString().padStart(2, "0")}`;
   };
 
   if (!url) {
@@ -91,17 +170,34 @@ export function AudioPlayer({ url, title }: AudioPlayerProps) {
       <div className="flex justify-between items-start gap-2">
         <div className="min-w-0 flex-1">
           <h3 className="text-base md:text-xl font-bold truncate">{title}</h3>
-          <p className="text-xs md:text-sm text-primary">Now Playing</p>
+          <p className="text-xs md:text-sm text-primary">
+            {hasError ? "Error loading audio" : isReady ? "Now Playing" : "Loading..."}
+          </p>
         </div>
         <Button size="icon" variant="ghost" onClick={handleDownload} className="text-muted-foreground flex-shrink-0" data-testid="button-download-track">
           <Download className="w-5 h-5" />
         </Button>
       </div>
 
-      <div ref={containerRef} className="w-full opacity-0 transition-opacity duration-500" style={{ opacity: isReady ? 1 : 0 }} />
-      {!isReady && (
-        <div className="h-[80px] w-full flex items-center justify-center bg-black/20 rounded-lg">
-          <span className="text-xs text-muted-foreground animate-pulse">Loading waveform...</span>
+      <div
+        ref={containerRef}
+        className="w-full transition-opacity duration-500"
+        style={{ opacity: waveformReady ? 1 : 0, height: waveformReady ? 'auto' : 0 }}
+      />
+      {!waveformReady && !hasError && (
+        <div className="w-full space-y-2">
+          <Slider
+            value={[duration > 0 ? currentTime / duration : 0]}
+            max={1}
+            step={0.001}
+            onValueChange={handleSeek}
+            className="w-full"
+            data-testid="slider-seek"
+          />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(duration)}</span>
+          </div>
         </div>
       )}
 
@@ -109,6 +205,7 @@ export function AudioPlayer({ url, title }: AudioPlayerProps) {
         <Button 
           size="icon" 
           onClick={togglePlay}
+          disabled={hasError || !isReady}
           className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-white text-black shadow-lg shadow-white/10"
           data-testid="button-play-pause"
         >
