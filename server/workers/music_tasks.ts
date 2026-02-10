@@ -70,61 +70,240 @@ async function generateSmartPrompt(
   return { enhancedPrompt: finalPrompt, generatedLyrics };
 }
 
-function buildMusicGenPrompt(rawPrompt: string, style: string): string {
-  const musicGenStyles: Record<string, string> = {
+function buildAceStepTags(userPrompt: string, style: string): string {
+  const styleTags: Record<string, string> = {
     "heart-mula":
-      "Dominican bachata, acoustic guitar fingerpicking rhythm, bongo groove, warm bass, cohesive tight band sound, emotional Latin music, professionally produced, 72 BPM",
+      "bachata, Dominican bachata, acoustic guitar, requinto, bongo, guira, bass, romantic, emotional, intimate, Latin, 72 BPM, D minor",
     "bachata-romantic":
-      "romantic bachata, soft acoustic guitar strumming, gentle bongo and guira rhythm, warm intimate Latin music, well-mixed, 75 BPM",
+      "bachata, romantic bachata, acoustic guitar, bongo, guira, soft, emotional, tender, intimate, Latin, 75 BPM, A minor",
     "bachata-dance":
-      "upbeat bachata, energetic guitar strumming, fast bongo and guira groove, fun Latin dance music, tight ensemble, 90 BPM",
+      "bachata, upbeat bachata, acoustic guitar, bongo, guira, conga, energetic, dance, party, fun, Latin, 90 BPM, C major",
     "bachata-bolero":
-      "slow bachata bolero, gentle acoustic guitar arpeggios, soft bongo rhythm, emotional intimate Latin music, 70 BPM",
+      "bachata bolero, slow bachata, acoustic guitar, requinto, piano, emotional, sorrowful, nostalgic, intimate, Latin, 70 BPM, D minor",
     "trio-serenade":
-      "Latin trio, three acoustic guitars playing together in harmony, romantic bolero rhythm, intimate serenade, 70 BPM",
+      "Latin trio, serenade, requinto, classical guitar, bolero, romantic, harmony, intimate, acoustic, 70 BPM, E minor",
     "bachata-urbana":
-      "modern urban bachata, electric guitar with reverb, bongo mixed with subtle trap beats, deep bass groove, polished Latin R&B, 85 BPM",
+      "modern bachata, urban bachata, electric guitar, bongo, trap, 808 bass, R&B, polished, contemporary, Latin, 85 BPM, G minor",
   };
 
-  const styleDesc = musicGenStyles[style] || musicGenStyles["heart-mula"];
+  const baseTags = styleTags[style] || styleTags["heart-mula"];
 
-  const cleanUserPrompt = rawPrompt
-    .replace(/high fidelity|masterpiece|studio quality|studio intimate|professionally mixed|cohesive ensemble/gi, "")
-    .replace(/,\s*,/g, ",")
-    .replace(/\s+/g, " ")
+  const cleanUserWords = userPrompt
+    .replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ\s]/g, "")
     .trim()
-    .substring(0, 80);
+    .substring(0, 60);
 
-  return `${cleanUserPrompt}, ${styleDesc}`.substring(0, 250);
+  if (cleanUserWords.length > 3) {
+    return `${cleanUserWords}, ${baseTags}`;
+  }
+  return baseTags;
+}
+
+function buildAceStepLyrics(userPrompt: string, style: string, generatedLyrics: string): string {
+  if (generatedLyrics && generatedLyrics.length > 20) {
+    const hasStructure = /\[(verse|chorus|bridge|intro|outro)/i.test(generatedLyrics);
+    if (hasStructure) return generatedLyrics;
+    const lines = generatedLyrics.split("\n").filter(l => l.trim());
+    if (lines.length >= 4) {
+      const half = Math.ceil(lines.length / 2);
+      return `[verse]\n${lines.slice(0, half).join("\n")}\n\n[chorus]\n${lines.slice(half).join("\n")}`;
+    }
+  }
+
+  const styleTemplates: Record<string, string> = {
+    "heart-mula": `[verse]
+Bajo la luna de Santo Domingo
+Tu mirada me tiene cautivo
+Cada latido es un ritmo que sigo
+Heart Mula suena el amor es mi abrigo
+
+[chorus]
+Bailamos bachata corazon a corazon
+Tu cuerpo y el mio una sola cancion
+Heart Mula late con toda la pasion
+Eres mi reina mi unica razon
+
+[verse]
+En la noche tu voz me acaricia
+Como brisa del mar con delicia
+Guitarra y bongo te hacen justicia
+Y este ritmo convierte en noticia
+
+[chorus]
+Bailamos bachata corazon a corazon
+Tu cuerpo y el mio una sola cancion
+Heart Mula late con toda la pasion
+Eres mi reina mi unica razon`,
+
+    "bachata-romantic": `[verse]
+En la noche callada te pienso
+Tu recuerdo me abraza tan intenso
+Las guitarras me cuentan tu historia
+Y en cada nota vive tu memoria
+
+[chorus]
+Ven a bailar conmigo esta noche
+Que la bachata nos une sin reproche
+Tu mano en mi mano tu piel en mi piel
+Este amor sabe a miel
+
+[verse]
+Tus ojos brillan como las estrellas
+Iluminan mis noches mas bellas
+Con cada paso que damos bailando
+Mi corazon se va enamorando
+
+[chorus]
+Ven a bailar conmigo esta noche
+Que la bachata nos une sin reproche
+Tu mano en mi mano tu piel en mi piel
+Este amor sabe a miel`,
+
+    "bachata-dance": `[verse]
+Suena la guira suena el bongo
+La pista se enciende el ritmo es nuestro
+Mueve la cintura siente la clave
+Esta noche nadie nos para
+
+[chorus]
+Dale pa lante bachata en la sangre
+Que la noche es joven y el ritmo no pare
+Bongo y guitarra fuego en el aire
+Esta fiesta es pa gozarla a lo grande
+
+[verse]
+Todo el mundo a la pista ahora
+Que la bachata suena y enamora
+Con los pies en el suelo y el alma volando
+Toda la noche seguimos bailando
+
+[chorus]
+Dale pa lante bachata en la sangre
+Que la noche es joven y el ritmo no pare
+Bongo y guitarra fuego en el aire
+Esta fiesta es pa gozarla a lo grande`,
+
+    "bachata-bolero": `[verse]
+En el silencio de esta noche triste
+Recuerdo el dia que te fuiste
+Las guitarras lloran tu ausencia
+Y mi corazon busca tu presencia
+
+[chorus]
+Vuelve a mi mi amor perdido
+Que sin ti me siento herido
+El bolero canta nuestro dolor
+Trae de vuelta nuestro amor
+
+[verse]
+Las calles vacias me hablan de ti
+Cada esquina un recuerdo de abril
+Tu perfume aun vive en mi almohada
+Y tu ausencia me deja sin nada
+
+[chorus]
+Vuelve a mi mi amor perdido
+Que sin ti me siento herido
+El bolero canta nuestro dolor
+Trae de vuelta nuestro amor`,
+
+    "trio-serenade": `[verse]
+Bajo tu ventana vengo a cantar
+Con mi requinto y mi guitarra
+Las estrellas brillan sobre el mar
+Y este trio te entrega su serenata
+
+[chorus]
+Escucha mi serenata mi amor
+Cada nota lleva mi corazon
+Tres voces cantan con fervor
+Esta cancion llena de pasion
+
+[verse]
+La brisa nocturna lleva mi voz
+Hasta tu puerta con toda emocion
+Tres guitarras suenan para los dos
+Bajo la luna nuestra cancion
+
+[chorus]
+Escucha mi serenata mi amor
+Cada nota lleva mi corazon
+Tres voces cantan con fervor
+Esta cancion llena de pasion`,
+
+    "bachata-urbana": `[verse]
+En la ciudad las luces brillan
+Tu y yo en la calle nadie nos vigila
+El beat urbano con guitarra real
+Bachata nueva pero original
+
+[chorus]
+Somos fuego somos flow
+Bachata urbana nuevo sabor
+En cada paso siento tu calor
+Baby tu eres mi mayor
+
+[verse]
+Las noches son nuestras el ritmo tambien
+Mezclando lo nuevo con lo que esta bien
+Guitarra electrica bajo profundo
+Contigo conquistamos el mundo
+
+[chorus]
+Somos fuego somos flow
+Bachata urbana nuevo sabor
+En cada paso siento tu calor
+Baby tu eres mi mayor`,
+  };
+
+  return styleTemplates[style] || styleTemplates["heart-mula"];
 }
 
 async function generateWithReplicate(
   prompt: string,
   duration: number,
-  style: string = "heart-mula"
+  style: string = "heart-mula",
+  lyrics: string = ""
 ): Promise<{ audioUrl: string; provider: "replicate" }> {
-  const cleanPrompt = buildMusicGenPrompt(prompt, style);
-  console.log(`[Worker] Generating audio with Replicate MusicGen (stereo-large)...`);
-  console.log(`[Worker] MusicGen prompt (${cleanPrompt.length} chars): ${cleanPrompt}`);
+  const tags = buildAceStepTags(prompt, style);
+  const aceStepLyrics = buildAceStepLyrics(prompt, style, lyrics);
+
+  console.log(`[Worker] Generating audio with Replicate ACE-Step...`);
+  console.log(`[Worker] Tags: ${tags}`);
+  console.log(`[Worker] Lyrics (${aceStepLyrics.length} chars): ${aceStepLyrics.substring(0, 100)}...`);
+
+  const input: Record<string, any> = {
+    tags,
+    lyrics: aceStepLyrics,
+    duration: Math.min(Math.max(duration, 30), 180),
+    number_of_steps: 60,
+  };
 
   const output = await replicate.run(
-    "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
-    {
-      input: {
-        model_version: "stereo-large",
-        prompt: cleanPrompt,
-        duration: Math.min(duration, 30),
-        temperature: 0.7,
-        top_k: 250,
-        top_p: 0.0,
-        classifier_free_guidance: 4,
-        output_format: "wav",
-        normalization_strategy: "loudness",
-      },
-    }
+    "lucataco/ace-step:280fc4f9ee507577f880a167f639c02622421d8fecf492454320311217b688f1",
+    { input }
   );
 
-  const audioUrl = typeof output === "string" ? output : (output as any)?.audio || String(output);
+  let audioUrl: string;
+  const result = Array.isArray(output) ? output[0] : output;
+
+  if (result && typeof result === "object" && typeof (result as any).url === "function") {
+    audioUrl = (result as any).url();
+  } else if (result && typeof result === "object" && "url" in (result as any)) {
+    audioUrl = (result as any).url;
+  } else if (typeof result === "string") {
+    audioUrl = result;
+  } else if (result instanceof Buffer || result instanceof ArrayBuffer) {
+    const buf = result instanceof ArrayBuffer ? Buffer.from(result) : result;
+    audioUrl = "local:" + saveAudioFile(buf, "mp3");
+  } else {
+    audioUrl = String(result);
+  }
+
+  if (audioUrl.startsWith("local:")) {
+    return { audioUrl: audioUrl.replace("local:", ""), provider: "replicate" };
+  }
+
   return { audioUrl, provider: "replicate" };
 }
 
@@ -189,10 +368,10 @@ export async function processMusicGeneration(
         const muMsg = muErr.message || "";
         console.log(`[Worker] Mureka unavailable: ${muMsg.substring(0, 120)}`);
 
-        // 3. Try Replicate (instrumental with style-optimized prompt)
+        // 3. Try Replicate ACE-Step (full song with vocals + lyrics)
         try {
-          console.log(`[Worker] Using Replicate MusicGen with style-optimized prompt...`);
-          const repResult = await generateWithReplicate(enhancedPrompt, duration, style);
+          console.log(`[Worker] Using Replicate ACE-Step with lyrics...`);
+          const repResult = await generateWithReplicate(enhancedPrompt, duration, style, generatedLyrics);
           const localUrl = await downloadAndSaveAudio(repResult.audioUrl);
           result = { audioUrl: localUrl, provider: "replicate" };
         } catch (repErr: any) {

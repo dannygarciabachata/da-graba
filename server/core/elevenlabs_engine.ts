@@ -138,7 +138,7 @@ export async function generateWithElevenLabs(
     },
     body: JSON.stringify({
       prompt,
-      duration_ms: durationMs,
+      music_length_ms: durationMs,
       output_format: "mp3_44100_128",
     }),
   });
