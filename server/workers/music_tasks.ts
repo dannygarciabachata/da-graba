@@ -73,30 +73,20 @@ async function generateSmartPrompt(
 function buildAceStepTags(userPrompt: string, style: string): string {
   const styleTags: Record<string, string> = {
     "heart-mula":
-      "bachata, Dominican bachata, acoustic guitar, requinto, bongo, guira, bass, romantic, emotional, intimate, Latin, 72 BPM, D minor",
+      "bachata, Dominican bachata, male vocal, Spanish, acoustic guitar fingerpicking, requinto guitar solo, bongo, guira, bass guitar, piano pads, romantic, emotional, intimate, warm, nostalgic, Latin, 72 BPM, D minor",
     "bachata-romantic":
-      "bachata, romantic bachata, acoustic guitar, bongo, guira, soft, emotional, tender, intimate, Latin, 75 BPM, A minor",
+      "bachata, romantic bachata, male vocal, Spanish, acoustic guitar, soft requinto, bongo, guira, tender, emotional, intimate, warm, Latin love song, 75 BPM, A minor",
     "bachata-dance":
-      "bachata, upbeat bachata, acoustic guitar, bongo, guira, conga, energetic, dance, party, fun, Latin, 90 BPM, C major",
+      "bachata, upbeat bachata, male vocal, Spanish, driving acoustic guitar, bongo, guira, conga, energetic, dance, party, fun, Latin dance, 90 BPM, C major",
     "bachata-bolero":
-      "bachata bolero, slow bachata, acoustic guitar, requinto, piano, emotional, sorrowful, nostalgic, intimate, Latin, 70 BPM, D minor",
+      "bachata bolero, slow bachata, male vocal, Spanish, acoustic guitar arpeggios, requinto crying melody, piano, emotional, sorrowful, nostalgic, intimate, Latin, 70 BPM, D minor",
     "trio-serenade":
-      "Latin trio, serenade, requinto, classical guitar, bolero, romantic, harmony, intimate, acoustic, 70 BPM, E minor",
+      "Latin trio, serenade, male vocal harmony, Spanish, requinto, two rhythm guitars, bolero, romantic, intimate, acoustic, 70 BPM, E minor",
     "bachata-urbana":
-      "modern bachata, urban bachata, electric guitar, bongo, trap, 808 bass, R&B, polished, contemporary, Latin, 85 BPM, G minor",
+      "modern bachata, urban bachata, male vocal, Spanish, electric guitar reverb, bongo, trap hi-hats, 808 bass, R&B, polished, contemporary, Latin urban, 85 BPM, G minor",
   };
 
-  const baseTags = styleTags[style] || styleTags["heart-mula"];
-
-  const cleanUserWords = userPrompt
-    .replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ\s]/g, "")
-    .trim()
-    .substring(0, 60);
-
-  if (cleanUserWords.length > 3) {
-    return `${cleanUserWords}, ${baseTags}`;
-  }
-  return baseTags;
+  return styleTags[style] || styleTags["heart-mula"];
 }
 
 function buildAceStepLyrics(userPrompt: string, style: string, generatedLyrics: string): string {
@@ -105,15 +95,27 @@ function buildAceStepLyrics(userPrompt: string, style: string, generatedLyrics: 
       .replace(/\*\*[^*]*\*\*/g, "")
       .replace(/^#+\s.*/gm, "")
       .replace(/^\s*[-–—]\s*/gm, "")
+      .replace(/\[Verse\s*\d*\]/gi, "[verse]")
+      .replace(/\[Chorus\s*\d*\]/gi, "[chorus]")
+      .replace(/\[Bridge\s*\d*\]/gi, "[bridge]")
+      .replace(/\[Pre-Chorus\s*\d*\]/gi, "[verse]")
+      .replace(/\[Intro\s*\d*\]/gi, "[verse]")
+      .replace(/\[Outro\s*\d*\]/gi, "[chorus]")
+      .replace(/\[Spoken\s*Word[^\]]*\]/gi, "[bridge]")
+      .replace(/\[Final\s*Chorus[^\]]*\]/gi, "[chorus]")
+      .replace(/\[Hook[^\]]*\]/gi, "[chorus]")
+      .replace(/\[Dance\s*Break[^\]]*\]/gi, "[bridge]")
+      .replace(/\[Ad[- ]?libs?[^\]]*\]/gi, "")
       .replace(/\n{3,}/g, "\n\n")
+      .replace(/^\s*\n/gm, "")
       .trim();
 
-    const hasStructure = /\[(verse|chorus|bridge|intro|outro)/i.test(cleaned);
+    const hasStructure = /\[(verse|chorus|bridge)/i.test(cleaned);
     if (hasStructure) return cleaned;
-    const lines = cleaned.split("\n").filter(l => l.trim());
+    const lines = cleaned.split("\n").filter(l => l.trim() && l.trim().length > 3);
     if (lines.length >= 4) {
-      const half = Math.ceil(lines.length / 2);
-      return `[verse]\n${lines.slice(0, half).join("\n")}\n\n[chorus]\n${lines.slice(half).join("\n")}`;
+      const third = Math.ceil(lines.length / 3);
+      return `[verse]\n${lines.slice(0, third).join("\n")}\n\n[chorus]\n${lines.slice(third, third * 2).join("\n")}\n\n[verse]\n${lines.slice(third * 2).join("\n")}`;
     }
   }
 
@@ -283,7 +285,8 @@ async function generateWithReplicate(
     tags,
     lyrics: aceStepLyrics,
     duration: Math.min(Math.max(duration, 30), 180),
-    number_of_steps: 60,
+    number_of_steps: 100,
+    guidance_scale: 15,
   };
 
   const output = await replicate.run(
