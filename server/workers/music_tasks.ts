@@ -101,9 +101,16 @@ function buildAceStepTags(userPrompt: string, style: string): string {
 
 function buildAceStepLyrics(userPrompt: string, style: string, generatedLyrics: string): string {
   if (generatedLyrics && generatedLyrics.length > 20) {
-    const hasStructure = /\[(verse|chorus|bridge|intro|outro)/i.test(generatedLyrics);
-    if (hasStructure) return generatedLyrics;
-    const lines = generatedLyrics.split("\n").filter(l => l.trim());
+    let cleaned = generatedLyrics
+      .replace(/\*\*[^*]*\*\*/g, "")
+      .replace(/^#+\s.*/gm, "")
+      .replace(/^\s*[-–—]\s*/gm, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
+    const hasStructure = /\[(verse|chorus|bridge|intro|outro)/i.test(cleaned);
+    if (hasStructure) return cleaned;
+    const lines = cleaned.split("\n").filter(l => l.trim());
     if (lines.length >= 4) {
       const half = Math.ceil(lines.length / 2);
       return `[verse]\n${lines.slice(0, half).join("\n")}\n\n[chorus]\n${lines.slice(half).join("\n")}`;
@@ -287,22 +294,19 @@ async function generateWithReplicate(
   let audioUrl: string;
   const result = Array.isArray(output) ? output[0] : output;
 
+  console.log(`[Worker] ACE-Step raw output type: ${typeof result}, constructor: ${result?.constructor?.name}`);
+
   if (result && typeof result === "object" && typeof (result as any).url === "function") {
-    audioUrl = (result as any).url();
+    audioUrl = String((result as any).url());
   } else if (result && typeof result === "object" && "url" in (result as any)) {
-    audioUrl = (result as any).url;
+    audioUrl = String((result as any).url);
   } else if (typeof result === "string") {
     audioUrl = result;
-  } else if (result instanceof Buffer || result instanceof ArrayBuffer) {
-    const buf = result instanceof ArrayBuffer ? Buffer.from(result) : result;
-    audioUrl = "local:" + saveAudioFile(buf, "mp3");
   } else {
     audioUrl = String(result);
   }
 
-  if (audioUrl.startsWith("local:")) {
-    return { audioUrl: audioUrl.replace("local:", ""), provider: "replicate" };
-  }
+  console.log(`[Worker] ACE-Step resolved URL: ${audioUrl.substring(0, 120)}...`);
 
   return { audioUrl, provider: "replicate" };
 }
