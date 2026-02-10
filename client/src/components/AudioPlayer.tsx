@@ -32,20 +32,39 @@ export function AudioPlayer({ url, title }: AudioPlayerProps) {
     setCurrentTime(0);
     setDuration(0);
 
-    const audio = new Audio(url);
+    const audio = new Audio();
     audio.preload = "auto";
     audioRef.current = audio;
 
     const onCanPlay = () => setIsReady(true);
     const onLoadedMetadata = () => setDuration(audio.duration || 0);
-    const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
+    const onTimeUpdate = () => {
+      setCurrentTime(audio.currentTime || 0);
+      if (wavesurfer.current && audio.duration > 0) {
+        const progress = audio.currentTime / audio.duration;
+        wavesurfer.current.seekTo(progress);
+      }
+    };
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
     const onEnded = () => setIsPlaying(false);
+    let retryCount = 0;
     const onError = () => {
-      console.error("[AudioPlayer] HTML Audio error loading:", url);
-      setHasError(true);
+      const err = audio.error;
+      console.error("[AudioPlayer] HTML Audio error:", err?.code, err?.message, "url:", url);
+      if (retryCount < 2) {
+        retryCount++;
+        console.log(`[AudioPlayer] Retrying load (${retryCount}/2)...`);
+        setTimeout(() => {
+          audio.src = url + (url.includes("?") ? "&" : "?") + "retry=" + retryCount;
+          audio.load();
+        }, 1000 * retryCount);
+      } else {
+        setHasError(true);
+      }
     };
+
+    audio.src = url;
 
     audio.addEventListener("canplay", onCanPlay);
     audio.addEventListener("loadedmetadata", onLoadedMetadata);
@@ -66,10 +85,13 @@ export function AudioPlayer({ url, title }: AudioPlayerProps) {
           barGap: 3,
           height: 80,
           normalize: true,
-          media: audio,
+          url: url,
         });
 
         wavesurfer.current.on('ready', () => setWaveformReady(true));
+        wavesurfer.current.on('interaction', (newTime: number) => {
+          audio.currentTime = newTime;
+        });
         wavesurfer.current.on('error', (err) => {
           console.warn("[AudioPlayer] WaveSurfer error (fallback to basic player):", err);
         });
