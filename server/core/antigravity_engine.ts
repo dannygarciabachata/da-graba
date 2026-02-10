@@ -21,9 +21,9 @@ export async function generateCreativeLyrics(
     model: "gpt-5.1",
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Write a complete Bachata song about: ${theme}` },
+      { role: "user", content: `Write a short Bachata song (2 verses and 2 choruses only, 4 lines each section) about: ${theme}` },
     ],
-    max_completion_tokens: 2048,
+    max_completion_tokens: 800,
   });
 
   return completion.choices[0].message.content || "Could not generate lyrics.";

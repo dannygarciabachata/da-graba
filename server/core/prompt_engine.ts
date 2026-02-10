@@ -88,8 +88,9 @@ CRITICAL OUTPUT FORMAT RULES:
 - Do NOT number sections (no [Verse 1], no [Chorus 2])
 - Do NOT use markdown formatting (no **, no ##, no bullet points)
 - Do NOT include section descriptions like "(8 lines)" — just the lyrics
-- Write 4-6 lines per section, one line per line
-- Each line should be a singable phrase, not a paragraph
+- Write EXACTLY 4 lines per section, each line is one short singable phrase
+- Keep each line SHORT (under 12 words) so it fits naturally into the rhythm
+- Write ONLY 4 sections total: [verse], [chorus], [verse], [chorus]
 - Write lyrics ONLY — no titles, no explanations, no notes
 - Language: Spanish with natural Spanglish phrases`;
 
@@ -102,28 +103,28 @@ ${formatRules}
 
 Example output format:
 [verse]
-Primera línea del verso aquí
-Segunda línea del verso aquí
-Tercera línea aquí
-Cuarta línea aquí
+Bajo la luna te pienso mi amor
+Tu recuerdo me abraza el corazón
+Las guitarras me cuentan tu historia
+Y en cada nota vive tu memoria
 
 [chorus]
-Primera línea del coro
-Segunda línea del coro
-Tercera línea del coro
-Cuarta línea del coro
+Ven a bailar conmigo esta noche
+Que la bachata nos une sin reproche
+Tu mano en mi mano tu piel en mi piel
+Este amor sabe a miel
 
 [verse]
-Otro verso aquí
-Continuación del verso
-Más letras del verso
-Final del verso
+Tus ojos brillan como las estrellas
+Iluminan mis noches más bellas
+Con cada paso que damos bailando
+Mi corazón se va enamorando
 
 [chorus]
-Repetición del coro
-Segunda línea
-Tercera línea
-Cuarta línea`,
+Ven a bailar conmigo esta noche
+Que la bachata nos une sin reproche
+Tu mano en mi mano tu piel en mi piel
+Este amor sabe a miel`,
 
     dance: `You are DGB STUDIO Heart Mula Music Engine — an upbeat Bachata hitmaker in the spirit of Aventura and Grupo Extra.
 Write fun, flirty, irresistible party lyrics in Spanish with catchy Spanglish hooks.

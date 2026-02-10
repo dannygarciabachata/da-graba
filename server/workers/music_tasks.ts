@@ -73,23 +73,37 @@ async function generateSmartPrompt(
 function buildAceStepTags(userPrompt: string, style: string): string {
   const styleTags: Record<string, string> = {
     "heart-mula":
-      "bachata, Dominican bachata, male vocal, Spanish, acoustic guitar fingerpicking, requinto guitar solo, bongo, guira, bass guitar, piano pads, romantic, emotional, intimate, warm, nostalgic, Latin, 72 BPM, D minor",
+      "bachata, Latin Caribbean, tropical, male vocal, Spanish lyrics, syncopated acoustic guitar strumming pattern, nylon string guitar, lead guitar melody, bongo hand drums, guira shaker percussion, bass guitar groove, warm piano chords, romantic, emotional, intimate, professional Latin production, 130 BPM, D minor",
     "bachata-romantic":
-      "bachata, romantic bachata, male vocal, Spanish, acoustic guitar, soft requinto, bongo, guira, tender, emotional, intimate, warm, Latin love song, 75 BPM, A minor",
+      "bachata, Latin Caribbean, tropical, male vocal, Spanish lyrics, fingerpicked nylon guitar, soft lead guitar melody, bongo hand drums, guira shaker, acoustic bass, tender, emotional, romantic ballad, intimate, warm reverb, professional Latin production, 128 BPM, A minor",
     "bachata-dance":
-      "bachata, upbeat bachata, male vocal, Spanish, driving acoustic guitar, bongo, guira, conga, energetic, dance, party, fun, Latin dance, 90 BPM, C major",
+      "bachata, Latin Caribbean, tropical, male vocal, Spanish lyrics, driving nylon guitar strumming, energetic lead guitar riffs, fast bongo hand drums, loud guira shaker, punchy bass, congas, dance, party, upbeat, high energy, professional Latin production, 140 BPM, C major",
     "bachata-bolero":
-      "bachata bolero, slow bachata, male vocal, Spanish, acoustic guitar arpeggios, requinto crying melody, piano, emotional, sorrowful, nostalgic, intimate, Latin, 70 BPM, D minor",
+      "bachata bolero, Latin Caribbean, tropical, male vocal, Spanish lyrics, slow arpeggiated nylon guitar, crying lead guitar melody, soft bongo brushes, gentle guira, piano ballad chords, deep emotional bass, sorrowful, nostalgic, intimate, professional Latin production, 108 BPM, D minor",
     "trio-serenade":
-      "Latin trio, serenade, male vocal harmony, Spanish, requinto, two rhythm guitars, bolero, romantic, intimate, acoustic, 70 BPM, E minor",
+      "Latin bolero trio, Caribbean serenade, three-part male vocal harmony, Spanish lyrics, requinto lead guitar, two rhythm nylon guitars, romantic, intimate, acoustic, traditional Latin, professional production, 105 BPM, E minor",
     "bachata-urbana":
-      "modern bachata, urban bachata, male vocal, Spanish, electric guitar reverb, bongo, trap hi-hats, 808 bass, R&B, polished, contemporary, Latin urban, 85 BPM, G minor",
+      "modern bachata, Latin urban, reggaeton fusion, male vocal, Spanish lyrics, electric guitar with reverb and delay, electronic bongo pattern, trap hi-hat rolls, deep 808 sub bass, R&B vocal style, polished contemporary production, 138 BPM, G minor",
   };
 
   return styleTags[style] || styleTags["heart-mula"];
 }
 
-function buildAceStepLyrics(userPrompt: string, style: string, generatedLyrics: string): string {
+function trimLyricsToFitDuration(lyrics: string, durationSec: number): string {
+  const linesPerSection = 4;
+  const sectionsFor30s = 2;
+  const maxSections = Math.max(sectionsFor30s, Math.floor(durationSec / 20));
+
+  const sections = lyrics.split(/(?=\[(verse|chorus|bridge)\])/gi).filter(s => s.trim());
+  if (sections.length <= maxSections) return lyrics;
+
+  const kept = sections.slice(0, maxSections);
+  const result = kept.join("\n\n").trim();
+  console.log(`[Worker] Trimmed lyrics from ${sections.length} sections to ${maxSections} for ${durationSec}s track`);
+  return result;
+}
+
+function buildAceStepLyrics(userPrompt: string, style: string, generatedLyrics: string, durationSec: number = 30): string {
   if (generatedLyrics && generatedLyrics.length > 20) {
     let cleaned = generatedLyrics
       .replace(/\*\*[^*]*\*\*/g, "")
@@ -111,11 +125,13 @@ function buildAceStepLyrics(userPrompt: string, style: string, generatedLyrics: 
       .trim();
 
     const hasStructure = /\[(verse|chorus|bridge)/i.test(cleaned);
-    if (hasStructure) return cleaned;
+    if (hasStructure) return trimLyricsToFitDuration(cleaned, durationSec);
     const lines = cleaned.split("\n").filter(l => l.trim() && l.trim().length > 3);
     if (lines.length >= 4) {
-      const third = Math.ceil(lines.length / 3);
-      return `[verse]\n${lines.slice(0, third).join("\n")}\n\n[chorus]\n${lines.slice(third, third * 2).join("\n")}\n\n[verse]\n${lines.slice(third * 2).join("\n")}`;
+      const maxLines = Math.max(8, Math.floor(durationSec / 4));
+      const usedLines = lines.slice(0, maxLines);
+      const half = Math.ceil(usedLines.length / 2);
+      return `[verse]\n${usedLines.slice(0, half).join("\n")}\n\n[chorus]\n${usedLines.slice(half).join("\n")}`;
     }
   }
 
@@ -274,19 +290,20 @@ async function generateWithReplicate(
   style: string = "heart-mula",
   lyrics: string = ""
 ): Promise<{ audioUrl: string; provider: "replicate" }> {
+  const actualDuration = Math.min(Math.max(duration, 30), 180);
   const tags = buildAceStepTags(prompt, style);
-  const aceStepLyrics = buildAceStepLyrics(prompt, style, lyrics);
+  const aceStepLyrics = buildAceStepLyrics(prompt, style, lyrics, actualDuration);
 
   console.log(`[Worker] Generating audio with Replicate ACE-Step...`);
   console.log(`[Worker] Tags: ${tags}`);
-  console.log(`[Worker] Lyrics (${aceStepLyrics.length} chars): ${aceStepLyrics.substring(0, 100)}...`);
+  console.log(`[Worker] Lyrics (${aceStepLyrics.length} chars): ${aceStepLyrics.substring(0, 200)}...`);
 
   const input: Record<string, any> = {
     tags,
     lyrics: aceStepLyrics,
-    duration: Math.min(Math.max(duration, 30), 180),
+    duration: actualDuration,
     number_of_steps: 100,
-    guidance_scale: 15,
+    guidance_scale: 20,
   };
 
   const output = await replicate.run(
