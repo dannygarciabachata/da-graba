@@ -122,14 +122,10 @@ export async function registerRoutes(
   app.post("/api/webhooks/musicgpt", async (req, res) => {
     try {
       const payload = req.body;
-      console.log(`[Webhook] Received MusicGPT webhook:`, JSON.stringify(payload).substring(0, 500));
+      const subtype = payload.subtype;
+      console.log(`[Webhook] Received MusicGPT webhook (subtype: ${subtype || "audio"}):`, JSON.stringify(payload).substring(0, 500));
 
       const taskId = payload.task_id;
-      const status = payload.status?.toUpperCase();
-      const audioUrl = payload.audio_url;
-      const title = payload.title;
-      const conversionType = payload.conversion_type;
-
       if (!taskId) {
         console.log("[Webhook] No task_id in payload, ignoring");
         return res.sendStatus(200);
@@ -149,33 +145,53 @@ export async function registerRoutes(
         console.log(`[Webhook] No song found for task_id ${taskId}, ignoring`);
         return res.sendStatus(200);
       }
-      pendingTaskMap.delete(taskId);
 
-      if (song.status === "completed") {
-        console.log(`[Webhook] Song ${song.id} already completed, ignoring duplicate webhook`);
+      if (subtype === "album_cover_generation" && payload.image_path) {
+        console.log(`[Webhook] Song ${song.id} - saving album cover: ${payload.image_path}`);
+        await storage.updateSongImage(song.id, payload.image_path);
         return res.sendStatus(200);
       }
 
-      if (status === "COMPLETED" && audioUrl) {
-        console.log(`[Webhook] Song ${song.id} completed! Downloading audio...`);
-        const localUrl = await downloadMusicGPTFile(audioUrl, "songs", "song");
-        await storage.updateSongStatus(song.id, "completed", localUrl);
+      if (subtype === "lyrics_timestamped") {
+        console.log(`[Webhook] Song ${song.id} - received timestamped lyrics, skipping`);
+        return res.sendStatus(200);
+      }
 
-        if (title && title !== "Generated Song") {
-          try {
-            const { db } = await import("./db");
-            const { songs: songsTable } = await import("@shared/schema");
-            const { eq } = await import("drizzle-orm");
-            await db.update(songsTable).set({ title }).where(eq(songsTable.id, song.id));
-          } catch {}
-        }
-
-        console.log(`[Webhook] Song ${song.id} saved: ${localUrl}`);
-      } else if (status === "FAILED") {
-        const errorMsg = payload.status_msg || "Generation failed";
+      if (payload.success === false) {
+        const errorMsg = payload.status_msg || payload.error || "Generation failed";
         console.log(`[Webhook] Song ${song.id} failed: ${errorMsg}`);
         await storage.updateSongStatus(song.id, "failed", undefined, errorMsg);
+        pendingTaskMap.delete(taskId);
+        return res.sendStatus(200);
       }
+
+      const audioUrl = payload.conversion_path || payload.conversion_path_wav || payload.audio_url;
+      if (!audioUrl) {
+        console.log(`[Webhook] Song ${song.id} - no audio URL in payload, skipping`);
+        return res.sendStatus(200);
+      }
+
+      if (song.status === "completed") {
+        console.log(`[Webhook] Song ${song.id} already completed, ignoring duplicate`);
+        return res.sendStatus(200);
+      }
+
+      console.log(`[Webhook] Song ${song.id} completed! Downloading audio from ${audioUrl}...`);
+      const localUrl = await downloadMusicGPTFile(audioUrl, "songs", "song");
+      const duration = payload.conversion_duration ? Math.round(payload.conversion_duration) : null;
+      await storage.updateSongStatus(song.id, "completed", localUrl);
+
+      if (duration) {
+        try {
+          const { db } = await import("./db");
+          const { songs: songsTable } = await import("@shared/schema");
+          const { eq } = await import("drizzle-orm");
+          await db.update(songsTable).set({ duration }).where(eq(songsTable.id, song.id));
+        } catch {}
+      }
+
+      pendingTaskMap.delete(taskId);
+      console.log(`[Webhook] Song ${song.id} saved: ${localUrl} (duration: ${duration}s)`);
 
       res.sendStatus(200);
     } catch (err: any) {
