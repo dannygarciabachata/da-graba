@@ -1,0 +1,41 @@
+Introduction
+MusicGPT v6 Pro is live now : Access the world’s most advanced AI audio models with the MusicGPT API
+​
+MusicGPT Public API Documentation
+Welcome to MusicGPT — your all-in-one AI-powered music and audio platform. Our API lets you generate, remix, enhance, convert, and manipulate audio effortlessly, turning creative ideas into production-ready music. We offer:
+Music AICoverText to SpeechRemixExtraction+20 features
+Whether it’s AI-generated songs, voice transformation, audio inpainting, stem extraction, or seamless format conversion, MusicGPT gives developers and creators the tools to do anything possible with music and audio.
+​
+Features Highlights
+Musicgpt is a comprehensive AI audio platform offering a wide range of features including:
+Music Generation (MusicAI): Turn text prompts into full-length songs.
+Voice Changing: Convert any voice into a new one — ideal for character work, privacy, or creativity.
+Cover Song Generation: Recreate any song with a new voice or style.
+Vocal, Instrumental and Stems Extraction: Isolate or remove vocals or instruments or stems.
+Text-to-Speech (TTS): Convert text to expressive voice using custom voice profiles.
+Audio Cleaning: De-noise, de-echo, and de-reverb your recordings.
+Remixing and Editing Tools: Cut, master, change pitch/speed, remix, inpaint and more.
+Key/BPM Detection: Instantly extract musical key and tempo.
+Transcription: Get accurate text from speech.
+File Format Conversion: Seamlessly convert between audio formats.
+​
+Why Developers Love Musicgpt
+Powerful & Easy-to-Use API
+Webhook Support for Async Jobs
+Flexible Pricing with Free Tier
+Fast Processing & Global CDN Delivery
+Real-Time Status Monitoring
+Secure & Scalable Infrastructure
+​
+Real-World Use Cases
+Content Creators auto-dubbing podcasts or YouTube videos
+Music Producers generating and remixing audio at scale
+Developers building music-based apps or smart audio tools
+Researchers experimenting with generative audio AI
+​
+Start Your API Journey Today 🎁
+Get free credits and start building with Musicgpt API immediately!
+👉 Join the API Program
+Easy signup and dashboard access
+Seamless Integration
+Start generating in minutes

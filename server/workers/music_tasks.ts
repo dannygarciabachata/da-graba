@@ -1,5 +1,6 @@
 import Replicate from "replicate";
 import { storage } from "../storage";
+import { generateWithMusicGPT } from "../core/musicgpt_engine";
 import { generateWithElevenLabs } from "../core/elevenlabs_engine";
 import {
   startSongGeneration,
@@ -289,48 +290,65 @@ export async function processMusicGeneration(
 
     let result: { audioUrl: string; provider: string };
 
-    // Provider order for bachata: ACE-Step first (best genre recognition),
-    // then ElevenLabs, then Mureka
+    // Provider order: MusicGPT (primary, full songs with lyrics+style control),
+    // ACE-Step (secondary, best bachata genre tags), ElevenLabs (tertiary), Mureka (quaternary)
 
-    // 1. Try Replicate ACE-Step (best for bachata - has native genre tag support)
+    const errors: string[] = [];
+
+    // 1. Try MusicGPT (primary - full song generation with style and lyrics)
     try {
-      console.log(`[Worker] Trying Replicate ACE-Step (primary for bachata)...`);
-      const repResult = await generateWithAceStep(duration, style, generatedLyrics);
-      const localUrl = await downloadAndSaveAudio(repResult.audioUrl);
-      result = { audioUrl: localUrl, provider: "replicate" };
-    } catch (repErr: any) {
-      const repMsg = repErr.message || "";
-      console.log(`[Worker] ACE-Step unavailable: ${repMsg.substring(0, 120)}`);
+      console.log(`[Worker] Trying MusicGPT (primary)...`);
+      const mgptResult = await generateWithMusicGPT(finalPrompt, style, {
+        lyrics: generatedLyrics || undefined,
+        duration,
+      });
+      const localUrl = await downloadAndSaveAudio(mgptResult.audioUrl);
+      result = { audioUrl: localUrl, provider: "musicgpt" };
+    } catch (mgptErr: any) {
+      const mgptMsg = mgptErr.message || "";
+      errors.push(`MusicGPT: ${mgptMsg.substring(0, 80)}`);
+      console.log(`[Worker] MusicGPT unavailable: ${mgptMsg.substring(0, 120)}`);
 
-      // 2. Try ElevenLabs (general music model)
+      // 2. Try Replicate ACE-Step (best for bachata genre tags)
       try {
-        console.log(`[Worker] Trying ElevenLabs Music (secondary)...`);
-        const elResult = await generateWithElevenLabs(finalPrompt, style, {
-          lyrics: generatedLyrics || undefined,
-          durationMs: Math.max(duration * 1000, 30000),
-        });
-        const audioUrl = saveAudioFile(elResult.audioBuffer, "mp3");
-        result = { audioUrl, provider: "elevenlabs" };
-      } catch (elErr: any) {
-        const elMsg = elErr.message || "";
-        console.log(`[Worker] ElevenLabs unavailable: ${elMsg.substring(0, 120)}`);
+        console.log(`[Worker] Trying Replicate ACE-Step (secondary)...`);
+        const repResult = await generateWithAceStep(duration, style, generatedLyrics);
+        const localUrl = await downloadAndSaveAudio(repResult.audioUrl);
+        result = { audioUrl: localUrl, provider: "replicate" };
+      } catch (repErr: any) {
+        const repMsg = repErr.message || "";
+        errors.push(`ACE-Step: ${repMsg.substring(0, 80)}`);
+        console.log(`[Worker] ACE-Step unavailable: ${repMsg.substring(0, 120)}`);
 
-        // 3. Try Mureka (full song with vocals)
+        // 3. Try ElevenLabs (general music model)
         try {
-          console.log(`[Worker] Trying Mureka AI (tertiary)...`);
-          const murekaLyrics = generatedLyrics || buildBachataLyrics(finalPrompt, style);
-          const murekaPrompt = buildMurekaPrompt(finalPrompt, style);
-          const task = await startSongGeneration(murekaLyrics, murekaPrompt, "auto");
-          const completed = await pollSongUntilDone(task.id, 300000, 5000);
-          if (!completed.choices || completed.choices.length === 0) {
-            throw new Error("Mureka returned no audio choices");
+          console.log(`[Worker] Trying ElevenLabs Music (tertiary)...`);
+          const elResult = await generateWithElevenLabs(finalPrompt, style, {
+            lyrics: generatedLyrics || undefined,
+            durationMs: Math.max(duration * 1000, 30000),
+          });
+          const audioUrl = saveAudioFile(elResult.audioBuffer, "mp3");
+          result = { audioUrl, provider: "elevenlabs" };
+        } catch (elErr: any) {
+          errors.push(`ElevenLabs: ${(elErr.message || "").substring(0, 80)}`);
+          console.log(`[Worker] ElevenLabs unavailable: ${(elErr.message || "").substring(0, 120)}`);
+
+          // 4. Try Mureka (full song with vocals)
+          try {
+            console.log(`[Worker] Trying Mureka AI (quaternary)...`);
+            const murekaLyrics = generatedLyrics || buildBachataLyrics(finalPrompt, style);
+            const murekaPrompt = buildMurekaPrompt(finalPrompt, style);
+            const task = await startSongGeneration(murekaLyrics, murekaPrompt, "auto");
+            const completed = await pollSongUntilDone(task.id, 300000, 5000);
+            if (!completed.choices || completed.choices.length === 0) {
+              throw new Error("Mureka returned no audio choices");
+            }
+            const localUrl = await downloadAndSaveAudio(completed.choices[0].url);
+            result = { audioUrl: localUrl, provider: "mureka" };
+          } catch (muErr: any) {
+            errors.push(`Mureka: ${(muErr.message || "").substring(0, 80)}`);
+            throw new Error(`All music providers failed. ${errors.join(". ")}`);
           }
-          const localUrl = await downloadAndSaveAudio(completed.choices[0].url);
-          result = { audioUrl: localUrl, provider: "mureka" };
-        } catch (muErr: any) {
-          throw new Error(
-            `All music providers failed. ACE-Step: ${repMsg.substring(0, 80)}. ElevenLabs: ${elErr.message?.substring(0, 80)}. Mureka: ${muErr.message?.substring(0, 80)}`
-          );
         }
       }
     }

@@ -8,10 +8,11 @@ AI-powered music generation platform tailored for Bachata music by Danny Garcia.
 - **Backend**: Express.js (TypeScript)
 - **Database**: PostgreSQL (Neon-backed via Replit)
 - **Auth**: Replit Auth (OpenID Connect)
-- **Music AI**: Replicate ACE-Step (primary, best bachata genre adherence) → ElevenLabs Music (secondary) → Mureka AI (tertiary)
+- **Music AI**: MusicGPT (primary, full songs with style+lyrics) → Replicate ACE-Step (secondary, bachata genre tags) → ElevenLabs Music (tertiary) → Mureka AI (quaternary)
 - **Lyrics AI**: OpenAI via Replit AI Integrations (GPT-5.1)
 
 ## Core Engines (server/core/)
+- **musicgpt_engine.ts** - MusicGPT API client (submit generation, poll status, download audio)
 - **prompt_engine.ts** - Versioned music prompts (Heart Mula, Romantic, Dance, Bolero, Urbana, Serenade), lyrics system prompts, structured JSON config generation
 - **elevenlabs_engine.ts** - ElevenLabs Music client (direct audio generation, Bachata prompts & lyrics)
 - **mureka_engine.ts** - Mureka AI client (song generation, async polling, Bachata lyrics templates)
@@ -21,7 +22,7 @@ AI-powered music generation platform tailored for Bachata music by Danny Garcia.
 - **stems_engine.ts** - AI stem separation using Replicate Demucs (splits songs into vocals, drums, bass, other)
 
 ## Workers (server/workers/)
-- **music_tasks.ts** - Background async music generation: OpenAI creates lyrics, then ACE-Step (primary) → ElevenLabs → Mureka for audio
+- **music_tasks.ts** - Background async music generation: OpenAI creates lyrics, then MusicGPT (primary) → ACE-Step → ElevenLabs → Mureka for audio
 - **sample_tasks.ts** - Humming-to-music AI transformation using Replicate MusicGen melody-conditioned model
 
 ## Key Features
@@ -98,7 +99,7 @@ shared/
 - Font: Inter + JetBrains Mono
 
 ## API Endpoints
-- `POST /api/songs/generate` - Generate music (ACE-Step primary for bachata, ElevenLabs secondary, Mureka tertiary; supports style, duration, lyrics, auto-bachata detection)
+- `POST /api/songs/generate` - Generate music (MusicGPT primary, ACE-Step secondary, ElevenLabs tertiary, Mureka quaternary; supports style, duration, lyrics, auto-bachata detection)
 - `GET /api/songs` - List user's songs
 - `GET /api/songs/:id` - Get single song
 - `DELETE /api/songs/:id` - Delete song
@@ -120,7 +121,8 @@ shared/
 
 ## Environment Variables
 - `DATABASE_URL` - PostgreSQL connection
-- `ELEVENLABS_API_KEY` - ElevenLabs API key (primary music generation, requires paid plan)
+- `MUSICGPT_API_KEY` - MusicGPT API key (primary music generation)
+- `ELEVENLABS_API_KEY` - ElevenLabs API key (tertiary music generation, requires paid plan)
 - `MUREKA_API_KEY` - Mureka AI API key (secondary music generation)
 - `REPLICATE_API_TOKEN` - Replicate API key (fallback music generation)
 - `HF_TOKEN` - Hugging Face token (unused fallback)
