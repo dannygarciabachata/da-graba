@@ -70,15 +70,21 @@ export async function submitMusicGPTJob(
 ): Promise<MusicGPTSubmitResponse> {
   const apiKey = getApiKey();
 
-  console.log(`[MusicGPT:${endpoint}] Submitting job...`);
+  console.log(`[MusicGPT:${endpoint}] Submitting job with params:`, Object.keys(body).join(", "));
+
+  const formData = new FormData();
+  for (const [key, value] of Object.entries(body)) {
+    if (value !== undefined && value !== null) {
+      formData.append(key, String(value));
+    }
+  }
 
   const response = await fetch(`${MUSICGPT_API_BASE}/${endpoint}`, {
     method: "POST",
     headers: {
       Authorization: apiKey,
-      "Content-Type": "application/json",
     },
-    body: JSON.stringify(body),
+    body: formData,
   });
 
   if (!response.ok) {
@@ -297,13 +303,19 @@ export async function submitAudioCutter(
 
   console.log(`[MusicGPT:AudioCutter] Submitting trim: ${startTimeMs}ms - ${endTimeMs}ms`);
 
+  const formData = new FormData();
+  for (const [key, value] of Object.entries(body)) {
+    if (value !== undefined && value !== null) {
+      formData.append(key, String(value));
+    }
+  }
+
   const response = await fetch(`${MUSICGPT_API_BASE}/audio_cutter`, {
     method: "POST",
     headers: {
       Authorization: apiKey,
-      "Content-Type": "application/json",
     },
-    body: JSON.stringify(body),
+    body: formData,
   });
 
   if (!response.ok) {
