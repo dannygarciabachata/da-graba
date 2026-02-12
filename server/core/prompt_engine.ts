@@ -8,7 +8,7 @@ All instruments must play together as a tight ensemble — not separately.
 
 STYLE: Romantic Dominican Bachata
 MOOD: Emotional, intimate, nostalgic
-TEMPO: 70–85 BPM
+TEMPO: 105–140 BPM
 KEY: Minor preferred
 
 ARRANGEMENT RULES:
@@ -61,17 +61,17 @@ export interface MusicPromptConfig {
 
 export const PROMPT_VERSIONS: Record<string, string> = {
   "bachata-romantic":
-    "romantic Dominican bachata, tight acoustic guitar rhythm, requinto melody, bongo and guira groove locked together, smooth bass, soft piano chords, professionally mixed and balanced, cohesive ensemble, 75 BPM, A minor",
+    "romantic Dominican bachata, fingerpicked nylon guitar, soft lead guitar melody, bongo hand drums, guira shaker, acoustic bass, tender emotional ballad, intimate warm reverb, professionally mixed, 128 BPM, A minor",
   "bachata-dance":
-    "upbeat Dominican bachata, driving guitar strumming, guira and bongo locked in groove, conga accents, energetic bass, piano montuno fills, tight ensemble, well-mixed, 90 BPM, C major",
+    "upbeat Dominican bachata, driving nylon guitar strumming, energetic lead guitar riffs, fast bongo hand drums, loud guira shaker, punchy bass, congas, dance party high energy, tight ensemble, 140 BPM, C major",
   "bachata-bolero":
-    "slow bachata bolero, gentle acoustic guitar arpeggios, requinto crying melody, soft piano harmony, warm bass, gentle bongo keeping time, intimate and cohesive, professionally produced, 70 BPM, D minor",
+    "bachata bolero, slow arpeggiated nylon guitar, crying lead guitar melody, soft bongo brushes, gentle guira, piano ballad chords, deep emotional bass, sorrowful nostalgic intimate, professionally produced, 108 BPM, D minor",
   "trio-serenade":
-    "Latin trio serenade, requinto lead guitar with two rhythm guitars in harmony, romantic bolero feel, tight three-guitar arrangement, balanced mix, 70 BPM, E minor",
+    "Latin bolero trio serenade, requinto lead guitar, two rhythm nylon guitars in harmony, romantic intimate acoustic, traditional Latin feel, balanced mix, 105 BPM, E minor",
   "heart-mula":
-    "emotional Dominican bachata, acoustic guitar fingerpicking as foundation, requinto melody over top, bongo and guira locked rhythm, piano pads, warm bass groove, all instruments playing together as one cohesive band, professionally mixed, 72 BPM, D minor",
+    "Dominican bachata, syncopated acoustic guitar strumming, nylon string guitar, lead guitar melody, bongo hand drums, guira shaker percussion, bass guitar groove, warm piano chords, romantic emotional intimate, professionally mixed, 130 BPM, D minor",
   "bachata-urbana":
-    "modern urban bachata, electric guitar with reverb as lead, Dominican bongo and guira blended with subtle trap hi-hats, deep 808 bass, R&B vocal style, polished modern production, well-balanced mix, 85 BPM, G minor",
+    "modern urban bachata, electric guitar with reverb and delay, electronic bongo pattern, trap hi-hat rolls, deep 808 sub bass, R&B vocal style, polished contemporary production, 138 BPM, G minor",
 };
 
 export function buildMusicGenPrompt(userPrompt: string, style: string = "bachata-romantic"): string {
@@ -148,18 +148,18 @@ export async function generateStructuredPrompt(userInput: string): Promise<Music
   const isSad = /sad|triste|heartbreak|llorar|dolor|cry/i.test(userInput);
 
   let mood = "emotional, intimate, nostalgic";
-  let tempo = "75";
+  let tempo = "128";
   let key = "Am";
   let dynamics = "Gradual build from soft intro to emotional peak at final chorus, gentle fade. All instruments play as a tight cohesive ensemble.";
 
   if (isDance) {
     mood = "energetic, fun, party";
-    tempo = "90";
+    tempo = "140";
     key = "C";
     dynamics = "High energy throughout with tight ensemble groove, build to dance break, instruments locked together";
   } else if (isSad) {
     mood = "melancholic, sorrowful, deep";
-    tempo = "70";
+    tempo = "108";
     key = "Dm";
     dynamics = "Start intimate and soft, instruments enter gradually and blend together, raw emotional peak at bridge";
   }

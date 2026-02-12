@@ -216,12 +216,12 @@ Baby tu eres mi mayor`,
 
 export function buildMurekaPrompt(userPrompt: string, style: string): string {
   const stylePrompts: Record<string, string> = {
-    "heart-mula": "Dominican bachata, tight guitar and bongo groove, requinto melody, cohesive ensemble, emotional male vocal in Spanish, professionally mixed, 72 BPM",
-    "bachata-romantic": "romantic bachata, soft guitar rhythm with gentle bongo, emotional male vocal in Spanish, intimate balanced mix, 75 BPM",
-    "bachata-dance": "upbeat bachata, driving guitar and guira groove locked together, energetic male vocal in Spanish, tight band sound, 90 BPM",
-    "bachata-bolero": "slow bachata bolero, gentle guitar arpeggios, requinto melody, emotional male vocal in Spanish, intimate cohesive sound, 70 BPM",
-    "trio-serenade": "Latin trio serenade, three guitars in harmony, requinto lead, male vocal harmony in Spanish, tight acoustic arrangement, 70 BPM",
-    "bachata-urbana": "modern urban bachata, electric guitar with reverb, bongo and trap hi-hats blended, R&B male vocal in Spanish, polished production, 85 BPM",
+    "heart-mula": "Dominican bachata, syncopated acoustic guitar, bongo hand drums and guira groove, lead guitar melody, emotional male vocal in Spanish, professionally mixed, 130 BPM",
+    "bachata-romantic": "romantic bachata, fingerpicked nylon guitar, gentle bongo and guira, emotional male vocal in Spanish, intimate balanced mix, 128 BPM",
+    "bachata-dance": "upbeat bachata, driving nylon guitar strumming, guira shaker and bongo locked groove, energetic male vocal in Spanish, tight band sound, 140 BPM",
+    "bachata-bolero": "slow bachata bolero, arpeggiated nylon guitar, crying lead guitar melody, soft bongo brushes, emotional male vocal in Spanish, intimate cohesive sound, 108 BPM",
+    "trio-serenade": "Latin trio serenade, requinto lead guitar, two nylon guitars in harmony, male vocal harmony in Spanish, tight acoustic arrangement, 105 BPM",
+    "bachata-urbana": "modern urban bachata, electric guitar with reverb and delay, electronic bongo and trap hi-hats blended, R&B male vocal in Spanish, polished production, 138 BPM",
   };
 
   const basePrompt = stylePrompts[style] || stylePrompts["heart-mula"];
