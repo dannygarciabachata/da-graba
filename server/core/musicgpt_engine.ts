@@ -280,6 +280,49 @@ export async function submitCover(
   });
 }
 
+export async function submitAudioCutter(
+  audioUrl: string,
+  startTimeMs: number,
+  endTimeMs: number,
+  options: { outputExtension?: string; webhookUrl?: string } = {}
+): Promise<{ success: boolean; conversion_id: string; conversion_path?: string; message?: string }> {
+  const apiKey = getApiKey();
+  const body: Record<string, any> = {
+    audio_url: audioUrl,
+    start_time: startTimeMs,
+    end_time: endTimeMs,
+    output_extension: options.outputExtension || "mp3",
+  };
+  if (options.webhookUrl) body.webhook_url = options.webhookUrl;
+
+  console.log(`[MusicGPT:AudioCutter] Submitting trim: ${startTimeMs}ms - ${endTimeMs}ms`);
+
+  const response = await fetch(`${MUSICGPT_API_BASE}/audio_cutter`, {
+    method: "POST",
+    headers: {
+      Authorization: apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    let errorMsg = `Audio Cutter API error: ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMsg = errorData?.message || errorData?.error || JSON.stringify(errorData);
+    } catch {
+      const text = await response.text().catch(() => "");
+      if (text) errorMsg = text.substring(0, 300);
+    }
+    throw new Error(`MUSICGPT_ERROR: ${errorMsg}`);
+  }
+
+  const data = await response.json();
+  console.log(`[MusicGPT:AudioCutter] Result: conversion_id=${data.conversion_id}, path=${data.conversion_path?.substring(0, 80)}`);
+  return data;
+}
+
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
