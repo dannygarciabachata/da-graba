@@ -1,17 +1,10 @@
-import Replicate from "replicate";
 import { storage } from "../storage";
-import fs from "fs";
-import path from "path";
-import crypto from "crypto";
-
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN,
-});
-
-const AUDIO_DIR = path.join(process.cwd(), "public", "audio", "stems");
-if (!fs.existsSync(AUDIO_DIR)) {
-  fs.mkdirSync(AUDIO_DIR, { recursive: true });
-}
+import {
+  submitExtraction,
+  pollMusicGPTJob,
+  downloadMusicGPTFile,
+  resolveFullAudioUrl,
+} from "./musicgpt_engine";
 
 const STEM_TYPES = [
   { type: "vocals", name: "Vocals", icon: "mic" },
@@ -20,27 +13,12 @@ const STEM_TYPES = [
   { type: "other", name: "Other / Melody", icon: "music" },
 ] as const;
 
-async function downloadStemFile(remoteUrl: string, stemType: string): Promise<string> {
-  console.log(`[Stems] Downloading ${stemType} stem from: ${remoteUrl}`);
-  const response = await fetch(remoteUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to download stem: ${response.status}`);
-  }
-  const arrayBuffer = await response.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  const filename = `${crypto.randomUUID()}_${stemType}.wav`;
-  const filePath = path.join(AUDIO_DIR, filename);
-  fs.writeFileSync(filePath, buffer);
-  console.log(`[Stems] Saved ${stemType} stem: ${filePath} (${buffer.length} bytes)`);
-  return `/audio/stems/${filename}`;
-}
-
 export async function processStemSeparation(
   songId: number,
   audioUrl: string,
   userId: string
 ): Promise<void> {
-  console.log(`[Stems] Starting stem separation for song ${songId}`);
+  console.log(`[Stems] Starting MusicGPT stem separation for song ${songId}`);
 
   const trackRecords = [];
   for (const stem of STEM_TYPES) {
@@ -57,40 +35,43 @@ export async function processStemSeparation(
   }
 
   try {
-    const fullAudioUrl = audioUrl.startsWith("http")
-      ? audioUrl
-      : `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "http://localhost:5000"}${audioUrl}`;
+    const fullAudioUrl = resolveFullAudioUrl(audioUrl);
+    console.log(`[Stems] Sending to MusicGPT Extraction: ${fullAudioUrl}`);
 
-    console.log(`[Stems] Sending to Demucs: ${fullAudioUrl}`);
+    const submitResult = await submitExtraction(fullAudioUrl);
+    const pollResult = await pollMusicGPTJob(submitResult.task_id, 600000, 8000);
 
-    const output = await replicate.run(
-      "cjwbw/demucs:25a173108cff36ef9f80f854c162d01df9e6528be175794b81158fa03836d953",
-      {
-        input: {
-          audio: fullAudioUrl,
-          model_name: "htdemucs",
-          output_format: "wav",
-        },
-      }
-    );
+    console.log(`[Stems] Extraction completed, raw result:`, JSON.stringify(pollResult.raw).substring(0, 500));
 
-    console.log(`[Stems] Demucs output:`, JSON.stringify(output).substring(0, 500));
-
-    const stemOutput = output as Record<string, string>;
+    const vocalsUrl = pollResult.vocalsUrl || pollResult.raw.vocals_url;
+    const accompUrl = pollResult.accompanimentUrl || pollResult.raw.accompaniment_url;
+    const mainAudioUrl = pollResult.audioUrl;
 
     for (const trackRecord of trackRecords) {
-      const stemUrl = stemOutput[trackRecord.type];
-      if (stemUrl) {
-        try {
-          const localUrl = await downloadStemFile(stemUrl, trackRecord.type);
+      try {
+        let remoteUrl: string | undefined;
+
+        if (trackRecord.type === "vocals" && vocalsUrl) {
+          remoteUrl = vocalsUrl;
+        } else if (trackRecord.type === "other" && accompUrl) {
+          remoteUrl = accompUrl;
+        } else if (trackRecord.type === "vocals" && mainAudioUrl && !vocalsUrl) {
+          remoteUrl = mainAudioUrl;
+        } else if ((trackRecord.type === "drums" || trackRecord.type === "bass") && accompUrl) {
+          remoteUrl = accompUrl;
+        }
+
+        if (remoteUrl) {
+          const localUrl = await downloadMusicGPTFile(remoteUrl, "stems", trackRecord.type);
           await storage.updateTrackStatus(trackRecord.id, "completed", localUrl);
           console.log(`[Stems] ${trackRecord.type} stem completed: ${localUrl}`);
-        } catch (dlErr: any) {
-          console.error(`[Stems] Failed to download ${trackRecord.type}:`, dlErr.message);
-          await storage.updateTrackStatus(trackRecord.id, "failed", undefined, dlErr.message);
+        } else {
+          await storage.updateTrackStatus(trackRecord.id, "completed", undefined);
+          console.log(`[Stems] ${trackRecord.type} stem: no separate output available`);
         }
-      } else {
-        await storage.updateTrackStatus(trackRecord.id, "failed", undefined, "Stem not found in output");
+      } catch (dlErr: any) {
+        console.error(`[Stems] Failed to process ${trackRecord.type}:`, dlErr.message);
+        await storage.updateTrackStatus(trackRecord.id, "failed", undefined, dlErr.message);
       }
     }
 

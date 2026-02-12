@@ -9,7 +9,7 @@ import { generateCreativeLyrics } from "./core/antigravity_engine";
 import { buildMusicGenPrompt, PROMPT_VERSIONS } from "./core/prompt_engine";
 import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engine";
 import { processStemSeparation } from "./core/stems_engine";
-import { processHummingToMusic } from "./workers/sample_tasks";
+import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong } from "./workers/sample_tasks";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -497,6 +497,80 @@ export async function registerRoutes(
       }
       res.status(500).json({ message: "Failed to update sample" });
     }
+  });
+
+  // ========== MUSICGPT AUDIO PROCESSING ROUTES ==========
+
+  app.post("/api/songs/:id/master", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const songId = Number(req.params.id);
+    const song = await storage.getSong(songId);
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    if (song.status !== "completed" || !song.audioUrl) {
+      return res.status(400).json({ message: "Song must be completed with audio before mastering" });
+    }
+
+    processMastering(songId, song.audioUrl);
+    res.status(202).json({ message: "Audio mastering started", songId });
+  });
+
+  app.post("/api/songs/:id/denoise", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const songId = Number(req.params.id);
+    const song = await storage.getSong(songId);
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    if (song.status !== "completed" || !song.audioUrl) {
+      return res.status(400).json({ message: "Song must be completed with audio before denoising" });
+    }
+
+    processDenoise(songId, song.audioUrl);
+    res.status(202).json({ message: "Audio denoising started", songId });
+  });
+
+  const coverSchema = z.object({
+    voiceDescription: z.string().min(1).max(500),
+  });
+
+  app.post("/api/songs/:id/cover", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const songId = Number(req.params.id);
+    const song = await storage.getSong(songId);
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    if (song.status !== "completed" || !song.audioUrl) {
+      return res.status(400).json({ message: "Song must be completed with audio before creating a cover" });
+    }
+
+    try {
+      const input = coverSchema.parse(req.body);
+      processCoverSong(songId, song.audioUrl, input.voiceDescription, userId);
+      res.status(202).json({ message: "Cover song generation started", songId });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Failed to start cover generation" });
+    }
+  });
+
+  app.post("/api/samples/:id/key-bpm", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const sampleId = Number(req.params.id);
+    const sample = await storage.getSample(sampleId);
+    if (!sample) return res.sendStatus(404);
+    if (sample.userId !== userId) return res.sendStatus(403);
+    if (!sample.audioUrl) {
+      return res.status(400).json({ message: "Sample must have audio for Key/BPM detection" });
+    }
+
+    processKeyBPMDetection(sampleId, sample.audioUrl);
+    res.status(202).json({ message: "Key/BPM detection started", sampleId });
   });
 
   return httpServer;

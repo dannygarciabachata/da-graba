@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useSamples, useUploadSample, useRecordSample, useTransformSample, useDeleteSample } from "@/hooks/use-samples";
+import { useSamples, useUploadSample, useRecordSample, useTransformSample, useDeleteSample, useDetectKeyBPM } from "@/hooks/use-samples";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -289,6 +289,12 @@ function SampleCard({
                 <span>{sample.bpm} BPM</span>
               </>
             )}
+            {sample.key && (
+              <>
+                <span className="opacity-30">|</span>
+                <span>Key: {sample.key}</span>
+              </>
+            )}
             {sample.status === "failed" && (
               <span className="text-red-400 text-[10px]">Failed</span>
             )}
@@ -392,6 +398,7 @@ export default function SampleLab() {
   const recordMutation = useRecordSample();
   const transformMutation = useTransformSample();
   const deleteMutation = useDeleteSample();
+  const detectKeyBPMMutation = useDetectKeyBPM();
 
   const [selectedSampleId, setSelectedSampleId] = useState<number | null>(null);
   const [playingSampleId, setPlayingSampleId] = useState<number | null>(null);
@@ -600,8 +607,45 @@ export default function SampleLab() {
                         ) : (
                           <Wand2 className="h-4 w-4" />
                         )}
-                        Transform with AI
+                        Remix with AI
                       </Button>
+
+                      <div className="border-t border-white/5 pt-3">
+                        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                          <div>
+                            <p className="text-sm font-medium">Key & BPM Detection</p>
+                            <p className="text-[10px] text-muted-foreground">AI-powered musical analysis</p>
+                          </div>
+                          {(selectedSample.key || selectedSample.bpm) && (
+                            <div className="flex items-center gap-2 text-xs">
+                              {selectedSample.key && (
+                                <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-mono" data-testid="text-detected-key">
+                                  {selectedSample.key}
+                                </span>
+                              )}
+                              {selectedSample.bpm && (
+                                <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-mono" data-testid="text-detected-bpm">
+                                  {selectedSample.bpm} BPM
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          variant="outline"
+                          className="w-full gap-2"
+                          onClick={() => detectKeyBPMMutation.mutate(selectedSample.id)}
+                          disabled={detectKeyBPMMutation.isPending || selectedSample.status === "processing"}
+                          data-testid="button-detect-key-bpm"
+                        >
+                          {detectKeyBPMMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Music className="h-4 w-4" />
+                          )}
+                          {detectKeyBPMMutation.isPending ? "Analyzing..." : "Detect Key & BPM"}
+                        </Button>
+                      </div>
                     </>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">

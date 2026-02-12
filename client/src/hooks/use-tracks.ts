@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import type { Track } from "@shared/schema";
 
 export function useSongTracks(songId: number | null) {
@@ -41,7 +42,7 @@ export function useSeparateStems() {
       queryClient.invalidateQueries({ queryKey: ["/api/songs", songId, "tracks"] });
       toast({
         title: "Stem Separation Started",
-        description: "AI is separating your track into individual stems (vocals, drums, bass, melody).",
+        description: "AI is separating your track into individual stems.",
       });
     },
     onError: (error: Error) => {
@@ -70,6 +71,84 @@ export function useUpdateTrack() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/songs", data.songId, "tracks"] });
+    },
+  });
+}
+
+export function useMasterSong() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (songId: number) => {
+      const res = await apiRequest("POST", `/api/songs/${songId}/master`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/songs"] });
+      toast({
+        title: "Mastering Started",
+        description: "AI is mastering your track for professional quality audio.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Mastering Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useDenoiseSong() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (songId: number) => {
+      const res = await apiRequest("POST", `/api/songs/${songId}/denoise`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/songs"] });
+      toast({
+        title: "Denoise Started",
+        description: "AI is cleaning noise from your track.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Denoise Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useCoverSong() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ songId, voiceDescription }: { songId: number; voiceDescription: string }) => {
+      const res = await apiRequest("POST", `/api/songs/${songId}/cover`, { voiceDescription });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/songs"] });
+      toast({
+        title: "Cover Generation Started",
+        description: "AI is creating a cover version with a new voice.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Cover Generation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 }

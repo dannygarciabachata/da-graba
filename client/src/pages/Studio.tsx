@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSongs } from "@/hooks/use-songs";
-import { useSongTracks, useSeparateStems, useUpdateTrack } from "@/hooks/use-tracks";
+import { useSongTracks, useSeparateStems, useUpdateTrack, useMasterSong, useDenoiseSong, useCoverSong } from "@/hooks/use-tracks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import {
   Play, Pause, Square, Volume2, VolumeX, Mic, Drum,
   Guitar, Music, Loader2, Scissors, ArrowLeft, ChevronRight, Download,
-  Package, SkipBack
+  Package, SkipBack, Sparkles, Shield, MicVocal
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -234,6 +235,11 @@ export default function StudioPage() {
   const { data: songTracks, isLoading: tracksLoading } = useSongTracks(selectedSongId);
   const { mutate: separateStems, isPending: isSeparating } = useSeparateStems();
   const { mutate: updateTrack } = useUpdateTrack();
+  const { mutate: masterSong, isPending: isMastering } = useMasterSong();
+  const { mutate: denoiseSong, isPending: isDenoising } = useDenoiseSong();
+  const { mutate: coverSong, isPending: isCovering } = useCoverSong();
+  const [showTools, setShowTools] = useState(false);
+  const [coverVoice, setCoverVoice] = useState("");
 
   const audioElementsRef = useRef<Map<number, HTMLAudioElement>>(new Map());
   const [audioReady, setAudioReady] = useState<Set<number>>(new Set());
@@ -626,6 +632,110 @@ export default function StudioPage() {
                         </div>
                       </Card>
                     )}
+
+                    <Card className="p-4 border-white/5 bg-card">
+                      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-primary" />
+                          <h3 className="text-sm font-bold" data-testid="text-ai-tools-title">AI Audio Tools</h3>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => setShowTools(!showTools)}
+                          data-testid="button-toggle-tools"
+                        >
+                          {showTools ? "Hide" : "Show Tools"}
+                        </Button>
+                      </div>
+
+                      {showTools && (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <Card className="p-3 border-white/5">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium">Master</p>
+                                  <p className="text-[10px] text-muted-foreground">Professional quality audio</p>
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                className="w-full gap-1.5"
+                                disabled={isMastering || !selectedSong}
+                                onClick={() => selectedSongId && masterSong(selectedSongId)}
+                                data-testid="button-master-song"
+                              >
+                                {isMastering ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                {isMastering ? "Mastering..." : "Master Track"}
+                              </Button>
+                            </Card>
+
+                            <Card className="p-3 border-white/5">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                  <Shield className="w-4 h-4 text-blue-400" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium">Denoise</p>
+                                  <p className="text-[10px] text-muted-foreground">Remove background noise</p>
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                className="w-full gap-1.5"
+                                disabled={isDenoising || !selectedSong}
+                                onClick={() => selectedSongId && denoiseSong(selectedSongId)}
+                                data-testid="button-denoise-song"
+                              >
+                                {isDenoising ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
+                                {isDenoising ? "Cleaning..." : "Denoise Track"}
+                              </Button>
+                            </Card>
+                          </div>
+
+                          <Card className="p-3 border-white/5">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                                <MicVocal className="w-4 h-4 text-purple-400" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">AI Cover</p>
+                                <p className="text-[10px] text-muted-foreground">Re-sing with a different AI voice</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Input
+                                placeholder="Describe the voice style... (e.g. smooth female R&B vocalist)"
+                                value={coverVoice}
+                                onChange={(e) => setCoverVoice(e.target.value)}
+                                className="flex-1 text-xs bg-black/20 border-white/10"
+                                data-testid="input-cover-voice"
+                              />
+                              <Button
+                                size="sm"
+                                className="gap-1.5 flex-shrink-0"
+                                disabled={isCovering || !coverVoice.trim() || !selectedSongId}
+                                onClick={() => {
+                                  if (selectedSongId && coverVoice.trim()) {
+                                    coverSong({ songId: selectedSongId, voiceDescription: coverVoice });
+                                    setCoverVoice("");
+                                  }
+                                }}
+                                data-testid="button-cover-song"
+                              >
+                                {isCovering ? <Loader2 className="w-3 h-3 animate-spin" /> : <MicVocal className="w-3 h-3" />}
+                                {isCovering ? "Creating..." : "Create Cover"}
+                              </Button>
+                            </div>
+                          </Card>
+                        </div>
+                      )}
+                    </Card>
                   </motion.div>
                 )}
               </ScrollArea>

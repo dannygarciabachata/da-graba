@@ -1,36 +1,34 @@
 # DGB Audio - Heart Mula Music Engine
 
 ## Overview
-AI-powered music generation platform tailored for Bachata music by Danny Garcia. The "Heart Mula" engine uses Replicate ACE-Step (primary, best for bachata genre with tag-based control), ElevenLabs Music (secondary, full songs with vocals), and Mureka AI (tertiary) for music generation, and OpenAI (GPT-5.1) for lyrics writing, with a structured prompt system for authentic Dominican Bachata sound.
+AI-powered music generation platform tailored for Bachata music by Danny Garcia. The "Heart Mula" engine uses MusicGPT as the exclusive AI provider for all audio operations (generation, stem extraction, remix, mastering, denoise, key/BPM detection, cover songs), and OpenAI (GPT-5.1) for lyrics writing, with a structured prompt system for authentic Dominican Bachata sound.
 
 ## Architecture
 - **Frontend**: React + Vite + TailwindCSS + Shadcn UI
 - **Backend**: Express.js (TypeScript)
 - **Database**: PostgreSQL (Neon-backed via Replit)
 - **Auth**: Replit Auth (OpenID Connect)
-- **Music AI**: MusicGPT (primary, full songs with style+lyrics) → Replicate ACE-Step (secondary, bachata genre tags) → ElevenLabs Music (tertiary) → Mureka AI (quaternary)
+- **Music AI**: MusicGPT (exclusive provider for all audio: /MusicAI, /Extraction, /Remix, /AudioMastering, /Denoise, /KeyBPMExtraction, /Cover)
 - **Lyrics AI**: OpenAI via Replit AI Integrations (GPT-5.1)
 
 ## Core Engines (server/core/)
-- **musicgpt_engine.ts** - MusicGPT API client (submit generation, poll status, download audio)
+- **musicgpt_engine.ts** - MusicGPT API client with generic submit/poll helpers for all endpoints (MusicAI, Extraction, Remix, AudioMastering, Denoise, KeyBPMExtraction, Cover), file download utility, URL resolver
 - **prompt_engine.ts** - Versioned music prompts (Heart Mula, Romantic, Dance, Bolero, Urbana, Serenade), lyrics system prompts, structured JSON config generation
-- **elevenlabs_engine.ts** - ElevenLabs Music client (direct audio generation, Bachata prompts & lyrics)
-- **mureka_engine.ts** - Mureka AI client (song generation, async polling, Bachata lyrics templates)
-- **music_engine.ts** - Multi-provider orchestrator
 - **antigravity_engine.ts** - Creative AI engine for lyrics and full arrangement configs via OpenAI
 - **quiz_engine.ts** - Bachata knowledge quiz system (static bank + AI-generated questions)
-- **stems_engine.ts** - AI stem separation using Replicate Demucs (splits songs into vocals, drums, bass, other)
+- **stems_engine.ts** - AI stem separation using MusicGPT /Extraction (splits songs into vocals, drums, bass, other)
 
 ## Workers (server/workers/)
-- **music_tasks.ts** - Background async music generation: OpenAI creates lyrics, then MusicGPT (primary) → ACE-Step → ElevenLabs → Mureka for audio
-- **sample_tasks.ts** - Humming-to-music AI transformation using Replicate MusicGen melody-conditioned model
+- **music_tasks.ts** - Background async music generation via MusicGPT /MusicAI
+- **sample_tasks.ts** - MusicGPT-powered workers: Remix (humming-to-music transform), Key/BPM detection, Mastering, Denoise, Cover song generation
 
 ## Key Features
 - "Heart Mula" branded music engine with style presets selector
 - Dual generation modes: Aggregate (quick title+genre+style) and Standard (detailed prompt)
 - Bachata Mode auto-detection (keywords like "bachata", "bongo", "guira" auto-force Dominican instruments)
 - 6 style presets: Heart Mula Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana
-- Multitrack Studio: AI stem separation (Replicate Demucs) splits songs into Vocals, Drums, Bass, Melody
+- Multitrack Studio: AI stem separation (MusicGPT Extraction) splits songs into Vocals, Drums, Bass, Melody
+- Studio AI Tools: Master (professional audio mastering), Denoise (noise removal), AI Cover (voice change)
 - Individual track controls: volume, mute, solo per stem with waveform visualization
 - AI lyrics generator (romantic, dance, heartbreak styles) with Frank Reyes/Romeo Santos influences
 - Bachata Quiz with 10-question knowledge bank (history, instruments, artists, rhythm, culture)
@@ -38,13 +36,15 @@ AI-powered music generation platform tailored for Bachata music by Danny Garcia.
 - Song history with polling for processing status
 - Mobile-first responsive design with bottom tab navigation
 - User authentication via Replit Auth
-- Sample Lab: Audio recording, file upload, humming-to-music AI transformation, clip timeline, transport controls with BPM
+- Sample Lab: Audio recording, file upload, AI Remix transformation, Key/BPM detection, clip timeline, transport controls
 
 ## Layout Architecture (Suno-inspired)
 - **Left Sidebar**: Shadcn sidebar with nav (Create, Library, Lyrics, Quiz, Studio, Sample Lab), user profile, DGB branding
 - **Main Content Area**: Full-width page content for each route
 - **Create Page**: Centered Suno-style prompt with Simple/Custom toggle, style preset badges, recent creations grid
 - **Library Page**: Song list feed with inline player
+- **Studio Page**: Song selector + stem separation + AI tools (Master, Denoise, Cover)
+- **Sample Lab**: Record/Upload/Transform tabs + Key/BPM detection
 - **Landing**: Public landing page for unauthenticated users
 
 ## Project Structure
@@ -57,37 +57,35 @@ client/src/
   pages/LibraryPage.tsx          - Song library with inline player
   pages/LyricsPage.tsx           - Lyrics generation page
   pages/QuizPage.tsx             - Bachata quiz page
-  pages/Studio.tsx               - Multitrack studio with stem separation
-  pages/SampleLab.tsx            - Sample Lab with recording, upload, AI transform, timeline
+  pages/Studio.tsx               - Multitrack studio with stem separation + AI tools (Master, Denoise, Cover)
+  pages/SampleLab.tsx            - Sample Lab with recording, upload, AI Remix, Key/BPM detection, timeline
   pages/Dashboard.tsx            - (legacy, redirects to /create)
-  components/MusicGenerator.tsx  - Heart Mula music generation panel (legacy component)
-  components/LyricsGenerator.tsx - Lyrics AI editor
   components/AudioPlayer.tsx     - Waveform player
   components/SongHistory.tsx     - Track history list with Studio link
   components/BachataQuiz.tsx     - Interactive Bachata quiz
   hooks/use-songs.ts             - Song CRUD hooks
-  hooks/use-tracks.ts            - Track/stem CRUD hooks
+  hooks/use-tracks.ts            - Track/stem hooks + mastering, denoise, cover mutations
   hooks/use-lyrics.ts            - Lyrics generation hook
-  hooks/use-samples.ts           - Sample Lab CRUD hooks
+  hooks/use-samples.ts           - Sample Lab hooks + Key/BPM detection mutation
   hooks/use-auth.ts              - Auth state hook
 
 server/
   core/
+    musicgpt_engine.ts           - MusicGPT API: generic submit/poll for all endpoints + download + URL resolve
     prompt_engine.ts             - Versioned prompts & structured config
-    music_engine.ts              - MusicGen wrapper
     antigravity_engine.ts        - Creative AI (lyrics + arrangements)
     quiz_engine.ts               - Quiz logic & question bank
-    stems_engine.ts              - AI stem separation (Replicate Demucs)
+    stems_engine.ts              - AI stem separation (MusicGPT Extraction)
   workers/
-    music_tasks.ts               - Background music generation
-    sample_tasks.ts              - Humming-to-music AI worker
-  routes.ts                      - API routes (music, lyrics, quiz, tracks, samples, auth)
+    music_tasks.ts               - Background music generation (MusicGPT MusicAI)
+    sample_tasks.ts              - Background workers: Remix, Key/BPM, Mastering, Denoise, Cover
+  routes.ts                      - API routes (music, lyrics, quiz, tracks, samples, audio tools, auth)
   storage.ts                     - Database storage layer (IStorage interface)
   db.ts                          - Database connection
   replit_integrations/           - Auth, chat modules
 
 shared/
-  schema.ts                      - Drizzle schema (songs, tracks, lyrics, quiz_results, users, sessions)
+  schema.ts                      - Drizzle schema (songs, tracks, lyrics, quiz_results, samples, users, sessions)
   routes.ts                      - API contract with Zod validation
 ```
 
@@ -99,11 +97,14 @@ shared/
 - Font: Inter + JetBrains Mono
 
 ## API Endpoints
-- `POST /api/songs/generate` - Generate music (MusicGPT primary, ACE-Step secondary, ElevenLabs tertiary, Mureka quaternary; supports style, duration, lyrics, auto-bachata detection)
+- `POST /api/songs/generate` - Generate music (MusicGPT exclusive; supports style, duration, lyrics, auto-bachata detection)
 - `GET /api/songs` - List user's songs
 - `GET /api/songs/:id` - Get single song
 - `DELETE /api/songs/:id` - Delete song
-- `POST /api/songs/:id/stems` - Trigger AI stem separation (Replicate Demucs) for a completed song
+- `POST /api/songs/:id/stems` - Trigger AI stem separation (MusicGPT Extraction) for a completed song
+- `POST /api/songs/:id/master` - AI audio mastering (MusicGPT AudioMastering)
+- `POST /api/songs/:id/denoise` - AI noise removal (MusicGPT Denoise)
+- `POST /api/songs/:id/cover` - AI cover song with voice change (MusicGPT Cover, body: {voiceDescription})
 - `GET /api/songs/:id/tracks` - Get individual tracks/stems for a song
 - `GET /api/tracks` - List all user's tracks
 - `PATCH /api/tracks/:id` - Update track settings (volume, mute, solo)
@@ -115,17 +116,25 @@ shared/
 - `GET /api/samples` - List user's samples
 - `POST /api/samples/upload` - Upload audio file (multipart/form-data with multer)
 - `POST /api/samples/record` - Save browser recording (base64 audio data)
-- `POST /api/samples/transform` - Humming-to-music AI transform (Replicate MusicGen melody-conditioned)
+- `POST /api/samples/transform` - AI Remix transform (MusicGPT Remix)
+- `POST /api/samples/:id/key-bpm` - AI Key/BPM detection (MusicGPT KeyBPMExtraction)
 - `DELETE /api/samples/:id` - Delete sample (also removes audio file)
 - `PATCH /api/samples/:id` - Update sample metadata (name, bpm, key, position)
 
+## MusicGPT API Pattern
+All MusicGPT endpoints use async task-based processing:
+1. Submit job → POST to /api/public/v1/{Endpoint} → receive task_id
+2. Poll status → GET /api/public/v1/byId?task_id={id} → check status
+3. On COMPLETED → download audio from returned URL → save locally
+4. Authorization: raw API key in Authorization header (not Bearer)
+
 ## Environment Variables
 - `DATABASE_URL` - PostgreSQL connection
-- `MUSICGPT_API_KEY` - MusicGPT API key (primary music generation)
-- `ELEVENLABS_API_KEY` - ElevenLabs API key (tertiary music generation, requires paid plan)
-- `MUREKA_API_KEY` - Mureka AI API key (secondary music generation)
-- `REPLICATE_API_TOKEN` - Replicate API key (fallback music generation)
-- `HF_TOKEN` - Hugging Face token (unused fallback)
+- `MUSICGPT_API_KEY` - MusicGPT API key (exclusive provider for all audio AI operations)
 - `AI_INTEGRATIONS_OPENAI_API_KEY` - Auto-configured by Replit
 - `AI_INTEGRATIONS_OPENAI_BASE_URL` - Auto-configured by Replit
 - `SESSION_SECRET` - Session encryption
+- `ELEVENLABS_API_KEY` - (legacy, unused)
+- `MUREKA_API_KEY` - (legacy, unused)
+- `REPLICATE_API_TOKEN` - (legacy, unused)
+- `HF_TOKEN` - (legacy, unused)

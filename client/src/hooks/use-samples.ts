@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { Sample } from "@shared/schema";
 
 export function useSamples() {
@@ -72,6 +73,31 @@ export function useUpdateSample() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/samples"] });
+    },
+  });
+}
+
+export function useDetectKeyBPM() {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (sampleId: number) => {
+      const res = await apiRequest("POST", `/api/samples/${sampleId}/key-bpm`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/samples"] });
+      toast({
+        title: "Key/BPM Detection Started",
+        description: "AI is analyzing your audio to detect key and tempo.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Detection Failed",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 }
