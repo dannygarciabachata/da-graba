@@ -1,0 +1,51 @@
+Webhook Integration
+When working with asynchronous processes like music generation, voice cloning, or instrumental extraction, waiting for a task to complete can slow down your workflow. That’s where webhooks come in handy.
+Webhooks allow Musicgpt to notify your application the moment a task is completed. You’ll get all the necessary data — including the audio URL — without needing to constantly poll our API.
+​
+How It Works
+Set the webhook_url when submitting your conversion request.
+Musicgpt will send a POST request to that URL when the task is completed.
+Your server can then parse the response and proceed with post-processing or user notifications.
+​
+Sample Payload
+Here’s what a typical webhook payload looks like:
+{
+"task_id": "12345678-abcd-1234-efgh-567890abcdef",
+"status": "COMPLETED",
+"status_msg": "Conversion successful",
+"conversion_type": "MUSIC_AI",
+"audio_url": "https://musicgpt.s3.amazonaws.com/audiofile.mp3",
+"title": "Generated Song",
+"conversion_cost": 1.25,
+"createdAt": "2025-01-01T12:00:00Z",
+"updatedAt": "2025-01-01T12:05:00Z"
+}
+🔗 Set the webhook_url to an endpoint on your server — this is where Musicgpt will notify you once the generation is done.
+​
+Preliminary Response
+When you initiate a conversion request, Musicgpt will immediately respond with a preliminary response that includes:
+success: whether the task was successfully initiated
+task_id: a unique ID you can use to track the conversion
+Example:
+{
+"success": true,
+"task_id": "12345678-abcd-1234-efgh-567890abcdef"
+}
+This response confirms that the request was accepted. However, the final result (like the downloadable file) will be sent later to your webhook URL.: curl --request GET
+--url https://api.musicgpt.com/api/public/v1/byId
+--header 'Authorization: <api-key>': {
+"success": true,
+"conversion": {
+"task_id": "12345678-abcd-1234-efgh-567890abcdef",
+"conversion_id": "87654321-dcba-4321-hgfe-098765fedcba",
+"status": "COMPLETED",
+"status_msg": "Conversion successful",
+"audio_url": "https://musicgpt.s3.amazonaws.com/audiofile.mp3",
+"conversion_cost": 1.25,
+"title": "Generated Song",
+"lyrics": "[Verse 1]...",
+"music_style": "Pop",
+"createdAt": "2025-01-01T12:00:00Z",
+"updatedAt": "2025-01-01T12:05:00Z"
+}
+}
