@@ -68,32 +68,18 @@ export async function registerRoutes(
       const duration = (req.body.duration as number) || 15;
       const lyrics = (req.body.lyrics as string) || undefined;
       const mode = input.mode || "standard";
-      const style = input.style || "heart-mula";
+      const style = input.style || "Bachata";
       const genre = input.genre || undefined;
 
       let finalPrompt: string;
       let songTitle: string;
-      let shouldForceBachata: boolean;
 
       if (mode === "aggregate") {
         songTitle = (input.title || input.prompt || "Untitled").trim();
-        const genreLabel = genre || "Bachata";
-        const isBachataGenre = /bachata/i.test(genreLabel);
-        
-        if (isBachataGenre) {
-          finalPrompt = buildMusicGenPrompt(`${songTitle}, ${genreLabel} style`, style);
-        } else {
-          const styleDesc = PROMPT_VERSIONS[style] || "";
-          finalPrompt = `${songTitle}, ${genreLabel} style, ${styleDesc}, high fidelity, studio quality`;
-        }
-        shouldForceBachata = isBachataGenre;
+        finalPrompt = `${songTitle}, ${genre || style} style, high fidelity, studio quality`;
       } else {
         songTitle = input.prompt.slice(0, 50) + (input.prompt.length > 50 ? "..." : "");
-        const hasBachataKeywords = /bachata|bongo|guira|dominican|latino|requinto/i.test(input.prompt);
-        shouldForceBachata = input.isBachata || hasBachataKeywords;
-        finalPrompt = shouldForceBachata
-          ? buildMusicGenPrompt(input.prompt, style)
-          : input.prompt;
+        finalPrompt = input.prompt;
       }
 
       const song = await storage.createSong({
@@ -105,7 +91,6 @@ export async function registerRoutes(
       });
 
       processMusicGeneration(song.id, finalPrompt, {
-        isBachata: shouldForceBachata,
         style,
         duration,
         lyrics,

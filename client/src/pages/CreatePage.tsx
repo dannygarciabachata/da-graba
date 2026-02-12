@@ -39,12 +39,26 @@ import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
 const STYLE_OPTIONS = [
-  { value: "heart-mula", label: "Heart Mula Signature" },
-  { value: "bachata-romantic", label: "Romantic Bachata" },
-  { value: "bachata-dance", label: "Dance Bachata" },
-  { value: "bachata-bolero", label: "Bachata Bolero" },
-  { value: "trio-serenade", label: "Trio Serenade" },
-  { value: "bachata-urbana", label: "Bachata Urbana" },
+  { value: "Bachata", label: "Bachata" },
+  { value: "Pop", label: "Pop" },
+  { value: "R&B", label: "R&B" },
+  { value: "Hip-Hop", label: "Hip-Hop" },
+  { value: "Rock", label: "Rock" },
+  { value: "EDM", label: "EDM" },
+  { value: "Jazz", label: "Jazz" },
+  { value: "Reggaeton", label: "Reggaeton" },
+  { value: "Country", label: "Country" },
+  { value: "Lo-Fi", label: "Lo-Fi" },
+  { value: "Classical", label: "Classical" },
+  { value: "Blues", label: "Blues" },
+  { value: "Funk", label: "Funk" },
+  { value: "Ambient", label: "Ambient" },
+  { value: "Latin Pop", label: "Latin Pop" },
+  { value: "Reggae", label: "Reggae" },
+  { value: "Metal", label: "Metal" },
+  { value: "Indie", label: "Indie" },
+  { value: "Synthwave", label: "Synthwave" },
+  { value: "Folk", label: "Folk" },
 ];
 
 const GENRE_OPTIONS = [
@@ -78,12 +92,12 @@ export default function CreatePage() {
   const [currentSong, setCurrentSong] = useState<any>(null);
 
   const [simplePrompt, setSimplePrompt] = useState("");
-  const [simpleStyle, setSimpleStyle] = useState("heart-mula");
+  const [simpleStyle, setSimpleStyle] = useState("Bachata");
 
   const [prompt, setPrompt] = useState("");
   const [lyrics, setLyrics] = useState("");
   const [isBachata, setIsBachata] = useState(true);
-  const [style, setStyle] = useState("heart-mula");
+  const [style, setStyle] = useState("Bachata");
   const [genre, setGenre] = useState("Bachata");
   const [title, setTitle] = useState("");
 

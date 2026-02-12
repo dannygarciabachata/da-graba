@@ -60,37 +60,8 @@ export type MusicGPTEndpoint =
   | "Cover";
 
 export function buildMusicGPTPrompt(userPrompt: string, style: string): { prompt: string; music_style: string } {
-  const styleMap: Record<string, { prompt_suffix: string; music_style: string }> = {
-    "heart-mula": {
-      prompt_suffix: "Dominican Bachata, passionate nylon guitar, bongo drums, guira percussion, emotional male vocals in Spanish, 130 BPM",
-      music_style: "Bachata",
-    },
-    "bachata-romantic": {
-      prompt_suffix: "Romantic Dominican Bachata ballad, tender nylon guitar, bongo, guira, emotional male vocals in Spanish, intimate, 128 BPM",
-      music_style: "Bachata",
-    },
-    "bachata-dance": {
-      prompt_suffix: "Upbeat Dominican Bachata, energetic nylon guitar, fast bongo, guira, congas, male vocals in Spanish, dance party, 140 BPM",
-      music_style: "Bachata",
-    },
-    "bachata-bolero": {
-      prompt_suffix: "Slow Bachata Bolero, melancholic nylon guitar, piano, soft bongo, emotional male vocals in Spanish, nostalgic, 108 BPM",
-      music_style: "Bachata",
-    },
-    "trio-serenade": {
-      prompt_suffix: "Latin Bolero Trio Serenade, requinto guitar, nylon guitars, three-part male vocal harmony in Spanish, acoustic, intimate, 105 BPM",
-      music_style: "Bolero",
-    },
-    "bachata-urbana": {
-      prompt_suffix: "Modern Urban Bachata, electric guitar with reverb, bongo, trap hi-hats, 808 bass, R&B male vocals in Spanish, 138 BPM",
-      music_style: "Bachata",
-    },
-  };
-
-  const cfg = styleMap[style] || styleMap["heart-mula"];
-  const prompt = `${userPrompt}. ${cfg.prompt_suffix}`.substring(0, 280);
-
-  return { prompt, music_style: cfg.music_style };
+  const prompt = userPrompt.substring(0, 280);
+  return { prompt, music_style: style };
 }
 
 export async function submitMusicGPTJob(
