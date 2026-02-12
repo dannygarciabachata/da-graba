@@ -64,6 +64,8 @@ export function buildMusicGPTPrompt(userPrompt: string, style: string): { prompt
   return { prompt, music_style: style };
 }
 
+const JSON_ENDPOINTS: MusicGPTEndpoint[] = ["MusicAI"];
+
 export async function submitMusicGPTJob(
   endpoint: MusicGPTEndpoint,
   body: Record<string, any>
@@ -72,19 +74,28 @@ export async function submitMusicGPTJob(
 
   console.log(`[MusicGPT:${endpoint}] Submitting job with params:`, Object.keys(body).join(", "));
 
-  const formData = new FormData();
-  for (const [key, value] of Object.entries(body)) {
-    if (value !== undefined && value !== null) {
-      formData.append(key, String(value));
+  const useJson = JSON_ENDPOINTS.includes(endpoint);
+
+  let requestBody: any;
+  const headers: Record<string, string> = { Authorization: apiKey };
+
+  if (useJson) {
+    headers["Content-Type"] = "application/json";
+    requestBody = JSON.stringify(body);
+  } else {
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(body)) {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
     }
+    requestBody = formData;
   }
 
   const response = await fetch(`${MUSICGPT_API_BASE}/${endpoint}`, {
     method: "POST",
-    headers: {
-      Authorization: apiKey,
-    },
-    body: formData,
+    headers,
+    body: requestBody,
   });
 
   if (!response.ok) {
