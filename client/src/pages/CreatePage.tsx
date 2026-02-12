@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useGenerateSong } from "@/hooks/use-songs";
 import { useSongs } from "@/hooks/use-songs";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
   Send,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   Dices,
   Play,
   Clock,
@@ -81,6 +82,100 @@ const CREATION_MODES = [
   { id: "sound", label: "Create Sound", icon: FileAudio, active: false },
   { id: "speak", label: "Speak text", icon: Mic, active: false },
 ];
+
+const ITEMS_PER_PAGE = 4;
+
+function GenreCarousel({
+  genres,
+  selectedGenre,
+  onSelect,
+}: {
+  genres: typeof GENRE_CARDS;
+  selectedGenre: string;
+  onSelect: (genre: string) => void;
+}) {
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(genres.length / ITEMS_PER_PAGE);
+
+  const visibleGenres = genres.slice(
+    page * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE + ITEMS_PER_PAGE
+  );
+
+  const goBack = () => setPage((p) => Math.max(0, p - 1));
+  const goForward = () => setPage((p) => Math.min(totalPages - 1, p + 1));
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 min-h-[76px]">
+        <AnimatePresence mode="popLayout">
+          {visibleGenres.map((genre) => (
+            <motion.div
+              key={genre.value}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Card
+                className={cn(
+                  "p-3 cursor-pointer transition-all border-white/5",
+                  selectedGenre === genre.value
+                    ? "border-primary/50 bg-primary/5"
+                    : "hover-elevate"
+                )}
+                onClick={() => onSelect(genre.value)}
+                data-testid={`card-genre-${genre.value}`}
+              >
+                <div className="text-sm font-medium mb-1 line-clamp-1">{genre.value}</div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <ThumbsUp className="h-3 w-3" />
+                  {genre.likes} Likes
+                </div>
+              </Card>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      <div className="flex items-center justify-center gap-3 mt-3">
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={goBack}
+          disabled={page === 0}
+          data-testid="button-genre-prev"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="flex items-center gap-1.5">
+          {Array.from({ length: totalPages }).map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setPage(i)}
+              className={cn(
+                "w-2 h-2 rounded-full transition-all",
+                i === page
+                  ? "bg-primary w-4"
+                  : "bg-muted-foreground/30"
+              )}
+              data-testid={`button-genre-page-${i}`}
+            />
+          ))}
+        </div>
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={goForward}
+          disabled={page === totalPages - 1}
+          data-testid="button-genre-next"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function CreatePage() {
   const { user } = useAuth();
@@ -343,27 +438,11 @@ export default function CreatePage() {
           </div>
 
           <div className="mb-8">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-              {GENRE_CARDS.map((genre) => (
-                <Card
-                  key={genre.value}
-                  className={cn(
-                    "p-3 cursor-pointer transition-all border-white/5",
-                    selectedGenre === genre.value
-                      ? "border-primary/50 bg-primary/5"
-                      : "hover-elevate"
-                  )}
-                  onClick={() => setSelectedGenre(genre.value)}
-                  data-testid={`card-genre-${genre.value}`}
-                >
-                  <div className="text-sm font-medium mb-1 line-clamp-1">{genre.value}</div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <ThumbsUp className="h-3 w-3" />
-                    {genre.likes} Likes
-                  </div>
-                </Card>
-              ))}
-            </div>
+            <GenreCarousel
+              genres={GENRE_CARDS}
+              selectedGenre={selectedGenre}
+              onSelect={setSelectedGenre}
+            />
           </div>
 
           {isPending && (
