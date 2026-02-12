@@ -182,8 +182,7 @@ export async function pollMusicGPTJob(
 export function getWebhookUrl(): string {
   const domain = process.env.REPLIT_DEV_DOMAIN;
   const base = domain ? `https://${domain}` : "http://localhost:5000";
-  const secret = process.env.SESSION_SECRET || "musicgpt-webhook";
-  return `${base}/api/webhooks/musicgpt?token=${encodeURIComponent(secret)}`;
+  return `${base}/api/webhooks/musicgpt`;
 }
 
 export async function submitMusicGPTGeneration(

@@ -121,13 +121,6 @@ export async function registerRoutes(
 
   app.post("/api/webhooks/musicgpt", async (req, res) => {
     try {
-      const expectedToken = process.env.SESSION_SECRET || "musicgpt-webhook";
-      const token = req.query.token as string;
-      if (!token || token !== expectedToken) {
-        console.log("[Webhook] Unauthorized webhook request - invalid token");
-        return res.sendStatus(401);
-      }
-
       const payload = req.body;
       console.log(`[Webhook] Received MusicGPT webhook:`, JSON.stringify(payload).substring(0, 500));
 
