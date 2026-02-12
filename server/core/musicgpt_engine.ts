@@ -248,9 +248,12 @@ export async function generateWithMusicGPT(
 
 export async function submitExtraction(
   audioUrl: string,
-  stems: string = "vocals"
+  stems: string[] = ["vocals", "drums", "bass", "instrumental"]
 ): Promise<MusicGPTSubmitResponse> {
-  return submitMusicGPTJob("Extraction", { audio_url: audioUrl, stems });
+  return submitMusicGPTJob("Extraction", {
+    audio_url: audioUrl,
+    stems: JSON.stringify(stems),
+  });
 }
 
 export async function submitRemix(
