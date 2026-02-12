@@ -225,7 +225,12 @@ export async function registerRoutes(
 
     const existingTracks = await storage.getTracksBySongId(songId);
     if (existingTracks.length > 0) {
-      return res.status(400).json({ message: "Stems already exist for this song", tracks: existingTracks });
+      const allFailed = existingTracks.every(t => t.status === "failed");
+      if (allFailed) {
+        await storage.deleteTracksBySongId(songId);
+      } else {
+        return res.status(400).json({ message: "Stems already exist for this song", tracks: existingTracks });
+      }
     }
 
     processStemSeparation(songId, song.audioUrl, userId);

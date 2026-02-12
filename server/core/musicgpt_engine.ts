@@ -246,8 +246,11 @@ export async function generateWithMusicGPT(
   return { audioUrl, provider: "musicgpt" };
 }
 
-export async function submitExtraction(audioUrl: string): Promise<MusicGPTSubmitResponse> {
-  return submitMusicGPTJob("Extraction", { audio_url: audioUrl });
+export async function submitExtraction(
+  audioUrl: string,
+  stems: string = "vocals"
+): Promise<MusicGPTSubmitResponse> {
+  return submitMusicGPTJob("Extraction", { audio_url: audioUrl, stems });
 }
 
 export async function submitRemix(
