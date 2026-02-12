@@ -15,8 +15,11 @@ export { chatStorage } from "./replit_integrations/chat/storage";
 export interface IStorage {
   createSong(song: InsertSong): Promise<Song>;
   getSong(id: number): Promise<Song | undefined>;
+  getSongByTaskId(taskId: string): Promise<Song | undefined>;
   getUserSongs(userId: string): Promise<Song[]>;
   updateSongStatus(id: number, status: string, audioUrl?: string, error?: string): Promise<Song>;
+  updateSongTaskId(id: number, taskId: string): Promise<Song>;
+  updateSongImage(id: number, imageUrl: string): Promise<Song>;
   deleteSong(id: number): Promise<void>;
 
   createTrack(track: InsertTrack): Promise<Track>;
@@ -59,10 +62,33 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(songs.createdAt));
   }
 
+  async getSongByTaskId(taskId: string): Promise<Song | undefined> {
+    const [song] = await db.select().from(songs).where(eq(songs.taskId, taskId));
+    return song;
+  }
+
   async updateSongStatus(id: number, status: string, audioUrl?: string, error?: string): Promise<Song> {
     const [updated] = await db
       .update(songs)
       .set({ status, audioUrl, error })
+      .where(eq(songs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateSongTaskId(id: number, taskId: string): Promise<Song> {
+    const [updated] = await db
+      .update(songs)
+      .set({ taskId })
+      .where(eq(songs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateSongImage(id: number, imageUrl: string): Promise<Song> {
+    const [updated] = await db
+      .update(songs)
+      .set({ imageUrl })
       .where(eq(songs.id, id))
       .returning();
     return updated;

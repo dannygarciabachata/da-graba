@@ -1,38 +1,14 @@
 import { storage } from "../storage";
-import { generateWithMusicGPT } from "../core/musicgpt_engine";
+import { submitMusicGPTGeneration, getWebhookUrl, pollMusicGPTStatus, downloadMusicGPTFile } from "../core/musicgpt_engine";
 import { generateCreativeLyrics } from "../core/antigravity_engine";
-import fs from "fs";
-import path from "path";
-import crypto from "crypto";
 
-const AUDIO_DIR = path.join(process.cwd(), "public", "audio");
-if (!fs.existsSync(AUDIO_DIR)) {
-  fs.mkdirSync(AUDIO_DIR, { recursive: true });
-}
-
-function saveAudioFile(buffer: Buffer, extension: string = "mp3"): string {
-  const filename = `${crypto.randomUUID()}.${extension}`;
-  const filePath = path.join(AUDIO_DIR, filename);
-  fs.writeFileSync(filePath, buffer);
-  console.log(`[Worker] Saved audio file: ${filePath} (${buffer.length} bytes)`);
-  return `/audio/${filename}`;
-}
-
-async function downloadAndSaveAudio(remoteUrl: string): Promise<string> {
-  console.log(`[Worker] Downloading audio from: ${remoteUrl}`);
-  const response = await fetch(remoteUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to download audio: ${response.status}`);
-  }
-  const arrayBuffer = await response.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  const ext = remoteUrl.includes(".wav") ? "wav" : "mp3";
-  return saveAudioFile(buffer, ext);
-}
+export const pendingTaskMap = new Map<string, number>();
 
 function mapStyleToLyricsStyle(style: string): "romantic" | "dance" | "heartbreak" {
-  if (style === "bachata-dance") return "dance";
-  if (style === "bachata-bolero") return "heartbreak";
+  const danceStyles = ["EDM", "Dance Pop", "Reggaeton", "Afrobeat", "House", "Drum & Bass"];
+  const sadStyles = ["Blues", "Soul", "Bolero"];
+  if (danceStyles.some(s => style.toLowerCase().includes(s.toLowerCase()))) return "dance";
+  if (sadStyles.some(s => style.toLowerCase().includes(s.toLowerCase()))) return "heartbreak";
   return "romantic";
 }
 
@@ -63,13 +39,12 @@ export async function processMusicGeneration(
   songId: number,
   finalPrompt: string,
   options: {
-    isBachata?: boolean;
     style?: string;
     duration?: number;
     lyrics?: string;
   } = {}
 ): Promise<void> {
-  const { duration = 30, style = "heart-mula", lyrics } = options;
+  const { duration = 30, style = "Bachata", lyrics } = options;
 
   try {
     console.log(`[Worker] Starting music generation for song ${songId}`);
@@ -78,33 +53,65 @@ export async function processMusicGeneration(
 
     await storage.updateSongStatus(songId, "processing");
 
-    const { enhancedPrompt, generatedLyrics } = await generateSmartPrompt(
-      finalPrompt,
-      style,
-      lyrics
-    );
+    const { generatedLyrics } = await generateSmartPrompt(finalPrompt, style, lyrics);
 
-    console.log(`[Worker] Enhanced prompt: ${enhancedPrompt.substring(0, 200)}...`);
     if (generatedLyrics) {
       console.log(`[Worker] Lyrics ready (${generatedLyrics.length} chars)`);
     }
 
-    let result: { audioUrl: string; provider: string };
+    const webhookUrl = getWebhookUrl();
+    console.log(`[Worker] Submitting to MusicGPT with webhook: ${webhookUrl}`);
 
-    // MusicGPT only - sole music generation provider
-    console.log(`[Worker] Generating with MusicGPT...`);
-    const mgptResult = await generateWithMusicGPT(finalPrompt, style, {
+    const submitResult = await submitMusicGPTGeneration(finalPrompt, style, {
       lyrics: generatedLyrics || undefined,
       duration,
+      webhookUrl,
     });
-    const localUrl = await downloadAndSaveAudio(mgptResult.audioUrl);
-    result = { audioUrl: localUrl, provider: "musicgpt" };
 
-    console.log(`[Worker] Music generated via ${result.provider} for song ${songId}: ${result.audioUrl}`);
-    await storage.updateSongStatus(songId, "completed", result.audioUrl);
+    await storage.updateSongTaskId(songId, submitResult.task_id);
+    pendingTaskMap.set(submitResult.task_id, songId);
+    console.log(`[Worker] Task ${submitResult.task_id} submitted for song ${songId}, waiting for webhook...`);
+
+    startFallbackPoller(songId, submitResult.task_id);
+
   } catch (err: any) {
     console.error(`[Worker] Music generation failed for song ${songId}:`, err);
     const errorMessage = err.message || "Generation failed";
     await storage.updateSongStatus(songId, "failed", undefined, errorMessage);
   }
+}
+
+function startFallbackPoller(songId: number, taskId: string) {
+  const checkInterval = 30000;
+  const maxChecks = 40;
+  let checks = 0;
+
+  const timer = setInterval(async () => {
+    checks++;
+    try {
+      const song = await storage.getSong(songId);
+      if (!song || song.status === "completed" || song.status === "failed") {
+        clearInterval(timer);
+        return;
+      }
+
+      if (checks >= maxChecks) {
+        console.log(`[Fallback] Song ${songId} timed out after ${maxChecks * checkInterval / 1000}s`);
+        await storage.updateSongStatus(songId, "failed", undefined, "Generation timed out");
+        clearInterval(timer);
+        return;
+      }
+
+      console.log(`[Fallback] Check ${checks}/${maxChecks} for song ${songId} (task ${taskId})`);
+      const audioUrl = await pollMusicGPTStatus(taskId, 5000, 5000).catch(() => null);
+      if (audioUrl) {
+        console.log(`[Fallback] Got audio via polling for song ${songId}`);
+        const localUrl = await downloadMusicGPTFile(audioUrl, "songs", "song");
+        await storage.updateSongStatus(songId, "completed", localUrl);
+        clearInterval(timer);
+      }
+    } catch (err: any) {
+      console.log(`[Fallback] Poll error for song ${songId}: ${err.message?.substring(0, 80)}`);
+    }
+  }, checkInterval);
 }

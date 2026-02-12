@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import WaveSurfer from "wavesurfer.js";
-import { Play, Pause, Download, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, Download, Volume2, VolumeX, Music } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { motion } from "framer-motion";
@@ -8,9 +9,11 @@ import { motion } from "framer-motion";
 interface AudioPlayerProps {
   url: string | null;
   title: string;
+  imageUrl?: string | null;
+  genre?: string | null;
 }
 
-export function AudioPlayer({ url, title }: AudioPlayerProps) {
+export function AudioPlayer({ url, title, imageUrl, genre }: AudioPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -189,12 +192,24 @@ export function AudioPlayer({ url, title }: AudioPlayerProps) {
       animate={{ opacity: 1, scale: 1 }}
       className="glass-panel rounded-2xl p-4 md:p-6 space-y-4 md:space-y-6"
     >
-      <div className="flex justify-between items-start gap-2">
+      <div className="flex items-start gap-3 md:gap-4">
+        <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-primary/10 flex-shrink-0 flex items-center justify-center overflow-hidden">
+          {imageUrl ? (
+            <img src={imageUrl} alt={title} className="w-full h-full object-cover" />
+          ) : (
+            <Music className="w-6 h-6 text-primary/50" />
+          )}
+        </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-base md:text-xl font-bold truncate">{title}</h3>
-          <p className="text-xs md:text-sm text-primary">
-            {hasError ? "Error loading audio" : isReady ? "Now Playing" : "Loading..."}
-          </p>
+          <h3 className="text-base md:text-lg font-bold truncate">{title}</h3>
+          <div className="flex items-center gap-2 mt-0.5">
+            {genre && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-white/10">{genre}</Badge>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {hasError ? "Error loading audio" : isReady ? "Now Playing" : "Loading..."}
+            </p>
+          </div>
         </div>
         <Button size="icon" variant="ghost" onClick={handleDownload} className="text-muted-foreground flex-shrink-0" data-testid="button-download-track">
           <Download className="w-5 h-5" />

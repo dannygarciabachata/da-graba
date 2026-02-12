@@ -53,6 +53,8 @@ export default function LibraryPage() {
               <AudioPlayer
                 url={currentSong.audioUrl}
                 title={currentSong.title || "Untitled Track"}
+                imageUrl={currentSong.imageUrl}
+                genre={currentSong.genre}
               />
             </motion.div>
           )}
@@ -90,10 +92,12 @@ export default function LibraryPage() {
                 >
                   <div className="flex items-center gap-4">
                     <div className={cn(
-                      "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                      "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden",
                       song.status === "completed" ? "bg-primary/10" : "bg-white/5"
                     )}>
-                      {song.status === "completed" ? (
+                      {song.imageUrl ? (
+                        <img src={song.imageUrl} alt={song.title} className="w-10 h-10 object-cover" />
+                      ) : song.status === "completed" ? (
                         <Play className="h-4 w-4 text-primary fill-current" />
                       ) : song.status === "processing" ? (
                         <Loader2 className="h-4 w-4 text-yellow-500 animate-spin" />

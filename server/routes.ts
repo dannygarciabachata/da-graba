@@ -4,9 +4,10 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
-import { processMusicGeneration } from "./workers/music_tasks";
+import { processMusicGeneration, pendingTaskMap } from "./workers/music_tasks";
 import { generateCreativeLyrics } from "./core/antigravity_engine";
 import { buildMusicGenPrompt, PROMPT_VERSIONS } from "./core/prompt_engine";
+import { downloadMusicGPTFile } from "./core/musicgpt_engine";
 import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engine";
 import { processStemSeparation } from "./core/stems_engine";
 import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong } from "./workers/sample_tasks";
@@ -114,6 +115,80 @@ export async function registerRoutes(
     if (song.userId !== userId) return res.sendStatus(403);
     await storage.deleteSong(song.id);
     res.sendStatus(204);
+  });
+
+  // ========== MUSICGPT WEBHOOK ==========
+
+  app.post("/api/webhooks/musicgpt", async (req, res) => {
+    try {
+      const expectedToken = process.env.SESSION_SECRET || "musicgpt-webhook";
+      const token = req.query.token as string;
+      if (!token || token !== expectedToken) {
+        console.log("[Webhook] Unauthorized webhook request - invalid token");
+        return res.sendStatus(401);
+      }
+
+      const payload = req.body;
+      console.log(`[Webhook] Received MusicGPT webhook:`, JSON.stringify(payload).substring(0, 500));
+
+      const taskId = payload.task_id;
+      const status = payload.status?.toUpperCase();
+      const audioUrl = payload.audio_url;
+      const title = payload.title;
+      const conversionType = payload.conversion_type;
+
+      if (!taskId) {
+        console.log("[Webhook] No task_id in payload, ignoring");
+        return res.sendStatus(200);
+      }
+
+      let song = await storage.getSongByTaskId(taskId);
+      if (!song) {
+        const songId = pendingTaskMap.get(taskId);
+        if (songId) {
+          song = await storage.getSong(songId);
+          if (song) {
+            await storage.updateSongTaskId(song.id, taskId);
+          }
+        }
+      }
+      if (!song) {
+        console.log(`[Webhook] No song found for task_id ${taskId}, ignoring`);
+        return res.sendStatus(200);
+      }
+      pendingTaskMap.delete(taskId);
+
+      if (song.status === "completed") {
+        console.log(`[Webhook] Song ${song.id} already completed, ignoring duplicate webhook`);
+        return res.sendStatus(200);
+      }
+
+      if (status === "COMPLETED" && audioUrl) {
+        console.log(`[Webhook] Song ${song.id} completed! Downloading audio...`);
+        const localUrl = await downloadMusicGPTFile(audioUrl, "songs", "song");
+        await storage.updateSongStatus(song.id, "completed", localUrl);
+
+        if (title && title !== "Generated Song") {
+          try {
+            const { db } = await import("./db");
+            const { songs: songsTable } = await import("@shared/schema");
+            const { eq } = await import("drizzle-orm");
+            await db.update(songsTable).set({ title }).where(eq(songsTable.id, song.id));
+          } catch {}
+        }
+
+        console.log(`[Webhook] Song ${song.id} saved: ${localUrl}`);
+      } else if (status === "FAILED") {
+        const errorMsg = payload.status_msg || "Generation failed";
+        console.log(`[Webhook] Song ${song.id} failed: ${errorMsg}`);
+        await storage.updateSongStatus(song.id, "failed", undefined, errorMsg);
+      }
+
+      res.sendStatus(200);
+    } catch (err: any) {
+      console.error("[Webhook] Error processing webhook:", err);
+      res.sendStatus(200);
+    }
   });
 
   // ========== TRACKS / STEMS ROUTES ==========
@@ -276,7 +351,12 @@ export async function registerRoutes(
   });
 
   app.get("/api/quiz/styles", (_req, res) => {
-    res.json(Object.keys(PROMPT_VERSIONS));
+    const musicGPTStyles = [
+      "Pop", "Rock", "Hip Hop", "R&B", "EDM", "Jazz", "Blues", "Country",
+      "Reggaeton", "Bachata", "Salsa", "Afrobeat", "K-pop", "Indie",
+      "Classical", "Soul", "Funk", "House", "Drum & Bass", "Synthwave"
+    ];
+    res.json(musicGPTStyles);
   });
 
   // ========== SAMPLE LAB ROUTES ==========
@@ -416,8 +496,8 @@ export async function registerRoutes(
       if (sourceSample.userId !== userId) return res.sendStatus(403);
       if (!sourceSample.audioUrl) return res.status(400).json({ message: "Source sample has no audio" });
 
-      const style = input.style || "heart-mula";
-      const promptWithStyle = buildMusicGenPrompt(input.prompt, style);
+      const style = input.style || "Bachata";
+      const promptWithStyle = `${input.prompt}, ${style} style`;
 
       const newSample = await storage.createSample({
         userId,

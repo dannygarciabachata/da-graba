@@ -179,10 +179,17 @@ export async function pollMusicGPTJob(
   throw new Error(`MusicGPT job timed out after ${timeoutMs / 1000}s`);
 }
 
+export function getWebhookUrl(): string {
+  const domain = process.env.REPLIT_DEV_DOMAIN;
+  const base = domain ? `https://${domain}` : "http://localhost:5000";
+  const secret = process.env.SESSION_SECRET || "musicgpt-webhook";
+  return `${base}/api/webhooks/musicgpt?token=${encodeURIComponent(secret)}`;
+}
+
 export async function submitMusicGPTGeneration(
   userPrompt: string,
   style: string,
-  options: { lyrics?: string; duration?: number } = {}
+  options: { lyrics?: string; duration?: number; webhookUrl?: string } = {}
 ): Promise<MusicGPTSubmitResponse> {
   const { prompt, music_style } = buildMusicGPTPrompt(userPrompt, style);
 
@@ -199,9 +206,15 @@ export async function submitMusicGPTGeneration(
   if (options.duration && options.duration > 0) {
     body.output_length = options.duration;
   }
+  if (options.webhookUrl) {
+    body.webhook_url = options.webhookUrl;
+  }
 
   console.log(`[MusicGPT] Prompt: ${prompt}`);
   console.log(`[MusicGPT] Style: ${music_style}, Duration: ${options.duration || "default"}s`);
+  if (options.webhookUrl) {
+    console.log(`[MusicGPT] Webhook: ${options.webhookUrl}`);
+  }
 
   return submitMusicGPTJob("MusicAI", body);
 }

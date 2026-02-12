@@ -4,31 +4,30 @@ import { useSongs } from "@/hooks/use-songs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Slider } from "@/components/ui/slider";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Loader2,
   Sparkles,
-  Heart,
   Music,
-  Sliders,
-  Layers,
+  Mic,
+  FileAudio,
+  Send,
+  ChevronDown,
+  ChevronRight,
+  Dices,
   Play,
   Clock,
   AlertCircle,
   Trash2,
   Scissors,
-  Dices,
+  ThumbsUp,
+  Zap,
+  SlidersHorizontal,
+  Info,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -37,69 +36,66 @@ import { AudioPlayer } from "@/components/AudioPlayer";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-const STYLE_OPTIONS = [
-  { value: "Bachata", label: "Bachata" },
-  { value: "Pop", label: "Pop" },
-  { value: "R&B", label: "R&B" },
-  { value: "Hip-Hop", label: "Hip-Hop" },
-  { value: "Rock", label: "Rock" },
-  { value: "EDM", label: "EDM" },
-  { value: "Jazz", label: "Jazz" },
-  { value: "Reggaeton", label: "Reggaeton" },
-  { value: "Country", label: "Country" },
-  { value: "Lo-Fi", label: "Lo-Fi" },
-  { value: "Classical", label: "Classical" },
-  { value: "Blues", label: "Blues" },
-  { value: "Funk", label: "Funk" },
-  { value: "Ambient", label: "Ambient" },
-  { value: "Latin Pop", label: "Latin Pop" },
-  { value: "Reggae", label: "Reggae" },
-  { value: "Metal", label: "Metal" },
-  { value: "Indie", label: "Indie" },
-  { value: "Synthwave", label: "Synthwave" },
-  { value: "Folk", label: "Folk" },
-];
-
-const GENRE_OPTIONS = [
-  { value: "Bachata", label: "Bachata" },
-  { value: "Merengue", label: "Merengue" },
-  { value: "Salsa", label: "Salsa" },
-  { value: "Reggaeton", label: "Reggaeton" },
-  { value: "Bolero", label: "Bolero" },
-  { value: "Cumbia", label: "Cumbia" },
-  { value: "Latin Pop", label: "Latin Pop" },
-  { value: "R&B Latino", label: "R&B Latino" },
-  { value: "Dembow", label: "Dembow" },
-  { value: "Tropical", label: "Tropical" },
+const GENRE_CARDS = [
+  { value: "Bachata", likes: "97K" },
+  { value: "R&B", likes: "48K" },
+  { value: "Hip Hop", likes: "45K" },
+  { value: "Pop", likes: "32K" },
+  { value: "Reggaeton", likes: "29K" },
+  { value: "EDM", likes: "31K" },
+  { value: "K-pop", likes: "38K" },
+  { value: "Afrobeat", likes: "41K" },
+  { value: "Jazz", likes: "13K" },
+  { value: "Rock", likes: "25K" },
+  { value: "Synthwave", likes: "27K" },
+  { value: "House", likes: "18K" },
+  { value: "Soul", likes: "23K" },
+  { value: "Country", likes: "15K" },
+  { value: "Blues", likes: "12K" },
+  { value: "Indie", likes: "21K" },
+  { value: "Classical", likes: "9K" },
+  { value: "Funk", likes: "17K" },
+  { value: "Latin Pop", likes: "34K" },
+  { value: "Drum & Bass", likes: "14K" },
 ];
 
 const PROMPT_SUGGESTIONS = [
-  "A romantic bachata under the Caribbean moonlight",
-  "Sensual dance track with güira and bongo grooves",
-  "Heartbreak bolero with crying requinto guitar",
-  "Upbeat merengue fusion with modern beats",
-  "Trio serenade inspired by Frank Reyes",
-  "Urban bachata with trap influences",
+  "R&B with female vocals about Los Angeles",
+  "Upbeat pop anthem about summer freedom",
+  "Romantic bachata under Caribbean moonlight",
+  "Chill lo-fi hip hop beat for studying",
+  "Energetic EDM drop with euphoric synths",
+  "Soulful jazz ballad with saxophone",
+  "Dark trap beat with heavy 808s",
+  "Acoustic folk song about road trips",
 ];
 
-type GeneratorMode = "simple" | "custom";
+const CREATION_MODES = [
+  { id: "song", label: "Create song", icon: Music, active: true },
+  { id: "sound", label: "Create Sound", icon: FileAudio, active: false },
+  { id: "speak", label: "Speak text", icon: Mic, active: false },
+];
 
 export default function CreatePage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const [mode, setMode] = useState<GeneratorMode>("simple");
   const [currentSong, setCurrentSong] = useState<any>(null);
 
-  const [simplePrompt, setSimplePrompt] = useState("");
-  const [simpleStyle, setSimpleStyle] = useState("Bachata");
-
   const [prompt, setPrompt] = useState("");
-  const [lyrics, setLyrics] = useState("");
-  const [isBachata, setIsBachata] = useState(true);
-  const [style, setStyle] = useState("Bachata");
-  const [genre, setGenre] = useState("Bachata");
+  const [selectedGenre, setSelectedGenre] = useState("Bachata");
+  const [showProControls, setShowProControls] = useState(false);
   const [title, setTitle] = useState("");
+  const [promptIntensity, setPromptIntensity] = useState([85]);
+  const [lyricsIntensity, setLyricsIntensity] = useState([70]);
+  const [isInstrumental, setIsInstrumental] = useState(false);
+  const [lyrics, setLyrics] = useState("");
+  const [activeCreationMode, setActiveCreationMode] = useState("song");
 
   const { mutate: generate, isPending } = useGenerateSong();
   const { data: songs, isLoading: songsLoading } = useSongs();
@@ -107,377 +103,397 @@ export default function CreatePage() {
 
   const recentSongs = songs?.slice(0, 6) ?? [];
 
-  const handleSimpleGenerate = () => {
-    if (!simplePrompt.trim()) return;
-    generate({
-      prompt: simplePrompt,
-      isBachata: true,
-      style: simpleStyle,
-      mode: "standard",
-    });
-    setSimplePrompt("");
-  };
-
-  const handleCustomGenerate = () => {
+  const handleGenerate = () => {
     if (!prompt.trim() && !title.trim()) return;
+    const finalPrompt = isInstrumental
+      ? `${prompt || title} (instrumental, no vocals)`
+      : prompt || title;
     generate({
-      prompt: prompt || title,
+      prompt: finalPrompt,
       title: title || undefined,
-      genre,
-      isBachata,
-      style,
+      style: selectedGenre,
+      genre: selectedGenre,
       mode: title ? "aggregate" : "standard",
-      ...(lyrics.trim() ? { lyrics: lyrics.trim() } : {}),
+      ...(lyrics.trim() && !isInstrumental ? { lyrics: lyrics.trim() } : {}),
     });
     setPrompt("");
-    setTitle("");
-    setLyrics("");
   };
 
   const handleRandomPrompt = () => {
     const random = PROMPT_SUGGESTIONS[Math.floor(Math.random() * PROMPT_SUGGESTIONS.length)];
-    if (mode === "simple") {
-      setSimplePrompt(random);
-    } else {
-      setPrompt(random);
-    }
+    setPrompt(random);
   };
 
   if (!user) return null;
 
   return (
-    <div className="flex flex-col lg:flex-row h-full">
-      <div className="flex-1 flex flex-col items-center justify-start overflow-auto">
-        <div className="w-full max-w-2xl px-4 py-8 md:py-12 mx-auto">
+    <ScrollArea className="h-full">
+      <div className="flex flex-col items-center w-full">
+        <div className="w-full max-w-3xl px-4 py-6 md:py-10 mx-auto">
+
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-8"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium mb-4">
-              <Heart className="h-3 w-3" />
-              Heart Mula Music Engine
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold mb-2" data-testid="text-create-title">
-              Create your next track
+            <h1 className="text-2xl md:text-3xl font-bold mb-1" data-testid="text-create-title">
+              Create something new today
             </h1>
             <p className="text-sm text-muted-foreground">
-              Describe your song and let the Heart Mula engine bring it to life
+              12 credits per song
             </p>
           </motion.div>
 
-          <div className="flex gap-1 mb-6 bg-white/5 rounded-lg p-1 max-w-xs mx-auto">
-            <Button
-              variant={mode === "simple" ? "default" : "ghost"}
-              size="sm"
-              className="flex-1 gap-1.5 text-xs"
-              onClick={() => setMode("simple")}
-              data-testid="button-mode-simple"
-            >
-              <Layers className="h-3.5 w-3.5" />
-              Simple
-            </Button>
-            <Button
-              variant={mode === "custom" ? "default" : "ghost"}
-              size="sm"
-              className="flex-1 gap-1.5 text-xs"
-              onClick={() => setMode("custom")}
-              data-testid="button-mode-custom"
-            >
-              <Sliders className="h-3.5 w-3.5" />
-              Custom
-            </Button>
+          <div className="mb-6">
+            <div className="relative">
+              <Textarea
+                placeholder={`${selectedGenre} with vocals about...`}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                className="bg-card border-white/10 focus:border-primary/50 focus:ring-primary/20 min-h-[100px] resize-none text-base pr-24"
+                data-testid="input-prompt"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    handleGenerate();
+                  }
+                }}
+              />
+              <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-muted-foreground"
+                  onClick={handleRandomPrompt}
+                  data-testid="button-random-prompt"
+                >
+                  <Dices className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  onClick={handleGenerate}
+                  disabled={isPending || (!prompt.trim() && !title.trim())}
+                  className="bg-primary text-black"
+                  data-testid="button-submit"
+                >
+                  {isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
 
-          <AnimatePresence mode="wait">
-            {mode === "simple" ? (
-              <motion.div
-                key="simple"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="space-y-4"
-              >
-                <div className="relative">
-                  <Textarea
-                    placeholder="Describe your song... e.g. A romantic bachata with soft requinto guitar under the moonlight"
-                    value={simplePrompt}
-                    onChange={(e) => setSimplePrompt(e.target.value)}
-                    className="bg-card border-white/10 focus:border-primary/50 focus:ring-primary/20 min-h-[120px] resize-none text-base pr-10"
-                    data-testid="input-simple-prompt"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 text-muted-foreground"
-                    onClick={handleRandomPrompt}
-                    data-testid="button-random-prompt"
-                  >
-                    <Dices className="h-4 w-4" />
-                  </Button>
-                </div>
+          <div className="flex items-center gap-2 mb-6 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setShowProControls(!showProControls)}
+              data-testid="button-pro-controls"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Pro controls
+              {showProControls ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+            </Button>
+            <Badge
+              variant={isInstrumental ? "default" : "outline"}
+              className={cn(
+                "cursor-pointer text-xs gap-1 toggle-elevate",
+                isInstrumental && "toggle-elevated bg-primary/20 text-primary border-primary/30"
+              )}
+              onClick={() => setIsInstrumental(!isInstrumental)}
+              data-testid="badge-instrumental"
+            >
+              <Music className="h-3 w-3" />
+              Instrumental
+            </Badge>
+            <Badge
+              variant={!isInstrumental ? "default" : "outline"}
+              className={cn(
+                "cursor-pointer text-xs gap-1 toggle-elevate",
+                !isInstrumental && "toggle-elevated bg-primary/20 text-primary border-primary/30"
+              )}
+              onClick={() => setIsInstrumental(false)}
+              data-testid="badge-lyrics-mode"
+            >
+              <Mic className="h-3 w-3" />
+              Lyrics
+            </Badge>
+          </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Label className="text-xs text-muted-foreground">Style:</Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {STYLE_OPTIONS.map((opt) => (
-                      <Badge
-                        key={opt.value}
-                        variant={simpleStyle === opt.value ? "default" : "outline"}
-                        className={cn(
-                          "cursor-pointer text-xs transition-colors",
-                          simpleStyle === opt.value
-                            ? "bg-primary text-black"
-                            : "border-white/10 text-muted-foreground"
-                        )}
-                        onClick={() => setSimpleStyle(opt.value)}
-                        data-testid={`badge-style-${opt.value}`}
-                      >
-                        {opt.label}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleSimpleGenerate}
-                  disabled={isPending || !simplePrompt.trim()}
-                  className="w-full text-base font-semibold bg-primary text-black shadow-lg shadow-primary/25"
-                  data-testid="button-create-simple"
-                >
-                  {isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Composing your track...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-5 w-5" />
-                      Create
-                    </>
-                  )}
-                </Button>
-              </motion.div>
-            ) : (
+          <AnimatePresence>
+            {showProControls && (
               <motion.div
-                key="custom"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="space-y-4"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden mb-6"
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Card className="p-4 space-y-4 border-white/5">
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Song Title</Label>
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      Title
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3 w-3" />
+                        </TooltipTrigger>
+                        <TooltipContent>Optional song title</TooltipContent>
+                      </Tooltip>
+                    </Label>
                     <Input
-                      placeholder="Mi Corazón Latiendo..."
+                      placeholder="Enter song title (optional)"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="bg-card border-white/10 focus:border-primary/50 text-sm"
-                      data-testid="input-custom-title"
+                      className="bg-background border-white/10 focus:border-primary/50 text-sm"
+                      data-testid="input-title"
                     />
                   </div>
+
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Genre</Label>
-                    <Select value={genre} onValueChange={setGenre}>
-                      <SelectTrigger className="bg-card border-white/10" data-testid="select-custom-genre">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {GENRE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      Prompt intensity
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3 w-3" />
+                        </TooltipTrigger>
+                        <TooltipContent>How closely the AI follows your prompt</TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <Slider
+                        value={promptIntensity}
+                        onValueChange={setPromptIntensity}
+                        min={0}
+                        max={100}
+                        step={1}
+                        className="flex-1"
+                        data-testid="slider-prompt-intensity"
+                      />
+                      <span className="text-xs font-mono text-muted-foreground w-8 text-right">{promptIntensity[0]}</span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between flex-wrap gap-1">
-                    <Label className="text-xs text-muted-foreground">Describe your track</Label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-muted-foreground h-6 px-2"
-                      onClick={handleRandomPrompt}
-                      data-testid="button-random-custom"
-                    >
-                      <Dices className="h-3 w-3 mr-1" />
-                      Random
-                    </Button>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      Lyrics intensity
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3 w-3" />
+                        </TooltipTrigger>
+                        <TooltipContent>Controls creativity vs. precision in lyrics</TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <Slider
+                        value={lyricsIntensity}
+                        onValueChange={setLyricsIntensity}
+                        min={0}
+                        max={100}
+                        step={1}
+                        className="flex-1"
+                        data-testid="slider-lyrics-intensity"
+                      />
+                      <span className="text-xs font-mono text-muted-foreground w-8 text-right">{lyricsIntensity[0]}</span>
+                    </div>
                   </div>
-                  <Textarea
-                    placeholder="A romantic melody under Caribbean moonlight, requinto crying softly..."
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    className="bg-card border-white/10 focus:border-primary/50 min-h-[80px] resize-none text-sm"
-                    data-testid="input-custom-prompt"
-                  />
-                </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Lyrics (optional)</Label>
-                  <Textarea
-                    placeholder={"[Verse]\nBajo la luna de Santo Domingo\nTu mirada me tiene cautivo...\n\n[Chorus]\nBailamos bachata toda la noche..."}
-                    value={lyrics}
-                    onChange={(e) => setLyrics(e.target.value)}
-                    className="bg-card border-white/10 focus:border-primary/50 min-h-[100px] resize-none text-sm font-mono"
-                    data-testid="input-custom-lyrics"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Style Preset</Label>
-                  <Select value={style} onValueChange={setStyle}>
-                    <SelectTrigger className="bg-card border-white/10" data-testid="select-custom-style">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STYLE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-lg bg-card border border-white/5">
-                  <div className="space-y-0.5">
-                    <Label className="text-sm font-medium">Bachata Mode</Label>
-                    <p className="text-xs text-muted-foreground">Force Dominican instruments</p>
-                  </div>
-                  <Switch
-                    checked={isBachata}
-                    onCheckedChange={setIsBachata}
-                    className="data-[state=checked]:bg-primary"
-                    data-testid="switch-bachata-mode"
-                  />
-                </div>
-
-                <Button
-                  onClick={handleCustomGenerate}
-                  disabled={isPending || (!prompt.trim() && !title.trim())}
-                  className="w-full text-base font-semibold bg-primary text-black shadow-lg shadow-primary/25"
-                  data-testid="button-create-custom"
-                >
-                  {isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Composing your track...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-5 w-5" />
-                      Create
-                    </>
+                  {!isInstrumental && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Custom lyrics</Label>
+                      <Textarea
+                        placeholder={"[Verse]\nWrite your lyrics here...\n\n[Chorus]\nYour chorus..."}
+                        value={lyrics}
+                        onChange={(e) => setLyrics(e.target.value)}
+                        className="bg-background border-white/10 focus:border-primary/50 min-h-[80px] resize-none text-sm font-mono"
+                        data-testid="input-lyrics"
+                      />
+                    </div>
                   )}
-                </Button>
+                </Card>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
 
-        {recentSongs.length > 0 && (
-          <div className="w-full max-w-4xl px-4 pb-8 mx-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Recent Creations</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground"
-                onClick={() => setLocation("/library")}
-                data-testid="button-view-all"
-              >
-                View All
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {recentSongs.map((song: any) => (
-                <Card
-                  key={song.id}
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              {CREATION_MODES.map((m) => (
+                <Badge
+                  key={m.id}
+                  variant={activeCreationMode === m.id ? "default" : "outline"}
                   className={cn(
-                    "p-3 cursor-pointer transition-all duration-200 border-white/5",
-                    currentSong?.id === song.id
+                    "cursor-pointer text-xs gap-1.5 py-1",
+                    activeCreationMode === m.id
+                      ? "bg-primary/15 text-primary border-primary/30"
+                      : "text-muted-foreground border-white/10"
+                  )}
+                  onClick={() => setActiveCreationMode(m.id)}
+                  data-testid={`badge-mode-${m.id}`}
+                >
+                  <m.icon className="h-3 w-3" />
+                  {m.label}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+              {GENRE_CARDS.map((genre) => (
+                <Card
+                  key={genre.value}
+                  className={cn(
+                    "p-3 cursor-pointer transition-all border-white/5",
+                    selectedGenre === genre.value
                       ? "border-primary/50 bg-primary/5"
                       : "hover-elevate"
                   )}
-                  onClick={() => song.status === "completed" && setCurrentSong(song)}
-                  data-testid={`card-recent-song-${song.id}`}
+                  onClick={() => setSelectedGenre(genre.value)}
+                  data-testid={`card-genre-${genre.value}`}
                 >
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h4 className="text-sm font-medium line-clamp-1 flex-1">
-                      {song.title || song.prompt}
-                    </h4>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {song.status === "completed" && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6 text-primary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setLocation("/studio");
-                          }}
-                          data-testid={`button-studio-${song.id}`}
-                        >
-                          <Scissors className="h-3 w-3" />
-                        </Button>
-                      )}
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6 text-muted-foreground"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteSong(song.id);
-                        }}
-                        data-testid={`button-delete-${song.id}`}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>
-                      {song.createdAt && formatDistanceToNow(new Date(song.createdAt), { addSuffix: true })}
-                    </span>
-                    {song.status === "completed" && (
-                      <div className="flex items-center text-primary gap-1">
-                        <Play className="w-3 h-3 fill-current" />
-                        Ready
-                      </div>
-                    )}
-                    {song.status === "processing" && (
-                      <div className="flex items-center text-yellow-500 gap-1 animate-pulse">
-                        <Clock className="w-3 h-3" />
-                        Processing
-                      </div>
-                    )}
-                    {song.status === "failed" && (
-                      <div className="flex items-center text-destructive gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        Failed
-                      </div>
-                    )}
+                  <div className="text-sm font-medium mb-1 line-clamp-1">{genre.value}</div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <ThumbsUp className="h-3 w-3" />
+                    {genre.likes} Likes
                   </div>
                 </Card>
               ))}
             </div>
           </div>
-        )}
 
-        {currentSong && (
-          <div className="w-full max-w-2xl px-4 pb-8 mx-auto">
-            <AudioPlayer
-              url={currentSong.audioUrl}
-              title={currentSong.title || "Untitled Track"}
-            />
-          </div>
-        )}
+          {isPending && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mb-8"
+            >
+              <Card className="p-4 border-primary/20 bg-primary/5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-md bg-primary/10 flex items-center justify-center">
+                    <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Generating your track...</p>
+                    <p className="text-xs text-muted-foreground">This usually takes 30-60 seconds</p>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {recentSongs.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  Recent Creations
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground"
+                  onClick={() => setLocation("/library")}
+                  data-testid="button-view-all"
+                >
+                  View All
+                  <ChevronRight className="h-3 w-3 ml-1" />
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {recentSongs.map((song: any) => (
+                  <Card
+                    key={song.id}
+                    className={cn(
+                      "overflow-visible cursor-pointer transition-all border-white/5",
+                      currentSong?.id === song.id
+                        ? "border-primary/50 bg-primary/5"
+                        : "hover-elevate"
+                    )}
+                    onClick={() => song.status === "completed" && setCurrentSong(song)}
+                    data-testid={`card-recent-song-${song.id}`}
+                  >
+                    <div className="flex items-start gap-3 p-3">
+                      <div className="h-12 w-12 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        {song.imageUrl ? (
+                          <img
+                            src={song.imageUrl}
+                            alt={song.title}
+                            className="h-12 w-12 rounded-md object-cover"
+                          />
+                        ) : song.status === "processing" ? (
+                          <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                        ) : song.status === "completed" ? (
+                          <Play className="h-5 w-5 text-primary fill-current" />
+                        ) : (
+                          <AlertCircle className="h-5 w-5 text-destructive" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium line-clamp-1">
+                          {song.title || song.prompt}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          {song.genre && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-white/10">
+                              {song.genre}
+                            </Badge>
+                          )}
+                          <span className="text-[10px] text-muted-foreground">
+                            {song.createdAt && formatDistanceToNow(new Date(song.createdAt), { addSuffix: true })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                        {song.status === "completed" && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLocation("/studio");
+                            }}
+                            data-testid={`button-studio-${song.id}`}
+                          >
+                            <Scissors className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-muted-foreground"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteSong(song.id);
+                          }}
+                          data-testid={`button-delete-${song.id}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {currentSong && (
+            <div className="mb-8">
+              <AudioPlayer
+                url={currentSong.audioUrl}
+                title={currentSong.title || "Untitled Track"}
+                imageUrl={currentSong.imageUrl}
+                genre={currentSong.genre}
+              />
+            </div>
+          )}
+
+        </div>
       </div>
-    </div>
+    </ScrollArea>
   );
 }

@@ -1,7 +1,7 @@
 # DGB Audio - Heart Mula Music Engine
 
 ## Overview
-AI-powered music generation platform tailored for Bachata music by Danny Garcia. The "Heart Mula" engine uses MusicGPT as the exclusive AI provider for all audio operations (generation, stem extraction, remix, mastering, denoise, key/BPM detection, cover songs), and OpenAI (GPT-5.1) for lyrics writing, with a structured prompt system for authentic Dominican Bachata sound.
+AI-powered music generation platform by Danny Garcia. The "Heart Mula" engine uses MusicGPT as the exclusive AI provider for all audio operations (generation, stem extraction, remix, mastering, denoise, key/BPM detection, cover songs), and OpenAI for lyrics writing. Supports 20+ music genres from MusicGPT's native style list. Uses webhook-based architecture for efficient async processing.
 
 ## Architecture
 - **Frontend**: React + Vite + TailwindCSS + Shadcn UI
@@ -12,8 +12,8 @@ AI-powered music generation platform tailored for Bachata music by Danny Garcia.
 - **Lyrics AI**: OpenAI via Replit AI Integrations (GPT-5.1)
 
 ## Core Engines (server/core/)
-- **musicgpt_engine.ts** - MusicGPT API client with generic submit/poll helpers for all endpoints (MusicAI, Extraction, Remix, AudioMastering, Denoise, KeyBPMExtraction, Cover), file download utility, URL resolver
-- **prompt_engine.ts** - Versioned music prompts (Heart Mula, Romantic, Dance, Bolero, Urbana, Serenade), lyrics system prompts, structured JSON config generation
+- **musicgpt_engine.ts** - MusicGPT API client with generic submit/poll helpers for all endpoints (MusicAI, Extraction, Remix, AudioMastering, Denoise, KeyBPMExtraction, Cover), file download utility, URL resolver, webhook URL helper
+- **prompt_engine.ts** - Lyrics system prompts (romantic/dance/heartbreak), structured JSON config generation
 - **antigravity_engine.ts** - Creative AI engine for lyrics and full arrangement configs via OpenAI
 - **quiz_engine.ts** - Bachata knowledge quiz system (static bank + AI-generated questions)
 - **stems_engine.ts** - AI stem separation using MusicGPT /Extraction (splits songs into vocals, drums, bass, other)
@@ -27,6 +27,7 @@ AI-powered music generation platform tailored for Bachata music by Danny Garcia.
 - Dual generation modes: Aggregate (quick title+genre+style) and Standard (detailed prompt)
 - Bachata Mode auto-detection (keywords like "bachata", "bongo", "guira" auto-force Dominican instruments)
 - 6 style presets: Heart Mula Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana
+- MusicGPT-inspired CreatePage with genre cards (20+ genres), pro controls, prompt/lyrics intensity sliders
 - Multitrack Studio: AI stem separation (MusicGPT Extraction) splits songs into Vocals, Drums, Bass, Melody
 - Studio AI Tools: Master (professional audio mastering), Denoise (noise removal), AI Cover (voice change)
 - Individual track controls: volume, mute, solo per stem with waveform visualization
@@ -98,6 +99,7 @@ shared/
 
 ## API Endpoints
 - `POST /api/songs/generate` - Generate music (MusicGPT exclusive; supports style, duration, lyrics, auto-bachata detection)
+- `POST /api/webhooks/musicgpt` - Webhook receiver for MusicGPT async completion (no auth, matches by task_id)
 - `GET /api/songs` - List user's songs
 - `GET /api/songs/:id` - Get single song
 - `DELETE /api/songs/:id` - Delete song
@@ -127,6 +129,12 @@ All MusicGPT endpoints use async task-based processing:
 2. Poll status → GET /api/public/v1/byId?task_id={id} → check status
 3. On COMPLETED → download audio from returned URL → save locally
 4. Authorization: raw API key in Authorization header (not Bearer)
+
+For music generation (MusicAI), webhook-based flow is preferred:
+1. Submit with webhook_url → receive task_id → store in songs.taskId
+2. MusicGPT POSTs to /api/webhooks/musicgpt when complete
+3. Webhook handler matches task_id → downloads audio → updates song status
+4. Fallback poller runs as backup in case webhook fails
 
 ## Environment Variables
 - `DATABASE_URL` - PostgreSQL connection
