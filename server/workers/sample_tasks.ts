@@ -5,6 +5,7 @@ import {
   downloadMusicGPTFile,
   resolveFullAudioUrl,
   buildMusicGPTPrompt,
+  submitAudioCutter,
 } from "../core/musicgpt_engine";
 
 export async function processHummingToMusic(
@@ -176,5 +177,44 @@ export async function processCoverSong(
     console.log(`[CoverWorker] Cover complete for song ${songId}, new song: ${coverSong.id}`);
   } catch (err: any) {
     console.error(`[CoverWorker] Error for song ${songId}:`, err.message || err);
+  }
+}
+
+export async function processAudioCut(
+  songId: number,
+  audioUrl: string,
+  startTimeMs: number,
+  endTimeMs: number,
+  userId: string
+): Promise<void> {
+  try {
+    console.log(`[CutWorker] Starting audio trim for song ${songId}: ${startTimeMs}ms - ${endTimeMs}ms`);
+
+    const song = await storage.getSong(songId);
+    if (!song) throw new Error("Song not found");
+
+    const durationSec = Math.round((endTimeMs - startTimeMs) / 1000);
+    const trimSong = await storage.createSong({
+      userId,
+      title: `${song.title} (Trimmed ${durationSec}s)`,
+      prompt: `Trimmed version of "${song.title}" (${startTimeMs}ms - ${endTimeMs}ms)`,
+      genre: song.genre,
+      mode: "standard",
+    });
+
+    await storage.updateSongStatus(trimSong.id, "processing");
+
+    const fullAudioUrl = resolveFullAudioUrl(audioUrl);
+    const result = await submitAudioCutter(fullAudioUrl, startTimeMs, endTimeMs);
+
+    if (!result.success || !result.conversion_path) {
+      throw new Error(result.message || "Audio cutter returned no output path");
+    }
+
+    const localUrl = await downloadMusicGPTFile(result.conversion_path, "trimmed", "trim");
+    await storage.updateSongStatus(trimSong.id, "completed", localUrl);
+    console.log(`[CutWorker] Trim complete for song ${songId}, new song: ${trimSong.id}`);
+  } catch (err: any) {
+    console.error(`[CutWorker] Error for song ${songId}:`, err.message || err);
   }
 }

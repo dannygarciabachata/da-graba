@@ -10,7 +10,7 @@ import { buildMusicGenPrompt, PROMPT_VERSIONS } from "./core/prompt_engine";
 import { downloadMusicGPTFile } from "./core/musicgpt_engine";
 import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engine";
 import { processStemSeparation } from "./core/stems_engine";
-import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong } from "./workers/sample_tasks";
+import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong, processAudioCut } from "./workers/sample_tasks";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -639,6 +639,36 @@ export async function registerRoutes(
         return res.status(400).json({ message: err.errors[0].message });
       }
       res.status(500).json({ message: "Failed to start cover generation" });
+    }
+  });
+
+  const trimSchema = z.object({
+    startTimeMs: z.number().min(0),
+    endTimeMs: z.number().min(1),
+  }).refine(data => data.endTimeMs > data.startTimeMs, {
+    message: "End time must be greater than start time",
+  });
+
+  app.post("/api/songs/:id/trim", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const songId = Number(req.params.id);
+    const song = await storage.getSong(songId);
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    if (song.status !== "completed" || !song.audioUrl) {
+      return res.status(400).json({ message: "Song must be completed with audio before trimming" });
+    }
+
+    try {
+      const input = trimSchema.parse(req.body);
+      processAudioCut(songId, song.audioUrl, input.startTimeMs, input.endTimeMs, userId);
+      res.status(202).json({ message: "Audio trimming started", songId });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Failed to start audio trimming" });
     }
   });
 

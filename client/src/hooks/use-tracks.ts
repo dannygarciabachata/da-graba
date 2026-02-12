@@ -152,3 +152,29 @@ export function useCoverSong() {
     },
   });
 }
+
+export function useTrimSong() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ songId, startTimeMs, endTimeMs }: { songId: number; startTimeMs: number; endTimeMs: number }) => {
+      const res = await apiRequest("POST", `/api/songs/${songId}/trim`, { startTimeMs, endTimeMs });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/songs"] });
+      toast({
+        title: "Audio Trimming Started",
+        description: "AI is trimming your track to the selected range.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Trim Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
