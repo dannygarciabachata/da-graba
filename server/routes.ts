@@ -643,10 +643,12 @@ export async function registerRoutes(
   });
 
   const trimSchema = z.object({
-    startTimeMs: z.number().min(0),
-    endTimeMs: z.number().min(1),
+    startTimeMs: z.coerce.number().min(0).max(86400000),
+    endTimeMs: z.coerce.number().min(100).max(86400000),
   }).refine(data => data.endTimeMs > data.startTimeMs, {
     message: "End time must be greater than start time",
+  }).refine(data => (data.endTimeMs - data.startTimeMs) >= 500, {
+    message: "Trimmed audio must be at least 0.5 seconds",
   });
 
   app.post("/api/songs/:id/trim", async (req, res) => {

@@ -29,7 +29,7 @@ AI-powered music generation platform by Danny Garcia. The "Heart Mula" engine us
 - 6 style presets: Heart Mula Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana
 - MusicGPT-inspired CreatePage with genre cards (20+ genres), pro controls, prompt/lyrics intensity sliders
 - Multitrack Studio: AI stem separation (MusicGPT Extraction) splits songs into Vocals, Drums, Bass, Melody
-- Studio AI Tools: Master (professional audio mastering), Denoise (noise removal), AI Cover (voice change)
+- Studio AI Tools: Master (professional audio mastering), Denoise (noise removal), AI Cover (voice change), Audio Cutter (trim to time range)
 - Individual track controls: volume, mute, solo per stem with waveform visualization
 - AI lyrics generator (romantic, dance, heartbreak styles) with Frank Reyes/Romeo Santos influences
 - Bachata Quiz with 10-question knowledge bank (history, instruments, artists, rhythm, culture)
@@ -107,6 +107,7 @@ shared/
 - `POST /api/songs/:id/master` - AI audio mastering (MusicGPT AudioMastering)
 - `POST /api/songs/:id/denoise` - AI noise removal (MusicGPT Denoise)
 - `POST /api/songs/:id/cover` - AI cover song with voice change (MusicGPT Cover, body: {voiceDescription})
+- `POST /api/songs/:id/trim` - Audio Cutter trim (MusicGPT audio_cutter, body: {startTimeMs, endTimeMs})
 - `GET /api/songs/:id/tracks` - Get individual tracks/stems for a song
 - `GET /api/tracks` - List all user's tracks
 - `PATCH /api/tracks/:id` - Update track settings (volume, mute, solo)

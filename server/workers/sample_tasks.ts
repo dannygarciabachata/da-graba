@@ -187,6 +187,8 @@ export async function processAudioCut(
   endTimeMs: number,
   userId: string
 ): Promise<void> {
+  let trimSongId: number | null = null;
+
   try {
     console.log(`[CutWorker] Starting audio trim for song ${songId}: ${startTimeMs}ms - ${endTimeMs}ms`);
 
@@ -202,6 +204,7 @@ export async function processAudioCut(
       mode: "standard",
     });
 
+    trimSongId = trimSong.id;
     await storage.updateSongStatus(trimSong.id, "processing");
 
     const fullAudioUrl = resolveFullAudioUrl(audioUrl);
@@ -216,5 +219,8 @@ export async function processAudioCut(
     console.log(`[CutWorker] Trim complete for song ${songId}, new song: ${trimSong.id}`);
   } catch (err: any) {
     console.error(`[CutWorker] Error for song ${songId}:`, err.message || err);
+    if (trimSongId) {
+      await storage.updateSongStatus(trimSongId, "failed", undefined, err.message || "Audio trimming failed");
+    }
   }
 }

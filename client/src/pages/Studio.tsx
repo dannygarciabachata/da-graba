@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSongs } from "@/hooks/use-songs";
-import { useSongTracks, useSeparateStems, useUpdateTrack, useMasterSong, useDenoiseSong, useCoverSong } from "@/hooks/use-tracks";
+import { useSongTracks, useSeparateStems, useUpdateTrack, useMasterSong, useDenoiseSong, useCoverSong, useTrimSong } from "@/hooks/use-tracks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -238,8 +238,11 @@ export default function StudioPage() {
   const { mutate: masterSong, isPending: isMastering } = useMasterSong();
   const { mutate: denoiseSong, isPending: isDenoising } = useDenoiseSong();
   const { mutate: coverSong, isPending: isCovering } = useCoverSong();
+  const { mutate: trimSong, isPending: isTrimming } = useTrimSong();
   const [showTools, setShowTools] = useState(false);
   const [coverVoice, setCoverVoice] = useState("");
+  const [trimStart, setTrimStart] = useState("");
+  const [trimEnd, setTrimEnd] = useState("");
 
   const audioElementsRef = useRef<Map<number, HTMLAudioElement>>(new Map());
   const [audioReady, setAudioReady] = useState<Set<number>>(new Set());
@@ -730,6 +733,64 @@ export default function StudioPage() {
                               >
                                 {isCovering ? <Loader2 className="w-3 h-3 animate-spin" /> : <MicVocal className="w-3 h-3" />}
                                 {isCovering ? "Creating..." : "Create Cover"}
+                              </Button>
+                            </div>
+                          </Card>
+
+                          <Card className="p-3 border-white/5">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                                <Scissors className="w-4 h-4 text-orange-400" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">Audio Cutter</p>
+                                <p className="text-[10px] text-muted-foreground">Trim audio to a specific time range</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 items-end flex-wrap">
+                              <div className="flex-1 min-w-[80px]">
+                                <label className="text-[10px] text-muted-foreground mb-1 block">Start (seconds)</label>
+                                <Input
+                                  type="number"
+                                  placeholder="0"
+                                  min="0"
+                                  step="0.5"
+                                  value={trimStart}
+                                  onChange={(e) => setTrimStart(e.target.value)}
+                                  className="text-xs bg-black/20 border-white/10"
+                                  data-testid="input-trim-start"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-[80px]">
+                                <label className="text-[10px] text-muted-foreground mb-1 block">End (seconds)</label>
+                                <Input
+                                  type="number"
+                                  placeholder="30"
+                                  min="0.5"
+                                  step="0.5"
+                                  value={trimEnd}
+                                  onChange={(e) => setTrimEnd(e.target.value)}
+                                  className="text-xs bg-black/20 border-white/10"
+                                  data-testid="input-trim-end"
+                                />
+                              </div>
+                              <Button
+                                size="sm"
+                                className="gap-1.5 flex-shrink-0"
+                                disabled={isTrimming || !trimStart || !trimEnd || !selectedSongId || parseFloat(trimEnd) <= parseFloat(trimStart)}
+                                onClick={() => {
+                                  if (selectedSongId && trimStart && trimEnd) {
+                                    const startMs = parseFloat(trimStart) * 1000;
+                                    const endMs = parseFloat(trimEnd) * 1000;
+                                    trimSong({ songId: selectedSongId, startTimeMs: startMs, endTimeMs: endMs });
+                                    setTrimStart("");
+                                    setTrimEnd("");
+                                  }
+                                }}
+                                data-testid="button-trim-song"
+                              >
+                                {isTrimming ? <Loader2 className="w-3 h-3 animate-spin" /> : <Scissors className="w-3 h-3" />}
+                                {isTrimming ? "Trimming..." : "Trim Audio"}
                               </Button>
                             </div>
                           </Card>
