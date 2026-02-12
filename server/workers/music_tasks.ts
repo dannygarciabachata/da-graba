@@ -70,27 +70,26 @@ async function generateSmartPrompt(
   return { enhancedPrompt: finalPrompt, generatedLyrics };
 }
 
-function buildAceStepTags(userPrompt: string, style: string): string {
+function buildAceStepTags(style: string): string {
   const styleTags: Record<string, string> = {
     "heart-mula":
-      "bachata, Latin Caribbean, tropical, male vocal, Spanish lyrics, syncopated acoustic guitar strumming pattern, nylon string guitar, lead guitar melody, bongo hand drums, guira shaker percussion, bass guitar groove, warm piano chords, romantic, emotional, intimate, professional Latin production, 130 BPM, D minor",
+      "Bachata, romantic, passionate, 130 BPM, nylon guitar, bongo, guira, smooth male vocal, Spanish, Dominican, Latin dance, intimate",
     "bachata-romantic":
-      "bachata, Latin Caribbean, tropical, male vocal, Spanish lyrics, fingerpicked nylon guitar, soft lead guitar melody, bongo hand drums, guira shaker, acoustic bass, tender, emotional, romantic ballad, intimate, warm reverb, professional Latin production, 128 BPM, A minor",
+      "Bachata, romantic ballad, tender, 128 BPM, nylon guitar, bongo, guira, emotional male vocal, Spanish, Dominican, intimate, A minor",
     "bachata-dance":
-      "bachata, Latin Caribbean, tropical, male vocal, Spanish lyrics, driving nylon guitar strumming, energetic lead guitar riffs, fast bongo hand drums, loud guira shaker, punchy bass, congas, dance, party, upbeat, high energy, professional Latin production, 140 BPM, C major",
+      "Bachata, upbeat, danceable, energetic, 140 BPM, nylon guitar, bongo, guira, congas, male vocal, Spanish, Dominican, party, Latin dance, C major",
     "bachata-bolero":
-      "bachata bolero, Latin Caribbean, tropical, male vocal, Spanish lyrics, slow arpeggiated nylon guitar, crying lead guitar melody, soft bongo brushes, gentle guira, piano ballad chords, deep emotional bass, sorrowful, nostalgic, intimate, professional Latin production, 108 BPM, D minor",
+      "Bachata bolero, slow, melancholic, sorrowful, 108 BPM, nylon guitar, bongo, guira, piano, emotional male vocal, Spanish, Dominican, nostalgic, D minor",
     "trio-serenade":
-      "Latin bolero trio, Caribbean serenade, three-part male vocal harmony, Spanish lyrics, requinto lead guitar, two rhythm nylon guitars, romantic, intimate, acoustic, traditional Latin, professional production, 105 BPM, E minor",
+      "Latin bolero trio, serenade, romantic, 105 BPM, requinto guitar, nylon guitars, three-part male vocal harmony, Spanish, acoustic, intimate, E minor",
     "bachata-urbana":
-      "modern bachata, Latin urban, reggaeton fusion, male vocal, Spanish lyrics, electric guitar with reverb and delay, electronic bongo pattern, trap hi-hat rolls, deep 808 sub bass, R&B vocal style, polished contemporary production, 138 BPM, G minor",
+      "Modern bachata, urban, sensual, 138 BPM, electric guitar, bongo, trap hi-hats, 808 bass, R&B male vocal, Spanish, Dominican, contemporary, G minor",
   };
 
   return styleTags[style] || styleTags["heart-mula"];
 }
 
 function trimLyricsToFitDuration(lyrics: string, durationSec: number): string {
-  const linesPerSection = 4;
   const sectionsFor30s = 2;
   const maxSections = Math.max(sectionsFor30s, Math.floor(durationSec / 20));
 
@@ -103,7 +102,7 @@ function trimLyricsToFitDuration(lyrics: string, durationSec: number): string {
   return result;
 }
 
-function buildAceStepLyrics(userPrompt: string, style: string, generatedLyrics: string, durationSec: number = 30): string {
+function buildAceStepLyrics(style: string, generatedLyrics: string, durationSec: number = 30): string {
   if (generatedLyrics && generatedLyrics.length > 20) {
     let cleaned = generatedLyrics
       .replace(/\*\*[^*]*\*\*/g, "")
@@ -146,18 +145,6 @@ Heart Mula suena el amor es mi abrigo
 Bailamos bachata corazon a corazon
 Tu cuerpo y el mio una sola cancion
 Heart Mula late con toda la pasion
-Eres mi reina mi unica razon
-
-[verse]
-En la noche tu voz me acaricia
-Como brisa del mar con delicia
-Guitarra y bongo te hacen justicia
-Y este ritmo convierte en noticia
-
-[chorus]
-Bailamos bachata corazon a corazon
-Tu cuerpo y el mio una sola cancion
-Heart Mula late con toda la pasion
 Eres mi reina mi unica razon`,
 
     "bachata-romantic": `[verse]
@@ -165,18 +152,6 @@ En la noche callada te pienso
 Tu recuerdo me abraza tan intenso
 Las guitarras me cuentan tu historia
 Y en cada nota vive tu memoria
-
-[chorus]
-Ven a bailar conmigo esta noche
-Que la bachata nos une sin reproche
-Tu mano en mi mano tu piel en mi piel
-Este amor sabe a miel
-
-[verse]
-Tus ojos brillan como las estrellas
-Iluminan mis noches mas bellas
-Con cada paso que damos bailando
-Mi corazon se va enamorando
 
 [chorus]
 Ven a bailar conmigo esta noche
@@ -194,18 +169,6 @@ Esta noche nadie nos para
 Dale pa lante bachata en la sangre
 Que la noche es joven y el ritmo no pare
 Bongo y guitarra fuego en el aire
-Esta fiesta es pa gozarla a lo grande
-
-[verse]
-Todo el mundo a la pista ahora
-Que la bachata suena y enamora
-Con los pies en el suelo y el alma volando
-Toda la noche seguimos bailando
-
-[chorus]
-Dale pa lante bachata en la sangre
-Que la noche es joven y el ritmo no pare
-Bongo y guitarra fuego en el aire
 Esta fiesta es pa gozarla a lo grande`,
 
     "bachata-bolero": `[verse]
@@ -213,18 +176,6 @@ En el silencio de esta noche triste
 Recuerdo el dia que te fuiste
 Las guitarras lloran tu ausencia
 Y mi corazon busca tu presencia
-
-[chorus]
-Vuelve a mi mi amor perdido
-Que sin ti me siento herido
-El bolero canta nuestro dolor
-Trae de vuelta nuestro amor
-
-[verse]
-Las calles vacias me hablan de ti
-Cada esquina un recuerdo de abril
-Tu perfume aun vive en mi almohada
-Y tu ausencia me deja sin nada
 
 [chorus]
 Vuelve a mi mi amor perdido
@@ -242,18 +193,6 @@ Y este trio te entrega su serenata
 Escucha mi serenata mi amor
 Cada nota lleva mi corazon
 Tres voces cantan con fervor
-Esta cancion llena de pasion
-
-[verse]
-La brisa nocturna lleva mi voz
-Hasta tu puerta con toda emocion
-Tres guitarras suenan para los dos
-Bajo la luna nuestra cancion
-
-[chorus]
-Escucha mi serenata mi amor
-Cada nota lleva mi corazon
-Tres voces cantan con fervor
 Esta cancion llena de pasion`,
 
     "bachata-urbana": `[verse]
@@ -266,33 +205,20 @@ Bachata nueva pero original
 Somos fuego somos flow
 Bachata urbana nuevo sabor
 En cada paso siento tu calor
-Baby tu eres mi mayor
-
-[verse]
-Las noches son nuestras el ritmo tambien
-Mezclando lo nuevo con lo que esta bien
-Guitarra electrica bajo profundo
-Contigo conquistamos el mundo
-
-[chorus]
-Somos fuego somos flow
-Bachata urbana nuevo sabor
-En cada paso siento tu calor
 Baby tu eres mi mayor`,
   };
 
   return styleTemplates[style] || styleTemplates["heart-mula"];
 }
 
-async function generateWithReplicate(
-  prompt: string,
+async function generateWithAceStep(
   duration: number,
   style: string = "heart-mula",
   lyrics: string = ""
 ): Promise<{ audioUrl: string; provider: "replicate" }> {
   const actualDuration = Math.min(Math.max(duration, 30), 180);
-  const tags = buildAceStepTags(prompt, style);
-  const aceStepLyrics = buildAceStepLyrics(prompt, style, lyrics, actualDuration);
+  const tags = buildAceStepTags(style);
+  const aceStepLyrics = buildAceStepLyrics(style, lyrics, actualDuration);
 
   console.log(`[Worker] Generating audio with Replicate ACE-Step...`);
   console.log(`[Worker] Tags: ${tags}`);
@@ -303,7 +229,7 @@ async function generateWithReplicate(
     lyrics: aceStepLyrics,
     duration: actualDuration,
     number_of_steps: 100,
-    guidance_scale: 20,
+    guidance_scale: 15,
   };
 
   const output = await replicate.run(
@@ -363,44 +289,47 @@ export async function processMusicGeneration(
 
     let result: { audioUrl: string; provider: string };
 
-    // 1. Try ElevenLabs (full song with vocals + lyrics)
+    // Provider order for bachata: ACE-Step first (best genre recognition),
+    // then ElevenLabs, then Mureka
+
+    // 1. Try Replicate ACE-Step (best for bachata - has native genre tag support)
     try {
-      console.log(`[Worker] Trying ElevenLabs Music (primary)...`);
-      const elResult = await generateWithElevenLabs(finalPrompt, style, {
-        lyrics: generatedLyrics || undefined,
-        durationMs: Math.max(duration * 1000, 30000),
-      });
-      const audioUrl = saveAudioFile(elResult.audioBuffer, "mp3");
-      result = { audioUrl, provider: "elevenlabs" };
-    } catch (elErr: any) {
-      const elMsg = elErr.message || "";
-      console.log(`[Worker] ElevenLabs unavailable: ${elMsg.substring(0, 120)}`);
+      console.log(`[Worker] Trying Replicate ACE-Step (primary for bachata)...`);
+      const repResult = await generateWithAceStep(duration, style, generatedLyrics);
+      const localUrl = await downloadAndSaveAudio(repResult.audioUrl);
+      result = { audioUrl: localUrl, provider: "replicate" };
+    } catch (repErr: any) {
+      const repMsg = repErr.message || "";
+      console.log(`[Worker] ACE-Step unavailable: ${repMsg.substring(0, 120)}`);
 
-      // 2. Try Mureka (full song with vocals)
+      // 2. Try ElevenLabs (general music model)
       try {
-        console.log(`[Worker] Trying Mureka AI (secondary)...`);
-        const murekaLyrics = generatedLyrics || buildBachataLyrics(finalPrompt, style);
-        const murekaPrompt = buildMurekaPrompt(finalPrompt, style);
-        const task = await startSongGeneration(murekaLyrics, murekaPrompt, "auto");
-        const completed = await pollSongUntilDone(task.id, 300000, 5000);
-        if (!completed.choices || completed.choices.length === 0) {
-          throw new Error("Mureka returned no audio choices");
-        }
-        const localUrl = await downloadAndSaveAudio(completed.choices[0].url);
-        result = { audioUrl: localUrl, provider: "mureka" };
-      } catch (muErr: any) {
-        const muMsg = muErr.message || "";
-        console.log(`[Worker] Mureka unavailable: ${muMsg.substring(0, 120)}`);
+        console.log(`[Worker] Trying ElevenLabs Music (secondary)...`);
+        const elResult = await generateWithElevenLabs(finalPrompt, style, {
+          lyrics: generatedLyrics || undefined,
+          durationMs: Math.max(duration * 1000, 30000),
+        });
+        const audioUrl = saveAudioFile(elResult.audioBuffer, "mp3");
+        result = { audioUrl, provider: "elevenlabs" };
+      } catch (elErr: any) {
+        const elMsg = elErr.message || "";
+        console.log(`[Worker] ElevenLabs unavailable: ${elMsg.substring(0, 120)}`);
 
-        // 3. Try Replicate ACE-Step (full song with vocals + lyrics)
+        // 3. Try Mureka (full song with vocals)
         try {
-          console.log(`[Worker] Using Replicate ACE-Step with lyrics...`);
-          const repResult = await generateWithReplicate(enhancedPrompt, duration, style, generatedLyrics);
-          const localUrl = await downloadAndSaveAudio(repResult.audioUrl);
-          result = { audioUrl: localUrl, provider: "replicate" };
-        } catch (repErr: any) {
+          console.log(`[Worker] Trying Mureka AI (tertiary)...`);
+          const murekaLyrics = generatedLyrics || buildBachataLyrics(finalPrompt, style);
+          const murekaPrompt = buildMurekaPrompt(finalPrompt, style);
+          const task = await startSongGeneration(murekaLyrics, murekaPrompt, "auto");
+          const completed = await pollSongUntilDone(task.id, 300000, 5000);
+          if (!completed.choices || completed.choices.length === 0) {
+            throw new Error("Mureka returned no audio choices");
+          }
+          const localUrl = await downloadAndSaveAudio(completed.choices[0].url);
+          result = { audioUrl: localUrl, provider: "mureka" };
+        } catch (muErr: any) {
           throw new Error(
-            `All music providers failed. ElevenLabs: ${elMsg.substring(0, 80)}. Mureka: ${muMsg.substring(0, 80)}. Replicate: ${repErr.message?.substring(0, 80)}`
+            `All music providers failed. ACE-Step: ${repMsg.substring(0, 80)}. ElevenLabs: ${elErr.message?.substring(0, 80)}. Mureka: ${muErr.message?.substring(0, 80)}`
           );
         }
       }

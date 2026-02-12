@@ -1,14 +1,14 @@
 # DGB Audio - Heart Mula Music Engine
 
 ## Overview
-AI-powered music generation platform tailored for Bachata music by Danny Garcia. The "Heart Mula" engine uses ElevenLabs Music (primary, full songs with vocals), Mureka AI (secondary), and Replicate (fallback, instrumental) for music generation, and OpenAI (GPT-5.1) for lyrics writing, with a structured prompt system for authentic Dominican Bachata sound.
+AI-powered music generation platform tailored for Bachata music by Danny Garcia. The "Heart Mula" engine uses Replicate ACE-Step (primary, best for bachata genre with tag-based control), ElevenLabs Music (secondary, full songs with vocals), and Mureka AI (tertiary) for music generation, and OpenAI (GPT-5.1) for lyrics writing, with a structured prompt system for authentic Dominican Bachata sound.
 
 ## Architecture
 - **Frontend**: React + Vite + TailwindCSS + Shadcn UI
 - **Backend**: Express.js (TypeScript)
 - **Database**: PostgreSQL (Neon-backed via Replit)
 - **Auth**: Replit Auth (OpenID Connect)
-- **Music AI**: ElevenLabs Music (primary, full songs with vocals) → Mureka AI (secondary) → Replicate (fallback, instrumental)
+- **Music AI**: Replicate ACE-Step (primary, best bachata genre adherence) → ElevenLabs Music (secondary) → Mureka AI (tertiary)
 - **Lyrics AI**: OpenAI via Replit AI Integrations (GPT-5.1)
 
 ## Core Engines (server/core/)
@@ -21,7 +21,7 @@ AI-powered music generation platform tailored for Bachata music by Danny Garcia.
 - **stems_engine.ts** - AI stem separation using Replicate Demucs (splits songs into vocals, drums, bass, other)
 
 ## Workers (server/workers/)
-- **music_tasks.ts** - Background async music generation: OpenAI creates lyrics + enhanced prompt, then ElevenLabs → Mureka → Replicate for audio
+- **music_tasks.ts** - Background async music generation: OpenAI creates lyrics, then ACE-Step (primary) → ElevenLabs → Mureka for audio
 - **sample_tasks.ts** - Humming-to-music AI transformation using Replicate MusicGen melody-conditioned model
 
 ## Key Features
@@ -98,7 +98,7 @@ shared/
 - Font: Inter + JetBrains Mono
 
 ## API Endpoints
-- `POST /api/songs/generate` - Generate music (ElevenLabs primary, Mureka secondary, Replicate fallback; supports style, duration, lyrics, auto-bachata detection)
+- `POST /api/songs/generate` - Generate music (ACE-Step primary for bachata, ElevenLabs secondary, Mureka tertiary; supports style, duration, lyrics, auto-bachata detection)
 - `GET /api/songs` - List user's songs
 - `GET /api/songs/:id` - Get single song
 - `DELETE /api/songs/:id` - Delete song

@@ -216,12 +216,12 @@ Baby tu eres mi mayor`,
 
 export function buildMurekaPrompt(userPrompt: string, style: string): string {
   const stylePrompts: Record<string, string> = {
-    "heart-mula": "Dominican bachata, syncopated acoustic guitar, bongo hand drums and guira groove, lead guitar melody, emotional male vocal in Spanish, professionally mixed, 130 BPM",
-    "bachata-romantic": "romantic bachata, fingerpicked nylon guitar, gentle bongo and guira, emotional male vocal in Spanish, intimate balanced mix, 128 BPM",
-    "bachata-dance": "upbeat bachata, driving nylon guitar strumming, guira shaker and bongo locked groove, energetic male vocal in Spanish, tight band sound, 140 BPM",
-    "bachata-bolero": "slow bachata bolero, arpeggiated nylon guitar, crying lead guitar melody, soft bongo brushes, emotional male vocal in Spanish, intimate cohesive sound, 108 BPM",
-    "trio-serenade": "Latin trio serenade, requinto lead guitar, two nylon guitars in harmony, male vocal harmony in Spanish, tight acoustic arrangement, 105 BPM",
-    "bachata-urbana": "modern urban bachata, electric guitar with reverb and delay, electronic bongo and trap hi-hats blended, R&B male vocal in Spanish, polished production, 138 BPM",
+    "heart-mula": "Dominican Bachata, nylon guitar, bongo, guira, emotional male vocal in Spanish, Latin dance, 130 BPM",
+    "bachata-romantic": "romantic Bachata, nylon guitar, bongo, guira, emotional male vocal in Spanish, Latin dance, 128 BPM",
+    "bachata-dance": "upbeat Bachata, driving nylon guitar, fast bongo, guira, energetic male vocal in Spanish, Latin dance party, 140 BPM",
+    "bachata-bolero": "slow Bachata Bolero, arpeggiated nylon guitar, piano, soft bongo, emotional male vocal in Spanish, 108 BPM",
+    "trio-serenade": "Latin Bolero Trio, requinto guitar, nylon guitars, male vocal harmony in Spanish, acoustic, 105 BPM",
+    "bachata-urbana": "modern Urban Bachata, electric guitar, bongo, trap hi-hats, 808 bass, R&B male vocal in Spanish, 138 BPM",
   };
 
   const basePrompt = stylePrompts[style] || stylePrompts["heart-mula"];

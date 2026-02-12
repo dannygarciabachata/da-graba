@@ -61,17 +61,17 @@ export interface MusicPromptConfig {
 
 export const PROMPT_VERSIONS: Record<string, string> = {
   "bachata-romantic":
-    "romantic Dominican bachata, fingerpicked nylon guitar, soft lead guitar melody, bongo hand drums, guira shaker, acoustic bass, tender emotional ballad, intimate warm reverb, professionally mixed, 128 BPM, A minor",
+    "romantic Dominican Bachata, nylon guitar, bongo, guira, emotional male vocals in Spanish, Latin dance, 128 BPM, A minor",
   "bachata-dance":
-    "upbeat Dominican bachata, driving nylon guitar strumming, energetic lead guitar riffs, fast bongo hand drums, loud guira shaker, punchy bass, congas, dance party high energy, tight ensemble, 140 BPM, C major",
+    "upbeat Dominican Bachata, driving nylon guitar, fast bongo, guira, congas, male vocals in Spanish, Latin dance party, 140 BPM, C major",
   "bachata-bolero":
-    "bachata bolero, slow arpeggiated nylon guitar, crying lead guitar melody, soft bongo brushes, gentle guira, piano ballad chords, deep emotional bass, sorrowful nostalgic intimate, professionally produced, 108 BPM, D minor",
+    "slow Bachata Bolero, arpeggiated nylon guitar, piano, soft bongo, emotional male vocals in Spanish, nostalgic Latin, 108 BPM, D minor",
   "trio-serenade":
-    "Latin bolero trio serenade, requinto lead guitar, two rhythm nylon guitars in harmony, romantic intimate acoustic, traditional Latin feel, balanced mix, 105 BPM, E minor",
+    "Latin Bolero Trio Serenade, requinto guitar, nylon guitars, male vocal harmony in Spanish, acoustic intimate, 105 BPM, E minor",
   "heart-mula":
-    "Dominican bachata, syncopated acoustic guitar strumming, nylon string guitar, lead guitar melody, bongo hand drums, guira shaker percussion, bass guitar groove, warm piano chords, romantic emotional intimate, professionally mixed, 130 BPM, D minor",
+    "Dominican Bachata, passionate, nylon guitar, bongo drums, guira, emotional male vocals in Spanish, Latin dance rhythm, 130 BPM, D minor",
   "bachata-urbana":
-    "modern urban bachata, electric guitar with reverb and delay, electronic bongo pattern, trap hi-hat rolls, deep 808 sub bass, R&B vocal style, polished contemporary production, 138 BPM, G minor",
+    "modern Urban Bachata, electric guitar, bongo, trap hi-hats, 808 bass, R&B male vocals in Spanish, contemporary Latin, 138 BPM, G minor",
 };
 
 export function buildMusicGenPrompt(userPrompt: string, style: string = "bachata-romantic"): string {
