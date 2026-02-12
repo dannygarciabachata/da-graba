@@ -94,6 +94,17 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async toggleSongPublic(id: number): Promise<Song> {
+    const song = await this.getSong(id);
+    if (!song) throw new Error("Song not found");
+    const [updated] = await db
+      .update(songs)
+      .set({ isPublic: !song.isPublic })
+      .where(eq(songs.id, id))
+      .returning();
+    return updated;
+  }
+
   async deleteSong(id: number): Promise<void> {
     await db.delete(tracks).where(eq(tracks.songId, id));
     await db.delete(songs).where(eq(songs.id, id));

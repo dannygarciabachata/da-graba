@@ -117,6 +117,16 @@ export async function registerRoutes(
     res.sendStatus(204);
   });
 
+  app.patch("/api/songs/:id/publish", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const song = await storage.getSong(Number(req.params.id));
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    const updated = await storage.toggleSongPublic(song.id);
+    res.json(updated);
+  });
+
   // ========== MUSICGPT WEBHOOK ==========
 
   app.post("/api/webhooks/musicgpt", async (req, res) => {

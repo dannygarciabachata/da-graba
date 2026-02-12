@@ -97,3 +97,26 @@ export function useDeleteSong() {
     },
   });
 }
+
+export function useTogglePublish() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/songs/${id}/publish`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to toggle publish");
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: [api.songs.list.path] });
+      toast({
+        title: data.isPublic ? "Song Published" : "Song Unpublished",
+        description: data.isPublic ? "Your track is now public." : "Your track is now private.",
+      });
+    },
+  });
+}

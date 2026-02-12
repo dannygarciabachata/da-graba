@@ -1,16 +1,14 @@
 import { useState } from "react";
-import { useSongs, useDeleteSong } from "@/hooks/use-songs";
+import { useSongs, useDeleteSong, useTogglePublish } from "@/hooks/use-songs";
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
   Play,
-  Clock,
   AlertCircle,
   Trash2,
   Scissors,
@@ -25,9 +23,14 @@ export default function LibraryPage() {
   const [, setLocation] = useLocation();
   const { data: songs, isLoading } = useSongs();
   const { mutate: deleteSong } = useDeleteSong();
+  const { mutate: togglePublish } = useTogglePublish();
   const [currentSong, setCurrentSong] = useState<any>(null);
 
   if (!user) return null;
+
+  const activeSong = currentSong
+    ? songs?.find((s: any) => s.id === currentSong.id) || currentSong
+    : null;
 
   return (
     <div className="h-full flex flex-col">
@@ -45,16 +48,22 @@ export default function LibraryPage() {
 
       <div className="flex-1 overflow-auto">
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-4">
-          {currentSong && (
+          {activeSong && (
             <motion.div
+              key={activeSong.id}
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
             >
               <AudioPlayer
-                url={currentSong.audioUrl}
-                title={currentSong.title || "Untitled Track"}
-                imageUrl={currentSong.imageUrl}
-                genre={currentSong.genre}
+                url={activeSong.audioUrl}
+                title={activeSong.title || "Untitled Track"}
+                imageUrl={activeSong.imageUrl}
+                genre={activeSong.genre}
+                duration={activeSong.duration}
+                createdAt={activeSong.createdAt}
+                isPublic={activeSong.isPublic}
+                onTogglePublic={() => togglePublish(activeSong.id)}
+                onOpenStudio={() => setLocation("/studio")}
               />
             </motion.div>
           )}
@@ -83,7 +92,7 @@ export default function LibraryPage() {
                   key={song.id}
                   className={cn(
                     "p-4 cursor-pointer transition-all duration-200 border-white/5",
-                    currentSong?.id === song.id
+                    activeSong?.id === song.id
                       ? "border-primary/50 bg-primary/5"
                       : "hover-elevate"
                   )}
@@ -113,6 +122,7 @@ export default function LibraryPage() {
                           {song.createdAt && formatDistanceToNow(new Date(song.createdAt), { addSuffix: true })}
                         </span>
                         {song.genre && <span>{song.genre}</span>}
+                        {song.duration && <span>{Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}</span>}
                         {song.status === "processing" && (
                           <span className="text-yellow-500 animate-pulse">Processing</span>
                         )}

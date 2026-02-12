@@ -1,19 +1,25 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import WaveSurfer from "wavesurfer.js";
-import { Play, Pause, Download, Volume2, VolumeX, Music } from "lucide-react";
+import { Play, Pause, Download, Volume2, VolumeX, Music, Share2, Globe, Lock, Scissors, Copy, Check, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
 
 interface AudioPlayerProps {
   url: string | null;
   title: string;
   imageUrl?: string | null;
   genre?: string | null;
+  duration?: number | null;
+  createdAt?: string | null;
+  isPublic?: boolean;
+  onTogglePublic?: () => void;
+  onOpenStudio?: () => void;
 }
 
-export function AudioPlayer({ url, title, imageUrl, genre }: AudioPlayerProps) {
+export function AudioPlayer({ url, title, imageUrl, genre, duration: songDuration, createdAt, isPublic, onTogglePublic, onOpenStudio }: AudioPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -24,6 +30,8 @@ export function AudioPlayer({ url, title, imageUrl, genre }: AudioPlayerProps) {
   const [hasError, setHasError] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!url) return;
@@ -165,6 +173,31 @@ export function AudioPlayer({ url, title, imageUrl, genre }: AudioPlayerProps) {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      toast({ title: "Download started", description: `${title}.mp3` });
+    }
+  };
+
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `${title} - DGB Studio`, url: shareUrl });
+      } catch {}
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      toast({ title: "Link copied", description: "Share link copied to clipboard" });
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (url) {
+      const fullUrl = window.location.origin + url;
+      await navigator.clipboard.writeText(fullUrl);
+      setCopied(true);
+      toast({ title: "Audio link copied", description: "Direct audio link copied to clipboard" });
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -173,6 +206,11 @@ export function AudioPlayer({ url, title, imageUrl, genre }: AudioPlayerProps) {
     const min = Math.floor(t / 60);
     const sec = Math.floor(t % 60);
     return `${min}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   };
 
   if (!url) {
@@ -190,76 +228,128 @@ export function AudioPlayer({ url, title, imageUrl, genre }: AudioPlayerProps) {
     <motion.div 
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="glass-panel rounded-2xl p-4 md:p-6 space-y-4 md:space-y-6"
+      className="glass-panel rounded-2xl overflow-hidden"
     >
-      <div className="flex items-start gap-3 md:gap-4">
-        <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-primary/10 flex-shrink-0 flex items-center justify-center overflow-hidden">
-          {imageUrl ? (
-            <img src={imageUrl} alt={title} className="w-full h-full object-cover" />
-          ) : (
-            <Music className="w-6 h-6 text-primary/50" />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-base md:text-lg font-bold truncate">{title}</h3>
-          <div className="flex items-center gap-2 mt-0.5">
-            {genre && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-white/10">{genre}</Badge>
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+        <div className="flex items-start gap-3 md:gap-4">
+          <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-primary/10 flex-shrink-0 flex items-center justify-center overflow-hidden">
+            {imageUrl ? (
+              <img src={imageUrl} alt={title} className="w-full h-full object-cover" />
+            ) : (
+              <Music className="w-6 h-6 text-primary/50" />
             )}
-            <p className="text-xs text-muted-foreground">
-              {hasError ? "Error loading audio" : isReady ? "Now Playing" : "Loading..."}
-            </p>
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base md:text-lg font-bold truncate">{title}</h3>
+            <div className="flex items-center gap-2 flex-wrap mt-0.5">
+              {genre && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-white/10">{genre}</Badge>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {hasError ? "Error loading audio" : isReady ? (isPlaying ? "Now Playing" : "Ready") : "Loading..."}
+              </p>
+            </div>
           </div>
         </div>
-        <Button size="icon" variant="ghost" onClick={handleDownload} className="text-muted-foreground flex-shrink-0" data-testid="button-download-track">
-          <Download className="w-5 h-5" />
-        </Button>
+
+        <div
+          ref={containerRef}
+          className="w-full transition-opacity duration-500"
+          style={{ opacity: waveformReady ? 1 : 0, height: waveformReady ? 'auto' : 0 }}
+        />
+        {!waveformReady && !hasError && (
+          <div className="w-full space-y-2">
+            <Slider
+              value={[duration > 0 ? currentTime / duration : 0]}
+              max={1}
+              step={0.001}
+              onValueChange={handleSeek}
+              className="w-full"
+              data-testid="slider-seek"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(duration)}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-4 md:gap-6">
+          <Button 
+            size="icon" 
+            onClick={togglePlay}
+            disabled={hasError || !isReady}
+            className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-white text-black shadow-lg shadow-white/10"
+            data-testid="button-play-pause"
+          >
+            {isPlaying ? <Pause className="w-5 h-5 md:w-6 md:h-6 fill-current" /> : <Play className="w-5 h-5 md:w-6 md:h-6 fill-current ml-0.5" />}
+          </Button>
+
+          <div className="flex-1 flex items-center gap-2 md:gap-3">
+            <Button variant="ghost" size="icon" onClick={toggleMute} className="text-muted-foreground flex-shrink-0" data-testid="button-mute">
+              {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </Button>
+            <Slider 
+              value={[volume]} 
+              max={1} 
+              step={0.01} 
+              onValueChange={handleVolume}
+              className="flex-1 max-w-[150px]" 
+            />
+          </div>
+        </div>
       </div>
 
-      <div
-        ref={containerRef}
-        className="w-full transition-opacity duration-500"
-        style={{ opacity: waveformReady ? 1 : 0, height: waveformReady ? 'auto' : 0 }}
-      />
-      {!waveformReady && !hasError && (
-        <div className="w-full space-y-2">
-          <Slider
-            value={[duration > 0 ? currentTime / duration : 0]}
-            max={1}
-            step={0.001}
-            onValueChange={handleSeek}
-            className="w-full"
-            data-testid="slider-seek"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
+      <div className="border-t border-white/5 px-4 md:px-6 py-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            {createdAt && (
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formatDate(createdAt)}
+              </span>
+            )}
+            {(songDuration || duration > 0) && (
+              <span className="ml-2">{formatTime(songDuration || duration)}</span>
+            )}
           </div>
-        </div>
-      )}
 
-      <div className="flex items-center gap-4 md:gap-6">
-        <Button 
-          size="icon" 
-          onClick={togglePlay}
-          disabled={hasError || !isReady}
-          className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-white text-black shadow-lg shadow-white/10"
-          data-testid="button-play-pause"
-        >
-          {isPlaying ? <Pause className="w-5 h-5 md:w-6 md:h-6 fill-current" /> : <Play className="w-5 h-5 md:w-6 md:h-6 fill-current ml-0.5" />}
-        </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={handleDownload} className="text-muted-foreground gap-1.5" data-testid="button-download-track">
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Download</span>
+            </Button>
 
-        <div className="flex-1 flex items-center gap-2 md:gap-3">
-          <Button variant="ghost" size="icon" onClick={toggleMute} className="text-muted-foreground flex-shrink-0" data-testid="button-mute">
-            {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </Button>
-          <Slider 
-            value={[volume]} 
-            max={1} 
-            step={0.01} 
-            onValueChange={handleVolume}
-            className="flex-1 max-w-[150px]" 
-          />
+            <Button variant="ghost" size="sm" onClick={handleShare} className="text-muted-foreground gap-1.5" data-testid="button-share-track">
+              <Share2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Share</span>
+            </Button>
+
+            <Button variant="ghost" size="sm" onClick={handleCopyLink} className="text-muted-foreground gap-1.5" data-testid="button-copy-link">
+              {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+              <span className="hidden sm:inline">{copied ? "Copied" : "Copy Link"}</span>
+            </Button>
+
+            {onTogglePublic !== undefined && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onTogglePublic} 
+                className={`gap-1.5 ${isPublic ? "text-green-400" : "text-muted-foreground"}`}
+                data-testid="button-publish-track"
+              >
+                {isPublic ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                <span className="hidden sm:inline">{isPublic ? "Public" : "Publish"}</span>
+              </Button>
+            )}
+
+            {onOpenStudio && (
+              <Button variant="ghost" size="sm" onClick={onOpenStudio} className="text-primary gap-1.5" data-testid="button-open-studio">
+                <Scissors className="w-4 h-4" />
+                <span className="hidden sm:inline">Studio</span>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </motion.div>
