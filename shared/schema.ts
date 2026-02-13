@@ -461,3 +461,45 @@ export type SubmitQuizRequest = {
 
 export type SongResponse = Song;
 export type LyricResponse = Lyric;
+
+// === CLOUD SERVERS ===
+
+export const cloudServers = pgTable("cloud_servers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  baseUrl: text("base_url").notNull(),
+  apiPort: integer("api_port").notNull().default(7860),
+  apiKey: text("api_key"),
+  webhookSecret: text("webhook_secret"),
+  authHeaderName: text("auth_header_name").default("X-DGB-API-Key"),
+  webhookHeaderName: text("webhook_header_name").default("X-Webhook-Secret"),
+  healthEndpoint: text("health_endpoint").default("/api/health"),
+  uploadEndpoint: text("upload_endpoint").default("/api/upload-instrument"),
+  capabilities: text("capabilities").array().notNull().default(["instrument_processing"]),
+  priority: integer("priority").notNull().default(0),
+  isActive: boolean("is_active").default(true),
+  status: text("status").default("unknown"),
+  lastHealthCheck: timestamp("last_health_check"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCloudServerSchema = createInsertSchema(cloudServers).omit({
+  id: true,
+  createdAt: true,
+  lastHealthCheck: true,
+  status: true,
+});
+
+export type CloudServer = typeof cloudServers.$inferSelect;
+export type InsertCloudServer = z.infer<typeof insertCloudServerSchema>;
+
+export const CLOUD_CAPABILITIES = [
+  "instrument_processing",
+  "music_generation",
+  "training",
+  "audio_analysis",
+  "midi_conversion",
+] as const;
+
+export type CloudCapability = typeof CLOUD_CAPABILITIES[number];

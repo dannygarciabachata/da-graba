@@ -1,36 +1,126 @@
 import * as fs from "fs";
 import * as path from "path";
+import type { CloudServer } from "@shared/schema";
 
 const AUDIO_BASE_DIR = path.join(process.cwd(), "public", "audio");
 
-function getCloudApiUrl(): string {
+function getEnvFallbackServer(): { baseUrl: string; apiKey: string; webhookSecret: string } | null {
   const base = (process.env.RUNPOD_BASE_URL || "").replace(/\/lab\/.*$/, "").replace(/\/$/, "");
-  return base.replace(/:8888$/, ":7860").replace(/-8888\./, "-7860.");
+  const apiKey = process.env.DGB_API_KEY || "";
+  if (!base || !apiKey) return null;
+  const baseUrl = base.replace(/:8888$/, ":7860").replace(/-8888\./, "-7860.");
+  return {
+    baseUrl,
+    apiKey,
+    webhookSecret: process.env.TRAINING_WEBHOOK_SECRET || apiKey,
+  };
 }
 
-function getApiKey(): string {
-  return process.env.DGB_API_KEY || "";
+interface ResolvedServer {
+  baseUrl: string;
+  apiKey: string;
+  webhookSecret: string;
+  authHeaderName: string;
+  webhookHeaderName: string;
+  healthEndpoint: string;
+  uploadEndpoint: string;
+  serverId?: number;
 }
 
-function getWebhookSecret(): string {
-  return process.env.TRAINING_WEBHOOK_SECRET || process.env.DGB_API_KEY || "";
+function resolveFromCloudServer(server: CloudServer): ResolvedServer {
+  let baseUrl = server.baseUrl.replace(/\/$/, "");
+  if (server.apiPort && !baseUrl.includes(`:${server.apiPort}`)) {
+    const url = new URL(baseUrl);
+    url.port = String(server.apiPort);
+    baseUrl = url.toString().replace(/\/$/, "");
+  }
+  return {
+    baseUrl,
+    apiKey: server.apiKey || "",
+    webhookSecret: server.webhookSecret || server.apiKey || "",
+    authHeaderName: server.authHeaderName || "X-DGB-API-Key",
+    webhookHeaderName: server.webhookHeaderName || "X-Webhook-Secret",
+    healthEndpoint: server.healthEndpoint || "/api/health",
+    uploadEndpoint: server.uploadEndpoint || "/api/upload-instrument",
+    serverId: server.id,
+  };
+}
+
+function resolveFromEnv(): ResolvedServer | null {
+  const env = getEnvFallbackServer();
+  if (!env) return null;
+  return {
+    baseUrl: env.baseUrl,
+    apiKey: env.apiKey,
+    webhookSecret: env.webhookSecret,
+    authHeaderName: "X-DGB-API-Key",
+    webhookHeaderName: "X-Webhook-Secret",
+    healthEndpoint: "/api/health",
+    uploadEndpoint: "/api/upload-instrument",
+  };
+}
+
+export async function getActiveServer(storage: any, capability?: string): Promise<ResolvedServer | null> {
+  try {
+    const server = await storage.getActiveCloudServer(capability || "instrument_processing");
+    if (server) return resolveFromCloudServer(server);
+  } catch (err) {
+    console.log("[Cloud] DB lookup failed, trying env fallback:", (err as Error).message);
+  }
+  return resolveFromEnv();
 }
 
 export function isDgbCloudConfigured(): boolean {
   return !!(process.env.RUNPOD_BASE_URL && process.env.DGB_API_KEY);
 }
 
-export function verifyWebhookSecret(headerValue: string): boolean {
-  const secret = getWebhookSecret();
+export async function isCloudConfigured(storage: any): Promise<boolean> {
+  try {
+    const server = await storage.getActiveCloudServer("instrument_processing");
+    if (server) return true;
+  } catch {}
+  return isDgbCloudConfigured();
+}
+
+export function verifyWebhookSecret(headerValue: string, server?: CloudServer): boolean {
+  if (server) {
+    const secret = server.webhookSecret || server.apiKey || "";
+    return !!secret && headerValue === secret;
+  }
+  const secret = process.env.TRAINING_WEBHOOK_SECRET || process.env.DGB_API_KEY || "";
   if (!secret) return false;
   return headerValue === secret;
 }
 
-export async function checkDgbCloudHealth(): Promise<{ connected: boolean; gpu?: boolean; error?: string }> {
+export async function verifyWebhookFromAnyServer(headers: Record<string, string | undefined>, storage: any): Promise<boolean> {
+  const webhookSecret = headers["x-webhook-secret"] || "";
+  const apiKey = headers["x-dgb-api-key"] || "";
+
   try {
-    const url = `${getCloudApiUrl()}/api/health`;
+    const servers = await storage.getCloudServers();
+    for (const server of servers) {
+      if (webhookSecret && server.webhookSecret && webhookSecret === server.webhookSecret) return true;
+      if (apiKey && server.apiKey && apiKey === server.apiKey) return true;
+    }
+  } catch {}
+
+  if (webhookSecret) {
+    const envSecret = process.env.TRAINING_WEBHOOK_SECRET || "";
+    if (envSecret && webhookSecret === envSecret) return true;
+  }
+  if (apiKey) {
+    const envKey = process.env.DGB_API_KEY || "";
+    if (envKey && apiKey === envKey) return true;
+  }
+
+  return false;
+}
+
+export async function checkCloudHealth(resolved: ResolvedServer): Promise<{ connected: boolean; gpu?: boolean; error?: string }> {
+  try {
+    const url = `${resolved.baseUrl}${resolved.healthEndpoint}`;
     const res = await fetch(url, {
-      headers: { "X-DGB-API-Key": getApiKey() },
+      headers: { [resolved.authHeaderName]: resolved.apiKey },
       signal: AbortSignal.timeout(10000),
     });
     if (res.ok) {
@@ -43,20 +133,32 @@ export async function checkDgbCloudHealth(): Promise<{ connected: boolean; gpu?:
   }
 }
 
+export async function checkDgbCloudHealth(): Promise<{ connected: boolean; gpu?: boolean; error?: string }> {
+  const resolved = resolveFromEnv();
+  if (!resolved) return { connected: false, error: "Not configured" };
+  return checkCloudHealth(resolved);
+}
+
 export async function uploadInstrumentToCloud(
   instrumentId: number,
   kitId: number,
   instrumentName: string,
   audioFilePath: string,
-  webhookUrl: string
+  webhookUrl: string,
+  serverOverride?: ResolvedServer
 ): Promise<{ success: boolean; error?: string }> {
   const fullPath = path.join(process.cwd(), "public", audioFilePath);
   if (!fs.existsSync(fullPath)) {
     return { success: false, error: `Audio file not found: ${audioFilePath}` };
   }
 
+  const resolved = serverOverride || resolveFromEnv();
+  if (!resolved) {
+    return { success: false, error: "No cloud server configured" };
+  }
+
   try {
-    const apiUrl = `${getCloudApiUrl()}/api/upload-instrument`;
+    const apiUrl = `${resolved.baseUrl}${resolved.uploadEndpoint}`;
 
     const FormData = (await import("form-data")).default;
     const form = new FormData();
@@ -68,7 +170,7 @@ export async function uploadInstrumentToCloud(
 
     const headers = {
       ...form.getHeaders(),
-      "X-DGB-API-Key": getApiKey(),
+      [resolved.authHeaderName]: resolved.apiKey,
     };
 
     const res = await fetch(apiUrl, {
@@ -80,7 +182,7 @@ export async function uploadInstrumentToCloud(
 
     if (res.ok) {
       const data = await res.json();
-      console.log(`[DGB Cloud] Instrument ${instrumentId} uploaded: ${data.message}`);
+      console.log(`[Cloud] Instrument ${instrumentId} uploaded: ${data.message}`);
       return { success: true };
     } else {
       const errText = await res.text();
@@ -105,6 +207,6 @@ export async function saveMidiFile(
   const buffer = Buffer.from(midiBase64, "base64");
   fs.writeFileSync(filePath, buffer);
 
-  console.log(`[DGB Cloud] MIDI saved for instrument ${instrumentId}: ${filePath} (${buffer.length} bytes)`);
+  console.log(`[Cloud] MIDI saved for instrument ${instrumentId}: ${filePath} (${buffer.length} bytes)`);
   return `/audio/midi/${filename}`;
 }

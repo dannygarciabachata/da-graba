@@ -15,7 +15,7 @@ import { processHummingToMusic, processKeyBPMDetection, processMastering, proces
 import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider } from "./core/seed_providers";
 import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfig, buildRunPodPayload, GENRE_STYLE_HINTS } from "./core/sao_training_engine";
 import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection } from "./core/runpod_client";
-import { isDgbCloudConfigured, checkDgbCloudHealth, uploadInstrumentToCloud, saveMidiFile } from "./core/dgb_runpod_api";
+import { isCloudConfigured, getActiveServer, checkCloudHealth, checkDgbCloudHealth, uploadInstrumentToCloud, saveMidiFile, verifyWebhookFromAnyServer } from "./core/dgb_runpod_api";
 import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, STYLE_KIT_GENRES, INSTRUMENT_TYPES, SETTING_CATEGORIES, TICKET_STATUSES, TICKET_PRIORITIES, insertApiProviderSchema, insertApiEndpointSchema, insertStyleKitSchema, insertStyleKitInstrumentSchema, insertPlatformSettingSchema } from "@shared/schema";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
@@ -1465,18 +1465,21 @@ export async function registerRoutes(
       if (audioUrl) {
         await storage.updateStyleKit(kitId, { trainingStatus: "pending" });
 
-        if (isDgbCloudConfigured()) {
+        const cloudConfigured = await isCloudConfigured(storage);
+        if (cloudConfigured) {
           const protocol = req.headers["x-forwarded-proto"] || "https";
           const host = req.headers["host"] || "localhost:5000";
           const webhookUrl = `${protocol}://${host}/api/dgb-cloud/webhook`;
 
-          console.log(`[DGB Cloud] Forwarding instrument ${instrument.id} for GPU processing...`);
+          const activeServer = await getActiveServer(storage, "instrument_processing");
+          console.log(`[Cloud] Forwarding instrument ${instrument.id} for GPU processing...`);
           const uploadResult = await uploadInstrumentToCloud(
             instrument.id,
             kitId,
             req.body.name,
             audioUrl,
-            webhookUrl
+            webhookUrl,
+            activeServer || undefined
           );
 
           if (uploadResult.success) {
@@ -1484,9 +1487,9 @@ export async function registerRoutes(
               uploadStatus: "processing",
               analysisStatus: "analyzing",
             });
-            console.log(`[DGB Cloud] Instrument ${instrument.id} sent for analysis + MIDI conversion`);
+            console.log(`[Cloud] Instrument ${instrument.id} sent for analysis + MIDI conversion`);
           } else {
-            console.error(`[DGB Cloud] Upload failed: ${uploadResult.error}`);
+            console.error(`[Cloud] Upload failed: ${uploadResult.error}`);
           }
         }
       }
@@ -1815,13 +1818,95 @@ export async function registerRoutes(
     }
   });
 
+  // ========== CLOUD SERVERS MANAGEMENT (Admin) ==========
+
+  app.get("/api/admin/cloud-servers", async (req, res) => {
+    if (!req.isAuthenticated() || !isAdmin(req)) return res.sendStatus(401);
+    try {
+      const servers = await storage.getCloudServers();
+      const safeServers = servers.map(s => ({
+        ...s,
+        apiKey: s.apiKey ? "••••" + s.apiKey.slice(-4) : null,
+        webhookSecret: s.webhookSecret ? "••••" + s.webhookSecret.slice(-4) : null,
+      }));
+      res.json(safeServers);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/cloud-servers", async (req, res) => {
+    if (!req.isAuthenticated() || !isAdmin(req)) return res.sendStatus(401);
+    try {
+      const server = await storage.createCloudServer(req.body);
+      res.status(201).json({ ...server, apiKey: server.apiKey ? "••••" + server.apiKey.slice(-4) : null, webhookSecret: server.webhookSecret ? "••••" + server.webhookSecret.slice(-4) : null });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/cloud-servers/:id", async (req, res) => {
+    if (!req.isAuthenticated() || !isAdmin(req)) return res.sendStatus(401);
+    try {
+      const id = Number(req.params.id);
+      const existing = await storage.getCloudServer(id);
+      if (!existing) return res.sendStatus(404);
+      const updateData = { ...req.body };
+      if (updateData.apiKey === "") delete updateData.apiKey;
+      if (updateData.webhookSecret === "") delete updateData.webhookSecret;
+      const updated = await storage.updateCloudServer(id, updateData);
+      res.json({ ...updated, apiKey: updated.apiKey ? "••••" + updated.apiKey.slice(-4) : null, webhookSecret: updated.webhookSecret ? "••••" + updated.webhookSecret.slice(-4) : null });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/cloud-servers/:id", async (req, res) => {
+    if (!req.isAuthenticated() || !isAdmin(req)) return res.sendStatus(401);
+    try {
+      await storage.deleteCloudServer(Number(req.params.id));
+      res.sendStatus(204);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/cloud-servers/:id/health", async (req, res) => {
+    if (!req.isAuthenticated() || !isAdmin(req)) return res.sendStatus(401);
+    try {
+      const id = Number(req.params.id);
+      const server = await storage.getCloudServer(id);
+      if (!server) return res.sendStatus(404);
+      const resolved = {
+        baseUrl: (() => {
+          let url = server.baseUrl.replace(/\/$/, "");
+          if (server.apiPort && !url.includes(`:${server.apiPort}`)) {
+            try { const u = new URL(url); u.port = String(server.apiPort); url = u.toString().replace(/\/$/, ""); } catch {}
+          }
+          return url;
+        })(),
+        apiKey: server.apiKey || "",
+        webhookSecret: server.webhookSecret || "",
+        authHeaderName: server.authHeaderName || "X-DGB-API-Key",
+        webhookHeaderName: server.webhookHeaderName || "X-Webhook-Secret",
+        healthEndpoint: server.healthEndpoint || "/api/health",
+        uploadEndpoint: server.uploadEndpoint || "/api/upload-instrument",
+      };
+      const health = await checkCloudHealth(resolved);
+      const status = health.connected ? "connected" : "offline";
+      await storage.updateCloudServer(id, { status, lastHealthCheck: new Date() });
+      res.json({ ...health, status });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // ========== DGB CLOUD ENGINE WEBHOOK ==========
 
   app.post("/api/dgb-cloud/webhook", async (req, res) => {
     try {
-      const webhookSecret = process.env.TRAINING_WEBHOOK_SECRET || process.env.DGB_API_KEY || "";
-      const incomingKey = (req.headers["x-webhook-secret"] || req.headers["x-dgb-api-key"] || "") as string;
-      if (webhookSecret && incomingKey !== webhookSecret) {
+      const verified = await verifyWebhookFromAnyServer(req.headers as any, storage);
+      if (!verified) {
         return res.status(401).json({ message: "Invalid webhook secret" });
       }
 
@@ -1911,14 +1996,19 @@ export async function registerRoutes(
   app.get("/api/dgb-cloud/status", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const configured = isDgbCloudConfigured();
+      const configured = await isCloudConfigured(storage);
       if (!configured) {
         return res.json({ configured: false, connected: false });
+      }
+      const activeServer = await getActiveServer(storage, "instrument_processing");
+      if (activeServer) {
+        const health = await checkCloudHealth(activeServer);
+        return res.json({ configured: true, ...health, serverId: activeServer.serverId });
       }
       const health = await checkDgbCloudHealth();
       res.json({ configured: true, ...health });
     } catch (err: any) {
-      res.json({ configured: isDgbCloudConfigured(), connected: false, error: err.message });
+      res.json({ configured: false, connected: false, error: err.message });
     }
   });
 

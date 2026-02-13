@@ -54,6 +54,7 @@ The "Heart Mula" music engine employs a microservices-oriented architecture with
 - **Stripe:** Payment gateway for subscription management, checkouts, and customer portals.
 - **DGB Cloud Engine:** Self-hosted Flask server (`dgb_api_receptor.py`) on private cloud GPU for Producer Store instrument processing. Receives audio uploads, converts to MIDI (basic-pitch), analyzes audio (librosa). Authenticated via `DGB_API_KEY` + `TRAINING_WEBHOOK_SECRET` for webhooks. Runs on port 7860. Webhook: `/api/dgb-cloud/webhook`. Auto-seeded as API Provider "DGB Cloud Engine" in Admin panel.
 - **Cloud GPU Server:** JupyterLab server for audio analysis (librosa-based key/BPM/energy detection) and SAO model fine-tuning. Connected via `RUNPOD_BASE_URL` env var (internal only). Uses Jupyter kernel API for job dispatch with webhook callbacks.
+- **Generic Cloud Server System:** Database-driven (`cloud_servers` table) management of multiple GPU servers from any provider (AWS, Google Cloud, DigitalOcean, RunPod, etc.). Admin panel "Cloud Servers" tab allows adding/editing/testing servers without code changes. System auto-selects highest-priority active server by capability. Falls back to env vars if no DB servers configured. Each server stores: baseUrl, apiPort, apiKey, webhookSecret, capabilities, priority, custom auth/webhook headers, and endpoint paths.
 - **Replit Auth:** OpenID Connect-based user authentication.
 - **Replit AI Integrations:** Facilitates connection to OpenAI services.
 - **Wavesurfer.js:** Frontend library for audio waveform visualization.

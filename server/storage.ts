@@ -5,6 +5,7 @@ import {
   apiProviders, apiEndpoints,
   styleKits, styleKitInstruments,
   platformSettings, supportTickets, supportMessages,
+  cloudServers,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
@@ -16,7 +17,8 @@ import {
   type StyleKitInstrument, type InsertStyleKitInstrument,
   type PlatformSetting, type InsertPlatformSetting,
   type SupportTicket, type InsertSupportTicket,
-  type SupportMessage, type InsertSupportMessage
+  type SupportMessage, type InsertSupportMessage,
+  type CloudServer, type InsertCloudServer,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -101,6 +103,13 @@ export interface IStorage {
     recentActivity: { date: string; songs: number; samples: number; lyrics: number }[];
     ticketStats: { open: number; inProgress: number; resolved: number; closed: number };
   }>;
+
+  getCloudServers(): Promise<CloudServer[]>;
+  getCloudServer(id: number): Promise<CloudServer | undefined>;
+  getActiveCloudServer(capability?: string): Promise<CloudServer | undefined>;
+  createCloudServer(server: InsertCloudServer): Promise<CloudServer>;
+  updateCloudServer(id: number, data: Partial<CloudServer>): Promise<CloudServer>;
+  deleteCloudServer(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -646,6 +655,39 @@ export class DatabaseStorage implements IStorage {
     } catch {
       return [];
     }
+  }
+
+  async getCloudServers(): Promise<CloudServer[]> {
+    return await db.select().from(cloudServers).orderBy(desc(cloudServers.priority));
+  }
+
+  async getCloudServer(id: number): Promise<CloudServer | undefined> {
+    const [server] = await db.select().from(cloudServers).where(eq(cloudServers.id, id));
+    return server;
+  }
+
+  async getActiveCloudServer(capability?: string): Promise<CloudServer | undefined> {
+    const allServers = await db
+      .select()
+      .from(cloudServers)
+      .where(eq(cloudServers.isActive, true))
+      .orderBy(desc(cloudServers.priority));
+    if (!capability) return allServers[0];
+    return allServers.find(s => s.capabilities?.includes(capability));
+  }
+
+  async createCloudServer(server: InsertCloudServer): Promise<CloudServer> {
+    const [created] = await db.insert(cloudServers).values(server).returning();
+    return created;
+  }
+
+  async updateCloudServer(id: number, data: Partial<CloudServer>): Promise<CloudServer> {
+    const [updated] = await db.update(cloudServers).set(data).where(eq(cloudServers.id, id)).returning();
+    return updated;
+  }
+
+  async deleteCloudServer(id: number): Promise<void> {
+    await db.delete(cloudServers).where(eq(cloudServers.id, id));
   }
 }
 

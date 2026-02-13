@@ -9,6 +9,8 @@ import {
   usePlatformSettings, useUpsertSetting, useBulkUpsertSettings,
   useAnalytics, useAdminTickets, useAdminTicket,
   useUpdateTicket, useReplyToTicket,
+  useCloudServers, useCreateCloudServer, useUpdateCloudServer,
+  useDeleteCloudServer, useTestCloudServer,
 } from "@/hooks/use-admin";
 import {
   useStyleKits, useStyleKitMeta, useCreateStyleKit, useUpdateStyleKit,
@@ -26,11 +28,11 @@ import {
   Shield, Globe, Key, ToggleLeft, ToggleRight,
   BarChart3, Users, CreditCard, Music, FileText, Mic, Disc, Upload,
   TrendingUp, MessageSquare, Mail, Sliders, Clock,
-  AlertCircle, Send, Eye,
+  AlertCircle, Send, Eye, Cloud, Wifi, WifiOff, Activity,
 } from "lucide-react";
-import type { ApiProvider, ApiEndpoint } from "@shared/schema";
+import type { ApiProvider, ApiEndpoint, CloudServer } from "@shared/schema";
 
-type Tab = "dashboard" | "analytics" | "users" | "subscriptions" | "support" | "settings" | "email" | "style-kits" | "providers" | "endpoints";
+type Tab = "dashboard" | "analytics" | "users" | "subscriptions" | "support" | "settings" | "email" | "style-kits" | "providers" | "endpoints" | "cloud-servers";
 
 export default function AdminPage() {
   const [, setLocation] = useLocation();
@@ -76,6 +78,7 @@ function AdminDashboard() {
     { id: "settings" as Tab, label: "Settings", icon: Sliders },
     { id: "email" as Tab, label: "Email", icon: Mail },
     { id: "style-kits" as Tab, label: "Style Kits", icon: Disc },
+    { id: "cloud-servers" as Tab, label: "Cloud Servers", icon: Cloud },
     { id: "providers" as Tab, label: "API Providers", icon: Server },
     { id: "endpoints" as Tab, label: "Endpoints", icon: Zap },
   ];
@@ -117,6 +120,7 @@ function AdminDashboard() {
       {activeTab === "settings" && <SettingsTab />}
       {activeTab === "email" && <EmailSettingsTab />}
       {activeTab === "style-kits" && <StyleKitsAdminTab />}
+      {activeTab === "cloud-servers" && <CloudServersTab />}
 
       {activeTab === "providers" && (
         <ProvidersTab
@@ -1657,6 +1661,364 @@ function StyleKitsAdminTab() {
             <Disc className="h-12 w-12 mx-auto mb-3 opacity-30" />
             <p className="text-sm">No style kits created yet.</p>
             <p className="text-xs">Click "New Kit" to create your first style kit and start uploading instruments.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const CAPABILITY_OPTIONS = [
+  { value: "instrument_processing", label: "Instrument Processing" },
+  { value: "music_generation", label: "Music Generation" },
+  { value: "training", label: "AI Training" },
+  { value: "audio_analysis", label: "Audio Analysis" },
+  { value: "midi_conversion", label: "MIDI Conversion" },
+];
+
+function CloudServersTab() {
+  const { data: servers, isLoading } = useCloudServers();
+  const createServer = useCreateCloudServer();
+  const updateServer = useUpdateCloudServer();
+  const deleteServer = useDeleteCloudServer();
+  const testServer = useTestCloudServer();
+  const { toast } = useToast();
+  const [showForm, setShowForm] = useState(false);
+  const [editingServer, setEditingServer] = useState<Partial<CloudServer> | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
+
+  const [form, setForm] = useState({
+    name: "",
+    baseUrl: "",
+    apiPort: 7860,
+    apiKey: "",
+    webhookSecret: "",
+    authHeaderName: "X-DGB-API-Key",
+    webhookHeaderName: "X-Webhook-Secret",
+    healthEndpoint: "/api/health",
+    uploadEndpoint: "/api/upload-instrument",
+    capabilities: ["instrument_processing"] as string[],
+    priority: 0,
+    isActive: true,
+    notes: "",
+  });
+
+  function resetForm() {
+    setForm({
+      name: "", baseUrl: "", apiPort: 7860, apiKey: "", webhookSecret: "",
+      authHeaderName: "X-DGB-API-Key", webhookHeaderName: "X-Webhook-Secret",
+      healthEndpoint: "/api/health", uploadEndpoint: "/api/upload-instrument",
+      capabilities: ["instrument_processing"], priority: 0, isActive: true, notes: "",
+    });
+    setEditingServer(null);
+    setShowForm(false);
+  }
+
+  function startEdit(server: CloudServer) {
+    setEditingServer(server);
+    setForm({
+      name: server.name,
+      baseUrl: server.baseUrl,
+      apiPort: server.apiPort || 7860,
+      apiKey: "",
+      webhookSecret: "",
+      authHeaderName: server.authHeaderName || "X-DGB-API-Key",
+      webhookHeaderName: server.webhookHeaderName || "X-Webhook-Secret",
+      healthEndpoint: server.healthEndpoint || "/api/health",
+      uploadEndpoint: server.uploadEndpoint || "/api/upload-instrument",
+      capabilities: server.capabilities || ["instrument_processing"],
+      priority: server.priority || 0,
+      isActive: server.isActive ?? true,
+      notes: server.notes || "",
+    });
+    setShowForm(true);
+  }
+
+  async function handleSave() {
+    if (!form.name || !form.baseUrl) {
+      toast({ title: "Name and Base URL are required", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const data: any = { ...form };
+      if (!data.apiKey) delete data.apiKey;
+      if (!data.webhookSecret) delete data.webhookSecret;
+
+      if (editingServer?.id) {
+        await updateServer.mutateAsync({ id: editingServer.id, ...data });
+        toast({ title: "Server updated" });
+      } else {
+        await createServer.mutateAsync(data);
+        toast({ title: "Server added" });
+      }
+      resetForm();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  }
+
+  async function handleTest(id: number) {
+    try {
+      const result = await testServer.mutateAsync(id);
+      toast({
+        title: result.connected ? "Connected" : "Connection Failed",
+        description: result.connected ? `GPU: ${result.gpu ? "Available" : "N/A"}` : result.error,
+        variant: result.connected ? "default" : "destructive",
+      });
+    } catch (err: any) {
+      toast({ title: "Test failed", description: err.message, variant: "destructive" });
+    }
+  }
+
+  async function handleDelete(id: number) {
+    if (!confirm("Delete this cloud server?")) return;
+    try {
+      await deleteServer.mutateAsync(id);
+      toast({ title: "Server deleted" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  }
+
+  function toggleCapability(cap: string) {
+    setForm(prev => ({
+      ...prev,
+      capabilities: prev.capabilities.includes(cap)
+        ? prev.capabilities.filter(c => c !== cap)
+        : [...prev.capabilities, cap],
+    }));
+  }
+
+  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+
+  return (
+    <div className="space-y-4" data-testid="cloud-servers-tab">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Cloud className="h-5 w-5 text-primary" /> Cloud GPU Servers
+          </h2>
+          <p className="text-xs text-muted-foreground">Manage GPU servers for instrument processing, training, and music generation. Add any provider (AWS, Google Cloud, DigitalOcean, etc.) without code changes.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowGuide(!showGuide)} data-testid="button-toggle-guide">
+            <FileText className="h-4 w-4 mr-1" /> {showGuide ? "Hide" : "Setup"} Guide
+          </Button>
+          <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }} data-testid="button-add-server">
+            <Plus className="h-4 w-4 mr-1" /> Add Server
+          </Button>
+        </div>
+      </div>
+
+      {showGuide && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">How to Connect a New Cloud GPU Server</CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs space-y-3">
+            <div>
+              <p className="font-semibold mb-1">1. Prepare your GPU server</p>
+              <p className="text-muted-foreground">Set up a GPU server on any cloud provider (AWS, Google Cloud, DigitalOcean, RunPod, etc.). Install the DGB Cloud Engine Flask API on it.</p>
+            </div>
+            <div>
+              <p className="font-semibold mb-1">2. Deploy the Flask API</p>
+              <p className="text-muted-foreground font-mono bg-background/50 p-2 rounded">
+                export DGB_API_KEY='your_api_key'<br/>
+                export TRAINING_WEBHOOK_SECRET='your_webhook_secret'<br/>
+                python3 dgb_api_receptor.py
+              </p>
+              <p className="text-muted-foreground mt-1">The API runs on port 7860 by default. Make sure the port is accessible from the internet.</p>
+            </div>
+            <div>
+              <p className="font-semibold mb-1">3. Add the server here</p>
+              <p className="text-muted-foreground">Click "Add Server", enter the server URL, API key, and webhook secret. Select capabilities and set priority (higher = preferred).</p>
+            </div>
+            <div>
+              <p className="font-semibold mb-1">4. Test the connection</p>
+              <p className="text-muted-foreground">Use the "Test" button to verify connectivity. The system will automatically use the highest-priority active server for each operation.</p>
+            </div>
+            <div className="border-t pt-2 mt-2">
+              <p className="font-semibold mb-1">Required API Endpoints on Your Server</p>
+              <div className="text-muted-foreground font-mono bg-background/50 p-2 rounded space-y-1">
+                <p>GET  /api/health - Health check (returns gpu_available)</p>
+                <p>POST /api/upload-instrument - Upload audio for analysis</p>
+              </div>
+              <p className="text-muted-foreground mt-1">The server sends results back via webhook to: <span className="font-mono">/api/dgb-cloud/webhook</span></p>
+            </div>
+            <div className="border-t pt-2 mt-2">
+              <p className="font-semibold mb-1">Multi-Server Setup</p>
+              <p className="text-muted-foreground">You can add multiple servers for redundancy. The system uses the highest-priority active server that has the required capability. If a server goes offline, it automatically falls back to the next available one.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {showForm && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">{editingServer ? "Edit" : "Add"} Cloud Server</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Server Name *</label>
+                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Primary GPU, AWS East" data-testid="input-server-name" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Base URL *</label>
+                <Input value={form.baseUrl} onChange={e => setForm(f => ({ ...f, baseUrl: e.target.value }))} placeholder="https://your-server.com" data-testid="input-server-url" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">API Port</label>
+                <Input type="number" value={form.apiPort} onChange={e => setForm(f => ({ ...f, apiPort: Number(e.target.value) }))} data-testid="input-server-port" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Priority (higher = preferred)</label>
+                <Input type="number" value={form.priority} onChange={e => setForm(f => ({ ...f, priority: Number(e.target.value) }))} data-testid="input-server-priority" />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  variant={form.isActive ? "default" : "outline"}
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setForm(f => ({ ...f, isActive: !f.isActive }))}
+                  data-testid="button-toggle-active"
+                >
+                  {form.isActive ? <ToggleRight className="h-4 w-4 mr-1" /> : <ToggleLeft className="h-4 w-4 mr-1" />}
+                  {form.isActive ? "Active" : "Inactive"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">API Key {editingServer ? "(leave empty to keep current)" : ""}</label>
+                <Input type="password" value={form.apiKey} onChange={e => setForm(f => ({ ...f, apiKey: e.target.value }))} placeholder="Your API key" data-testid="input-server-apikey" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Webhook Secret {editingServer ? "(leave empty to keep current)" : ""}</label>
+                <Input type="password" value={form.webhookSecret} onChange={e => setForm(f => ({ ...f, webhookSecret: e.target.value }))} placeholder="Webhook authentication secret" data-testid="input-server-webhook-secret" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Auth Header Name</label>
+                <Input value={form.authHeaderName} onChange={e => setForm(f => ({ ...f, authHeaderName: e.target.value }))} data-testid="input-auth-header" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Webhook Header Name</label>
+                <Input value={form.webhookHeaderName} onChange={e => setForm(f => ({ ...f, webhookHeaderName: e.target.value }))} data-testid="input-webhook-header" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Health Endpoint</label>
+                <Input value={form.healthEndpoint} onChange={e => setForm(f => ({ ...f, healthEndpoint: e.target.value }))} data-testid="input-health-endpoint" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Upload Endpoint</label>
+                <Input value={form.uploadEndpoint} onChange={e => setForm(f => ({ ...f, uploadEndpoint: e.target.value }))} data-testid="input-upload-endpoint" />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Capabilities</label>
+              <div className="flex flex-wrap gap-2">
+                {CAPABILITY_OPTIONS.map(cap => (
+                  <Badge
+                    key={cap.value}
+                    variant={form.capabilities.includes(cap.value) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => toggleCapability(cap.value)}
+                    data-testid={`badge-cap-${cap.value}`}
+                  >
+                    {form.capabilities.includes(cap.value) ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
+                    {cap.label}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Notes</label>
+              <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes about this server..." rows={2} data-testid="input-server-notes" />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button onClick={handleSave} disabled={createServer.isPending || updateServer.isPending} data-testid="button-save-server">
+                {(createServer.isPending || updateServer.isPending) ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+                {editingServer ? "Update" : "Add"} Server
+              </Button>
+              <Button variant="outline" onClick={resetForm} data-testid="button-cancel-server">Cancel</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-3">
+        {servers?.map(server => (
+          <Card key={server.id} className={`${!server.isActive ? "opacity-60" : ""}`} data-testid={`card-server-${server.id}`}>
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-sm">{server.name}</h3>
+                    {server.isActive ? (
+                      <Badge variant="default" className="text-xs"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs"><XCircle className="h-3 w-3 mr-1" />Inactive</Badge>
+                    )}
+                    {server.status === "connected" && (
+                      <Badge variant="default" className="text-xs bg-green-600"><Wifi className="h-3 w-3 mr-1" />Connected</Badge>
+                    )}
+                    {server.status === "offline" && (
+                      <Badge variant="destructive" className="text-xs"><WifiOff className="h-3 w-3 mr-1" />Offline</Badge>
+                    )}
+                    {server.status === "unknown" && (
+                      <Badge variant="outline" className="text-xs"><Activity className="h-3 w-3 mr-1" />Unknown</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground font-mono">{server.baseUrl}:{server.apiPort}</p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {server.capabilities?.map(cap => (
+                      <Badge key={cap} variant="outline" className="text-xs">{cap.replace(/_/g, " ")}</Badge>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                    <span>Priority: {server.priority}</span>
+                    {server.apiKey && <span><Key className="h-3 w-3 inline mr-1" />API Key: {server.apiKey}</span>}
+                    {server.webhookSecret && <span><Shield className="h-3 w-3 inline mr-1" />Webhook: {server.webhookSecret}</span>}
+                    {server.lastHealthCheck && <span><Clock className="h-3 w-3 inline mr-1" />Last check: {new Date(server.lastHealthCheck).toLocaleString()}</span>}
+                  </div>
+                  {server.notes && <p className="text-xs text-muted-foreground mt-1 italic">{server.notes}</p>}
+                </div>
+                <div className="flex gap-1 ml-3">
+                  <Button size="sm" variant="outline" onClick={() => handleTest(server.id)} disabled={testServer.isPending} data-testid={`button-test-server-${server.id}`}>
+                    {testServer.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <TestTube className="h-3.5 w-3.5" />}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => startEdit(server)} data-testid={`button-edit-server-${server.id}`}>
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete(server.id)} data-testid={`button-delete-server-${server.id}`}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {(!servers || servers.length === 0) && !showForm && (
+          <div className="text-center py-12 text-muted-foreground">
+            <Cloud className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p className="text-sm">No cloud servers configured yet.</p>
+            <p className="text-xs">The system will use environment variables as fallback. Add a server to manage GPU connections from here.</p>
           </div>
         )}
       </div>

@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { ApiProvider, ApiEndpoint, PlatformSetting, SupportTicket, SupportMessage } from "@shared/schema";
+import type { ApiProvider, ApiEndpoint, PlatformSetting, SupportTicket, SupportMessage, CloudServer } from "@shared/schema";
 
 export function useAdminCheck() {
   return useQuery<{ isAdmin: boolean }>({
@@ -267,6 +267,59 @@ export function useReplyToTicket() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/tickets"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/tickets", variables.ticketId] });
+    },
+  });
+}
+
+export function useCloudServers() {
+  return useQuery<CloudServer[]>({
+    queryKey: ["/api/admin/cloud-servers"],
+  });
+}
+
+export function useCreateCloudServer() {
+  return useMutation({
+    mutationFn: async (data: Partial<CloudServer>) => {
+      const res = await apiRequest("POST", "/api/admin/cloud-servers", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cloud-servers"] });
+    },
+  });
+}
+
+export function useUpdateCloudServer() {
+  return useMutation({
+    mutationFn: async ({ id, ...data }: Partial<CloudServer> & { id: number }) => {
+      const res = await apiRequest("PATCH", `/api/admin/cloud-servers/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cloud-servers"] });
+    },
+  });
+}
+
+export function useDeleteCloudServer() {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/admin/cloud-servers/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cloud-servers"] });
+    },
+  });
+}
+
+export function useTestCloudServer() {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/admin/cloud-servers/${id}/health`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cloud-servers"] });
     },
   });
 }
