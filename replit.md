@@ -3,7 +3,7 @@
 ## Overview
 DGB Audio is building an AI-powered music generation SaaS platform, "Heart Mula," designed to revolutionize music creation. The platform offers a generic, API-agnostic architecture, allowing for flexible integration with various AI providers, with MusicGPT as the default for audio operations and OpenAI for lyrics. It supports over 20 music genres and features a webhook-based system for efficient asynchronous processing.
 
-The platform includes a robust subscription model (Free, Pro, Producer, Premium tiers) powered by Stripe, a comprehensive admin dashboard for analytics, settings, and support management, and an AI-driven support chatbot. A key differentiator is the "Producer Store," enabling paying customers to upload custom instrument kits for AI training via RunPod, fostering a unique and evolving sound library. The business vision is to empower musicians and producers with cutting-edge AI tools to create high-quality, genre-diverse music effortlessly, tapping into the growing market for AI-assisted creative tools.
+The platform includes a robust subscription model (Free, Pro, Producer, Premium tiers) powered by Stripe, a comprehensive admin dashboard for analytics, settings, and support management, and an AI-driven support chatbot. A key differentiator is the "Producer Store," enabling paying customers to upload custom instrument kits for AI training via a private cloud GPU engine, fostering a unique and evolving sound library. The business vision is to empower musicians and producers with cutting-edge AI tools to create high-quality, genre-diverse music effortlessly, tapping into the growing market for AI-assisted creative tools.
 
 ## User Preferences
 I prefer clear and concise communication. For coding, I favor modular and maintainable solutions. I appreciate an iterative development approach with regular updates. Before implementing significant architectural changes or new external dependencies, please ask for my approval. I expect the agent to prioritize secure and scalable solutions.
@@ -36,7 +36,7 @@ The "Heart Mula" music engine employs a microservices-oriented architecture with
 - **AI Engines:**
     - **MusicGPT Engine:** Default for all audio operations, auto-seeded on first run.
     - **OpenAI Integration:** Used for lyrics generation (via GPT-5.1) and powering the platform's support chatbot and instrument prompt generation.
-    - **SAO Training Pipeline:** A Stable Audio Open-inspired fine-tuning pipeline for custom instrument kits, utilizing OpenAI for prompt generation and RunPod for training.
+    - **SAO Training Pipeline:** A Stable Audio Open-inspired fine-tuning pipeline for custom instrument kits, utilizing OpenAI for prompt generation and cloud GPU for training.
     - **Antigravity Engine:** A creative AI engine leveraging OpenAI for lyrics and full arrangement configurations.
 - **Workers:** Dedicated background workers (`music_tasks.ts`, `sample_tasks.ts`) for asynchronous processing of music generation and various audio sample transformations (Remix, Key/BPM, Mastering, Denoise, Cover, Audio Cut).
 - **Key Features Implemented:**
@@ -47,16 +47,16 @@ The "Heart Mula" music engine employs a microservices-oriented architecture with
     - **Song History:** Tracks processing status via polling.
 
 ## External Dependencies
-- **Stable Audio Open (Self-Hosted):** Primary music generation engine running on RunPod GPU server. Uses `runpod_music_engine.ts` to submit inference jobs via Jupyter WebSocket protocol. Generates audio from text prompts with no per-song API cost. Webhook: `/api/webhooks/runpod-music`. Falls back to external APIs (Generic/MusicGPT) if RunPod is unavailable.
+- **Stable Audio Open (Self-Hosted):** Primary music generation engine running on private cloud GPU. Uses `runpod_music_engine.ts` to submit inference jobs via Jupyter WebSocket protocol. Generates audio from text prompts with no per-song API cost. Webhook: `/api/webhooks/runpod-music`. Falls back to external APIs (Generic/MusicGPT) if GPU is unavailable.
 - **MusicGPT:** Fallback AI provider for audio-related operations (music generation, stem separation, remix, mastering, etc.).
 - **OpenAI:** Used for AI lyrics generation, AI support chatbot, and prompt generation within the SAO training pipeline.
 - **Neon (PostgreSQL):** Database hosting for all persistent data.
 - **Stripe:** Payment gateway for subscription management, checkouts, and customer portals.
-- **DGB Audio RunPod API:** Self-hosted Flask server (`dgb_api_receptor.py`) on RunPod GPU for Producer Store instrument processing. Receives audio uploads, converts to MIDI (basic-pitch), analyzes audio (librosa). Authenticated via shared `DGB_API_KEY`. Runs on port 7860. Webhook: `/api/dgb-runpod/webhook`. Auto-seeded as API Provider in Admin panel.
-- **RunPod:** JupyterLab server for audio analysis (librosa-based key/BPM/energy detection) and SAO model fine-tuning. Connected via `RUNPOD_BASE_URL` env var. Uses Jupyter kernel API for job dispatch with webhook callbacks.
+- **DGB Cloud Engine:** Self-hosted Flask server (`dgb_api_receptor.py`) on private cloud GPU for Producer Store instrument processing. Receives audio uploads, converts to MIDI (basic-pitch), analyzes audio (librosa). Authenticated via `DGB_API_KEY` + `TRAINING_WEBHOOK_SECRET` for webhooks. Runs on port 7860. Webhook: `/api/dgb-cloud/webhook`. Auto-seeded as API Provider "DGB Cloud Engine" in Admin panel.
+- **Cloud GPU Server:** JupyterLab server for audio analysis (librosa-based key/BPM/energy detection) and SAO model fine-tuning. Connected via `RUNPOD_BASE_URL` env var (internal only). Uses Jupyter kernel API for job dispatch with webhook callbacks.
 - **Replit Auth:** OpenID Connect-based user authentication.
 - **Replit AI Integrations:** Facilitates connection to OpenAI services.
 - **Wavesurfer.js:** Frontend library for audio waveform visualization.
 
 ## Key Scripts
-- **`server/scripts/dgb_api_receptor.py`**: Flask API server for RunPod GPU. Run on RunPod with `export DGB_API_KEY=your_key && python3 /workspace/dgb_api_receptor.py`. Handles instrument uploads, audio-to-MIDI conversion, and audio analysis. Port 7860.
+- **`server/scripts/dgb_api_receptor.py`**: DGB Cloud Engine Flask API server for private GPU. Run on GPU server with `export DGB_API_KEY='key' && export TRAINING_WEBHOOK_SECRET='secret' && python3 /workspace/dgb_api_receptor.py`. Handles instrument uploads, audio-to-MIDI conversion, and audio analysis. Port 7860. Webhook authentication uses `TRAINING_WEBHOOK_SECRET` (falls back to `DGB_API_KEY`).
