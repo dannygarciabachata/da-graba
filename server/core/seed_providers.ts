@@ -164,7 +164,7 @@ export async function seedDgbRunPodProvider(): Promise<void> {
   const existing = await storage.getApiProviders();
   const hasDgb = existing.some(p =>
     p.name === "DGB Cloud Engine" || p.name === "DGB Audio RunPod" ||
-    p.name === "Heart Mula Cloud Engine"
+    p.name === "Heart Mula Cloud Engine" || p.name === "DGB Studio Cloud Engine"
   );
   if (hasDgb) {
     console.log("[Seed] Cloud Engine provider already exists, skipping");
@@ -179,10 +179,10 @@ export async function seedDgbRunPodProvider(): Promise<void> {
   const gpuBase = (process.env.RUNPOD_BASE_URL || "").replace(/\/lab\/.*$/, "").replace(/\/$/, "");
   const apiBase = gpuBase.replace(/:8888$/, ":7860").replace(/-8888\./, "-7860.");
 
-  console.log("[Seed] Seeding Heart Mula Cloud Engine provider...");
+  console.log("[Seed] Seeding DGB Studio Cloud Engine provider...");
 
   const provider = await storage.createApiProvider({
-    name: "Heart Mula Cloud Engine",
+    name: "DGB Studio Cloud Engine",
     baseUrl: apiBase,
     authType: "header",
     authHeaderName: "X-DGB-API-Key",
@@ -249,5 +249,5 @@ export async function seedDgbRunPodProvider(): Promise<void> {
     console.log(`[Seed] Created Cloud endpoint: ${ep.name}`);
   }
 
-  console.log(`[Seed] Heart Mula Cloud Engine seeded with ${dgbEndpoints.length} endpoints`);
+  console.log(`[Seed] DGB Studio Cloud Engine seeded with ${dgbEndpoints.length} endpoints`);
 }

@@ -18,7 +18,7 @@ import { useLocation } from "wouter";
 import type { Sample } from "@shared/schema";
 
 const STYLE_OPTIONS = [
-  { value: "heart-mula", label: "Heart Mula" },
+  { value: "heart-mula", label: "DGB Studio Signature" },
   { value: "bachata-romantic", label: "Romantic" },
   { value: "bachata-dance", label: "Dance" },
   { value: "bachata-bolero", label: "Bolero" },

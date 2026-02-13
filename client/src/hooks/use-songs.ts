@@ -61,7 +61,7 @@ export function useGenerateSong() {
       queryClient.invalidateQueries({ queryKey: [api.songs.list.path] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/credits"] });
       toast({
-        title: "Heart Mula Activated",
+        title: "DGB Studio Activated",
         description: "Your track is being composed by the DGB Studio engine.",
       });
     },

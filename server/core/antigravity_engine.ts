@@ -34,7 +34,7 @@ export async function generateMusicConfig(userPrompt: string): Promise<MusicProm
     model: "gpt-5.1",
     messages: [
       { role: "system", content: MUSIC_PROMPT },
-      { role: "user", content: `Heart Mula Music Engine — create a musical arrangement for: ${userPrompt}` },
+      { role: "user", content: `DGB Studio Music Engine — create a musical arrangement for: ${userPrompt}` },
     ],
     response_format: { type: "json_object" },
     max_completion_tokens: 1024,

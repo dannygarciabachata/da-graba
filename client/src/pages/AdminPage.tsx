@@ -1251,7 +1251,7 @@ function SettingsTab() {
     { key: "max_songs_premium", label: "Max Songs (Premium)", defaultValue: "unlimited", category: "limits", description: "Song limit for premium tier" },
     { key: "allowed_audio_types", label: "Allowed Audio Types", defaultValue: "wav,mp3,ogg,flac,m4a", category: "limits", description: "Accepted audio formats" },
     { key: "support_auto_reply", label: "Support Auto-Reply", defaultValue: "true", category: "support", description: "AI auto-responds to support chats" },
-    { key: "brand_tagline", label: "Brand Tagline", defaultValue: "Heart Mula Music Engine", category: "branding", description: "Platform tagline" },
+    { key: "brand_tagline", label: "Brand Tagline", defaultValue: "DGB Studio Engine", category: "branding", description: "Platform tagline" },
   ];
 
   const currentValues: Record<string, string> = {};
@@ -1354,7 +1354,7 @@ function EmailSettingsTab() {
   ];
 
   const templateFields = [
-    { key: "email_template_welcome", label: "Welcome Email", defaultValue: "Welcome to DGB Audio! Start creating music with the Heart Mula Engine.", description: "Sent to new users" },
+    { key: "email_template_welcome", label: "Welcome Email", defaultValue: "Welcome to DGB Audio! Start creating music with the DGB Studio Engine.", description: "Sent to new users" },
     { key: "email_template_subscription", label: "Subscription Confirmation", defaultValue: "Your {plan} subscription is now active. Enjoy unlimited music creation!", description: "Sent after subscription" },
     { key: "email_template_support_reply", label: "Support Reply Notification", defaultValue: "Your support ticket #{ticketId} has a new reply from our team.", description: "Sent when admin replies to ticket" },
     { key: "email_template_password_reset", label: "Password Reset", defaultValue: "Click the link below to reset your password.", description: "Password reset email" },
@@ -1879,7 +1879,7 @@ function CloudServersTab() {
           <CardContent className="text-xs space-y-3">
             <div>
               <p className="font-semibold mb-1">1. Prepare your GPU server</p>
-              <p className="text-muted-foreground">Set up a GPU server on any cloud provider (AWS, Google Cloud, DigitalOcean, RunPod, etc.). Install the Heart Mula Cloud Engine API on it.</p>
+              <p className="text-muted-foreground">Set up a GPU server on any cloud provider (AWS, Google Cloud, DigitalOcean, RunPod, etc.). Install the DGB Studio Cloud Engine API on it.</p>
             </div>
             <div>
               <p className="font-semibold mb-1">2. Deploy the Flask API</p>

@@ -135,7 +135,7 @@ export default function Landing() {
               className="space-y-6 md:space-y-8 text-center lg:text-left"
             >
               <div className="inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs md:text-sm font-medium mb-2 md:mb-4">
-                Heart Mula Music Engine
+                DGB Studio Engine
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight leading-tight" data-testid="text-hero-title">
@@ -211,7 +211,7 @@ export default function Landing() {
                       </div>
                       <div className="text-left">
                         <p className="text-xs text-muted-foreground">AI Engine</p>
-                        <p className="text-sm font-bold">Heart Mula</p>
+                        <p className="text-sm font-bold">DGB Studio</p>
                       </div>
                     </div>
                     <Wand2 className="w-5 h-5 text-white/20" />
@@ -435,7 +435,7 @@ export default function Landing() {
           </div>
           <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} DGB Audio. All rights reserved.</p>
-            <p className="text-xs text-muted-foreground">Powered by Heart Mula Music Engine</p>
+            <p className="text-xs text-muted-foreground">Powered by DGB Studio Engine</p>
           </div>
         </div>
       </footer>

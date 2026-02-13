@@ -1,7 +1,7 @@
-# DGB Audio - Heart Mula Music Engine
+# DGB Audio - DGB Studio
 
 ## Overview
-DGB Audio is building an AI-powered music generation SaaS platform, "Heart Mula," designed to revolutionize music creation. The platform offers a generic, API-agnostic architecture, allowing for flexible integration with various AI providers, with MusicGPT as the default for audio operations and OpenAI for lyrics. It supports over 20 music genres and features a webhook-based system for efficient asynchronous processing.
+DGB Audio is building an AI-powered music generation SaaS platform, "DGB Studio," designed to revolutionize music creation. The platform offers a generic, API-agnostic architecture, allowing for flexible integration with various AI providers, with MusicGPT as the default for audio operations and OpenAI for lyrics. It supports over 20 music genres and features a webhook-based system for efficient asynchronous processing.
 
 The platform includes a robust subscription model (Free, Pro, Producer, Premium tiers) powered by Stripe, a comprehensive admin dashboard for analytics, settings, and support management, and an AI-driven support chatbot. A key differentiator is the "Producer Store," enabling paying customers to upload custom instrument kits for AI training via a private cloud GPU engine, fostering a unique and evolving sound library. The business vision is to empower musicians and producers with cutting-edge AI tools to create high-quality, genre-diverse music effortlessly, tapping into the growing market for AI-assisted creative tools.
 
@@ -9,7 +9,7 @@ The platform includes a robust subscription model (Free, Pro, Producer, Premium 
 I prefer clear and concise communication. For coding, I favor modular and maintainable solutions. I appreciate an iterative development approach with regular updates. Before implementing significant architectural changes or new external dependencies, please ask for my approval. I expect the agent to prioritize secure and scalable solutions.
 
 ## System Architecture
-The "Heart Mula" music engine employs a microservices-oriented architecture with a clear separation of concerns.
+The "DGB Studio" music engine employs a microservices-oriented architecture with a clear separation of concerns.
 
 **Frontend:**
 - **Technology Stack:** React, Vite, TailwindCSS, Shadcn UI.
@@ -36,14 +36,14 @@ The "Heart Mula" music engine employs a microservices-oriented architecture with
     - **Operation Types:** Supports a wide range of operations including music_generation, stem_separation, remix, mastering, denoise, key_bpm, cover, voice_change, audio_cut, lyrics_generation, and image_generation.
 - **AI Engines:**
     - **DGB STUDIO Audio Engine:** Default for all audio operations (seeded as "DGB STUDIO Audio Engine"), API-agnostic.
-    - **Heart Mula Cloud Engine:** Private cloud GPU engine for instrument processing, audio analysis, and MIDI conversion.
+    - **DGB Studio Cloud Engine:** Private cloud GPU engine for instrument processing, audio analysis, and MIDI conversion.
     - **OpenAI Integration:** Used for lyrics generation (via GPT-5.1) and powering the platform's support chatbot and instrument prompt generation.
     - **SAO Training Pipeline:** A Stable Audio Open-inspired fine-tuning pipeline for custom instrument kits, utilizing OpenAI for prompt generation and cloud GPU for training.
     - **Antigravity Engine:** A creative AI engine leveraging OpenAI for lyrics and full arrangement configurations.
 - **Stem Separation Engine:** Cloud GPU-first stem separation using Demucs (htdemucs model) via RunPod Jupyter. Falls back to generic API providers if GPU unavailable. Webhook: `/api/webhooks/runpod-stems`. Produces 4 stems: vocals, drums, bass, other/melody.
 - **Workers:** Dedicated background workers (`music_tasks.ts`, `sample_tasks.ts`) for asynchronous processing of music generation and various audio sample transformations (Remix, Key/BPM, Mastering, Denoise, Cover, Audio Cut).
 - **Key Features Implemented:**
-    - **Heart Mula branded engine:** Includes style presets (Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana).
+    - **DGB Studio branded engine:** Includes style presets (Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana).
     - **Bachata Mode:** Auto-detection of Bachata-related keywords to force Dominican instrument sounds.
     - **AI Lyrics Generator:** Offers romantic, dance, and heartbreak styles, influenced by artists like Frank Reyes and Romeo Santos.
     - **Bachata Quiz:** A knowledge quiz system.

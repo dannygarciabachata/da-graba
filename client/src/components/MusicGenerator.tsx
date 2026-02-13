@@ -13,7 +13,7 @@ import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 
 const STYLE_OPTIONS = [
-  { value: "heart-mula", label: "Heart Mula Signature" },
+  { value: "heart-mula", label: "DGB Studio Signature" },
   { value: "bachata-romantic", label: "Romantic Bachata" },
   { value: "bachata-dance", label: "Dance Bachata" },
   { value: "bachata-bolero", label: "Bachata Bolero" },
@@ -92,7 +92,7 @@ export function MusicGenerator() {
           <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg md:text-xl font-bold font-display" data-testid="text-engine-title">Heart Mula</h2>
+          <h2 className="text-lg md:text-xl font-bold font-display" data-testid="text-engine-title">DGB Studio</h2>
           <p className="text-xs md:text-sm text-muted-foreground">DGB Studio Music Engine</p>
         </div>
         {creditsData && (
