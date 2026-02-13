@@ -125,8 +125,12 @@ export async function checkCloudHealth(resolved: ResolvedServer): Promise<{ conn
       signal: AbortSignal.timeout(10000),
     });
     if (res.ok) {
-      const data = await res.json();
-      return { connected: true, gpu: data.gpu_available };
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const data = await res.json();
+        return { connected: true, gpu: data.gpu_available };
+      }
+      return { connected: true };
     }
     return { connected: false, error: `Status ${res.status}` };
   } catch (err: any) {
