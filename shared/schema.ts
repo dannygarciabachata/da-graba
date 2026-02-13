@@ -249,6 +249,11 @@ export const styleKits = pgTable("style_kits", {
   imageUrl: text("image_url"),
   createdBy: text("created_by").notNull(),
   isActive: boolean("is_active").default(true),
+  isPublic: boolean("is_public").default(false),
+  trainingStatus: text("training_status").default("pending"),
+  trainingJobId: text("training_job_id"),
+  trainingError: text("training_error"),
+  trainedModelUrl: text("trained_model_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -258,9 +263,11 @@ export const styleKitInstruments = pgTable("style_kit_instruments", {
   name: text("name").notNull(),
   type: text("type").notNull(),
   audioUrl: text("audio_url"),
+  processedUrl: text("processed_url"),
   description: text("description"),
   volume: integer("volume").default(100),
   position: integer("position").default(0),
+  uploadStatus: text("upload_status").default("uploaded"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

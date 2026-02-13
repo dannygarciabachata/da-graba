@@ -1,11 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearch } from "wouter";
 import { useStripeProducts, useStripeSubscription, useCheckout, usePortalSession } from "@/hooks/use-stripe";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Loader2, Crown, Zap, Music } from "lucide-react";
+import { Check, Loader2, Crown, Zap, Music, Disc } from "lucide-react";
 
 const FALLBACK_PLANS = [
   {
@@ -31,6 +31,26 @@ const FALLBACK_PLANS = [
     order: 1,
   },
   {
+    id: "producer",
+    name: "Producer",
+    description: "Upload your own instrument kits and train AI with your sounds",
+    tier: "producer",
+    price: 2900,
+    annualPrice: 33060,
+    priceId: null,
+    annualPriceId: null,
+    features: [
+      "Everything in Pro",
+      "Upload custom instrument kits",
+      "AI training for your sounds",
+      "Personal kit store",
+      "RunPod AI integration",
+      "Priority AI processing",
+    ],
+    icon: Disc,
+    order: 2,
+  },
+  {
     id: "premium",
     name: "Premium",
     description: "Unlimited access to the full DGB Audio suite",
@@ -39,7 +59,7 @@ const FALLBACK_PLANS = [
     priceId: null,
     features: ["Unlimited songs", "All AI tools", "Priority support", "Custom voice models", "Commercial license"],
     icon: Crown,
-    order: 2,
+    order: 3,
   },
 ];
 
@@ -55,18 +75,22 @@ function parsePlans(products: any[] | undefined) {
       const tier = product.metadata?.tier || product.name?.toLowerCase() || "free";
       const featuresStr = product.metadata?.features || "";
       const features = featuresStr ? featuresStr.split(",").map((f: string) => f.trim()) : [];
-      const price = product.prices?.[0];
+      const prices = product.prices || [];
+      const monthlyPrice = prices.find((p: any) => p.interval === "month") || prices[0];
+      const annualPrice = prices.find((p: any) => p.interval === "year");
       const fallback = FALLBACK_PLANS.find((p) => p.tier === tier);
 
-      const iconMap: Record<string, any> = { free: Music, pro: Zap, premium: Crown };
+      const iconMap: Record<string, any> = { free: Music, pro: Zap, producer: Disc, premium: Crown };
 
       return {
         id: product.id,
         name: product.name,
         description: product.description || fallback?.description || "",
         tier,
-        price: price?.unitAmount || fallback?.price || 0,
-        priceId: price?.id || null,
+        price: monthlyPrice?.unitAmount || fallback?.price || 0,
+        priceId: monthlyPrice?.id || null,
+        annualPrice: annualPrice?.unitAmount || (fallback as any)?.annualPrice || null,
+        annualPriceId: annualPrice?.id || null,
         features: features.length > 0 ? features : fallback?.features || [],
         icon: iconMap[tier] || Music,
         order: parseInt(product.metadata?.order || "0", 10) || fallback?.order || 0,
@@ -83,6 +107,7 @@ export default function PricingPage() {
   const { data: subscription } = useStripeSubscription();
   const checkout = useCheckout();
   const portal = usePortalSession();
+  const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">("monthly");
 
   useEffect(() => {
     if (params.get("success") === "true") {
@@ -107,18 +132,40 @@ export default function PricingPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-8" data-testid="pricing-page">
-      <div className="text-center space-y-2">
+      <div className="text-center space-y-3">
         <h1 className="text-3xl font-bold tracking-tight" data-testid="text-pricing-title">Choose Your Plan</h1>
         <p className="text-muted-foreground text-sm max-w-lg mx-auto">
           Unlock the full power of DGB Audio with a plan that fits your creative workflow.
         </p>
+        <div className="flex items-center justify-center gap-3">
+          <Button
+            variant={billingInterval === "monthly" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setBillingInterval("monthly")}
+            data-testid="button-billing-monthly"
+          >
+            Monthly
+          </Button>
+          <Button
+            variant={billingInterval === "annual" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setBillingInterval("annual")}
+            data-testid="button-billing-annual"
+          >
+            Annual
+            <Badge className="ml-1.5 text-[10px] bg-green-500 text-white">Save 5%</Badge>
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {plans.map((plan: any) => {
           const isCurrentPlan = currentTier === plan.tier;
-          const isPopular = plan.tier === "pro";
+          const isPopular = plan.tier === "producer";
           const IconComp = plan.icon;
+          const showAnnual = billingInterval === "annual" && plan.annualPrice;
+          const displayPrice = showAnnual ? Math.round(plan.annualPrice / 12) : plan.price;
+          const activePriceId = showAnnual && plan.annualPriceId ? plan.annualPriceId : plan.priceId;
 
           return (
             <Card
@@ -155,8 +202,13 @@ export default function PricingPage() {
                     <span className="text-3xl font-bold" data-testid={`text-price-${plan.tier}`}>Free</span>
                   ) : (
                     <div data-testid={`text-price-${plan.tier}`}>
-                      <span className="text-3xl font-bold">{formatPrice(plan.price)}</span>
+                      <span className="text-3xl font-bold">{formatPrice(displayPrice)}</span>
                       <span className="text-muted-foreground text-sm">/mo</span>
+                      {showAnnual && (
+                        <p className="text-xs text-green-400 mt-1">
+                          {formatPrice(plan.annualPrice)}/year (5% off)
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -187,10 +239,10 @@ export default function PricingPage() {
                   <Button variant="outline" className="w-full" disabled data-testid={`button-current-${plan.tier}`}>
                     Current Plan
                   </Button>
-                ) : plan.priceId ? (
+                ) : activePriceId ? (
                   <Button
                     className={`w-full ${isPopular ? "bg-primary text-black" : ""}`}
-                    onClick={() => checkout.mutate({ priceId: plan.priceId })}
+                    onClick={() => checkout.mutate({ priceId: activePriceId })}
                     disabled={checkout.isPending}
                     data-testid={`button-subscribe-${plan.tier}`}
                   >

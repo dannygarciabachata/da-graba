@@ -99,3 +99,83 @@ export function useDeleteInstrument() {
     },
   });
 }
+
+export function useProducerKits() {
+  return useQuery<StyleKitWithInstruments[]>({
+    queryKey: ["/api/producer/kits"],
+    queryFn: async () => {
+      const res = await fetch("/api/producer/kits", { credentials: "include" });
+      if (!res.ok) throw new Error(`${res.status}`);
+      return res.json();
+    },
+    retry: false,
+  });
+}
+
+export function useCreateProducerKit() {
+  return useMutation({
+    mutationFn: async (data: { name: string; genre: string; description?: string }) => {
+      const res = await apiRequest("POST", "/api/producer/kits", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/producer/kits"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/style-kits"] });
+    },
+  });
+}
+
+export function useDeleteProducerKit() {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/producer/kits/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/producer/kits"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/style-kits"] });
+    },
+  });
+}
+
+export function useUploadProducerInstrument() {
+  return useMutation({
+    mutationFn: async ({ kitId, formData }: { kitId: number; formData: FormData }) => {
+      const res = await fetch(`/api/producer/kits/${kitId}/instruments`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Upload failed" }));
+        throw new Error(err.message || `Upload failed: ${res.status}`);
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/producer/kits"] });
+    },
+  });
+}
+
+export function useDeleteProducerInstrument() {
+  return useMutation({
+    mutationFn: async ({ kitId, instrumentId }: { kitId: number; instrumentId: number }) => {
+      await apiRequest("DELETE", `/api/producer/kits/${kitId}/instruments/${instrumentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/producer/kits"] });
+    },
+  });
+}
+
+export function useTrainKit() {
+  return useMutation({
+    mutationFn: async (kitId: number) => {
+      const res = await apiRequest("POST", `/api/producer/kits/${kitId}/train`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/producer/kits"] });
+    },
+  });
+}

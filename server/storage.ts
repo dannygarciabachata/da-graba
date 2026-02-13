@@ -69,6 +69,7 @@ export interface IStorage {
   getStyleKits(): Promise<StyleKit[]>;
   getStyleKit(id: number): Promise<StyleKit | undefined>;
   getStyleKitsByGenre(genre: string): Promise<StyleKit[]>;
+  getStyleKitsByUser(userId: string): Promise<StyleKit[]>;
   createStyleKit(kit: InsertStyleKit): Promise<StyleKit>;
   updateStyleKit(id: number, data: Partial<StyleKit>): Promise<StyleKit>;
   deleteStyleKit(id: number): Promise<void>;
@@ -430,6 +431,12 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(styleKits)
       .where(and(eq(styleKits.genre, genre), eq(styleKits.isActive, true)))
       .orderBy(styleKits.name);
+  }
+
+  async getStyleKitsByUser(userId: string): Promise<StyleKit[]> {
+    return await db.select().from(styleKits)
+      .where(eq(styleKits.createdBy, userId))
+      .orderBy(styleKits.createdAt);
   }
 
   async createStyleKit(kit: InsertStyleKit): Promise<StyleKit> {

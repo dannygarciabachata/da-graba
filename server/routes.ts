@@ -1287,6 +1287,209 @@ export async function registerRoutes(
     }
   });
 
+  // ========== PRODUCER STORE (User Kit Management) ==========
+
+  const isProducer = (req: any): boolean => {
+    if (!req.isAuthenticated()) return false;
+    return true;
+  };
+
+  const checkProducerTier = async (req: any, res: any): Promise<boolean> => {
+    if (!req.isAuthenticated()) { res.sendStatus(401); return false; }
+    const userId = (req.user as any).claims.sub;
+    const user = await storage.getUser(userId);
+    if (isAdmin(req)) return true;
+    const tier = user?.subscriptionTier || "free";
+    if (tier !== "producer" && tier !== "premium") {
+      res.status(403).json({ message: "Producer subscription required. Upgrade to the Producer plan to upload your own instrument kits." });
+      return false;
+    }
+    return true;
+  };
+
+  app.get("/api/producer/kits", async (req, res) => {
+    if (!(await checkProducerTier(req, res))) return;
+    const userId = (req.user as any).claims.sub;
+    try {
+      const kits = await storage.getStyleKitsByUser(userId);
+      const kitsWithInstruments = await Promise.all(
+        kits.map(async (kit) => ({
+          ...kit,
+          instruments: await storage.getStyleKitInstruments(kit.id),
+        }))
+      );
+      res.json(kitsWithInstruments);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/producer/kits", async (req, res) => {
+    if (!(await checkProducerTier(req, res))) return;
+    const userId = (req.user as any).claims.sub;
+    try {
+      const parsed = insertStyleKitSchema.parse({
+        ...req.body,
+        createdBy: userId,
+        trainingStatus: "pending",
+      });
+      const kit = await storage.createStyleKit(parsed);
+      res.status(201).json(kit);
+    } catch (err: any) {
+      if (err.name === "ZodError") return res.status(400).json({ message: err.errors });
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/producer/kits/:id", async (req, res) => {
+    if (!(await checkProducerTier(req, res))) return;
+    const userId = (req.user as any).claims.sub;
+    try {
+      const kit = await storage.getStyleKit(Number(req.params.id));
+      if (!kit) return res.sendStatus(404);
+      if (kit.createdBy !== userId && !isAdmin(req)) return res.sendStatus(403);
+      const { trainingStatus, trainingJobId, trainedModelUrl, ...safeData } = req.body;
+      const updated = await storage.updateStyleKit(Number(req.params.id), safeData);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/producer/kits/:id", async (req, res) => {
+    if (!(await checkProducerTier(req, res))) return;
+    const userId = (req.user as any).claims.sub;
+    try {
+      const kit = await storage.getStyleKit(Number(req.params.id));
+      if (!kit) return res.sendStatus(404);
+      if (kit.createdBy !== userId && !isAdmin(req)) return res.sendStatus(403);
+      await storage.deleteStyleKit(kit.id);
+      res.sendStatus(204);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/producer/kits/:id/instruments", upload.single("audio"), async (req, res) => {
+    if (!(await checkProducerTier(req, res))) return;
+    const userId = (req.user as any).claims.sub;
+    try {
+      const kitId = Number(req.params.id);
+      const kit = await storage.getStyleKit(kitId);
+      if (!kit) return res.sendStatus(404);
+      if (kit.createdBy !== userId && !isAdmin(req)) return res.sendStatus(403);
+
+      const audioUrl = req.file ? `/audio/${req.file.filename}` : undefined;
+      const parsed = insertStyleKitInstrumentSchema.parse({
+        kitId,
+        name: req.body.name,
+        type: req.body.type || "other",
+        audioUrl,
+        description: req.body.description || null,
+        volume: req.body.volume ? Number(req.body.volume) : 100,
+        position: req.body.position ? Number(req.body.position) : 0,
+        uploadStatus: "uploaded",
+      });
+      const instrument = await storage.createStyleKitInstrument(parsed);
+
+      if (audioUrl) {
+        await storage.updateStyleKit(kitId, { trainingStatus: "pending" });
+      }
+
+      res.status(201).json(instrument);
+    } catch (err: any) {
+      if (err.name === "ZodError") return res.status(400).json({ message: err.errors });
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/producer/kits/:kitId/instruments/:id", async (req, res) => {
+    if (!(await checkProducerTier(req, res))) return;
+    const userId = (req.user as any).claims.sub;
+    try {
+      const kit = await storage.getStyleKit(Number(req.params.kitId));
+      if (!kit) return res.sendStatus(404);
+      if (kit.createdBy !== userId && !isAdmin(req)) return res.sendStatus(403);
+      await storage.deleteStyleKitInstrument(Number(req.params.id));
+      res.sendStatus(204);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/producer/kits/:id/train", async (req, res) => {
+    if (!(await checkProducerTier(req, res))) return;
+    const userId = (req.user as any).claims.sub;
+    try {
+      const kitId = Number(req.params.id);
+      const kit = await storage.getStyleKit(kitId);
+      if (!kit) return res.sendStatus(404);
+      if (kit.createdBy !== userId && !isAdmin(req)) return res.sendStatus(403);
+
+      const instruments = await storage.getStyleKitInstruments(kitId);
+      const withAudio = instruments.filter(i => i.audioUrl);
+      if (withAudio.length === 0) {
+        return res.status(400).json({ message: "Upload at least one instrument audio file before training." });
+      }
+
+      await storage.updateStyleKit(kitId, {
+        trainingStatus: "queued",
+        trainingError: null,
+      });
+
+      console.log(`[Training] Kit ${kitId} queued for training with ${withAudio.length} instruments. RunPod integration pending.`);
+
+      res.json({
+        message: "Training queued. Your kit will be processed by the AI training system.",
+        kitId,
+        instrumentCount: withAudio.length,
+        status: "queued",
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/training/webhook", async (req, res) => {
+    try {
+      const webhookSecret = process.env.TRAINING_WEBHOOK_SECRET;
+      if (webhookSecret) {
+        const authHeader = req.headers["x-webhook-secret"] || req.headers["authorization"];
+        if (authHeader !== webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
+          return res.status(401).json({ message: "Invalid webhook secret" });
+        }
+      }
+
+      const { kitId, status, modelUrl, error, jobId } = req.body;
+      if (!kitId) return res.status(400).json({ message: "kitId required" });
+
+      const kit = await storage.getStyleKit(Number(kitId));
+      if (!kit) return res.sendStatus(404);
+
+      const updateData: any = { trainingStatus: status || "ready" };
+      if (modelUrl) updateData.trainedModelUrl = modelUrl;
+      if (error) updateData.trainingError = error;
+      if (jobId) updateData.trainingJobId = jobId;
+
+      await storage.updateStyleKit(Number(kitId), updateData);
+
+      if (status === "ready") {
+        const instruments = await storage.getStyleKitInstruments(Number(kitId));
+        for (const instr of instruments) {
+          if (instr.audioUrl) {
+            await storage.updateStyleKitInstrument(instr.id, { uploadStatus: "processed" });
+          }
+        }
+      }
+
+      console.log(`[Training] Webhook received for kit ${kitId}: status=${status}`);
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("[Training] Webhook error:", err.message);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // ========== STRIPE: PUBLIC ROUTES ==========
 
   app.get("/api/stripe/publishable-key", async (_req, res) => {

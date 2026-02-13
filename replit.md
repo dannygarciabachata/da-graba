@@ -1,7 +1,7 @@
 # DGB Audio - Heart Mula Music Engine
 
 ## Overview
-AI-powered music generation SaaS platform by Danny Garcia. The "Heart Mula" engine uses a **generic, API-agnostic architecture** where any API provider can be configured via the Admin Panel. Default provider is MusicGPT for all audio operations. OpenAI handles lyrics writing. Supports 20+ music genres. Uses webhook-based architecture for efficient async processing. Includes Stripe subscription billing, comprehensive admin dashboard with analytics/settings/support management/email config, and AI support chatbot with persistent ticket tracking.
+AI-powered music generation SaaS platform by Danny Garcia. The "Heart Mula" engine uses a **generic, API-agnostic architecture** where any API provider can be configured via the Admin Panel. Default provider is MusicGPT for all audio operations. OpenAI handles lyrics writing. Supports 20+ music genres. Uses webhook-based architecture for efficient async processing. Includes Stripe subscription billing (Free/Pro/Producer/Premium tiers), comprehensive admin dashboard with analytics/settings/support management/email config, AI support chatbot with persistent ticket tracking, and a **Producer Store** for paying customers to upload custom instrument kits with AI training via RunPod.
 
 ## Architecture
 - **Frontend**: React + Vite + TailwindCSS + Shadcn UI
@@ -95,7 +95,8 @@ client/src/
   pages/SampleLab.tsx            - Sample Lab with recording, upload, AI Remix, Key/BPM detection
   pages/AdminPage.tsx            - Admin panel for API provider/endpoint management + style kits
   pages/StyleKitsPage.tsx        - User-facing style kit browser with instrument preview
-  pages/PricingPage.tsx          - Subscription plans and checkout
+  pages/ProducerStorePage.tsx    - Producer Store: kit management, instrument upload, AI training status
+  pages/PricingPage.tsx          - Subscription plans and checkout (monthly/annual toggle, 4 tiers)
   components/AudioPlayer.tsx     - Waveform player
   components/SongHistory.tsx     - Track history list with Studio link
   components/BachataQuiz.tsx     - Interactive Bachata quiz
@@ -181,6 +182,16 @@ shared/
 - `POST /api/style-kits/:kitId/instruments` - Upload instrument audio file (admin only)
 - `PATCH /api/style-kits/instruments/:id` - Update instrument (admin only)
 - `DELETE /api/style-kits/instruments/:id` - Delete instrument (admin only)
+
+### Producer Store (requires producer/premium/admin tier)
+- `GET /api/producer/kits` - List user's instrument kits
+- `POST /api/producer/kits` - Create new kit (name, genre, description)
+- `PATCH /api/producer/kits/:id` - Update kit
+- `DELETE /api/producer/kits/:id` - Delete kit + instruments
+- `POST /api/producer/kits/:id/instruments` - Upload instrument audio file
+- `DELETE /api/producer/kits/:kitId/instruments/:id` - Delete instrument
+- `POST /api/producer/kits/:id/train` - Queue kit for AI training (RunPod)
+- `POST /api/training/webhook` - RunPod training webhook callback
 
 ### Admin (owner-only, requires ADMIN_USER_ID env var)
 - `GET /api/admin/check` - Check if current user is admin
