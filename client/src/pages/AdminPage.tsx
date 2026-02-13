@@ -6,6 +6,9 @@ import {
   useCreateEndpoint, useUpdateEndpoint, useDeleteEndpoint,
   useTestEndpoint,
   useAdminStats, useAdminUsers, useAdminSubscriptions, useAdminProducts,
+  usePlatformSettings, useUpsertSetting, useBulkUpsertSettings,
+  useAnalytics, useAdminTickets, useAdminTicket,
+  useUpdateTicket, useReplyToTicket,
 } from "@/hooks/use-admin";
 import {
   useStyleKits, useStyleKitMeta, useCreateStyleKit, useUpdateStyleKit,
@@ -22,10 +25,12 @@ import {
   Server, Zap, ArrowLeft, TestTube, Loader2, Save,
   Shield, Globe, Key, ToggleLeft, ToggleRight,
   BarChart3, Users, CreditCard, Music, FileText, Mic, Disc, Upload,
+  TrendingUp, MessageSquare, Mail, Sliders, Clock,
+  AlertCircle, Send, Eye,
 } from "lucide-react";
 import type { ApiProvider, ApiEndpoint } from "@shared/schema";
 
-type Tab = "dashboard" | "users" | "subscriptions" | "style-kits" | "providers" | "endpoints";
+type Tab = "dashboard" | "analytics" | "users" | "subscriptions" | "support" | "settings" | "email" | "style-kits" | "providers" | "endpoints";
 
 export default function AdminPage() {
   const [, setLocation] = useLocation();
@@ -64,8 +69,12 @@ function AdminDashboard() {
 
   const tabs = [
     { id: "dashboard" as Tab, label: "Dashboard", icon: BarChart3 },
+    { id: "analytics" as Tab, label: "Analytics", icon: TrendingUp },
     { id: "users" as Tab, label: "Users", icon: Users },
     { id: "subscriptions" as Tab, label: "Subscriptions", icon: CreditCard },
+    { id: "support" as Tab, label: "Support", icon: MessageSquare },
+    { id: "settings" as Tab, label: "Settings", icon: Sliders },
+    { id: "email" as Tab, label: "Email", icon: Mail },
     { id: "style-kits" as Tab, label: "Style Kits", icon: Disc },
     { id: "providers" as Tab, label: "API Providers", icon: Server },
     { id: "endpoints" as Tab, label: "Endpoints", icon: Zap },
@@ -101,8 +110,12 @@ function AdminDashboard() {
       </div>
 
       {activeTab === "dashboard" && <DashboardTab />}
+      {activeTab === "analytics" && <AnalyticsTab />}
       {activeTab === "users" && <UsersTab />}
       {activeTab === "subscriptions" && <SubscriptionsTab />}
+      {activeTab === "support" && <SupportTab />}
+      {activeTab === "settings" && <SettingsTab />}
+      {activeTab === "email" && <EmailSettingsTab />}
       {activeTab === "style-kits" && <StyleKitsAdminTab />}
 
       {activeTab === "providers" && (
@@ -854,6 +867,560 @@ function EndpointsTab({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function AnalyticsTab() {
+  const { data: analytics, isLoading } = useAnalytics();
+
+  if (isLoading) return <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>;
+
+  const maxActivity = Math.max(
+    ...(analytics?.recentActivity?.map(d => d.songs + d.samples + d.lyrics) || [1])
+  );
+
+  return (
+    <div className="space-y-6" data-testid="admin-analytics-tab">
+      <h2 className="text-lg font-semibold flex items-center gap-2">
+        <TrendingUp className="h-5 w-5 text-primary" /> Platform Analytics (30 Days)
+      </h2>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card data-testid="stat-tickets-open">
+          <CardContent className="p-4 text-center">
+            <AlertCircle className="h-6 w-6 mx-auto text-yellow-400 mb-1" />
+            <p className="text-2xl font-bold">{analytics?.ticketStats?.open || 0}</p>
+            <p className="text-xs text-muted-foreground">Open Tickets</p>
+          </CardContent>
+        </Card>
+        <Card data-testid="stat-tickets-progress">
+          <CardContent className="p-4 text-center">
+            <Clock className="h-6 w-6 mx-auto text-blue-400 mb-1" />
+            <p className="text-2xl font-bold">{analytics?.ticketStats?.inProgress || 0}</p>
+            <p className="text-xs text-muted-foreground">In Progress</p>
+          </CardContent>
+        </Card>
+        <Card data-testid="stat-tickets-resolved">
+          <CardContent className="p-4 text-center">
+            <CheckCircle className="h-6 w-6 mx-auto text-green-400 mb-1" />
+            <p className="text-2xl font-bold">{analytics?.ticketStats?.resolved || 0}</p>
+            <p className="text-xs text-muted-foreground">Resolved</p>
+          </CardContent>
+        </Card>
+        <Card data-testid="stat-tickets-closed">
+          <CardContent className="p-4 text-center">
+            <XCircle className="h-6 w-6 mx-auto text-gray-400 mb-1" />
+            <p className="text-2xl font-bold">{analytics?.ticketStats?.closed || 0}</p>
+            <p className="text-xs text-muted-foreground">Closed</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Daily Activity</CardTitle>
+          <CardDescription className="text-xs">Songs, Samples & Lyrics created per day</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-end gap-[2px] h-32" data-testid="chart-daily-activity">
+            {analytics?.recentActivity?.slice(-30).map((d, i) => {
+              const total = d.songs + d.samples + d.lyrics;
+              const height = maxActivity > 0 ? (total / maxActivity) * 100 : 0;
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center gap-0.5" title={`${d.date}: ${d.songs}s ${d.samples}sa ${d.lyrics}l`}>
+                  <div className="w-full rounded-t bg-primary/70 transition-all" style={{ height: `${Math.max(height, 2)}%` }} />
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex justify-between mt-1">
+            <span className="text-[10px] text-muted-foreground">30 days ago</span>
+            <span className="text-[10px] text-muted-foreground">Today</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Songs by Genre</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2" data-testid="chart-genres">
+              {analytics?.songsByGenre?.map((g) => {
+                const maxGenreCount = Math.max(...(analytics.songsByGenre?.map(x => x.count) || [1]));
+                const width = maxGenreCount > 0 ? (g.count / maxGenreCount) * 100 : 0;
+                return (
+                  <div key={g.genre} className="flex items-center gap-2">
+                    <span className="text-xs w-20 truncate text-muted-foreground">{g.genre}</span>
+                    <div className="flex-1 bg-muted rounded-full h-3">
+                      <div className="bg-primary rounded-full h-3 transition-all" style={{ width: `${width}%` }} />
+                    </div>
+                    <span className="text-xs font-medium w-8 text-right">{g.count}</span>
+                  </div>
+                );
+              })}
+              {(!analytics?.songsByGenre || analytics.songsByGenre.length === 0) && (
+                <p className="text-xs text-muted-foreground text-center py-4">No genre data yet</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Songs by Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2" data-testid="chart-status">
+              {analytics?.songsByStatus?.map((s) => (
+                <div key={s.status} className="flex items-center justify-between p-2 rounded bg-muted/50">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={s.status === "completed" ? "default" : s.status === "failed" ? "destructive" : "secondary"} className="text-[10px]">
+                      {s.status}
+                    </Badge>
+                  </div>
+                  <span className="text-sm font-bold">{s.count}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">User Growth</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1" data-testid="chart-user-growth">
+              {analytics?.userGrowth?.slice(-10).map((d) => (
+                <div key={d.date} className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{new Date(d.date).toLocaleDateString()}</span>
+                  <Badge variant="outline">{d.count} new</Badge>
+                </div>
+              ))}
+              {(!analytics?.userGrowth || analytics.userGrowth.length === 0) && (
+                <p className="text-xs text-muted-foreground text-center py-4">No user growth data yet</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function SupportTab() {
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const { data: tickets, isLoading } = useAdminTickets(statusFilter);
+  const { data: ticketDetail } = useAdminTicket(selectedTicketId);
+  const updateTicket = useUpdateTicket();
+  const replyToTicket = useReplyToTicket();
+  const { toast } = useToast();
+
+  const handleStatusChange = async (ticketId: number, newStatus: string) => {
+    try {
+      await updateTicket.mutateAsync({ id: ticketId, data: { status: newStatus } });
+      toast({ title: `Ticket ${newStatus}` });
+    } catch {
+      toast({ title: "Failed to update ticket", variant: "destructive" });
+    }
+  };
+
+  const handleReply = async () => {
+    if (!selectedTicketId || !replyText.trim()) return;
+    try {
+      await replyToTicket.mutateAsync({ ticketId: selectedTicketId, content: replyText.trim() });
+      setReplyText("");
+      toast({ title: "Reply sent" });
+    } catch {
+      toast({ title: "Failed to send reply", variant: "destructive" });
+    }
+  };
+
+  if (isLoading) return <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>;
+
+  if (selectedTicketId && ticketDetail) {
+    return (
+      <div className="space-y-4" data-testid="admin-ticket-detail">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" onClick={() => setSelectedTicketId(null)} data-testid="button-back-tickets">
+            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+          </Button>
+          <h2 className="text-lg font-semibold">Ticket #{ticketDetail.id}</h2>
+          <Badge variant={ticketDetail.status === "open" ? "destructive" : ticketDetail.status === "in_progress" ? "default" : "secondary"}>
+            {ticketDetail.status}
+          </Badge>
+          <Badge variant="outline">{ticketDetail.priority}</Badge>
+        </div>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="font-medium text-sm">{ticketDetail.subject}</p>
+                <p className="text-xs text-muted-foreground">
+                  {ticketDetail.userName || "Unknown"} ({ticketDetail.userEmail || "no email"}) • {ticketDetail.createdAt ? new Date(ticketDetail.createdAt).toLocaleString() : ""}
+                </p>
+              </div>
+              <div className="flex gap-1">
+                {ticketDetail.status !== "in_progress" && (
+                  <Button size="sm" variant="outline" onClick={() => handleStatusChange(ticketDetail.id, "in_progress")} data-testid="button-status-progress">
+                    In Progress
+                  </Button>
+                )}
+                {ticketDetail.status !== "resolved" && (
+                  <Button size="sm" variant="outline" onClick={() => handleStatusChange(ticketDetail.id, "resolved")} data-testid="button-status-resolved">
+                    Resolve
+                  </Button>
+                )}
+                {ticketDetail.status !== "closed" && (
+                  <Button size="sm" variant="outline" onClick={() => handleStatusChange(ticketDetail.id, "closed")} data-testid="button-status-closed">
+                    Close
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-3 max-h-80 overflow-y-auto mb-4">
+              {ticketDetail.messages?.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === "admin" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                    msg.role === "admin" ? "bg-primary text-black rounded-br-sm" :
+                    msg.role === "assistant" ? "bg-blue-900/30 rounded-bl-sm border border-blue-500/20" :
+                    "bg-muted rounded-bl-sm"
+                  }`}>
+                    <div className="text-[10px] opacity-60 mb-0.5">
+                      {msg.role === "admin" ? "Admin" : msg.role === "assistant" ? "AI Bot" : "User"} • {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString() : ""}
+                    </div>
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                placeholder="Type admin reply..."
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleReply(); } }}
+                data-testid="input-admin-reply"
+              />
+              <Button size="sm" onClick={handleReply} disabled={!replyText.trim() || replyToTicket.isPending} data-testid="button-send-reply">
+                {replyToTicket.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4" data-testid="admin-support-tab">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <MessageSquare className="h-5 w-5 text-primary" /> Support Tickets ({tickets?.length || 0})
+        </h2>
+        <div className="flex gap-1">
+          {[undefined, "open", "in_progress", "resolved", "closed"].map(s => (
+            <Button
+              key={s || "all"}
+              size="sm"
+              variant={statusFilter === s ? "default" : "outline"}
+              onClick={() => setStatusFilter(s)}
+              data-testid={`filter-${s || "all"}`}
+            >
+              {s ? s.replace("_", " ") : "All"}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {tickets?.map(ticket => (
+          <Card key={ticket.id} className="hover:border-primary/20 transition-colors cursor-pointer" onClick={() => setSelectedTicketId(ticket.id)} data-testid={`card-ticket-${ticket.id}`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium text-sm truncate">{ticket.subject}</span>
+                    <Badge variant={
+                      ticket.status === "open" ? "destructive" :
+                      ticket.status === "in_progress" ? "default" :
+                      ticket.status === "resolved" ? "secondary" : "outline"
+                    } className="text-[10px]">
+                      {ticket.status}
+                    </Badge>
+                    <Badge variant="outline" className="text-[10px]">{ticket.priority}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {ticket.userName || "Unknown"} • {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : ""}
+                  </p>
+                </div>
+                <Eye className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        {(!tickets || tickets.length === 0) && (
+          <div className="text-center py-12 text-muted-foreground">
+            <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p className="text-sm">No support tickets yet.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SettingsTab() {
+  const { data: settings, isLoading } = usePlatformSettings();
+  const upsertSetting = useUpsertSetting();
+  const bulkUpsert = useBulkUpsertSettings();
+  const { toast } = useToast();
+
+  const generalSettings = [
+    { key: "site_name", label: "Site Name", defaultValue: "DGB Audio", category: "general", description: "Platform name" },
+    { key: "maintenance_mode", label: "Maintenance Mode", defaultValue: "false", category: "general", description: "Enable maintenance page" },
+    { key: "signup_enabled", label: "Signup Enabled", defaultValue: "true", category: "general", description: "Allow new user registrations" },
+    { key: "default_subscription_tier", label: "Default Tier", defaultValue: "free", category: "billing", description: "Default subscription for new users" },
+    { key: "max_upload_size_mb", label: "Max Upload Size (MB)", defaultValue: "50", category: "limits", description: "Max file upload size" },
+    { key: "max_songs_free", label: "Max Songs (Free)", defaultValue: "5", category: "limits", description: "Song limit for free tier" },
+    { key: "max_songs_pro", label: "Max Songs (Pro)", defaultValue: "50", category: "limits", description: "Song limit for pro tier" },
+    { key: "max_songs_premium", label: "Max Songs (Premium)", defaultValue: "unlimited", category: "limits", description: "Song limit for premium tier" },
+    { key: "allowed_audio_types", label: "Allowed Audio Types", defaultValue: "wav,mp3,ogg,flac,m4a", category: "limits", description: "Accepted audio formats" },
+    { key: "support_auto_reply", label: "Support Auto-Reply", defaultValue: "true", category: "support", description: "AI auto-responds to support chats" },
+    { key: "brand_tagline", label: "Brand Tagline", defaultValue: "Heart Mula Music Engine", category: "branding", description: "Platform tagline" },
+  ];
+
+  const currentValues: Record<string, string> = {};
+  settings?.forEach(s => { currentValues[s.key] = s.value || ""; });
+
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
+
+  const getVal = (key: string, defaultValue: string) => {
+    if (formValues[key] !== undefined) return formValues[key];
+    return currentValues[key] ?? defaultValue;
+  };
+
+  const handleSaveAll = async () => {
+    const toSave = generalSettings.map(s => ({
+      key: s.key,
+      value: getVal(s.key, s.defaultValue),
+      category: s.category,
+      description: s.description,
+    }));
+    try {
+      await bulkUpsert.mutateAsync(toSave);
+      toast({ title: "Settings saved" });
+      setFormValues({});
+    } catch {
+      toast({ title: "Failed to save settings", variant: "destructive" });
+    }
+  };
+
+  if (isLoading) return <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>;
+
+  return (
+    <div className="space-y-4" data-testid="admin-settings-tab">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Sliders className="h-5 w-5 text-primary" /> Platform Settings
+        </h2>
+        <Button size="sm" onClick={handleSaveAll} disabled={bulkUpsert.isPending} data-testid="button-save-settings">
+          {bulkUpsert.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+          Save All
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {generalSettings.map(setting => (
+          <Card key={setting.key} data-testid={`setting-${setting.key}`}>
+            <CardContent className="p-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">{setting.label}</label>
+                  <Badge variant="outline" className="text-[10px]">{setting.category}</Badge>
+                </div>
+                {setting.key === "maintenance_mode" || setting.key === "signup_enabled" || setting.key === "support_auto_reply" ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      const current = getVal(setting.key, setting.defaultValue);
+                      setFormValues({ ...formValues, [setting.key]: current === "true" ? "false" : "true" });
+                    }}
+                    data-testid={`toggle-${setting.key}`}
+                  >
+                    {getVal(setting.key, setting.defaultValue) === "true" ? (
+                      <><ToggleRight className="h-4 w-4 mr-2 text-green-400" /> Enabled</>
+                    ) : (
+                      <><ToggleLeft className="h-4 w-4 mr-2 text-red-400" /> Disabled</>
+                    )}
+                  </Button>
+                ) : (
+                  <Input
+                    value={getVal(setting.key, setting.defaultValue)}
+                    onChange={(e) => setFormValues({ ...formValues, [setting.key]: e.target.value })}
+                    placeholder={setting.defaultValue}
+                    data-testid={`input-${setting.key}`}
+                  />
+                )}
+                <p className="text-[10px] text-muted-foreground">{setting.description}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EmailSettingsTab() {
+  const { data: settings, isLoading } = usePlatformSettings("email");
+  const bulkUpsert = useBulkUpsertSettings();
+  const { toast } = useToast();
+
+  const emailFields = [
+    { key: "email_provider", label: "Email Provider", defaultValue: "smtp", description: "SMTP, SendGrid, Mailgun, etc." },
+    { key: "email_from_name", label: "From Name", defaultValue: "DGB Audio", description: "Sender display name" },
+    { key: "email_from_address", label: "From Address", defaultValue: "noreply@dgbaudio.com", description: "Sender email address" },
+    { key: "email_smtp_host", label: "SMTP Host", defaultValue: "", description: "e.g. smtp.gmail.com" },
+    { key: "email_smtp_port", label: "SMTP Port", defaultValue: "587", description: "Usually 587 (TLS) or 465 (SSL)" },
+    { key: "email_smtp_secure", label: "Use TLS/SSL", defaultValue: "true", description: "Enable secure connection" },
+    { key: "email_reply_to", label: "Reply-To Address", defaultValue: "", description: "Where replies go" },
+  ];
+
+  const templateFields = [
+    { key: "email_template_welcome", label: "Welcome Email", defaultValue: "Welcome to DGB Audio! Start creating music with the Heart Mula Engine.", description: "Sent to new users" },
+    { key: "email_template_subscription", label: "Subscription Confirmation", defaultValue: "Your {plan} subscription is now active. Enjoy unlimited music creation!", description: "Sent after subscription" },
+    { key: "email_template_support_reply", label: "Support Reply Notification", defaultValue: "Your support ticket #{ticketId} has a new reply from our team.", description: "Sent when admin replies to ticket" },
+    { key: "email_template_password_reset", label: "Password Reset", defaultValue: "Click the link below to reset your password.", description: "Password reset email" },
+  ];
+
+  const currentValues: Record<string, string> = {};
+  settings?.forEach(s => { currentValues[s.key] = s.value || ""; });
+
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
+
+  const getVal = (key: string, defaultValue: string) => {
+    if (formValues[key] !== undefined) return formValues[key];
+    return currentValues[key] ?? defaultValue;
+  };
+
+  const handleSave = async () => {
+    const allFields = [...emailFields, ...templateFields];
+    const toSave = allFields.map(f => ({
+      key: f.key,
+      value: getVal(f.key, f.defaultValue),
+      category: "email",
+      description: f.description,
+    }));
+    try {
+      await bulkUpsert.mutateAsync(toSave);
+      toast({ title: "Email settings saved" });
+      setFormValues({});
+    } catch {
+      toast({ title: "Failed to save email settings", variant: "destructive" });
+    }
+  };
+
+  if (isLoading) return <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>;
+
+  return (
+    <div className="space-y-6" data-testid="admin-email-tab">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Mail className="h-5 w-5 text-primary" /> Email Configuration
+        </h2>
+        <Button size="sm" onClick={handleSave} disabled={bulkUpsert.isPending} data-testid="button-save-email">
+          {bulkUpsert.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+          Save Email Settings
+        </Button>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold mb-3">SMTP Configuration</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {emailFields.map(field => (
+            <Card key={field.key} data-testid={`email-${field.key}`}>
+              <CardContent className="p-4 space-y-2">
+                <label className="text-sm font-medium">{field.label}</label>
+                {field.key === "email_smtp_secure" ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      const current = getVal(field.key, field.defaultValue);
+                      setFormValues({ ...formValues, [field.key]: current === "true" ? "false" : "true" });
+                    }}
+                    data-testid={`toggle-${field.key}`}
+                  >
+                    {getVal(field.key, field.defaultValue) === "true" ? (
+                      <><ToggleRight className="h-4 w-4 mr-2 text-green-400" /> Enabled</>
+                    ) : (
+                      <><ToggleLeft className="h-4 w-4 mr-2 text-red-400" /> Disabled</>
+                    )}
+                  </Button>
+                ) : (
+                  <Input
+                    value={getVal(field.key, field.defaultValue)}
+                    onChange={(e) => setFormValues({ ...formValues, [field.key]: e.target.value })}
+                    placeholder={field.defaultValue || field.description}
+                    data-testid={`input-${field.key}`}
+                  />
+                )}
+                <p className="text-[10px] text-muted-foreground">{field.description}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold mb-3">Email Templates</h3>
+        <div className="space-y-3">
+          {templateFields.map(field => (
+            <Card key={field.key} data-testid={`template-${field.key}`}>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">{field.label}</label>
+                  <Badge variant="outline" className="text-[10px]">template</Badge>
+                </div>
+                <Textarea
+                  value={getVal(field.key, field.defaultValue)}
+                  onChange={(e) => setFormValues({ ...formValues, [field.key]: e.target.value })}
+                  rows={2}
+                  className="text-sm"
+                  data-testid={`input-${field.key}`}
+                />
+                <p className="text-[10px] text-muted-foreground">{field.description}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      <Card className="border-yellow-500/20 bg-yellow-500/5">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-yellow-400 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium">SMTP Credentials</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                SMTP username and password should be stored as environment secrets (SMTP_USER, SMTP_PASSWORD) for security. Configure them in your environment variables, not in these settings.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

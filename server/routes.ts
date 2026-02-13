@@ -12,7 +12,7 @@ import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engi
 import { processStemSeparation } from "./core/stems_engine";
 import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong, processAudioCut } from "./workers/sample_tasks";
 import { seedDefaultMusicGPTProvider } from "./core/seed_providers";
-import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, STYLE_KIT_GENRES, INSTRUMENT_TYPES, insertApiProviderSchema, insertApiEndpointSchema, insertStyleKitSchema, insertStyleKitInstrumentSchema } from "@shared/schema";
+import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, STYLE_KIT_GENRES, INSTRUMENT_TYPES, SETTING_CATEGORIES, TICKET_STATUSES, TICKET_PRIORITIES, insertApiProviderSchema, insertApiEndpointSchema, insertStyleKitSchema, insertStyleKitInstrumentSchema, insertPlatformSettingSchema } from "@shared/schema";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
 import path from "path";
@@ -967,6 +967,199 @@ export async function registerRoutes(
     }
   });
 
+  // ========== ADMIN: PLATFORM SETTINGS ==========
+
+  app.get("/api/admin/settings", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const category = req.query.category as string | undefined;
+      const settings = await storage.getPlatformSettings(category);
+      res.json(settings);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.put("/api/admin/settings", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const data = insertPlatformSettingSchema.parse(req.body);
+      const setting = await storage.upsertPlatformSetting(data);
+      res.json(setting);
+    } catch (err: any) {
+      if (err.name === "ZodError") return res.status(400).json({ message: err.errors });
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.put("/api/admin/settings/bulk", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const { settings } = req.body;
+      if (!Array.isArray(settings)) return res.status(400).json({ message: "settings array required" });
+      const results = [];
+      for (const s of settings) {
+        const data = insertPlatformSettingSchema.parse(s);
+        results.push(await storage.upsertPlatformSetting(data));
+      }
+      res.json(results);
+    } catch (err: any) {
+      if (err.name === "ZodError") return res.status(400).json({ message: err.errors });
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/settings/:key", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      await storage.deletePlatformSetting(req.params.key);
+      res.sendStatus(204);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/admin/settings/meta", (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    res.json({ categories: SETTING_CATEGORIES });
+  });
+
+  // ========== ADMIN: ANALYTICS ==========
+
+  app.get("/api/admin/analytics", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const analytics = await storage.getAnalytics();
+      res.json(analytics);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ========== ADMIN: SUPPORT TICKETS ==========
+
+  app.get("/api/admin/tickets/meta", (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    res.json({ statuses: TICKET_STATUSES, priorities: TICKET_PRIORITIES });
+  });
+
+  app.get("/api/admin/tickets", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const status = req.query.status as string | undefined;
+      const tickets = await storage.getSupportTickets(status);
+      res.json(tickets);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/admin/tickets/:id", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const ticket = await storage.getSupportTicket(Number(req.params.id));
+      if (!ticket) return res.sendStatus(404);
+      const messages = await storage.getSupportMessages(ticket.id);
+      res.json({ ...ticket, messages });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/tickets/:id", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const ticket = await storage.updateSupportTicket(Number(req.params.id), req.body);
+      res.json(ticket);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/tickets/:id/reply", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ message: "content required" });
+    try {
+      const ticket = await storage.getSupportTicket(Number(req.params.id));
+      if (!ticket) return res.sendStatus(404);
+      const message = await storage.createSupportMessage({
+        ticketId: ticket.id,
+        role: "admin",
+        content,
+      });
+      if (ticket.status === "open") {
+        await storage.updateSupportTicket(ticket.id, { status: "in_progress" });
+      }
+      res.status(201).json(message);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ========== USER: SUPPORT TICKETS ==========
+
+  app.get("/api/support/tickets", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const tickets = await storage.getUserSupportTickets(userId);
+      res.json(tickets);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/support/tickets/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const ticket = await storage.getSupportTicket(Number(req.params.id));
+      if (!ticket || ticket.userId !== userId) return res.sendStatus(404);
+      const messages = await storage.getSupportMessages(ticket.id);
+      res.json({ ...ticket, messages });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/support/tickets", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const user = await storage.getUser(userId);
+    const { subject, message } = req.body;
+    if (!subject || !message) return res.status(400).json({ message: "subject and message required" });
+    try {
+      const ticket = await storage.createSupportTicket({
+        userId,
+        userName: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : undefined,
+        userEmail: user?.email || undefined,
+        subject,
+        status: "open",
+        priority: "normal",
+      });
+      await storage.createSupportMessage({ ticketId: ticket.id, role: "user", content: message });
+      res.status(201).json(ticket);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/support/tickets/:id/message", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ message: "content required" });
+    try {
+      const ticket = await storage.getSupportTicket(Number(req.params.id));
+      if (!ticket || ticket.userId !== userId) return res.sendStatus(404);
+      const message = await storage.createSupportMessage({ ticketId: ticket.id, role: "user", content });
+      res.status(201).json(message);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // ========== STYLE KITS ==========
 
   app.get("/api/style-kits", async (req, res) => {
@@ -1223,12 +1416,70 @@ export async function registerRoutes(
 
   // ========== AI SUPPORT CHATBOT ==========
 
+  app.get("/api/support/ticket/current", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const tickets = await storage.getSupportTickets(userId);
+      const openTicket = tickets.find(t => t.status === "open" || t.status === "in_progress");
+      if (!openTicket) return res.json({ ticket: null, messages: [] });
+      const messages = await storage.getSupportMessages(openTicket.id);
+      res.json({
+        ticket: openTicket,
+        messages: messages.map(m => ({
+          role: m.role === "admin" ? "assistant" : m.role,
+          content: m.content,
+        })),
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/support/ticket/:id/messages", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const ticketId = Number(req.params.id);
+    try {
+      const ticket = await storage.getSupportTicket(ticketId);
+      if (!ticket || ticket.userId !== userId) return res.sendStatus(404);
+      const messages = await storage.getSupportMessages(ticketId);
+      res.json({
+        messages: messages.map(m => ({
+          role: m.role === "admin" ? "assistant" : m.role,
+          content: m.content,
+        })),
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/support/chat", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const { message, history } = req.body;
+    const userId = (req.user as any).claims.sub;
+    const { message, history, ticketId } = req.body;
     if (!message) return res.status(400).json({ message: "message required" });
 
     try {
+      let currentTicketId = ticketId ? Number(ticketId) : null;
+      const user = await storage.getUser(userId);
+
+      if (!currentTicketId) {
+        const subject = message.length > 60 ? message.substring(0, 57) + "..." : message;
+        const ticket = await storage.createSupportTicket({
+          userId,
+          userName: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : undefined,
+          userEmail: user?.email || undefined,
+          subject,
+          status: "open",
+          priority: "normal",
+        });
+        currentTicketId = ticket.id;
+      }
+
+      await storage.createSupportMessage({ ticketId: currentTicketId, role: "user", content: message });
+
       const OpenAI = (await import("openai")).default;
       const openai = new OpenAI({
         apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -1277,9 +1528,11 @@ IMPORTANT: Always be helpful, concise, and supportive. If you don't know somethi
         temperature: 0.7,
       });
 
-      res.json({
-        reply: completion.choices[0]?.message?.content || "I'm sorry, I couldn't process your request. Please try again.",
-      });
+      const reply = completion.choices[0]?.message?.content || "I'm sorry, I couldn't process your request. Please try again.";
+
+      await storage.createSupportMessage({ ticketId: currentTicketId, role: "assistant", content: reply });
+
+      res.json({ reply, ticketId: currentTicketId });
     } catch (err: any) {
       console.error("[Support] Chat error:", err.message);
       res.status(500).json({ message: "Support chat unavailable" });

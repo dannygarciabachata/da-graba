@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageCircle, Send, X, Loader2 } from "lucide-react";
+import { MessageCircle, Send, X, Loader2, RotateCcw } from "lucide-react";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -15,15 +15,23 @@ export default function SupportChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [ticketId, setTicketId] = useState<number | null>(() => {
+    const stored = localStorage.getItem("dgb_support_ticket_id");
+    return stored ? Number(stored) : null;
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const sendMessage = useMutation({
     mutationFn: async (message: string) => {
       const history = messages.map((m) => ({ role: m.role, content: m.content }));
-      const res = await apiRequest("POST", "/api/support/chat", { message, history });
+      const res = await apiRequest("POST", "/api/support/chat", { message, history, ticketId });
       return await res.json();
     },
-    onSuccess: (data: { reply: string }) => {
+    onSuccess: (data: { reply: string; ticketId?: number }) => {
+      if (data.ticketId && !ticketId) {
+        setTicketId(data.ticketId);
+        localStorage.setItem("dgb_support_ticket_id", String(data.ticketId));
+      }
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
     },
     onError: () => {
@@ -33,6 +41,33 @@ export default function SupportChat() {
       ]);
     },
   });
+
+  useEffect(() => {
+    if (!isOpen || messages.length > 0) return;
+    if (ticketId) {
+      fetch(`/api/support/ticket/${ticketId}/messages`, { credentials: "include" })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.messages?.length > 0) {
+            setMessages(data.messages.map((m: any) => ({ role: m.role, content: m.content })));
+          }
+        })
+        .catch(() => {});
+    } else {
+      fetch("/api/support/ticket/current", { credentials: "include" })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.ticket) {
+            setTicketId(data.ticket.id);
+            localStorage.setItem("dgb_support_ticket_id", String(data.ticket.id));
+            if (data.messages?.length > 0) {
+              setMessages(data.messages.map((m: any) => ({ role: m.role, content: m.content })));
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -66,14 +101,25 @@ export default function SupportChat() {
                 <MessageCircle className="h-4 w-4 text-primary" />
                 DGB Support
               </CardTitle>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => setIsOpen(false)}
-                data-testid="button-close-chat"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => { setMessages([]); setTicketId(null); localStorage.removeItem("dgb_support_ticket_id"); }}
+                  title="New conversation"
+                  data-testid="button-new-chat"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setIsOpen(false)}
+                  data-testid="button-close-chat"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </CardHeader>
 
             <CardContent className="flex-1 overflow-y-auto p-4 space-y-3">

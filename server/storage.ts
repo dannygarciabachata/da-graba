@@ -1,9 +1,10 @@
 import { db } from "./db";
-import { eq, desc, and, sql, count } from "drizzle-orm";
+import { eq, desc, and, sql, count, gte } from "drizzle-orm";
 import { 
   songs, lyrics, quizResults, tracks, samples,
   apiProviders, apiEndpoints,
   styleKits, styleKitInstruments,
+  platformSettings, supportTickets, supportMessages,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
@@ -12,7 +13,10 @@ import {
   type ApiProvider, type InsertApiProvider,
   type ApiEndpoint, type InsertApiEndpoint,
   type StyleKit, type InsertStyleKit,
-  type StyleKitInstrument, type InsertStyleKitInstrument
+  type StyleKitInstrument, type InsertStyleKitInstrument,
+  type PlatformSetting, type InsertPlatformSetting,
+  type SupportTicket, type InsertSupportTicket,
+  type SupportMessage, type InsertSupportMessage
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -74,6 +78,28 @@ export interface IStorage {
   createStyleKitInstrument(instrument: InsertStyleKitInstrument): Promise<StyleKitInstrument>;
   updateStyleKitInstrument(id: number, data: Partial<StyleKitInstrument>): Promise<StyleKitInstrument>;
   deleteStyleKitInstrument(id: number): Promise<void>;
+
+  getPlatformSettings(category?: string): Promise<PlatformSetting[]>;
+  getPlatformSetting(key: string): Promise<PlatformSetting | undefined>;
+  upsertPlatformSetting(setting: InsertPlatformSetting): Promise<PlatformSetting>;
+  deletePlatformSetting(key: string): Promise<void>;
+
+  getSupportTickets(status?: string): Promise<SupportTicket[]>;
+  getSupportTicket(id: number): Promise<SupportTicket | undefined>;
+  getUserSupportTickets(userId: string): Promise<SupportTicket[]>;
+  createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
+  updateSupportTicket(id: number, data: Partial<SupportTicket>): Promise<SupportTicket>;
+
+  getSupportMessages(ticketId: number): Promise<SupportMessage[]>;
+  createSupportMessage(message: InsertSupportMessage): Promise<SupportMessage>;
+
+  getAnalytics(): Promise<{
+    userGrowth: { date: string; count: number }[];
+    songsByGenre: { genre: string; count: number }[];
+    songsByStatus: { status: string; count: number }[];
+    recentActivity: { date: string; songs: number; samples: number; lyrics: number }[];
+    ticketStats: { open: number; inProgress: number; resolved: number; closed: number };
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -452,6 +478,153 @@ export class DatabaseStorage implements IStorage {
       } catch {}
     }
     await db.delete(styleKitInstruments).where(eq(styleKitInstruments.id, id));
+  }
+
+  // === Platform Settings ===
+
+  async getPlatformSettings(category?: string): Promise<PlatformSetting[]> {
+    if (category) {
+      return await db.select().from(platformSettings)
+        .where(eq(platformSettings.category, category))
+        .orderBy(platformSettings.key);
+    }
+    return await db.select().from(platformSettings).orderBy(platformSettings.category, platformSettings.key);
+  }
+
+  async getPlatformSetting(key: string): Promise<PlatformSetting | undefined> {
+    const [setting] = await db.select().from(platformSettings).where(eq(platformSettings.key, key));
+    return setting;
+  }
+
+  async upsertPlatformSetting(setting: InsertPlatformSetting): Promise<PlatformSetting> {
+    const existing = await this.getPlatformSetting(setting.key);
+    if (existing) {
+      const [updated] = await db.update(platformSettings)
+        .set({ value: setting.value, category: setting.category, description: setting.description, updatedAt: new Date() })
+        .where(eq(platformSettings.key, setting.key))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(platformSettings).values(setting).returning();
+    return created;
+  }
+
+  async deletePlatformSetting(key: string): Promise<void> {
+    await db.delete(platformSettings).where(eq(platformSettings.key, key));
+  }
+
+  // === Support Tickets ===
+
+  async getSupportTickets(status?: string): Promise<SupportTicket[]> {
+    if (status) {
+      return await db.select().from(supportTickets)
+        .where(eq(supportTickets.status, status))
+        .orderBy(desc(supportTickets.updatedAt));
+    }
+    return await db.select().from(supportTickets).orderBy(desc(supportTickets.updatedAt));
+  }
+
+  async getSupportTicket(id: number): Promise<SupportTicket | undefined> {
+    const [ticket] = await db.select().from(supportTickets).where(eq(supportTickets.id, id));
+    return ticket;
+  }
+
+  async getUserSupportTickets(userId: string): Promise<SupportTicket[]> {
+    return await db.select().from(supportTickets)
+      .where(eq(supportTickets.userId, userId))
+      .orderBy(desc(supportTickets.createdAt));
+  }
+
+  async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> {
+    const [created] = await db.insert(supportTickets).values(ticket).returning();
+    return created;
+  }
+
+  async updateSupportTicket(id: number, data: Partial<SupportTicket>): Promise<SupportTicket> {
+    const updateData: any = { ...data, updatedAt: new Date() };
+    if (data.status === "closed" || data.status === "resolved") {
+      updateData.closedAt = new Date();
+    }
+    const [updated] = await db.update(supportTickets).set(updateData).where(eq(supportTickets.id, id)).returning();
+    return updated;
+  }
+
+  async getSupportMessages(ticketId: number): Promise<SupportMessage[]> {
+    return await db.select().from(supportMessages)
+      .where(eq(supportMessages.ticketId, ticketId))
+      .orderBy(supportMessages.createdAt);
+  }
+
+  async createSupportMessage(message: InsertSupportMessage): Promise<SupportMessage> {
+    const [created] = await db.insert(supportMessages).values(message).returning();
+    await db.update(supportTickets).set({ updatedAt: new Date() }).where(eq(supportTickets.id, message.ticketId));
+    return created;
+  }
+
+  // === Analytics ===
+
+  async getAnalytics() {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const userGrowthResult = await db.execute(sql`
+      SELECT DATE(created_at) as date, COUNT(*)::int as count
+      FROM users
+      WHERE created_at >= ${thirtyDaysAgo}
+      GROUP BY DATE(created_at)
+      ORDER BY date
+    `);
+
+    const songsByGenreResult = await db.execute(sql`
+      SELECT COALESCE(genre, 'unknown') as genre, COUNT(*)::int as count
+      FROM songs
+      GROUP BY genre
+      ORDER BY count DESC
+      LIMIT 10
+    `);
+
+    const songsByStatusResult = await db.execute(sql`
+      SELECT status, COUNT(*)::int as count
+      FROM songs
+      GROUP BY status
+      ORDER BY count DESC
+    `);
+
+    const recentActivityResult = await db.execute(sql`
+      SELECT d.date,
+        COALESCE(s.count, 0)::int as songs,
+        COALESCE(sa.count, 0)::int as samples,
+        COALESCE(l.count, 0)::int as lyrics
+      FROM generate_series(${thirtyDaysAgo}::date, CURRENT_DATE, '1 day') AS d(date)
+      LEFT JOIN (SELECT DATE(created_at) as date, COUNT(*) as count FROM songs WHERE created_at >= ${thirtyDaysAgo} GROUP BY DATE(created_at)) s ON s.date = d.date
+      LEFT JOIN (SELECT DATE(created_at) as date, COUNT(*) as count FROM samples WHERE created_at >= ${thirtyDaysAgo} GROUP BY DATE(created_at)) sa ON sa.date = d.date
+      LEFT JOIN (SELECT DATE(created_at) as date, COUNT(*) as count FROM lyrics WHERE created_at >= ${thirtyDaysAgo} GROUP BY DATE(created_at)) l ON l.date = d.date
+      ORDER BY d.date
+    `);
+
+    const ticketStatsResult = await db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'open')::int as open,
+        COUNT(*) FILTER (WHERE status = 'in_progress')::int as in_progress,
+        COUNT(*) FILTER (WHERE status = 'resolved')::int as resolved,
+        COUNT(*) FILTER (WHERE status = 'closed')::int as closed
+      FROM support_tickets
+    `);
+
+    const ticketRow = ticketStatsResult.rows[0] || { open: 0, in_progress: 0, resolved: 0, closed: 0 };
+
+    return {
+      userGrowth: userGrowthResult.rows.map((r: any) => ({ date: r.date, count: r.count })),
+      songsByGenre: songsByGenreResult.rows.map((r: any) => ({ genre: r.genre, count: r.count })),
+      songsByStatus: songsByStatusResult.rows.map((r: any) => ({ status: r.status, count: r.count })),
+      recentActivity: recentActivityResult.rows.map((r: any) => ({ date: r.date, songs: r.songs, samples: r.samples, lyrics: r.lyrics })),
+      ticketStats: {
+        open: Number(ticketRow.open) || 0,
+        inProgress: Number(ticketRow.in_progress) || 0,
+        resolved: Number(ticketRow.resolved) || 0,
+        closed: Number(ticketRow.closed) || 0,
+      },
+    };
   }
 
   async getStripeSubscriptions() {
