@@ -153,7 +153,7 @@ export function AppSidebar() {
                         }}
                       >
                         <Settings className="h-4 w-4" />
-                        <span>API Providers</span>
+                        <span>Admin Panel</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
