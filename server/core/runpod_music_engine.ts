@@ -2,6 +2,7 @@ import { isRunPodConfigured } from "./runpod_client";
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
+import WebSocket from "ws";
 
 const AUDIO_BASE_DIR = path.join(process.cwd(), "public", "audio");
 
@@ -256,8 +257,6 @@ export async function submitRunPodMusicGeneration(
     const wsProtocol = base.startsWith("https") ? "wss" : "ws";
     const wsBase = base.replace(/^https?/, wsProtocol);
     const tokenParam = token ? `?token=${token}` : "";
-
-    const WebSocket = require("ws");
 
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {

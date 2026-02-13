@@ -1,4 +1,5 @@
 import type { TrainingConfig } from "./sao_training_engine";
+import WebSocket from "ws";
 
 const RUNPOD_TOKEN = () => process.env.RUNPOD_JUPYTER_TOKEN || "";
 
@@ -67,7 +68,6 @@ async function executeCode(kernelId: string, code: string): Promise<string> {
       resolve("execution_timeout_submitted");
     }, 60000);
 
-    const WebSocket = require("ws");
     let ws: any;
 
     try {
