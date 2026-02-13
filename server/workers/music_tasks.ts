@@ -61,12 +61,15 @@ export async function processMusicGeneration(
 
     const useGeneric = await hasProviderForOperation("music_generation");
 
+    const safePrompt = finalPrompt.length > 295 ? finalPrompt.substring(0, 292) + "..." : finalPrompt;
+    console.log(`[Worker] Prompt length: ${finalPrompt.length} chars${finalPrompt.length > 295 ? ' (truncated to 295)' : ''}`);
+
     if (useGeneric) {
       console.log(`[Worker] Using generic API engine for music generation`);
       const webhookUrl = getWebhookUrl();
 
       const submitResult = await submitGenericJob("music_generation", {
-        prompt: finalPrompt,
+        prompt: safePrompt,
         music_style: style,
         lyrics: generatedLyrics || undefined,
         output_length: duration,
@@ -85,7 +88,7 @@ export async function processMusicGeneration(
       console.log(`[Worker] Using MusicGPT fallback for music generation`);
       const webhookUrl = getMusicGPTWebhookUrl();
 
-      const submitResult = await submitMusicGPTGeneration(finalPrompt, style, {
+      const submitResult = await submitMusicGPTGeneration(safePrompt, style, {
         lyrics: generatedLyrics || undefined,
         duration,
         webhookUrl,

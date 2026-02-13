@@ -148,16 +148,22 @@ export function buildStyleKitPrompt(
   genre: string,
   instruments: { name: string; type: string; description?: string | null }[]
 ): string {
-  const instrumentList = instruments
-    .map((i) => {
-      const desc = i.description ? ` (${i.description})` : "";
-      return `${i.name}${desc}`;
-    })
-    .join(", ");
-
+  const instrumentNames = instruments.map((i) => i.name).join(", ");
   const genreLabel = genre.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-  return `${userPrompt}, ${genreLabel} style using the "${kitName}" instrument kit: ${instrumentList}. Authentic ${genreLabel} arrangement with all instruments playing together as a tight ensemble, professional studio quality, balanced mix`;
+  let prompt = `${userPrompt}, ${genreLabel} style, ${kitName}: ${instrumentNames}, studio quality`;
+
+  if (prompt.length > 290) {
+    prompt = `${userPrompt}, ${genreLabel}, ${kitName}, studio quality`;
+  }
+  if (prompt.length > 290) {
+    prompt = `${userPrompt}, ${genreLabel}, studio quality`;
+  }
+  if (prompt.length > 290) {
+    prompt = prompt.substring(0, 287) + "...";
+  }
+
+  return prompt;
 }
 
 export async function generateStructuredPrompt(userInput: string): Promise<MusicPromptConfig> {
