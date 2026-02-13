@@ -1,7 +1,7 @@
 # DGB Audio - Heart Mula Music Engine
 
 ## Overview
-AI-powered music generation SaaS platform by Danny Garcia. The "Heart Mula" engine uses a **generic, API-agnostic architecture** where any API provider can be configured via the Admin Panel. Default provider is MusicGPT for all audio operations. OpenAI handles lyrics writing. Supports 20+ music genres. Uses webhook-based architecture for efficient async processing. Includes Stripe subscription billing, comprehensive admin dashboard, and AI support chatbot.
+AI-powered music generation SaaS platform by Danny Garcia. The "Heart Mula" engine uses a **generic, API-agnostic architecture** where any API provider can be configured via the Admin Panel. Default provider is MusicGPT for all audio operations. OpenAI handles lyrics writing. Supports 20+ music genres. Uses webhook-based architecture for efficient async processing. Includes Stripe subscription billing, comprehensive admin dashboard with analytics/settings/support management/email config, and AI support chatbot with persistent ticket tracking.
 
 ## Architecture
 - **Frontend**: React + Vite + TailwindCSS + Shadcn UI
@@ -14,6 +14,18 @@ AI-powered music generation SaaS platform by Danny Garcia. The "Heart Mula" engi
 - **Lyrics AI**: OpenAI via Replit AI Integrations (GPT-5.1)
 - **Support AI**: OpenAI-powered chatbot with platform knowledge
 - **Admin Panel**: Owner-only UI for managing users, subscriptions, API providers, endpoints, and platform stats
+
+## Admin Dashboard Tabs
+- **Dashboard**: Overview stats (users, songs, subscriptions, revenue)
+- **Analytics**: 30-day metrics - daily activity chart, songs by genre/status, user growth, ticket stats
+- **Users**: User management with subscription info
+- **Subscriptions**: Active subscription management
+- **Support**: Ticket list with status filters, ticket detail with message thread, admin replies, status changes (open/in_progress/resolved/closed)
+- **Settings**: Platform config (maintenance mode, signup toggle, upload limits, subscription tier limits, audio types, support auto-reply, branding)
+- **Email**: SMTP configuration (host/port/TLS), sender info, email templates (welcome/subscription/support/password_reset)
+- **Style Kits**: Instrument kit management with audio upload
+- **API Providers**: Generic API provider CRUD
+- **Endpoints**: API endpoint configuration with test connection
 
 ## Generic API Provider System
 The system is API-agnostic. All audio operations route through a generic engine that:
