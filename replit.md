@@ -47,7 +47,8 @@ The "Heart Mula" music engine employs a microservices-oriented architecture with
     - **Song History:** Tracks processing status via polling.
 
 ## External Dependencies
-- **MusicGPT:** Primary AI provider for all audio-related operations (music generation, stem separation, remix, mastering, etc.).
+- **Stable Audio Open (Self-Hosted):** Primary music generation engine running on RunPod GPU server. Uses `runpod_music_engine.ts` to submit inference jobs via Jupyter WebSocket protocol. Generates audio from text prompts with no per-song API cost. Webhook: `/api/webhooks/runpod-music`. Falls back to external APIs (Generic/MusicGPT) if RunPod is unavailable.
+- **MusicGPT:** Fallback AI provider for audio-related operations (music generation, stem separation, remix, mastering, etc.).
 - **OpenAI:** Used for AI lyrics generation, AI support chatbot, and prompt generation within the SAO training pipeline.
 - **Neon (PostgreSQL):** Database hosting for all persistent data.
 - **Stripe:** Payment gateway for subscription management, checkouts, and customer portals.

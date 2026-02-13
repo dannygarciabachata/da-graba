@@ -8,8 +8,10 @@ import {
   getWebhookUrl as getMusicGPTWebhookUrl 
 } from "../core/musicgpt_engine";
 import { generateCreativeLyrics } from "../core/antigravity_engine";
+import { canUseRunPodMusic, submitRunPodMusicGeneration } from "../core/runpod_music_engine";
 
 export const pendingTaskMap = new Map<string, number>();
+export const pendingRunPodSongs = new Map<number, NodeJS.Timeout>();
 
 function mapStyleToLyricsStyle(style: string): "romantic" | "dance" | "heartbreak" {
   const danceStyles = ["EDM", "Dance Pop", "Reggaeton", "Afrobeat", "House", "Drum & Bass"];
@@ -59,10 +61,29 @@ export async function processMusicGeneration(
 
     const { generatedLyrics } = await generateSmartPrompt(finalPrompt, style, lyrics);
 
-    const useGeneric = await hasProviderForOperation("music_generation");
-
     const safePrompt = finalPrompt.length > 295 ? finalPrompt.substring(0, 292) + "..." : finalPrompt;
     console.log(`[Worker] Prompt length: ${finalPrompt.length} chars${finalPrompt.length > 295 ? ' (truncated to 295)' : ''}`);
+
+    const fullPrompt = generatedLyrics 
+      ? `${safePrompt}. Lyrics: ${generatedLyrics.substring(0, 200)}` 
+      : safePrompt;
+
+    if (canUseRunPodMusic()) {
+      console.log(`[Worker] Using RunPod SAO engine for music generation (self-hosted)`);
+
+      const result = await submitRunPodMusicGeneration(songId, fullPrompt, duration);
+
+      if (result.success) {
+        await storage.updateSongTaskId(songId, result.jobId);
+        console.log(`[Worker] RunPod job ${result.jobId} submitted for song ${songId}`);
+        startRunPodTimeout(songId, 600000);
+        return;
+      } else {
+        console.log(`[Worker] RunPod submission failed: ${result.error}, trying fallback providers...`);
+      }
+    }
+
+    const useGeneric = await hasProviderForOperation("music_generation");
 
     if (useGeneric) {
       console.log(`[Worker] Using generic API engine for music generation`);
@@ -103,6 +124,23 @@ export async function processMusicGeneration(
     console.error(`[Worker] Music generation failed for song ${songId}:`, err);
     await storage.updateSongStatus(songId, "failed", undefined, err.message || "Generation failed");
   }
+}
+
+function startRunPodTimeout(songId: number, timeoutMs: number) {
+  const timer = setTimeout(async () => {
+    try {
+      const song = await storage.getSong(songId);
+      if (song && song.status === "processing") {
+        console.log(`[RunPod Music] Song ${songId} timed out after ${timeoutMs / 1000}s`);
+        await storage.updateSongStatus(songId, "failed", undefined, "Generation timed out - RunPod may still be processing");
+      }
+    } catch (err: any) {
+      console.error(`[RunPod Music] Timeout check error for song ${songId}:`, err.message);
+    }
+    pendingRunPodSongs.delete(songId);
+  }, timeoutMs);
+
+  pendingRunPodSongs.set(songId, timer);
 }
 
 function startFallbackPoller(songId: number, taskId: string, useGeneric: boolean) {

@@ -4,7 +4,8 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
-import { processMusicGeneration, pendingTaskMap } from "./workers/music_tasks";
+import { processMusicGeneration, pendingTaskMap, pendingRunPodSongs } from "./workers/music_tasks";
+import { saveRunPodAudio } from "./core/runpod_music_engine";
 import { generateCreativeLyrics } from "./core/antigravity_engine";
 import { buildMusicGenPrompt, buildStyleKitPrompt, PROMPT_VERSIONS } from "./core/prompt_engine";
 import { downloadMusicGPTFile } from "./core/musicgpt_engine";
@@ -237,6 +238,68 @@ export async function registerRoutes(
       res.sendStatus(200);
     } catch (err: any) {
       console.error("[Webhook] Error processing webhook:", err);
+      res.sendStatus(200);
+    }
+  });
+
+  app.post("/api/webhooks/runpod-music", async (req, res) => {
+    try {
+      const payload = req.body;
+      const songId = payload.songId;
+      console.log(`[Webhook] RunPod music webhook received for song ${songId}, status: ${payload.status}`);
+
+      if (!songId) {
+        console.log("[Webhook] No songId in RunPod music payload, ignoring");
+        return res.sendStatus(200);
+      }
+
+      const song = await storage.getSong(songId);
+      if (!song) {
+        console.log(`[Webhook] No song found with id ${songId}`);
+        return res.sendStatus(200);
+      }
+
+      const existingTimeout = pendingRunPodSongs.get(songId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+        pendingRunPodSongs.delete(songId);
+      }
+
+      if (payload.status === "failed") {
+        if (song.status === "completed") {
+          console.log(`[Webhook] Song ${songId} already completed, ignoring failure`);
+          return res.sendStatus(200);
+        }
+        const errorMsg = payload.error || "SAO generation failed";
+        console.log(`[Webhook] Song ${songId} failed: ${errorMsg}`);
+        await storage.updateSongStatus(songId, "failed", undefined, errorMsg);
+        return res.sendStatus(200);
+      }
+
+      if (payload.status === "completed" && payload.audioBase64) {
+        console.log(`[Webhook] Song ${songId} completed! Saving audio (${payload.fileSize ? (payload.fileSize / 1024 / 1024).toFixed(1) + 'MB' : 'unknown size'})...`);
+
+        const audioFormat = payload.audioFormat || "mp3";
+        const localUrl = await saveRunPodAudio(payload.audioBase64, songId, audioFormat);
+        const duration = payload.duration || null;
+
+        await storage.updateSongStatus(songId, "completed", localUrl);
+
+        if (duration) {
+          try {
+            const { db } = await import("./db");
+            const { songs: songsTable } = await import("@shared/schema");
+            const { eq } = await import("drizzle-orm");
+            await db.update(songsTable).set({ duration }).where(eq(songsTable.id, songId));
+          } catch {}
+        }
+
+        console.log(`[Webhook] Song ${songId} saved: ${localUrl} (gen time: ${payload.generationTime}s, device: ${payload.device})`);
+      }
+
+      res.sendStatus(200);
+    } catch (err: any) {
+      console.error("[Webhook] Error processing RunPod music webhook:", err);
       res.sendStatus(200);
     }
   });
