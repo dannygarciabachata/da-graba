@@ -1,0 +1,129 @@
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { ApiProvider, ApiEndpoint } from "@shared/schema";
+
+export function useAdminCheck() {
+  return useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/check"],
+    retry: false,
+  });
+}
+
+export function useAdminMeta() {
+  return useQuery<{
+    operationTypes: string[];
+    providerCategories: string[];
+    authTypes: string[];
+  }>({
+    queryKey: ["/api/admin/meta"],
+    retry: false,
+  });
+}
+
+export function useProviders() {
+  return useQuery<ApiProvider[]>({
+    queryKey: ["/api/admin/providers"],
+    retry: false,
+  });
+}
+
+export function useProvider(id: number) {
+  return useQuery<ApiProvider>({
+    queryKey: ["/api/admin/providers", id],
+    enabled: id > 0,
+    retry: false,
+  });
+}
+
+export function useCreateProvider() {
+  return useMutation({
+    mutationFn: async (data: Partial<ApiProvider>) => {
+      const res = await apiRequest("POST", "/api/admin/providers", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/providers"] });
+    },
+  });
+}
+
+export function useUpdateProvider() {
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<ApiProvider> }) => {
+      const res = await apiRequest("PATCH", `/api/admin/providers/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/providers"] });
+    },
+  });
+}
+
+export function useDeleteProvider() {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/admin/providers/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/providers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/endpoints"] });
+    },
+  });
+}
+
+export function useEndpoints(providerId?: number) {
+  const url = providerId ? `/api/admin/endpoints?providerId=${providerId}` : "/api/admin/endpoints";
+  return useQuery<ApiEndpoint[]>({
+    queryKey: ["/api/admin/endpoints", providerId ?? "all"],
+    queryFn: async () => {
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error(`${res.status}`);
+      return res.json();
+    },
+    retry: false,
+  });
+}
+
+export function useCreateEndpoint() {
+  return useMutation({
+    mutationFn: async (data: Partial<ApiEndpoint>) => {
+      const res = await apiRequest("POST", "/api/admin/endpoints", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/endpoints"] });
+    },
+  });
+}
+
+export function useUpdateEndpoint() {
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<ApiEndpoint> }) => {
+      const res = await apiRequest("PATCH", `/api/admin/endpoints/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/endpoints"] });
+    },
+  });
+}
+
+export function useDeleteEndpoint() {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/admin/endpoints/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/endpoints"] });
+    },
+  });
+}
+
+export function useTestEndpoint() {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/admin/endpoints/${id}/test`);
+      return res.json();
+    },
+  });
+}

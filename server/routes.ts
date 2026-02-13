@@ -11,6 +11,8 @@ import { downloadMusicGPTFile } from "./core/musicgpt_engine";
 import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engine";
 import { processStemSeparation } from "./core/stems_engine";
 import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong, processAudioCut } from "./workers/sample_tasks";
+import { seedDefaultMusicGPTProvider } from "./core/seed_providers";
+import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, insertApiProviderSchema, insertApiEndpointSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -693,6 +695,201 @@ export async function registerRoutes(
 
     processKeyBPMDetection(sampleId, sample.audioUrl);
     res.status(202).json({ message: "Key/BPM detection started", sampleId });
+  });
+
+  // ========== ADMIN: API PROVIDER MANAGEMENT ==========
+
+  const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
+  if (!ADMIN_USER_ID) {
+    console.warn("[Admin] WARNING: ADMIN_USER_ID env var not set. Admin panel will be inaccessible. Set it to your Replit user ID to enable admin access.");
+  }
+
+  function isAdmin(req: any): boolean {
+    if (!req.isAuthenticated()) return false;
+    if (!ADMIN_USER_ID) return false;
+    const userId = (req.user as any)?.claims?.sub;
+    return userId === ADMIN_USER_ID;
+  }
+
+  seedDefaultMusicGPTProvider().catch((err: any) =>
+    console.log("[Seed] Provider seed error:", err.message?.substring(0, 100))
+  );
+
+  app.get("/api/admin/check", (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    res.json({ isAdmin: userId === ADMIN_USER_ID });
+  });
+
+  app.get("/api/admin/meta", (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    res.json({
+      operationTypes: OPERATION_TYPES,
+      providerCategories: PROVIDER_CATEGORIES,
+      authTypes: AUTH_TYPES,
+    });
+  });
+
+  app.get("/api/admin/providers", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    const providers = await storage.getApiProviders();
+    res.json(providers);
+  });
+
+  app.get("/api/admin/providers/:id", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    const provider = await storage.getApiProvider(Number(req.params.id));
+    if (!provider) return res.sendStatus(404);
+    res.json(provider);
+  });
+
+  app.post("/api/admin/providers", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const data = insertApiProviderSchema.parse(req.body);
+      const provider = await storage.createApiProvider(data);
+      res.status(201).json(provider);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      res.status(500).json({ message: "Failed to create provider" });
+    }
+  });
+
+  const updateProviderSchema = z.object({
+    name: z.string().min(1).optional(),
+    baseUrl: z.string().url().optional(),
+    authType: z.enum(["raw", "bearer", "header", "query", "none"]).optional(),
+    authHeaderName: z.string().optional(),
+    apiKeyValue: z.string().optional().nullable(),
+    apiKeyEnvVar: z.string().optional().nullable(),
+    category: z.enum(["music", "lyrics", "image", "audio_processing", "voice"]).optional(),
+    isActive: z.boolean().optional(),
+    defaultHeaders: z.record(z.string()).optional().nullable(),
+    description: z.string().optional().nullable(),
+  });
+
+  app.patch("/api/admin/providers/:id", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    const id = Number(req.params.id);
+    const existing = await storage.getApiProvider(id);
+    if (!existing) return res.sendStatus(404);
+    try {
+      const data = updateProviderSchema.parse(req.body);
+      const updated = await storage.updateApiProvider(id, data);
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      res.status(500).json({ message: "Failed to update provider" });
+    }
+  });
+
+  app.delete("/api/admin/providers/:id", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    const id = Number(req.params.id);
+    const existing = await storage.getApiProvider(id);
+    if (!existing) return res.sendStatus(404);
+    await storage.deleteApiProvider(id);
+    res.sendStatus(204);
+  });
+
+  app.get("/api/admin/endpoints", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    const providerId = req.query.providerId ? Number(req.query.providerId) : undefined;
+    const endpoints = await storage.getApiEndpoints(providerId);
+    res.json(endpoints);
+  });
+
+  app.get("/api/admin/endpoints/:id", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    const endpoint = await storage.getApiEndpoint(Number(req.params.id));
+    if (!endpoint) return res.sendStatus(404);
+    res.json(endpoint);
+  });
+
+  app.post("/api/admin/endpoints", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const data = insertApiEndpointSchema.parse(req.body);
+      const endpoint = await storage.createApiEndpoint(data);
+      res.status(201).json(endpoint);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      res.status(500).json({ message: "Failed to create endpoint" });
+    }
+  });
+
+  const updateEndpointSchema = z.object({
+    name: z.string().min(1).optional(),
+    operationType: z.string().optional(),
+    path: z.string().min(1).optional(),
+    method: z.enum(["POST", "GET", "PUT", "PATCH"]).optional(),
+    contentType: z.enum(["json", "formdata"]).optional(),
+    requestMapping: z.record(z.any()).optional().nullable(),
+    responseMapping: z.record(z.string()).optional().nullable(),
+    pollPath: z.string().optional().nullable(),
+    pollMethod: z.enum(["GET", "POST"]).optional(),
+    pollResponseMapping: z.record(z.string()).optional().nullable(),
+    conversionType: z.string().optional().nullable(),
+    asyncPattern: z.enum(["polling", "webhook", "none"]).optional(),
+    webhookSupported: z.boolean().optional(),
+    isActive: z.boolean().optional(),
+    description: z.string().optional().nullable(),
+  });
+
+  app.patch("/api/admin/endpoints/:id", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    const id = Number(req.params.id);
+    const existing = await storage.getApiEndpoint(id);
+    if (!existing) return res.sendStatus(404);
+    try {
+      const data = updateEndpointSchema.parse(req.body);
+      const updated = await storage.updateApiEndpoint(id, data);
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      res.status(500).json({ message: "Failed to update endpoint" });
+    }
+  });
+
+  app.delete("/api/admin/endpoints/:id", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    const id = Number(req.params.id);
+    const existing = await storage.getApiEndpoint(id);
+    if (!existing) return res.sendStatus(404);
+    await storage.deleteApiEndpoint(id);
+    res.sendStatus(204);
+  });
+
+  app.post("/api/admin/endpoints/:id/test", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    const endpoint = await storage.getApiEndpoint(Number(req.params.id));
+    if (!endpoint) return res.sendStatus(404);
+    const provider = await storage.getApiProvider(endpoint.providerId);
+    if (!provider) return res.status(400).json({ message: "Provider not found" });
+
+    try {
+      const apiKey = provider.apiKeyEnvVar ? process.env[provider.apiKeyEnvVar] : provider.apiKeyValue;
+      if (!apiKey) {
+        return res.json({ success: false, message: "No API key configured" });
+      }
+
+      const headers: Record<string, string> = {};
+      switch (provider.authType) {
+        case "bearer": headers[provider.authHeaderName || "Authorization"] = `Bearer ${apiKey}`; break;
+        case "raw": case "header": headers[provider.authHeaderName || "Authorization"] = apiKey; break;
+      }
+
+      const testUrl = `${provider.baseUrl}${endpoint.pollPath || "/byId"}`;
+      const response = await fetch(testUrl, { method: "GET", headers });
+
+      res.json({
+        success: response.status < 500,
+        statusCode: response.status,
+        message: response.status < 500 ? "Connection successful" : `Server error: ${response.status}`,
+      });
+    } catch (err: any) {
+      res.json({ success: false, message: err.message || "Connection failed" });
+    }
   });
 
   return httpServer;

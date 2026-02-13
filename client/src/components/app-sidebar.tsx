@@ -24,7 +24,9 @@ import {
   Scissors,
   Music,
   LogOut,
+  Settings,
 } from "lucide-react";
+import { useAdminCheck } from "@/hooks/use-admin";
 
 const NAV_ITEMS = [
   { title: "Create", url: "/create", icon: Sparkles },
@@ -41,6 +43,7 @@ const TOOLS_ITEMS = [
 export function AppSidebar() {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
+  const { data: adminCheck } = useAdminCheck();
 
   return (
     <Sidebar>
@@ -126,6 +129,36 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {adminCheck?.isAdmin && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>Admin</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/admin"}
+                      data-testid="link-sidebar-admin"
+                    >
+                      <a
+                        href="/admin"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setLocation("/admin");
+                        }}
+                      >
+                        <Settings className="h-4 w-4" />
+                        <span>API Providers</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       {user && (

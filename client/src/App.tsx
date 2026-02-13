@@ -13,6 +13,7 @@ import LyricsPage from "@/pages/LyricsPage";
 import QuizPage from "@/pages/QuizPage";
 import StudioPage from "@/pages/Studio";
 import SampleLab from "@/pages/SampleLab";
+import AdminPage from "@/pages/AdminPage";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout() {
@@ -38,6 +39,7 @@ function AuthenticatedLayout() {
               <Route path="/quiz" component={QuizPage} />
               <Route path="/studio" component={StudioPage} />
               <Route path="/sample-lab" component={SampleLab} />
+              <Route path="/admin" component={AdminPage} />
               <Route component={NotFound} />
             </Switch>
           </main>

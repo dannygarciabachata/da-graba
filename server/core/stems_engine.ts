@@ -1,9 +1,10 @@
 import { storage } from "../storage";
 import {
-  submitExtraction,
-  pollMusicGPTJob,
-  downloadMusicGPTFile,
-  resolveFullAudioUrl,
+  submitGenericJob, pollGenericJob, downloadFile,
+  resolveFullAudioUrl, hasProviderForOperation,
+} from "./generic_api_engine";
+import {
+  submitExtraction, pollMusicGPTJob, downloadMusicGPTFile,
 } from "./musicgpt_engine";
 
 const STEM_TYPES = [
@@ -18,7 +19,7 @@ export async function processStemSeparation(
   audioUrl: string,
   userId: string
 ): Promise<void> {
-  console.log(`[Stems] Starting MusicGPT stem separation for song ${songId}`);
+  console.log(`[Stems] Starting stem separation for song ${songId}`);
 
   const trackRecords = [];
   for (const stem of STEM_TYPES) {
@@ -39,19 +40,35 @@ export async function processStemSeparation(
     console.log(`[Stems] Audio URL for extraction: ${fullAudioUrl}`);
 
     const stemsList = ["vocals", "drums", "bass", "instrumental"];
-    const submitResult = await submitExtraction(fullAudioUrl, stemsList);
-    console.log(`[Stems] Extraction submitted, task_id: ${submitResult.task_id}`);
+    const useGeneric = await hasProviderForOperation("stem_separation");
 
     for (const track of trackRecords) {
       await storage.updateTrackStatus(track.id, "processing");
     }
 
-    const pollResult = await pollMusicGPTJob(submitResult.task_id, 600000, 8000, "EXTRACTION");
-    console.log(`[Stems] Extraction completed, raw result keys:`, Object.keys(pollResult.raw || {}).join(", "));
+    let rawResult: any;
+
+    if (useGeneric) {
+      console.log(`[Stems] Using generic API engine for stem separation`);
+      const submitResult = await submitGenericJob("stem_separation", {
+        audio_url: fullAudioUrl,
+        stems: JSON.stringify(stemsList),
+      });
+      const pollResult = await pollGenericJob("stem_separation", submitResult.taskId!, 600000, 8000);
+      rawResult = pollResult;
+    } else {
+      console.log(`[Stems] Using MusicGPT fallback for stem separation`);
+      const submitResult = await submitExtraction(fullAudioUrl, stemsList);
+      console.log(`[Stems] Extraction submitted, task_id: ${submitResult.task_id}`);
+      const pollResult = await pollMusicGPTJob(submitResult.task_id, 600000, 8000, "EXTRACTION");
+      rawResult = pollResult;
+    }
+
+    console.log(`[Stems] Extraction completed, raw result keys:`, Object.keys(rawResult.raw || {}).join(", "));
 
     let stemUrls: Record<string, string> = {};
 
-    const audioUrlField = pollResult.raw?.audio_url || pollResult.audioUrl;
+    const audioUrlField = rawResult.raw?.audio_url || rawResult.audioUrl;
     if (audioUrlField && typeof audioUrlField === "string") {
       try {
         stemUrls = JSON.parse(audioUrlField);
@@ -62,7 +79,7 @@ export async function processStemSeparation(
       }
     }
 
-    const rawAny = pollResult.raw as any;
+    const rawAny = rawResult.raw as any;
     if (rawAny?.audio_url_wav && typeof rawAny.audio_url_wav === "string") {
       try {
         const wavUrls = JSON.parse(rawAny.audio_url_wav);
@@ -72,20 +89,19 @@ export async function processStemSeparation(
       } catch {}
     }
 
-    if (pollResult.vocalsUrl) stemUrls.vocals = stemUrls.vocals || pollResult.vocalsUrl;
-    if (pollResult.accompanimentUrl) stemUrls.instrumental = stemUrls.instrumental || pollResult.accompanimentUrl;
+    if (rawResult.vocalsUrl) stemUrls.vocals = stemUrls.vocals || rawResult.vocalsUrl;
+    if (rawResult.accompanimentUrl) stemUrls.instrumental = stemUrls.instrumental || rawResult.accompanimentUrl;
 
     console.log(`[Stems] Available stems: ${Object.keys(stemUrls).join(", ")}`);
 
     for (const trackRecord of trackRecords) {
       const stemDef = STEM_TYPES.find(s => s.type === trackRecord.type);
       const apiKey = (stemDef as any)?.apiKey || trackRecord.type;
-
       const remoteUrl = stemUrls[apiKey] || stemUrls[trackRecord.type];
 
       if (remoteUrl) {
         try {
-          const localUrl = await downloadMusicGPTFile(remoteUrl, "stems", `${songId}_${trackRecord.type}`);
+          const localUrl = await downloadFile(remoteUrl, "stems", `${songId}_${trackRecord.type}`);
           await storage.updateTrackStatus(trackRecord.id, "completed", localUrl);
           console.log(`[Stems] ${trackRecord.type} stem completed: ${localUrl}`);
         } catch (dlErr: any) {

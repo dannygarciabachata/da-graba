@@ -2,11 +2,14 @@ import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
 import { 
   songs, lyrics, quizResults, tracks, samples,
+  apiProviders, apiEndpoints,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
   type Track, type InsertTrack,
-  type Sample, type InsertSample
+  type Sample, type InsertSample,
+  type ApiProvider, type InsertApiProvider,
+  type ApiEndpoint, type InsertApiEndpoint
 } from "@shared/schema";
 
 export { authStorage } from "./replit_integrations/auth/storage";
@@ -41,6 +44,19 @@ export interface IStorage {
   getUserSamples(userId: string): Promise<Sample[]>;
   updateSample(id: number, data: Partial<Sample>): Promise<Sample>;
   deleteSample(id: number): Promise<void>;
+
+  getApiProviders(): Promise<ApiProvider[]>;
+  getApiProvider(id: number): Promise<ApiProvider | undefined>;
+  createApiProvider(provider: InsertApiProvider): Promise<ApiProvider>;
+  updateApiProvider(id: number, data: Partial<ApiProvider>): Promise<ApiProvider>;
+  deleteApiProvider(id: number): Promise<void>;
+
+  getApiEndpoints(providerId?: number): Promise<ApiEndpoint[]>;
+  getApiEndpoint(id: number): Promise<ApiEndpoint | undefined>;
+  getApiEndpointByOperation(operationType: string): Promise<(ApiEndpoint & { provider?: ApiProvider }) | undefined>;
+  createApiEndpoint(endpoint: InsertApiEndpoint): Promise<ApiEndpoint>;
+  updateApiEndpoint(id: number, data: Partial<ApiEndpoint>): Promise<ApiEndpoint>;
+  deleteApiEndpoint(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -220,6 +236,88 @@ export class DatabaseStorage implements IStorage {
       try { fs.default.unlinkSync(filePath); } catch {}
     }
     await db.delete(samples).where(eq(samples.id, id));
+  }
+
+  // === API Provider CRUD ===
+
+  async getApiProviders(): Promise<ApiProvider[]> {
+    return await db.select().from(apiProviders).orderBy(desc(apiProviders.createdAt));
+  }
+
+  async getApiProvider(id: number): Promise<ApiProvider | undefined> {
+    const [provider] = await db.select().from(apiProviders).where(eq(apiProviders.id, id));
+    return provider;
+  }
+
+  async createApiProvider(provider: InsertApiProvider): Promise<ApiProvider> {
+    const [created] = await db.insert(apiProviders).values(provider).returning();
+    return created;
+  }
+
+  async updateApiProvider(id: number, data: Partial<ApiProvider>): Promise<ApiProvider> {
+    const [updated] = await db
+      .update(apiProviders)
+      .set(data)
+      .where(eq(apiProviders.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteApiProvider(id: number): Promise<void> {
+    await db.delete(apiEndpoints).where(eq(apiEndpoints.providerId, id));
+    await db.delete(apiProviders).where(eq(apiProviders.id, id));
+  }
+
+  // === API Endpoint CRUD ===
+
+  async getApiEndpoints(providerId?: number): Promise<ApiEndpoint[]> {
+    if (providerId) {
+      return await db.select().from(apiEndpoints)
+        .where(eq(apiEndpoints.providerId, providerId))
+        .orderBy(apiEndpoints.operationType);
+    }
+    return await db.select().from(apiEndpoints).orderBy(apiEndpoints.operationType);
+  }
+
+  async getApiEndpoint(id: number): Promise<ApiEndpoint | undefined> {
+    const [endpoint] = await db.select().from(apiEndpoints).where(eq(apiEndpoints.id, id));
+    return endpoint;
+  }
+
+  async getApiEndpointByOperation(operationType: string): Promise<(ApiEndpoint & { provider?: ApiProvider }) | undefined> {
+    const [result] = await db
+      .select()
+      .from(apiEndpoints)
+      .where(and(
+        eq(apiEndpoints.operationType, operationType),
+        eq(apiEndpoints.isActive, true)
+      ))
+      .limit(1);
+
+    if (!result) return undefined;
+
+    const provider = await this.getApiProvider(result.providerId);
+    if (!provider || !provider.isActive) return undefined;
+
+    return { ...result, provider };
+  }
+
+  async createApiEndpoint(endpoint: InsertApiEndpoint): Promise<ApiEndpoint> {
+    const [created] = await db.insert(apiEndpoints).values(endpoint).returning();
+    return created;
+  }
+
+  async updateApiEndpoint(id: number, data: Partial<ApiEndpoint>): Promise<ApiEndpoint> {
+    const [updated] = await db
+      .update(apiEndpoints)
+      .set(data)
+      .where(eq(apiEndpoints.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteApiEndpoint(id: number): Promise<void> {
+    await db.delete(apiEndpoints).where(eq(apiEndpoints.id, id));
   }
 }
 

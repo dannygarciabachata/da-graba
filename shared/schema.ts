@@ -3,7 +3,6 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Import models from integrations
 export * from "./models/auth";
 export * from "./models/chat";
 
@@ -32,11 +31,10 @@ export const lyrics = pgTable("lyrics", {
   userId: text("user_id").notNull(),
   theme: text("theme").notNull(),
   content: text("content").notNull(),
-  style: text("style").default("bachata"), // romantic, dance, heartbreak
+  style: text("style").default("bachata"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// === RELATIONS ===
 export const songsRelations = relations(songs, ({ many }) => ({
   lyrics: many(lyrics),
   tracks: many(tracks),
@@ -49,7 +47,6 @@ export const lyricsRelations = relations(lyrics, ({ one }) => ({
   }),
 }));
 
-// === BASE SCHEMAS ===
 export const insertSongSchema = createInsertSchema(songs).omit({ 
   id: true, 
   createdAt: true,
@@ -63,7 +60,7 @@ export const insertLyricsSchema = createInsertSchema(lyrics).omit({
   createdAt: true 
 });
 
-// === TRACKS TABLE (Individual stems per song) ===
+// === TRACKS TABLE ===
 export const tracks = pgTable("tracks", {
   id: serial("id").primaryKey(),
   songId: integer("song_id").notNull().references(() => songs.id, { onDelete: "cascade" }),
@@ -97,7 +94,7 @@ export const insertTrackSchema = createInsertSchema(tracks).omit({
 export type Track = typeof tracks.$inferSelect;
 export type InsertTrack = z.infer<typeof insertTrackSchema>;
 
-// === SAMPLES TABLE (Sample Lab) ===
+// === SAMPLES TABLE ===
 export const samples = pgTable("samples", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(),
@@ -142,9 +139,108 @@ export const insertQuizResultSchema = createInsertSchema(quizResults).omit({
   createdAt: true,
 });
 
+// === GENERIC API PROVIDER SYSTEM ===
+
+export const apiProviders = pgTable("api_providers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  baseUrl: text("base_url").notNull(),
+  authType: text("auth_type").notNull().default("raw"),
+  authHeaderName: text("auth_header_name").default("Authorization"),
+  apiKeyValue: text("api_key_value"),
+  apiKeyEnvVar: text("api_key_env_var"),
+  category: text("category").notNull().default("music"),
+  isActive: boolean("is_active").default(true),
+  defaultHeaders: jsonb("default_headers").$type<Record<string, string>>(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const apiEndpoints = pgTable("api_endpoints", {
+  id: serial("id").primaryKey(),
+  providerId: integer("provider_id").notNull().references(() => apiProviders.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  operationType: text("operation_type").notNull(),
+  path: text("path").notNull(),
+  method: text("method").notNull().default("POST"),
+  contentType: text("content_type").notNull().default("formdata"),
+  requestMapping: jsonb("request_mapping").$type<Record<string, any>>(),
+  responseMapping: jsonb("response_mapping").$type<Record<string, string>>(),
+  pollPath: text("poll_path"),
+  pollMethod: text("poll_method").default("GET"),
+  pollResponseMapping: jsonb("poll_response_mapping").$type<Record<string, string>>(),
+  conversionType: text("conversion_type"),
+  asyncPattern: text("async_pattern").notNull().default("polling"),
+  webhookSupported: boolean("webhook_supported").default(false),
+  isActive: boolean("is_active").default(true),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const apiProvidersRelations = relations(apiProviders, ({ many }) => ({
+  endpoints: many(apiEndpoints),
+}));
+
+export const apiEndpointsRelations = relations(apiEndpoints, ({ one }) => ({
+  provider: one(apiProviders, {
+    fields: [apiEndpoints.providerId],
+    references: [apiProviders.id],
+  }),
+}));
+
+export const insertApiProviderSchema = createInsertSchema(apiProviders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertApiEndpointSchema = createInsertSchema(apiEndpoints).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ApiProvider = typeof apiProviders.$inferSelect;
+export type InsertApiProvider = z.infer<typeof insertApiProviderSchema>;
+export type ApiEndpoint = typeof apiEndpoints.$inferSelect;
+export type InsertApiEndpoint = z.infer<typeof insertApiEndpointSchema>;
+
+export const OPERATION_TYPES = [
+  "music_generation",
+  "stem_separation",
+  "remix",
+  "mastering",
+  "denoise",
+  "key_bpm",
+  "cover",
+  "voice_change",
+  "audio_cut",
+  "lyrics_generation",
+  "image_generation",
+] as const;
+
+export type OperationType = typeof OPERATION_TYPES[number];
+
+export const PROVIDER_CATEGORIES = [
+  "music",
+  "lyrics",
+  "image",
+  "audio_processing",
+  "voice",
+] as const;
+
+export type ProviderCategory = typeof PROVIDER_CATEGORIES[number];
+
+export const AUTH_TYPES = [
+  "raw",
+  "bearer",
+  "header",
+  "query",
+  "none",
+] as const;
+
+export type AuthType = typeof AUTH_TYPES[number];
+
 // === EXPLICIT API CONTRACT TYPES ===
 
-// Base types
 export type Song = typeof songs.$inferSelect;
 export type InsertSong = z.infer<typeof insertSongSchema>;
 export type Lyric = typeof lyrics.$inferSelect;
@@ -152,7 +248,6 @@ export type InsertLyric = z.infer<typeof insertLyricsSchema>;
 export type QuizResult = typeof quizResults.$inferSelect;
 export type InsertQuizResult = z.infer<typeof insertQuizResultSchema>;
 
-// Request types
 export type GenerateSongRequest = {
   prompt: string;
   isBachata?: boolean;
@@ -174,7 +269,5 @@ export type SubmitQuizRequest = {
   category?: string;
 };
 
-// Response types
 export type SongResponse = Song;
 export type LyricResponse = Lyric;
-

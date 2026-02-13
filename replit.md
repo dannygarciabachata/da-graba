@@ -1,66 +1,84 @@
 # DGB Audio - Heart Mula Music Engine
 
 ## Overview
-AI-powered music generation platform by Danny Garcia. The "Heart Mula" engine uses MusicGPT as the exclusive AI provider for all audio operations (generation, stem extraction, remix, mastering, denoise, key/BPM detection, cover songs), and OpenAI for lyrics writing. Supports 20+ music genres from MusicGPT's native style list. Uses webhook-based architecture for efficient async processing.
+AI-powered music generation platform by Danny Garcia. The "Heart Mula" engine uses a **generic, API-agnostic architecture** where any API provider can be configured via the Admin Panel. Default provider is MusicGPT for all audio operations. OpenAI handles lyrics writing. Supports 20+ music genres. Uses webhook-based architecture for efficient async processing.
 
 ## Architecture
 - **Frontend**: React + Vite + TailwindCSS + Shadcn UI
 - **Backend**: Express.js (TypeScript)
 - **Database**: PostgreSQL (Neon-backed via Replit)
 - **Auth**: Replit Auth (OpenID Connect)
-- **Music AI**: MusicGPT (exclusive provider for all audio: /MusicAI, /Extraction, /Remix, /audio_mastering, /denoise, /extract_key_bpm, /Cover, /VoiceChanger, /audio_cutter)
+- **API System**: Generic API engine with DB-driven provider configuration (api_providers + api_endpoints tables)
+- **Default Music AI**: MusicGPT (auto-seeded, all audio operations)
 - **Lyrics AI**: OpenAI via Replit AI Integrations (GPT-5.1)
+- **Admin Panel**: Owner-only UI for managing API providers, endpoints, and operation mappings
+
+## Generic API Provider System
+The system is API-agnostic. All audio operations route through a generic engine that:
+1. Checks DB for an active provider+endpoint matching the operation type
+2. If found, uses the generic engine with dynamic auth, request mapping, and response extraction
+3. If not found, falls back to hardcoded MusicGPT engine
+4. Supports any API provider with configurable: auth (raw/bearer/header/query/none), request mapping ($param, @env:VAR), response extraction (dot-path), async patterns (polling/webhook/none)
+
+### DB Tables
+- **api_providers**: name, baseUrl, authType, authHeaderName, apiKeyValue/apiKeyEnvVar, category, isActive, defaultHeaders, description
+- **api_endpoints**: providerId, name, operationType, path, method, contentType, requestMapping, responseMapping, pollPath, pollResponseMapping, conversionType, asyncPattern, webhookSupported, isActive
+
+### Operation Types
+music_generation, stem_separation, remix, mastering, denoise, key_bpm, cover, voice_change, audio_cut, lyrics_generation, image_generation
+
+### Provider Categories
+music, lyrics, image, audio_processing, voice
 
 ## Core Engines (server/core/)
-- **musicgpt_engine.ts** - MusicGPT API client with generic submit/poll helpers for all endpoints (MusicAI, Extraction, Remix, audio_mastering, denoise, extract_key_bpm, Cover, VoiceChanger, audio_cutter), file download utility, URL resolver, webhook URL helper, conversionType mapping for status polling
+- **generic_api_engine.ts** - API-agnostic engine: dynamic auth, request mapping, response extraction, submit/poll/download for ANY configured provider
+- **musicgpt_engine.ts** - MusicGPT-specific API client (fallback when no generic provider configured)
+- **seed_providers.ts** - Auto-seeds default MusicGPT provider with all 8 endpoints on first run
 - **prompt_engine.ts** - Lyrics system prompts (romantic/dance/heartbreak), structured JSON config generation
 - **antigravity_engine.ts** - Creative AI engine for lyrics and full arrangement configs via OpenAI
 - **quiz_engine.ts** - Bachata knowledge quiz system (static bank + AI-generated questions)
-- **stems_engine.ts** - AI stem separation using MusicGPT /Extraction (splits songs into vocals, drums, bass, other)
+- **stems_engine.ts** - AI stem separation (uses generic engine with MusicGPT fallback)
 
 ## Workers (server/workers/)
-- **music_tasks.ts** - Background async music generation via MusicGPT /MusicAI
-- **sample_tasks.ts** - MusicGPT-powered workers: Remix (humming-to-music transform), Key/BPM detection, Mastering, Denoise, Cover song generation
+- **music_tasks.ts** - Background async music generation (generic engine → MusicGPT fallback)
+- **sample_tasks.ts** - Background workers: Remix, Key/BPM, Mastering, Denoise, Cover, Audio Cut (all use generic engine → MusicGPT fallback)
 
 ## Key Features
 - "Heart Mula" branded music engine with style presets selector
+- **Admin Panel**: Owner-only API provider management with providers/endpoints tabs, test connection, Zod-validated CRUD
 - Dual generation modes: Aggregate (quick title+genre+style) and Standard (detailed prompt)
 - Bachata Mode auto-detection (keywords like "bachata", "bongo", "guira" auto-force Dominican instruments)
 - 6 style presets: Heart Mula Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana
-- MusicGPT-inspired CreatePage with genre cards (20+ genres), pro controls, prompt/lyrics intensity sliders
-- Multitrack Studio: AI stem separation (MusicGPT Extraction) splits songs into Vocals, Drums, Bass, Melody
-- Studio AI Tools: Master (professional audio mastering), Denoise (noise removal), AI Cover (voice change), Audio Cutter (trim to time range)
+- CreatePage with genre cards (20+ genres), pro controls, prompt/lyrics intensity sliders
+- Multitrack Studio: AI stem separation splits songs into Vocals, Drums, Bass, Melody
+- Studio AI Tools: Master, Denoise, AI Cover, Audio Cutter
 - Individual track controls: volume, mute, solo per stem with waveform visualization
 - AI lyrics generator (romantic, dance, heartbreak styles) with Frank Reyes/Romeo Santos influences
-- Bachata Quiz with 10-question knowledge bank (history, instruments, artists, rhythm, culture)
+- Bachata Quiz with 10-question knowledge bank
 - Waveform audio player (wavesurfer.js)
 - Song history with polling for processing status
 - Mobile-first responsive design with bottom tab navigation
 - User authentication via Replit Auth
-- Sample Lab: Audio recording, file upload, AI Remix transformation, Key/BPM detection, clip timeline, transport controls
+- Sample Lab: Audio recording, file upload, AI Remix transformation, Key/BPM detection
 
-## Layout Architecture (Suno-inspired)
-- **Left Sidebar**: Shadcn sidebar with nav (Create, Library, Lyrics, Quiz, Studio, Sample Lab), user profile, DGB branding
+## Layout Architecture
+- **Left Sidebar**: Shadcn sidebar with nav (Create, Library, Lyrics, Quiz, Studio, Sample Lab), Admin section (if admin), user profile, DGB branding
 - **Main Content Area**: Full-width page content for each route
-- **Create Page**: Centered Suno-style prompt with Simple/Custom toggle, style preset badges, recent creations grid
-- **Library Page**: Song list feed with inline player
-- **Studio Page**: Song selector + stem separation + AI tools (Master, Denoise, Cover)
-- **Sample Lab**: Record/Upload/Transform tabs + Key/BPM detection
-- **Landing**: Public landing page for unauthenticated users
+- **Admin Page**: Providers/Endpoints tabs with CRUD forms, test connection, JSON mapping editors
 
 ## Project Structure
 ```
 client/src/
   App.tsx                        - Root with SidebarProvider layout for authenticated users
-  components/app-sidebar.tsx     - Shadcn sidebar with navigation & user profile
+  components/app-sidebar.tsx     - Shadcn sidebar with navigation, admin section, & user profile
   pages/Landing.tsx              - Landing page with Heart Mula branding
   pages/CreatePage.tsx           - Suno-style music creation (Simple/Custom modes)
   pages/LibraryPage.tsx          - Song library with inline player
   pages/LyricsPage.tsx           - Lyrics generation page
   pages/QuizPage.tsx             - Bachata quiz page
-  pages/Studio.tsx               - Multitrack studio with stem separation + AI tools (Master, Denoise, Cover)
-  pages/SampleLab.tsx            - Sample Lab with recording, upload, AI Remix, Key/BPM detection, timeline
-  pages/Dashboard.tsx            - (legacy, redirects to /create)
+  pages/Studio.tsx               - Multitrack studio with stem separation + AI tools
+  pages/SampleLab.tsx            - Sample Lab with recording, upload, AI Remix, Key/BPM detection
+  pages/AdminPage.tsx            - Admin panel for API provider/endpoint management
   components/AudioPlayer.tsx     - Waveform player
   components/SongHistory.tsx     - Track history list with Studio link
   components/BachataQuiz.tsx     - Interactive Bachata quiz
@@ -68,25 +86,28 @@ client/src/
   hooks/use-tracks.ts            - Track/stem hooks + mastering, denoise, cover mutations
   hooks/use-lyrics.ts            - Lyrics generation hook
   hooks/use-samples.ts           - Sample Lab hooks + Key/BPM detection mutation
+  hooks/use-admin.ts             - Admin panel hooks (providers, endpoints CRUD, test)
   hooks/use-auth.ts              - Auth state hook
 
 server/
   core/
-    musicgpt_engine.ts           - MusicGPT API: generic submit/poll for all endpoints + download + URL resolve
+    generic_api_engine.ts        - API-agnostic engine: submit/poll/download with dynamic config
+    musicgpt_engine.ts           - MusicGPT-specific API client (fallback)
+    seed_providers.ts            - Auto-seed default MusicGPT provider config
     prompt_engine.ts             - Versioned prompts & structured config
     antigravity_engine.ts        - Creative AI (lyrics + arrangements)
     quiz_engine.ts               - Quiz logic & question bank
-    stems_engine.ts              - AI stem separation (MusicGPT Extraction)
+    stems_engine.ts              - AI stem separation (generic + MusicGPT fallback)
   workers/
-    music_tasks.ts               - Background music generation (MusicGPT MusicAI)
-    sample_tasks.ts              - Background workers: Remix, Key/BPM, Mastering, Denoise, Cover
-  routes.ts                      - API routes (music, lyrics, quiz, tracks, samples, audio tools, auth)
-  storage.ts                     - Database storage layer (IStorage interface)
+    music_tasks.ts               - Background music generation (generic + MusicGPT fallback)
+    sample_tasks.ts              - Background workers: Remix, Key/BPM, Mastering, Denoise, Cover, Audio Cut
+  routes.ts                      - API routes (music, lyrics, quiz, tracks, samples, audio tools, admin, auth)
+  storage.ts                     - Database storage layer (IStorage interface + provider/endpoint CRUD)
   db.ts                          - Database connection
   replit_integrations/           - Auth, chat modules
 
 shared/
-  schema.ts                      - Drizzle schema (songs, tracks, lyrics, quiz_results, samples, users, sessions)
+  schema.ts                      - Drizzle schema (songs, tracks, lyrics, quiz_results, samples, api_providers, api_endpoints, users, sessions)
   routes.ts                      - API contract with Zod validation
 ```
 
@@ -98,50 +119,57 @@ shared/
 - Font: Inter + JetBrains Mono
 
 ## API Endpoints
-- `POST /api/songs/generate` - Generate music (MusicGPT exclusive; supports style, duration, lyrics, auto-bachata detection)
-- `POST /api/webhooks/musicgpt` - Webhook receiver for MusicGPT async completion (no auth, matches by task_id)
+
+### Music
+- `POST /api/songs/generate` - Generate music (generic engine → MusicGPT fallback)
+- `POST /api/webhooks/musicgpt` - Webhook receiver for async completion
 - `GET /api/songs` - List user's songs
 - `GET /api/songs/:id` - Get single song
 - `DELETE /api/songs/:id` - Delete song
-- `POST /api/songs/:id/stems` - Trigger AI stem separation (MusicGPT Extraction) for a completed song
-- `POST /api/songs/:id/master` - AI audio mastering (MusicGPT audio_mastering)
-- `POST /api/songs/:id/denoise` - AI noise removal (MusicGPT denoise)
-- `POST /api/songs/:id/cover` - AI cover song with voice change (MusicGPT Cover, body: {voiceId, pitch?})
-- `POST /api/songs/:id/trim` - Audio Cutter trim (MusicGPT audio_cutter, body: {startTimeMs, endTimeMs})
-- `GET /api/songs/:id/tracks` - Get individual tracks/stems for a song
+- `POST /api/songs/:id/stems` - Trigger AI stem separation
+- `POST /api/songs/:id/master` - AI audio mastering
+- `POST /api/songs/:id/denoise` - AI noise removal
+- `POST /api/songs/:id/cover` - AI cover song with voice change
+- `POST /api/songs/:id/trim` - Audio Cutter trim
+- `GET /api/songs/:id/tracks` - Get tracks/stems for a song
 - `GET /api/tracks` - List all user's tracks
-- `PATCH /api/tracks/:id` - Update track settings (volume, mute, solo)
+- `PATCH /api/tracks/:id` - Update track settings
+
+### Lyrics & Quiz
 - `POST /api/lyrics/generate` - Generate lyrics via Heart Mula AI
-- `GET /api/quiz` - Get random quiz questions (supports ?category=&count=)
-- `POST /api/quiz/submit` - Submit quiz answers (validated with Zod)
+- `GET /api/quiz` - Get random quiz questions
+- `POST /api/quiz/submit` - Submit quiz answers
 - `GET /api/quiz/results` - Get user's quiz history
 - `GET /api/quiz/styles` - List available music style presets
+
+### Sample Lab
 - `GET /api/samples` - List user's samples
-- `POST /api/samples/upload` - Upload audio file (multipart/form-data with multer)
-- `POST /api/samples/record` - Save browser recording (base64 audio data)
-- `POST /api/samples/transform` - AI Remix transform (MusicGPT Remix)
-- `POST /api/samples/:id/key-bpm` - AI Key/BPM detection (MusicGPT extract_key_bpm)
-- `DELETE /api/samples/:id` - Delete sample (also removes audio file)
-- `PATCH /api/samples/:id` - Update sample metadata (name, bpm, key, position)
+- `POST /api/samples/upload` - Upload audio file
+- `POST /api/samples/record` - Save browser recording
+- `POST /api/samples/transform` - AI Remix transform
+- `POST /api/samples/:id/key-bpm` - AI Key/BPM detection
+- `DELETE /api/samples/:id` - Delete sample
+- `PATCH /api/samples/:id` - Update sample metadata
 
-## MusicGPT API Pattern
-All MusicGPT endpoints use async task-based processing:
-1. Submit job → POST to /api/public/v1/{Endpoint} → receive task_id
-2. Poll status → GET /api/public/v1/byId?task_id={id}&conversionType={type} → check status
-3. On COMPLETED → download audio from returned URL → save locally
-4. Authorization: raw API key in Authorization header (not Bearer)
-5. Content-type: MusicAI uses JSON (application/json), all others use FormData (multipart/form-data)
-6. conversionType values: MUSIC_AI, EXTRACTION, REMIX, AUDIO_MASTERING, DENOISING, KEY_BPM_EXTRACTION, COVER, VOICE_CONVERSION, AUDIO_CUTTER
-
-For music generation (MusicAI), webhook-based flow is preferred:
-1. Submit with webhook_url → receive task_id → store in songs.taskId
-2. MusicGPT POSTs to /api/webhooks/musicgpt when complete
-3. Webhook handler matches task_id → downloads audio → updates song status
-4. Fallback poller runs as backup in case webhook fails
+### Admin (owner-only, requires ADMIN_USER_ID env var)
+- `GET /api/admin/check` - Check if current user is admin
+- `GET /api/admin/meta` - Get operation types, categories, auth types
+- `GET /api/admin/providers` - List all API providers
+- `GET /api/admin/providers/:id` - Get single provider
+- `POST /api/admin/providers` - Create provider (Zod validated)
+- `PATCH /api/admin/providers/:id` - Update provider (Zod validated)
+- `DELETE /api/admin/providers/:id` - Delete provider + endpoints
+- `GET /api/admin/endpoints` - List endpoints (?providerId=)
+- `GET /api/admin/endpoints/:id` - Get single endpoint
+- `POST /api/admin/endpoints` - Create endpoint (Zod validated)
+- `PATCH /api/admin/endpoints/:id` - Update endpoint (Zod validated)
+- `DELETE /api/admin/endpoints/:id` - Delete endpoint
+- `POST /api/admin/endpoints/:id/test` - Test endpoint connection
 
 ## Environment Variables
 - `DATABASE_URL` - PostgreSQL connection
-- `MUSICGPT_API_KEY` - MusicGPT API key (exclusive provider for all audio AI operations)
+- `MUSICGPT_API_KEY` - MusicGPT API key (default provider for audio AI)
+- `ADMIN_USER_ID` - Replit user ID for admin panel access (required for admin features)
 - `AI_INTEGRATIONS_OPENAI_API_KEY` - Auto-configured by Replit
 - `AI_INTEGRATIONS_OPENAI_BASE_URL` - Auto-configured by Replit
 - `SESSION_SECRET` - Session encryption

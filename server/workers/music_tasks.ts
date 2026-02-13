@@ -1,5 +1,12 @@
 import { storage } from "../storage";
-import { submitMusicGPTGeneration, getWebhookUrl, pollMusicGPTStatus, downloadMusicGPTFile } from "../core/musicgpt_engine";
+import { 
+  submitGenericJob, pollGenericJob, downloadFile, getWebhookUrl, 
+  hasProviderForOperation, resolveFullAudioUrl 
+} from "../core/generic_api_engine";
+import { 
+  submitMusicGPTGeneration, pollMusicGPTStatus, downloadMusicGPTFile, 
+  getWebhookUrl as getMusicGPTWebhookUrl 
+} from "../core/musicgpt_engine";
 import { generateCreativeLyrics } from "../core/antigravity_engine";
 
 export const pendingTaskMap = new Map<string, number>();
@@ -48,40 +55,54 @@ export async function processMusicGeneration(
 
   try {
     console.log(`[Worker] Starting music generation for song ${songId}`);
-    console.log(`[Worker] Prompt (${finalPrompt.length} chars): ${finalPrompt.substring(0, 150)}`);
-    console.log(`[Worker] Style: ${style}, Duration: ${duration}s`);
-
     await storage.updateSongStatus(songId, "processing");
 
     const { generatedLyrics } = await generateSmartPrompt(finalPrompt, style, lyrics);
 
-    if (generatedLyrics) {
-      console.log(`[Worker] Lyrics ready (${generatedLyrics.length} chars)`);
+    const useGeneric = await hasProviderForOperation("music_generation");
+
+    if (useGeneric) {
+      console.log(`[Worker] Using generic API engine for music generation`);
+      const webhookUrl = getWebhookUrl();
+
+      const submitResult = await submitGenericJob("music_generation", {
+        prompt: finalPrompt,
+        music_style: style,
+        lyrics: generatedLyrics || undefined,
+        output_length: duration,
+        make_instrumental: false,
+        vocal_only: false,
+        webhook_url: webhookUrl,
+      });
+
+      if (submitResult.taskId) {
+        await storage.updateSongTaskId(songId, submitResult.taskId);
+        pendingTaskMap.set(submitResult.taskId, songId);
+        console.log(`[Worker] Task ${submitResult.taskId} submitted for song ${songId}`);
+        startFallbackPoller(songId, submitResult.taskId, true);
+      }
+    } else {
+      console.log(`[Worker] Using MusicGPT fallback for music generation`);
+      const webhookUrl = getMusicGPTWebhookUrl();
+
+      const submitResult = await submitMusicGPTGeneration(finalPrompt, style, {
+        lyrics: generatedLyrics || undefined,
+        duration,
+        webhookUrl,
+      });
+
+      await storage.updateSongTaskId(songId, submitResult.task_id);
+      pendingTaskMap.set(submitResult.task_id, songId);
+      console.log(`[Worker] Task ${submitResult.task_id} submitted for song ${songId}`);
+      startFallbackPoller(songId, submitResult.task_id, false);
     }
-
-    const webhookUrl = getWebhookUrl();
-    console.log(`[Worker] Submitting to MusicGPT with webhook: ${webhookUrl}`);
-
-    const submitResult = await submitMusicGPTGeneration(finalPrompt, style, {
-      lyrics: generatedLyrics || undefined,
-      duration,
-      webhookUrl,
-    });
-
-    await storage.updateSongTaskId(songId, submitResult.task_id);
-    pendingTaskMap.set(submitResult.task_id, songId);
-    console.log(`[Worker] Task ${submitResult.task_id} submitted for song ${songId}, waiting for webhook...`);
-
-    startFallbackPoller(songId, submitResult.task_id);
-
   } catch (err: any) {
     console.error(`[Worker] Music generation failed for song ${songId}:`, err);
-    const errorMessage = err.message || "Generation failed";
-    await storage.updateSongStatus(songId, "failed", undefined, errorMessage);
+    await storage.updateSongStatus(songId, "failed", undefined, err.message || "Generation failed");
   }
 }
 
-function startFallbackPoller(songId: number, taskId: string) {
+function startFallbackPoller(songId: number, taskId: string, useGeneric: boolean) {
   const checkInterval = 30000;
   const maxChecks = 40;
   let checks = 0;
@@ -103,12 +124,23 @@ function startFallbackPoller(songId: number, taskId: string) {
       }
 
       console.log(`[Fallback] Check ${checks}/${maxChecks} for song ${songId} (task ${taskId})`);
-      const audioUrl = await pollMusicGPTStatus(taskId, 5000, 5000).catch(() => null);
-      if (audioUrl) {
-        console.log(`[Fallback] Got audio via polling for song ${songId}`);
-        const localUrl = await downloadMusicGPTFile(audioUrl, "songs", "song");
-        await storage.updateSongStatus(songId, "completed", localUrl);
-        clearInterval(timer);
+
+      if (useGeneric) {
+        try {
+          const pollResult = await pollGenericJob("music_generation", taskId, 5000, 5000);
+          if (pollResult.status === "COMPLETED" && pollResult.audioUrl) {
+            const localUrl = await downloadFile(pollResult.audioUrl, "songs", "song");
+            await storage.updateSongStatus(songId, "completed", localUrl);
+            clearInterval(timer);
+          }
+        } catch {}
+      } else {
+        const audioUrl = await pollMusicGPTStatus(taskId, 5000, 5000).catch(() => null);
+        if (audioUrl) {
+          const localUrl = await downloadMusicGPTFile(audioUrl, "songs", "song");
+          await storage.updateSongStatus(songId, "completed", localUrl);
+          clearInterval(timer);
+        }
       }
     } catch (err: any) {
       console.log(`[Fallback] Poll error for song ${songId}: ${err.message?.substring(0, 80)}`);
