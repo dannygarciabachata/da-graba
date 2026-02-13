@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, real } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -254,6 +254,10 @@ export const styleKits = pgTable("style_kits", {
   trainingJobId: text("training_job_id"),
   trainingError: text("training_error"),
   trainedModelUrl: text("trained_model_url"),
+  trainingConfig: text("training_config"),
+  trainingPrompt: text("training_prompt"),
+  pipelineStep: text("pipeline_step").default("upload"),
+  lastTrainedAt: timestamp("last_trained_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -268,6 +272,14 @@ export const styleKitInstruments = pgTable("style_kit_instruments", {
   volume: integer("volume").default(100),
   position: integer("position").default(0),
   uploadStatus: text("upload_status").default("uploaded"),
+  analysisStatus: text("analysis_status").default("pending"),
+  analysisError: text("analysis_error"),
+  detectedKey: text("detected_key"),
+  detectedBpm: integer("detected_bpm"),
+  detectedEnergy: real("detected_energy"),
+  detectedTags: text("detected_tags"),
+  generatedPrompt: text("generated_prompt"),
+  durationMs: integer("duration_ms"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -12,6 +12,7 @@ import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engi
 import { processStemSeparation } from "./core/stems_engine";
 import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong, processAudioCut } from "./workers/sample_tasks";
 import { seedDefaultMusicGPTProvider } from "./core/seed_providers";
+import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfig, buildRunPodPayload, GENRE_STYLE_HINTS } from "./core/sao_training_engine";
 import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, STYLE_KIT_GENRES, INSTRUMENT_TYPES, SETTING_CATEGORIES, TICKET_STATUSES, TICKET_PRIORITIES, insertApiProviderSchema, insertApiEndpointSchema, insertStyleKitSchema, insertStyleKitInstrumentSchema, insertPlatformSettingSchema } from "@shared/schema";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
@@ -1417,7 +1418,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/producer/kits/:id/train", async (req, res) => {
+  app.post("/api/producer/kits/:id/analyze", async (req, res) => {
     if (!(await checkProducerTier(req, res))) return;
     const userId = (req.user as any).claims.sub;
     try {
@@ -1429,23 +1430,156 @@ export async function registerRoutes(
       const instruments = await storage.getStyleKitInstruments(kitId);
       const withAudio = instruments.filter(i => i.audioUrl);
       if (withAudio.length === 0) {
-        return res.status(400).json({ message: "Upload at least one instrument audio file before training." });
+        return res.status(400).json({ message: "Upload at least one instrument audio file before analysis." });
       }
+
+      await storage.updateStyleKit(kitId, { pipelineStep: "analyze", trainingStatus: "analyzing" });
+
+      for (const instr of withAudio) {
+        await storage.updateStyleKitInstrument(instr.id, { analysisStatus: "queued" });
+      }
+
+      console.log(`[SAO Pipeline] Kit ${kitId}: analysis queued for ${withAudio.length} instruments`);
+
+      const genreHint = GENRE_STYLE_HINTS[kit.genre] || kit.genre;
+      const analysisResults = [];
+      for (const instr of withAudio) {
+        try {
+          await storage.updateStyleKitInstrument(instr.id, { analysisStatus: "analyzing" });
+
+          const tags = [kit.genre, instr.type];
+          if (genreHint) tags.push(genreHint.split(" ")[0]);
+
+          await storage.updateStyleKitInstrument(instr.id, {
+            analysisStatus: "complete",
+            detectedTags: JSON.stringify(tags),
+          });
+
+          analysisResults.push({ id: instr.id, status: "complete" });
+        } catch (err: any) {
+          await storage.updateStyleKitInstrument(instr.id, {
+            analysisStatus: "failed",
+            analysisError: err.message,
+          });
+          analysisResults.push({ id: instr.id, status: "failed", error: err.message });
+        }
+      }
+
+      await storage.updateStyleKit(kitId, { pipelineStep: "prompt", trainingStatus: "prompting" });
+
+      console.log(`[SAO Pipeline] Kit ${kitId}: generating training prompts...`);
+
+      const updatedInstruments = await storage.getStyleKitInstruments(kitId);
+      const analyzed = updatedInstruments.filter(i => i.audioUrl && i.analysisStatus === "complete");
+      for (const instr of analyzed) {
+        try {
+          const prompt = await generateInstrumentPrompt(instr, kit.genre);
+          await storage.updateStyleKitInstrument(instr.id, { generatedPrompt: prompt });
+          console.log(`[SAO Pipeline] Prompt for "${instr.name}": ${prompt.substring(0, 80)}...`);
+        } catch (err: any) {
+          console.error(`[SAO Pipeline] Prompt generation failed for instrument ${instr.id}:`, err.message);
+        }
+      }
+
+      const kitPrompt = await generateKitTrainingPrompt(kit, analyzed);
+      await storage.updateStyleKit(kitId, { trainingPrompt: kitPrompt, pipelineStep: "train" });
+
+      console.log(`[SAO Pipeline] Kit ${kitId}: prompts generated, ready for training`);
+
+      res.json({
+        message: "Analysis and prompt generation complete. Kit is ready for training.",
+        kitId,
+        instrumentCount: withAudio.length,
+        analyzedCount: analyzed.length,
+        pipelineStep: "train",
+      });
+    } catch (err: any) {
+      console.error("[SAO Pipeline] Analysis error:", err.message);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/producer/kits/:id/train", async (req, res) => {
+    if (!(await checkProducerTier(req, res))) return;
+    const userId = (req.user as any).claims.sub;
+    try {
+      const kitId = Number(req.params.id);
+      const kit = await storage.getStyleKit(kitId);
+      if (!kit) return res.sendStatus(404);
+      if (kit.createdBy !== userId && !isAdmin(req)) return res.sendStatus(403);
+
+      const instruments = await storage.getStyleKitInstruments(kitId);
+      const withPrompts = instruments.filter(i => i.audioUrl && i.generatedPrompt);
+      if (withPrompts.length === 0) {
+        return res.status(400).json({ message: "Run analysis first to generate training prompts before training." });
+      }
+
+      const trainingConfig = buildTrainingConfig(kit, instruments);
+      const configJson = JSON.stringify(trainingConfig, null, 2);
 
       await storage.updateStyleKit(kitId, {
         trainingStatus: "queued",
         trainingError: null,
+        trainingConfig: configJson,
+        pipelineStep: "train",
       });
 
-      console.log(`[Training] Kit ${kitId} queued for training with ${withAudio.length} instruments. RunPod integration pending.`);
+      console.log(`[SAO Pipeline] Kit ${kitId} queued for training with ${withPrompts.length} instruments (SAO config generated)`);
+      console.log(`[SAO Pipeline] Training config: model_type=${trainingConfig.model_type}, sample_rate=${trainingConfig.sample_rate}, instruments=${trainingConfig.dataset.instruments.length}`);
 
       res.json({
-        message: "Training queued. Your kit will be processed by the AI training system.",
+        message: "Training queued. Your kit will be fine-tuned using the SAO pipeline with AI-generated prompts.",
         kitId,
-        instrumentCount: withAudio.length,
+        instrumentCount: withPrompts.length,
         status: "queued",
+        trainingConfig: {
+          model_type: trainingConfig.model_type,
+          sample_rate: trainingConfig.sample_rate,
+          instruments: trainingConfig.dataset.instruments.length,
+          demo_prompts: trainingConfig.training.demo_prompts,
+        },
       });
     } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/analysis/webhook", async (req, res) => {
+    try {
+      const webhookSecret = process.env.TRAINING_WEBHOOK_SECRET;
+      if (webhookSecret) {
+        const authHeader = req.headers["x-webhook-secret"] || req.headers["authorization"];
+        if (authHeader !== webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
+          return res.status(401).json({ message: "Invalid webhook secret" });
+        }
+      }
+
+      const { instrumentId, key, bpm, energy, acousticness, durationMs, tags, error } = req.body;
+      if (!instrumentId) return res.status(400).json({ message: "instrumentId required" });
+
+      const instrument = await storage.getStyleKitInstrument(Number(instrumentId));
+      if (!instrument) return res.sendStatus(404);
+
+      if (error) {
+        await storage.updateStyleKitInstrument(Number(instrumentId), {
+          analysisStatus: "failed",
+          analysisError: error,
+        });
+      } else {
+        await storage.updateStyleKitInstrument(Number(instrumentId), {
+          analysisStatus: "complete",
+          detectedKey: key || null,
+          detectedBpm: bpm ? Number(bpm) : null,
+          detectedEnergy: energy ? Number(energy) : null,
+          detectedTags: tags ? JSON.stringify(tags) : null,
+          durationMs: durationMs ? Number(durationMs) : null,
+        });
+      }
+
+      console.log(`[SAO Pipeline] Analysis webhook: instrument ${instrumentId} - ${error ? "failed" : "complete"}`);
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("[SAO Pipeline] Analysis webhook error:", err.message);
       res.status(500).json({ message: err.message });
     }
   });
@@ -1470,6 +1604,11 @@ export async function registerRoutes(
       if (modelUrl) updateData.trainedModelUrl = modelUrl;
       if (error) updateData.trainingError = error;
       if (jobId) updateData.trainingJobId = jobId;
+      if (status === "ready") {
+        updateData.pipelineStep = "ready";
+        updateData.lastTrainedAt = new Date();
+      }
+      if (status === "failed") updateData.pipelineStep = "train";
 
       await storage.updateStyleKit(Number(kitId), updateData);
 

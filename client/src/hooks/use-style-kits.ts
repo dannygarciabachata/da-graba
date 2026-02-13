@@ -168,6 +168,18 @@ export function useDeleteProducerInstrument() {
   });
 }
 
+export function useAnalyzeKit() {
+  return useMutation({
+    mutationFn: async (kitId: number) => {
+      const res = await apiRequest("POST", `/api/producer/kits/${kitId}/analyze`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/producer/kits"] });
+    },
+  });
+}
+
 export function useTrainKit() {
   return useMutation({
     mutationFn: async (kitId: number) => {
