@@ -5,61 +5,117 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Loader2, Crown, Zap, Music, Disc } from "lucide-react";
+import {
+  Check, Loader2, Crown, Zap, Music, Disc, X,
+  Sparkles, Scissors, Mic2, SlidersHorizontal, Upload,
+  Volume2, Headphones, Shield, Globe
+} from "lucide-react";
+
+const FEATURE_COMPARISON = [
+  { feature: "AI Music Generation", free: true, pro: true, producer: true, premium: true },
+  { feature: "Credits per month", free: "12 (one-time)", pro: "100", producer: "500", premium: "Unlimited" },
+  { feature: "AI Lyrics Generator", free: true, pro: true, producer: true, premium: true },
+  { feature: "Basic Stem Separation", free: true, pro: true, producer: true, premium: true },
+  { feature: "Advanced Stem Separation (Demucs)", free: false, pro: true, producer: true, premium: true },
+  { feature: "AI Mastering", free: false, pro: true, producer: true, premium: true },
+  { feature: "AI Denoise", free: false, pro: true, producer: true, premium: true },
+  { feature: "Sample Lab", free: false, pro: true, producer: true, premium: true },
+  { feature: "AI Cover Creation", free: false, pro: true, producer: true, premium: true },
+  { feature: "Audio Trimming", free: true, pro: true, producer: true, premium: true },
+  { feature: "Priority Processing", free: false, pro: true, producer: true, premium: true },
+  { feature: "Custom Instrument Kits", free: false, pro: false, producer: true, premium: true },
+  { feature: "AI Training (Your Sounds)", free: false, pro: false, producer: true, premium: true },
+  { feature: "Producer Store Access", free: false, pro: false, producer: true, premium: true },
+  { feature: "Cloud GPU Training", free: false, pro: false, producer: true, premium: true },
+  { feature: "Custom Voice Models", free: false, pro: false, producer: false, premium: true },
+  { feature: "Commercial License", free: false, pro: false, producer: false, premium: true },
+  { feature: "Priority Support", free: false, pro: false, producer: false, premium: true },
+];
 
 const FALLBACK_PLANS = [
   {
     id: "free",
     name: "Free",
-    description: "Get started with basic music creation tools",
+    description: "Get started with AI music creation. 12 credits included to explore the platform.",
     tier: "free",
     price: 0,
     priceId: null,
-    features: ["5 songs/month", "Basic stem separation", "AI lyrics"],
+    features: [
+      "12 credits (one-time)",
+      "AI music generation",
+      "Basic stem separation",
+      "AI lyrics generator",
+      "Audio trimming",
+      "Bachata Quiz",
+    ],
     icon: Music,
     order: 0,
+    color: "text-blue-400",
   },
   {
     id: "pro",
     name: "Pro",
-    description: "Professional tools for serious creators",
+    description: "Professional tools for serious music creators. More credits, more power.",
     tier: "pro",
     price: 1499,
     priceId: null,
-    features: ["50 songs/month", "Stem separation", "AI mastering", "Priority processing"],
+    features: [
+      "100 credits/month",
+      "Everything in Free",
+      "Advanced stem separation (Demucs AI)",
+      "AI mastering & denoise",
+      "Sample Lab (record, upload, remix)",
+      "AI cover creation",
+      "Key & BPM detection",
+      "Priority processing",
+    ],
     icon: Zap,
     order: 1,
+    color: "text-yellow-400",
   },
   {
     id: "producer",
     name: "Producer",
-    description: "Upload your own instrument kits and train AI with your sounds",
+    description: "Upload your own instruments, train AI with your sounds, and build your sonic brand.",
     tier: "producer",
     price: 2900,
     annualPrice: 33060,
     priceId: null,
     annualPriceId: null,
     features: [
+      "500 credits/month",
       "Everything in Pro",
       "Upload custom instrument kits",
       "AI training for your sounds",
-      "Personal kit store",
+      "Personal Producer Store",
       "Cloud GPU AI training",
+      "Style kit creation & sharing",
       "Priority AI processing",
     ],
     icon: Disc,
     order: 2,
+    color: "text-purple-400",
   },
   {
     id: "premium",
     name: "Premium",
-    description: "Unlimited access to the full DGB Audio suite",
+    description: "Unlimited access to every tool. Create without limits, license commercially.",
     tier: "premium",
     price: 2999,
     priceId: null,
-    features: ["Unlimited songs", "All AI tools", "Priority support", "Custom voice models", "Commercial license"],
+    features: [
+      "Unlimited credits",
+      "Everything in Producer",
+      "Custom voice models",
+      "Commercial use license",
+      "Priority support",
+      "Early access to new features",
+      "Cover art designer",
+      "API access (coming soon)",
+    ],
     icon: Crown,
     order: 3,
+    color: "text-amber-400",
   },
 ];
 
@@ -81,6 +137,12 @@ function parsePlans(products: any[] | undefined) {
       const fallback = FALLBACK_PLANS.find((p) => p.tier === tier);
 
       const iconMap: Record<string, any> = { free: Music, pro: Zap, producer: Disc, premium: Crown };
+      const colorMap: Record<string, string> = {
+        free: "text-blue-400",
+        pro: "text-yellow-400",
+        producer: "text-purple-400",
+        premium: "text-amber-400",
+      };
 
       return {
         id: product.id,
@@ -94,6 +156,7 @@ function parsePlans(products: any[] | undefined) {
         features: features.length > 0 ? features : fallback?.features || [],
         icon: iconMap[tier] || Music,
         order: parseInt(product.metadata?.order || "0", 10) || fallback?.order || 0,
+        color: colorMap[tier] || "text-blue-400",
       };
     })
     .sort((a: any, b: any) => a.order - b.order);
@@ -108,6 +171,7 @@ export default function PricingPage() {
   const checkout = useCheckout();
   const portal = usePortalSession();
   const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">("monthly");
+  const [showComparison, setShowComparison] = useState(false);
 
   useEffect(() => {
     if (params.get("success") === "true") {
@@ -131,13 +195,16 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-8" data-testid="pricing-page">
+    <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8" data-testid="pricing-page">
       <div className="text-center space-y-3">
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-pricing-title">Choose Your Plan</h1>
+        <Badge className="bg-primary/10 text-primary border-primary/20">Pricing</Badge>
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-pricing-title">
+          Choose Your Plan
+        </h1>
         <p className="text-muted-foreground text-sm max-w-lg mx-auto">
-          Unlock the full power of DGB Audio with a plan that fits your creative workflow.
+          Unlock the full power of DGB Audio. Start free with 12 credits, or upgrade for unlimited music creation.
         </p>
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-3 pt-2">
           <Button
             variant={billingInterval === "monthly" ? "default" : "outline"}
             size="sm"
@@ -182,18 +249,18 @@ export default function PricingPage() {
               )}
 
               <CardHeader className="text-center pb-2">
-                <div className="mx-auto mb-3 p-3 rounded-lg bg-primary/10">
-                  <IconComp className="h-6 w-6 text-primary" />
+                <div className={`mx-auto mb-3 p-3 rounded-lg bg-white/5`}>
+                  <IconComp className={`h-6 w-6 ${plan.color}`} />
                 </div>
                 <CardTitle className="text-lg flex items-center justify-center gap-2 flex-wrap">
                   {plan.name}
                   {isCurrentPlan && (
                     <Badge variant="secondary" data-testid={`badge-current-${plan.tier}`}>
-                      Current Plan
+                      Current
                     </Badge>
                   )}
                 </CardTitle>
-                <CardDescription className="text-xs">{plan.description}</CardDescription>
+                <CardDescription className="text-xs min-h-[2.5rem]">{plan.description}</CardDescription>
               </CardHeader>
 
               <CardContent className="flex-1 space-y-4">
@@ -259,6 +326,53 @@ export default function PricingPage() {
           );
         })}
       </div>
+
+      <div className="text-center">
+        <Button
+          variant="ghost"
+          onClick={() => setShowComparison(!showComparison)}
+          data-testid="button-toggle-comparison"
+          className="text-primary"
+        >
+          {showComparison ? "Hide" : "Show"} Full Feature Comparison
+        </Button>
+      </div>
+
+      {showComparison && (
+        <div className="overflow-x-auto rounded-xl border border-white/10" data-testid="table-comparison">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-white/10 bg-white/[0.02]">
+                <th className="text-left p-3 font-semibold">Feature</th>
+                <th className="text-center p-3 font-semibold">Free</th>
+                <th className="text-center p-3 font-semibold">Pro</th>
+                <th className="text-center p-3 font-semibold text-primary">Producer</th>
+                <th className="text-center p-3 font-semibold">Premium</th>
+              </tr>
+            </thead>
+            <tbody>
+              {FEATURE_COMPARISON.map((row, i) => (
+                <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
+                  <td className="p-3 text-muted-foreground">{row.feature}</td>
+                  {(["free", "pro", "producer", "premium"] as const).map((tier) => (
+                    <td key={tier} className="text-center p-3">
+                      {typeof row[tier] === "boolean" ? (
+                        row[tier] ? (
+                          <Check className="h-4 w-4 text-primary mx-auto" />
+                        ) : (
+                          <X className="h-4 w-4 text-muted-foreground/30 mx-auto" />
+                        )
+                      ) : (
+                        <span className="text-xs font-medium">{row[tier]}</span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {hasActiveSubscription && subscription?.subscription && (
         <Card className="max-w-md mx-auto" data-testid="card-subscription-info">

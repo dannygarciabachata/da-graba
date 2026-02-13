@@ -27,8 +27,12 @@ import {
   Settings,
   CreditCard,
   Store,
+  Zap,
+  Infinity,
 } from "lucide-react";
 import { useAdminCheck } from "@/hooks/use-admin";
+import { useCredits } from "@/hooks/use-credits";
+import { Badge } from "@/components/ui/badge";
 
 const NAV_ITEMS = [
   { title: "Create", url: "/create", icon: Sparkles },
@@ -49,6 +53,7 @@ export function AppSidebar() {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
   const { data: adminCheck } = useAdminCheck();
+  const { data: creditsData } = useCredits();
 
   return (
     <Sidebar>
@@ -167,7 +172,32 @@ export function AppSidebar() {
       </SidebarContent>
 
       {user && (
-        <SidebarFooter className="p-3">
+        <SidebarFooter className="p-3 space-y-2">
+          {creditsData && (
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10 cursor-pointer hover:bg-primary/10 transition-colors"
+              onClick={() => setLocation("/pricing")}
+              data-testid="link-credits-display"
+            >
+              <Zap className="h-4 w-4 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground">Credits</p>
+                <p className="text-sm font-bold" data-testid="text-credits-balance">
+                  {creditsData.isUnlimited ? (
+                    <span className="flex items-center gap-1"><Infinity className="h-4 w-4" /> Unlimited</span>
+                  ) : (
+                    <span>{creditsData.credits} remaining</span>
+                  )}
+                </p>
+              </div>
+              {!creditsData.isUnlimited && creditsData.credits <= 3 && creditsData.credits > 0 && (
+                <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px]">Low</Badge>
+              )}
+              {!creditsData.isUnlimited && creditsData.credits === 0 && (
+                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">Upgrade</Badge>
+              )}
+            </div>
+          )}
           <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-sidebar-accent/50">
             <Avatar className="h-7 w-7">
               <AvatarImage src={user.profileImageUrl || undefined} />

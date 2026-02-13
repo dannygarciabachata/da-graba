@@ -16,7 +16,9 @@ import {
   Library,
   Music,
   Download,
+  Palette,
 } from "lucide-react";
+import { CoverArtDesigner } from "@/components/CoverArtDesigner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +34,7 @@ export default function LibraryPage() {
   const { mutate: deleteSong } = useDeleteSong();
   const { mutate: togglePublish } = useTogglePublish();
   const [currentSong, setCurrentSong] = useState<any>(null);
+  const [designCoverFor, setDesignCoverFor] = useState<any>(null);
 
   if (!user) return null;
 
@@ -183,6 +186,21 @@ export default function LibraryPage() {
                         <Button
                           size="icon"
                           variant="ghost"
+                          className="text-purple-400"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDesignCoverFor(designCoverFor?.id === song.id ? null : song);
+                          }}
+                          title="Design Cover Art"
+                          data-testid={`button-cover-lib-${song.id}`}
+                        >
+                          <Palette className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {song.status === "completed" && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
                           className="text-primary"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -210,6 +228,26 @@ export default function LibraryPage() {
                 </Card>
               ))}
             </div>
+          )}
+
+          {designCoverFor && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <CoverArtDesigner
+                songTitle={designCoverFor.title || ""}
+                artistName={user?.username || ""}
+                onClose={() => setDesignCoverFor(null)}
+                onSave={(dataUrl) => {
+                  const link = document.createElement("a");
+                  link.download = `${(designCoverFor.title || "cover").replace(/\s+/g, "_")}-cover.png`;
+                  link.href = dataUrl;
+                  link.click();
+                  setDesignCoverFor(null);
+                }}
+              />
+            </motion.div>
           )}
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, jsonb, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
 
 // Session storage table.
 // (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
@@ -16,6 +16,15 @@ export const sessions = pgTable(
 export const ADMIN_ROLES = ["super_admin", "admin", "moderator", "user"] as const;
 export type AdminRole = typeof ADMIN_ROLES[number];
 
+export const FREE_CREDITS = 12;
+
+export const TIER_CREDITS: Record<string, number> = {
+  free: 12,
+  pro: 100,
+  producer: 500,
+  premium: -1,
+};
+
 // User storage table.
 // (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
 export const users = pgTable("users", {
@@ -25,6 +34,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role").notNull().default("user"),
+  credits: integer("credits").notNull().default(FREE_CREDITS),
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   subscriptionTier: varchar("subscription_tier").default("free"),

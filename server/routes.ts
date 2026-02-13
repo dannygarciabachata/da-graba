@@ -78,11 +78,36 @@ export async function registerRoutes(
     res.json(song);
   });
 
+  app.get("/api/user/credits", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const user = await storage.getUser(userId);
+    if (!user) return res.sendStatus(404);
+    const isUnlimited = user.subscriptionTier === "premium";
+    res.json({ credits: user.credits, tier: user.subscriptionTier || "free", isUnlimited });
+  });
+
   app.post(api.songs.generate.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = (req.user as any).claims.sub;
 
     try {
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      const isUnlimited = user.subscriptionTier === "premium";
+
+      if (!isUnlimited) {
+        const remaining = await storage.deductCredit(userId);
+        if (remaining === -1) {
+          return res.status(403).json({
+            error: "No credits remaining",
+            message: "You've used all your credits. Upgrade your plan for more.",
+            credits: 0,
+          });
+        }
+      }
+
       const input = api.songs.generate.input.parse(req.body);
       const duration = (req.body.duration as number) || 15;
       const lyrics = (req.body.lyrics as string) || undefined;
@@ -131,7 +156,8 @@ export async function registerRoutes(
         lyrics,
       });
 
-      res.status(202).json(song);
+      const remainingCredits = isUnlimited ? -1 : await storage.getUserCredits(userId);
+      res.status(202).json({ ...song, remainingCredits });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });

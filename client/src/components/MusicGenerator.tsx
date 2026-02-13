@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { useGenerateSong } from "@/hooks/use-songs";
+import { useCredits } from "@/hooks/use-credits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Heart, Music, Layers, Sliders } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Sparkles, Heart, Music, Layers, Sliders, Zap, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
+import { useLocation } from "wouter";
 
 const STYLE_OPTIONS = [
   { value: "heart-mula", label: "Heart Mula Signature" },
@@ -35,6 +38,7 @@ type GeneratorMode = "standard" | "aggregate";
 
 export function MusicGenerator() {
   const [mode, setMode] = useState<GeneratorMode>("aggregate");
+  const [, setLocation] = useLocation();
 
   const [prompt, setPrompt] = useState("");
   const [lyrics, setLyrics] = useState("");
@@ -47,6 +51,8 @@ export function MusicGenerator() {
   const [aggStyle, setAggStyle] = useState("heart-mula");
 
   const { mutate: generate, isPending } = useGenerateSong();
+  const { data: creditsData } = useCredits();
+  const noCredits = creditsData && !creditsData.isUnlimited && creditsData.credits <= 0;
 
   const handleStandardGenerate = () => {
     if (!prompt.trim()) return;
@@ -85,11 +91,33 @@ export function MusicGenerator() {
           <Heart className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h2 className="text-lg md:text-xl font-bold font-display" data-testid="text-engine-title">Heart Mula</h2>
           <p className="text-xs md:text-sm text-muted-foreground">DGB Studio Music Engine</p>
         </div>
+        {creditsData && (
+          <Badge
+            className={`shrink-0 cursor-pointer ${noCredits ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-primary/10 text-primary border-primary/20'}`}
+            onClick={() => setLocation("/pricing")}
+            data-testid="badge-credits-generator"
+          >
+            <Zap className="h-3 w-3 mr-1" />
+            {creditsData.isUnlimited ? "Unlimited" : `${creditsData.credits} credits`}
+          </Badge>
+        )}
       </div>
+      {noCredits && (
+        <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2" data-testid="alert-no-credits">
+          <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-red-400 font-medium">No credits remaining</p>
+            <p className="text-[10px] text-red-400/70">Upgrade your plan to keep creating music</p>
+          </div>
+          <Button size="sm" variant="outline" className="shrink-0 text-xs border-red-500/30 text-red-400" onClick={() => setLocation("/pricing")} data-testid="button-upgrade-from-generator">
+            Upgrade
+          </Button>
+        </div>
+      )}
 
       <div className="flex gap-1 mb-4 bg-white/5 rounded-lg p-1">
         <Button
@@ -165,7 +193,7 @@ export function MusicGenerator() {
           <div className="mt-4 md:mt-6">
             <Button
               onClick={handleAggregateGenerate}
-              disabled={isPending || !aggTitle.trim()}
+              disabled={isPending || !aggTitle.trim() || !!noCredits}
               className="w-full text-base font-semibold bg-primary text-black shadow-lg shadow-primary/25"
               data-testid="button-generate-aggregate"
             >
@@ -265,7 +293,7 @@ export function MusicGenerator() {
           <div className="mt-4 md:mt-6">
             <Button
               onClick={handleStandardGenerate}
-              disabled={isPending || !prompt.trim()}
+              disabled={isPending || !prompt.trim() || !!noCredits}
               className="w-full text-base font-semibold bg-primary text-black shadow-lg shadow-primary/25"
               data-testid="button-generate-music"
             >

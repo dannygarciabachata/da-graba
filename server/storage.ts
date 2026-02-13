@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, desc, and, sql, count, gte } from "drizzle-orm";
+import { eq, desc, and, sql, count, gte, gt } from "drizzle-orm";
 import { 
   songs, lyrics, quizResults, tracks, samples,
   apiProviders, apiEndpoints,
@@ -136,6 +136,9 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   updateUserRole(userId: string, role: string): Promise<User>;
+  getUserCredits(userId: string): Promise<number>;
+  deductCredit(userId: string): Promise<number>;
+  addCredits(userId: string, amount: number): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -420,6 +423,30 @@ export class DatabaseStorage implements IStorage {
   async updateUserRole(userId: string, role: string): Promise<User> {
     const [updated] = await db.update(users).set({ role, updatedAt: new Date() }).where(eq(users.id, userId)).returning();
     return updated;
+  }
+
+  async getUserCredits(userId: string): Promise<number> {
+    const user = await this.getUser(userId);
+    return user?.credits ?? 0;
+  }
+
+  async deductCredit(userId: string): Promise<number> {
+    const [updated] = await db
+      .update(users)
+      .set({ credits: sql`credits - 1`, updatedAt: new Date() })
+      .where(and(eq(users.id, userId), gt(users.credits, 0)))
+      .returning();
+    if (!updated) return -1;
+    return updated.credits ?? 0;
+  }
+
+  async addCredits(userId: string, amount: number): Promise<number> {
+    const [updated] = await db
+      .update(users)
+      .set({ credits: sql`credits + ${amount}`, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated?.credits ?? 0;
   }
 
   async getAdminStats(): Promise<{
