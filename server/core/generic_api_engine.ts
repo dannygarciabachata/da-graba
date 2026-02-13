@@ -307,9 +307,11 @@ export async function pollGenericJob(
 }
 
 export function getWebhookUrl(): string {
-  const domain = process.env.REPLIT_DEV_DOMAIN;
-  const base = domain ? `https://${domain}` : "http://localhost:5000";
-  return `${base}/api/webhooks/musicgpt`;
+  const appDomain = process.env.APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN;
+  const base = appDomain
+    ? (appDomain.startsWith("http") ? appDomain : `https://${appDomain}`)
+    : "http://localhost:5000";
+  return `${base.replace(/\/$/, "")}/api/webhooks/musicgpt`;
 }
 
 export async function downloadFile(
@@ -341,9 +343,11 @@ export async function downloadFile(
 
 export function resolveFullAudioUrl(localUrl: string): string {
   if (localUrl.startsWith("http")) return localUrl;
-  const domain = process.env.REPLIT_DEV_DOMAIN;
-  const base = domain ? `https://${domain}` : "http://localhost:5000";
-  return `${base}${localUrl}`;
+  const appDomain = process.env.APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN;
+  const base = appDomain
+    ? (appDomain.startsWith("http") ? appDomain : `https://${appDomain}`)
+    : "http://localhost:5000";
+  return `${base.replace(/\/$/, "")}${localUrl}`;
 }
 
 export async function hasProviderForOperation(operationType: OperationType): Promise<boolean> {

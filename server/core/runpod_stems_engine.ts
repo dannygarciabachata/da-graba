@@ -13,9 +13,11 @@ interface RunPodStemsResult {
 }
 
 export function getStemsWebhookUrl(): string {
-  const domain = process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS?.split(",")[0];
-  const base = domain ? `https://${domain}` : "http://localhost:5000";
-  return `${base}/api/webhooks/runpod-stems`;
+  const appDomain = process.env.APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS?.split(",")[0];
+  const base = appDomain
+    ? (appDomain.startsWith("http") ? appDomain : `https://${appDomain}`)
+    : "http://localhost:5000";
+  return `${base.replace(/\/$/, "")}/api/webhooks/runpod-stems`;
 }
 
 export function getStemsWebhookSecret(): string {
@@ -216,16 +218,35 @@ print(f"[Demucs Stems] Job finished for song {song_id}")
 `;
 }
 
+async function resolveJupyterServer(): Promise<{ base: string; token: string } | null> {
+  try {
+    const { storage } = await import("../storage");
+    const server = await storage.getActiveCloudServer("stem_separation");
+    if (server && server.baseUrl) {
+      const cleanBase = server.baseUrl.replace(/\/$/, "");
+      const port = server.jupyterPort || 8888;
+      const url = new URL(cleanBase);
+      url.port = String(port);
+      const base = url.toString().replace(/\/$/, "");
+      const token = server.jupyterToken || process.env.RUNPOD_JUPYTER_TOKEN || "";
+      return { base, token };
+    }
+  } catch {}
+  const base = (process.env.RUNPOD_BASE_URL || "").replace(/\/lab\/.*$/, "").replace(/\/$/, "");
+  const token = process.env.RUNPOD_JUPYTER_TOKEN || "";
+  if (!base) return null;
+  return { base, token };
+}
+
 export async function submitRunPodStemSeparation(
   songId: number,
   audioUrl: string
 ): Promise<RunPodStemsResult> {
-  const base = (process.env.RUNPOD_BASE_URL || "").replace(/\/lab\/.*$/, "").replace(/\/$/, "");
-  const token = process.env.RUNPOD_JUPYTER_TOKEN || "";
-
-  if (!base) {
-    return { success: false, jobId: "", error: "RUNPOD_BASE_URL not configured" };
+  const server = await resolveJupyterServer();
+  if (!server) {
+    return { success: false, jobId: "", error: "No cloud server configured for stem separation" };
   }
+  const { base, token } = server;
 
   const webhookUrl = getStemsWebhookUrl();
   const webhookSecret = getStemsWebhookSecret();

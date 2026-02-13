@@ -228,9 +228,11 @@ export function getConversionType(endpoint: MusicGPTEndpoint): string | undefine
 }
 
 export function getWebhookUrl(): string {
-  const domain = process.env.REPLIT_DEV_DOMAIN;
-  const base = domain ? `https://${domain}` : "http://localhost:5000";
-  return `${base}/api/webhooks/musicgpt`;
+  const appDomain = process.env.APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN;
+  const base = appDomain
+    ? (appDomain.startsWith("http") ? appDomain : `https://${appDomain}`)
+    : "http://localhost:5000";
+  return `${base.replace(/\/$/, "")}/api/webhooks/musicgpt`;
 }
 
 export async function submitMusicGPTGeneration(
@@ -412,9 +414,11 @@ export async function downloadMusicGPTFile(
 
 export function resolveFullAudioUrl(localUrl: string): string {
   if (localUrl.startsWith("http")) return localUrl;
-  const domain = process.env.REPLIT_DEV_DOMAIN;
-  const base = domain ? `https://${domain}` : "http://localhost:5000";
-  return `${base}${localUrl}`;
+  const appDomain = process.env.APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN;
+  const base = appDomain
+    ? (appDomain.startsWith("http") ? appDomain : `https://${appDomain}`)
+    : "http://localhost:5000";
+  return `${base.replace(/\/$/, "")}${localUrl}`;
 }
 
 function sleep(ms: number): Promise<void> {

@@ -13,9 +13,11 @@ interface RunPodMusicResult {
 }
 
 export function getRunPodMusicWebhookUrl(): string {
-  const domain = process.env.REPLIT_DEV_DOMAIN;
-  const base = domain ? `https://${domain}` : "http://localhost:5000";
-  return `${base}/api/webhooks/runpod-music`;
+  const appDomain = process.env.APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN;
+  const base = appDomain
+    ? (appDomain.startsWith("http") ? appDomain : `https://${appDomain}`)
+    : "http://localhost:5000";
+  return `${base.replace(/\/$/, "")}/api/webhooks/runpod-music`;
 }
 
 export function canUseRunPodMusic(): boolean {
@@ -213,17 +215,44 @@ print(f"[SAO Music] Job complete for song {song_id}")
 `;
 }
 
+async function resolveJupyterServer(): Promise<{ base: string; token: string } | null> {
+  try {
+    const { storage } = await import("../storage");
+    const server = await storage.getActiveCloudServer("music_generation");
+    if (!server) {
+      const stemServer = await storage.getActiveCloudServer("stem_separation");
+      if (stemServer && stemServer.baseUrl) {
+        const cleanBase = stemServer.baseUrl.replace(/\/$/, "");
+        const port = stemServer.jupyterPort || 8888;
+        const url = new URL(cleanBase);
+        url.port = String(port);
+        return { base: url.toString().replace(/\/$/, ""), token: stemServer.jupyterToken || process.env.RUNPOD_JUPYTER_TOKEN || "" };
+      }
+    }
+    if (server && server.baseUrl) {
+      const cleanBase = server.baseUrl.replace(/\/$/, "");
+      const port = server.jupyterPort || 8888;
+      const url = new URL(cleanBase);
+      url.port = String(port);
+      return { base: url.toString().replace(/\/$/, ""), token: server.jupyterToken || process.env.RUNPOD_JUPYTER_TOKEN || "" };
+    }
+  } catch {}
+  const base = (process.env.RUNPOD_BASE_URL || "").replace(/\/lab\/.*$/, "").replace(/\/$/, "");
+  const token = process.env.RUNPOD_JUPYTER_TOKEN || "";
+  if (!base) return null;
+  return { base, token };
+}
+
 export async function submitRunPodMusicGeneration(
   songId: number,
   prompt: string,
   duration: number
 ): Promise<RunPodMusicResult> {
-  const base = (process.env.RUNPOD_BASE_URL || "").replace(/\/lab\/.*$/, "").replace(/\/$/, "");
-  const token = process.env.RUNPOD_JUPYTER_TOKEN || "";
-
-  if (!base) {
-    return { success: false, jobId: "", error: "RUNPOD_BASE_URL not configured" };
+  const server = await resolveJupyterServer();
+  if (!server) {
+    return { success: false, jobId: "", error: "No cloud server configured for music generation" };
   }
+  const { base, token } = server;
 
   const webhookUrl = getRunPodMusicWebhookUrl();
   const script = buildMusicGenerationScript(songId, prompt, duration, webhookUrl);

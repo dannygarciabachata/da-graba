@@ -576,6 +576,8 @@ export const cloudServers = pgTable("cloud_servers", {
   name: text("name").notNull(),
   baseUrl: text("base_url").notNull(),
   apiPort: integer("api_port").notNull().default(7860),
+  jupyterPort: integer("jupyter_port").default(8888),
+  jupyterToken: text("jupyter_token"),
   apiKey: text("api_key"),
   webhookSecret: text("webhook_secret"),
   authHeaderName: text("auth_header_name").default("X-DGB-API-Key"),

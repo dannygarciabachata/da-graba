@@ -1722,10 +1722,12 @@ function StyleKitsAdminTab() {
 
 const CAPABILITY_OPTIONS = [
   { value: "instrument_processing", label: "Instrument Processing" },
-  { value: "music_generation", label: "Music Generation" },
+  { value: "stem_separation", label: "Stem Separation (Demucs)" },
+  { value: "music_generation", label: "Music Generation (SAO)" },
   { value: "training", label: "AI Training" },
   { value: "audio_analysis", label: "Audio Analysis" },
   { value: "midi_conversion", label: "MIDI Conversion" },
+  { value: "voice_training", label: "Voice Training" },
 ];
 
 function CloudServersTab() {
@@ -1743,6 +1745,8 @@ function CloudServersTab() {
     name: "",
     baseUrl: "",
     apiPort: 7860,
+    jupyterPort: 8888,
+    jupyterToken: "",
     apiKey: "",
     webhookSecret: "",
     authHeaderName: "X-DGB-API-Key",
@@ -1757,7 +1761,8 @@ function CloudServersTab() {
 
   function resetForm() {
     setForm({
-      name: "", baseUrl: "", apiPort: 7860, apiKey: "", webhookSecret: "",
+      name: "", baseUrl: "", apiPort: 7860, jupyterPort: 8888, jupyterToken: "",
+      apiKey: "", webhookSecret: "",
       authHeaderName: "X-DGB-API-Key", webhookHeaderName: "X-Webhook-Secret",
       healthEndpoint: "/api/health", uploadEndpoint: "/api/upload-instrument",
       capabilities: ["instrument_processing"], priority: 0, isActive: true, notes: "",
@@ -1772,6 +1777,8 @@ function CloudServersTab() {
       name: server.name,
       baseUrl: server.baseUrl,
       apiPort: server.apiPort || 7860,
+      jupyterPort: (server as any).jupyterPort || 8888,
+      jupyterToken: "",
       apiKey: "",
       webhookSecret: "",
       authHeaderName: server.authHeaderName || "X-DGB-API-Key",
@@ -1796,6 +1803,7 @@ function CloudServersTab() {
       const data: any = { ...form };
       if (!data.apiKey) delete data.apiKey;
       if (!data.webhookSecret) delete data.webhookSecret;
+      if (!data.jupyterToken) delete data.jupyterToken;
 
       if (editingServer?.id) {
         await updateServer.mutateAsync({ id: editingServer.id, ...data });
@@ -1923,10 +1931,14 @@ function CloudServersTab() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">API Port</label>
                 <Input type="number" value={form.apiPort} onChange={e => setForm(f => ({ ...f, apiPort: Number(e.target.value) }))} data-testid="input-server-port" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Jupyter Port</label>
+                <Input type="number" value={form.jupyterPort} onChange={e => setForm(f => ({ ...f, jupyterPort: Number(e.target.value) }))} placeholder="8888" data-testid="input-jupyter-port" />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Priority (higher = preferred)</label>
@@ -1946,14 +1958,18 @@ function CloudServersTab() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">API Key {editingServer ? "(leave empty to keep current)" : ""}</label>
+                <label className="text-xs text-muted-foreground mb-1 block">API Key {editingServer ? "(leave empty to keep)" : ""}</label>
                 <Input type="password" value={form.apiKey} onChange={e => setForm(f => ({ ...f, apiKey: e.target.value }))} placeholder="Your API key" data-testid="input-server-apikey" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Webhook Secret {editingServer ? "(leave empty to keep current)" : ""}</label>
+                <label className="text-xs text-muted-foreground mb-1 block">Webhook Secret {editingServer ? "(leave empty to keep)" : ""}</label>
                 <Input type="password" value={form.webhookSecret} onChange={e => setForm(f => ({ ...f, webhookSecret: e.target.value }))} placeholder="Webhook authentication secret" data-testid="input-server-webhook-secret" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Jupyter Token {editingServer ? "(leave empty to keep)" : ""}</label>
+                <Input type="password" value={form.jupyterToken} onChange={e => setForm(f => ({ ...f, jupyterToken: e.target.value }))} placeholder="Jupyter notebook token" data-testid="input-jupyter-token" />
               </div>
             </div>
 
@@ -2036,7 +2052,7 @@ function CloudServersTab() {
                       <Badge variant="outline" className="text-xs"><Activity className="h-3 w-3 mr-1" />Unknown</Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground font-mono">{server.baseUrl}:{server.apiPort}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{server.baseUrl}:{server.apiPort} {(server as any).jupyterPort ? `(Jupyter: ${(server as any).jupyterPort})` : ""}</p>
                   <div className="flex flex-wrap gap-1 mt-2">
                     {server.capabilities?.map(cap => (
                       <Badge key={cap} variant="outline" className="text-xs">{cap.replace(/_/g, " ")}</Badge>

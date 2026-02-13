@@ -193,12 +193,11 @@ except Exception as e:
 }
 
 export function getVoiceTrainingWebhookUrl(): string {
-  const base = process.env.REPLIT_DEV_DOMAIN
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : process.env.REPL_SLUG
-      ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
-      : "http://localhost:5000";
-  return `${base}/api/webhooks/voice-training`;
+  const appDomain = process.env.APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN;
+  const base = appDomain
+    ? (appDomain.startsWith("http") ? appDomain : `https://${appDomain}`)
+    : "http://localhost:5000";
+  return `${base.replace(/\/$/, "")}/api/webhooks/voice-training`;
 }
 
 export function getVoiceWebhookSecret(): string {
