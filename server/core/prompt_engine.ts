@@ -142,6 +142,24 @@ ${formatRules}`,
   return styleGuides[style] || styleGuides.romantic;
 }
 
+export function buildStyleKitPrompt(
+  userPrompt: string,
+  kitName: string,
+  genre: string,
+  instruments: { name: string; type: string; description?: string | null }[]
+): string {
+  const instrumentList = instruments
+    .map((i) => {
+      const desc = i.description ? ` (${i.description})` : "";
+      return `${i.name}${desc}`;
+    })
+    .join(", ");
+
+  const genreLabel = genre.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  return `${userPrompt}, ${genreLabel} style using the "${kitName}" instrument kit: ${instrumentList}. Authentic ${genreLabel} arrangement with all instruments playing together as a tight ensemble, professional studio quality, balanced mix`;
+}
+
 export async function generateStructuredPrompt(userInput: string): Promise<MusicPromptConfig> {
   const isBachata = /bachata|bongo|guira|dominican|latino|requinto|heart mula/i.test(userInput);
   const isDance = /dance|party|fiesta|bailable|upbeat/i.test(userInput);

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useGenerateSong } from "@/hooks/use-songs";
-import { useSongs } from "@/hooks/use-songs";
+import { useGenerateSong, useSongs } from "@/hooks/use-songs";
+import { useStyleKits } from "@/hooks/use-style-kits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -96,10 +96,12 @@ export default function CreatePage() {
   const [isInstrumental, setIsInstrumental] = useState(false);
   const [lyrics, setLyrics] = useState("");
   const [activeCreationMode, setActiveCreationMode] = useState("song");
+  const [selectedStyleKit, setSelectedStyleKit] = useState<number | undefined>(undefined);
 
   const { mutate: generate, isPending } = useGenerateSong();
   const { data: songs, isLoading: songsLoading } = useSongs();
   const { mutate: deleteSong } = useDeleteSong();
+  const { data: styleKits } = useStyleKits();
 
   const recentSongs = songs?.slice(0, 6) ?? [];
 
@@ -115,7 +117,8 @@ export default function CreatePage() {
       genre: selectedGenre,
       mode: title ? "aggregate" : "standard",
       ...(lyrics.trim() && !isInstrumental ? { lyrics: lyrics.trim() } : {}),
-    });
+      ...(selectedStyleKit ? { styleKitId: selectedStyleKit } : {}),
+    } as any);
     setPrompt("");
   };
 
@@ -254,6 +257,33 @@ export default function CreatePage() {
                       data-testid="input-title"
                     />
                   </div>
+
+                  {styleKits && styleKits.length > 0 && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        Style Kit
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-3 w-3" />
+                          </TooltipTrigger>
+                          <TooltipContent>Use a custom instrument kit to define your song's style</TooltipContent>
+                        </Tooltip>
+                      </Label>
+                      <select
+                        className="w-full rounded-md border border-white/10 bg-background px-3 py-2 text-sm"
+                        value={selectedStyleKit || ""}
+                        onChange={(e) => setSelectedStyleKit(e.target.value ? Number(e.target.value) : undefined)}
+                        data-testid="select-style-kit"
+                      >
+                        <option value="">None (default)</option>
+                        {styleKits.map((kit) => (
+                          <option key={kit.id} value={kit.id}>
+                            {kit.name} ({kit.genre.replace(/_/g, " ")}) — {kit.instruments.length} instruments
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground flex items-center gap-1.5">

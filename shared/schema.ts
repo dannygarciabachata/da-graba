@@ -239,6 +239,93 @@ export const AUTH_TYPES = [
 
 export type AuthType = typeof AUTH_TYPES[number];
 
+// === STYLE KITS ===
+
+export const styleKits = pgTable("style_kits", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  genre: text("genre").notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  createdBy: text("created_by").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const styleKitInstruments = pgTable("style_kit_instruments", {
+  id: serial("id").primaryKey(),
+  kitId: integer("kit_id").notNull().references(() => styleKits.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  audioUrl: text("audio_url"),
+  description: text("description"),
+  volume: integer("volume").default(100),
+  position: integer("position").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const styleKitsRelations = relations(styleKits, ({ many }) => ({
+  instruments: many(styleKitInstruments),
+}));
+
+export const styleKitInstrumentsRelations = relations(styleKitInstruments, ({ one }) => ({
+  kit: one(styleKits, {
+    fields: [styleKitInstruments.kitId],
+    references: [styleKits.id],
+  }),
+}));
+
+export const insertStyleKitSchema = createInsertSchema(styleKits).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertStyleKitInstrumentSchema = createInsertSchema(styleKitInstruments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type StyleKit = typeof styleKits.$inferSelect;
+export type InsertStyleKit = z.infer<typeof insertStyleKitSchema>;
+export type StyleKitInstrument = typeof styleKitInstruments.$inferSelect;
+export type InsertStyleKitInstrument = z.infer<typeof insertStyleKitInstrumentSchema>;
+
+export const STYLE_KIT_GENRES = [
+  "bachata",
+  "bolero",
+  "latin_pop",
+  "merengue",
+  "salsa",
+  "cumbia",
+  "reggaeton",
+  "son",
+  "vallenato",
+  "tropical",
+] as const;
+
+export type StyleKitGenre = typeof STYLE_KIT_GENRES[number];
+
+export const INSTRUMENT_TYPES = [
+  "guira",
+  "bongo",
+  "conga",
+  "timbal",
+  "requinto",
+  "segunda_guitarra",
+  "bass",
+  "piano",
+  "trumpet",
+  "saxophone",
+  "accordion",
+  "maracas",
+  "claves",
+  "cowbell",
+  "vocals",
+  "other",
+] as const;
+
+export type InstrumentType = typeof INSTRUMENT_TYPES[number];
+
 // === EXPLICIT API CONTRACT TYPES ===
 
 export type Song = typeof songs.$inferSelect;

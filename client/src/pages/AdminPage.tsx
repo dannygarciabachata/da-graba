@@ -7,6 +7,10 @@ import {
   useTestEndpoint,
   useAdminStats, useAdminUsers, useAdminSubscriptions, useAdminProducts,
 } from "@/hooks/use-admin";
+import {
+  useStyleKits, useStyleKitMeta, useCreateStyleKit, useUpdateStyleKit,
+  useDeleteStyleKit, useUploadInstrument, useDeleteInstrument,
+} from "@/hooks/use-style-kits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,11 +21,11 @@ import {
   Settings, Plus, Trash2, Edit, CheckCircle, XCircle,
   Server, Zap, ArrowLeft, TestTube, Loader2, Save,
   Shield, Globe, Key, ToggleLeft, ToggleRight,
-  BarChart3, Users, CreditCard, Music, FileText, Mic,
+  BarChart3, Users, CreditCard, Music, FileText, Mic, Disc, Upload,
 } from "lucide-react";
 import type { ApiProvider, ApiEndpoint } from "@shared/schema";
 
-type Tab = "dashboard" | "users" | "subscriptions" | "providers" | "endpoints";
+type Tab = "dashboard" | "users" | "subscriptions" | "style-kits" | "providers" | "endpoints";
 
 export default function AdminPage() {
   const [, setLocation] = useLocation();
@@ -62,6 +66,7 @@ function AdminDashboard() {
     { id: "dashboard" as Tab, label: "Dashboard", icon: BarChart3 },
     { id: "users" as Tab, label: "Users", icon: Users },
     { id: "subscriptions" as Tab, label: "Subscriptions", icon: CreditCard },
+    { id: "style-kits" as Tab, label: "Style Kits", icon: Disc },
     { id: "providers" as Tab, label: "API Providers", icon: Server },
     { id: "endpoints" as Tab, label: "Endpoints", icon: Zap },
   ];
@@ -98,6 +103,7 @@ function AdminDashboard() {
       {activeTab === "dashboard" && <DashboardTab />}
       {activeTab === "users" && <UsersTab />}
       {activeTab === "subscriptions" && <SubscriptionsTab />}
+      {activeTab === "style-kits" && <StyleKitsAdminTab />}
 
       {activeTab === "providers" && (
         <ProvidersTab
@@ -845,6 +851,245 @@ function EndpointsTab({
             <Zap className="h-12 w-12 mx-auto mb-3 opacity-30" />
             <p className="text-sm">No endpoints configured.</p>
             <p className="text-xs">{providerId ? "Add an endpoint to start mapping operations." : "Select a provider to view its endpoints."}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StyleKitsAdminTab() {
+  const { data: kits, isLoading } = useStyleKits();
+  const { data: meta } = useStyleKitMeta();
+  const createKit = useCreateStyleKit();
+  const deleteKit = useDeleteStyleKit();
+  const uploadInstrument = useUploadInstrument();
+  const deleteInstrument = useDeleteInstrument();
+  const { toast } = useToast();
+
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [kitForm, setKitForm] = useState({ name: "", genre: "bachata", description: "" });
+  const [expandedKit, setExpandedKit] = useState<number | null>(null);
+  const [uploadKitId, setUploadKitId] = useState<number | null>(null);
+  const [instrForm, setInstrForm] = useState({ name: "", type: "other", description: "" });
+
+  const genres = meta?.genres || [];
+  const instrumentTypes = meta?.instrumentTypes || [];
+
+  const handleCreateKit = async () => {
+    if (!kitForm.name.trim()) return;
+    try {
+      await createKit.mutateAsync(kitForm);
+      toast({ title: "Style Kit created" });
+      setKitForm({ name: "", genre: "bachata", description: "" });
+      setShowCreateForm(false);
+    } catch {
+      toast({ title: "Failed to create kit", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteKit = async (id: number) => {
+    try {
+      await deleteKit.mutateAsync(id);
+      toast({ title: "Style Kit deleted" });
+    } catch {
+      toast({ title: "Failed to delete", variant: "destructive" });
+    }
+  };
+
+  const handleUploadInstrument = async (kitId: number, file: File) => {
+    const formData = new FormData();
+    formData.append("audio", file);
+    formData.append("name", instrForm.name || file.name.replace(/\.[^/.]+$/, ""));
+    formData.append("type", instrForm.type);
+    if (instrForm.description) formData.append("description", instrForm.description);
+
+    try {
+      await uploadInstrument.mutateAsync({ kitId, formData });
+      toast({ title: "Instrument uploaded" });
+      setInstrForm({ name: "", type: "other", description: "" });
+      setUploadKitId(null);
+    } catch {
+      toast({ title: "Upload failed", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteInstrument = async (id: number) => {
+    try {
+      await deleteInstrument.mutateAsync(id);
+      toast({ title: "Instrument deleted" });
+    } catch {
+      toast({ title: "Failed to delete instrument", variant: "destructive" });
+    }
+  };
+
+  if (isLoading) return <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>;
+
+  return (
+    <div className="space-y-4" data-testid="admin-style-kits">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Disc className="h-5 w-5 text-primary" /> Style Kits
+        </h2>
+        <Button size="sm" onClick={() => setShowCreateForm(!showCreateForm)} data-testid="button-create-kit">
+          <Plus className="h-4 w-4 mr-1" /> New Kit
+        </Button>
+      </div>
+
+      {showCreateForm && (
+        <Card className="bg-white/5 border-white/10" data-testid="create-kit-form">
+          <CardContent className="pt-4 space-y-3">
+            <Input
+              placeholder="Kit name (e.g. Bachata Clásica)"
+              value={kitForm.name}
+              onChange={(e) => setKitForm({ ...kitForm, name: e.target.value })}
+              data-testid="input-kit-name"
+            />
+            <select
+              className="w-full rounded-md border border-white/10 bg-background px-3 py-2 text-sm"
+              value={kitForm.genre}
+              onChange={(e) => setKitForm({ ...kitForm, genre: e.target.value })}
+              data-testid="select-kit-genre"
+            >
+              {genres.map((g) => (
+                <option key={g} value={g}>{g.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</option>
+              ))}
+            </select>
+            <Textarea
+              placeholder="Description (optional)"
+              value={kitForm.description}
+              onChange={(e) => setKitForm({ ...kitForm, description: e.target.value })}
+              rows={2}
+              data-testid="input-kit-description"
+            />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleCreateKit} disabled={createKit.isPending} data-testid="button-save-kit">
+                {createKit.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+                Create
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setShowCreateForm(false)}>Cancel</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-3">
+        {kits?.map((kit) => {
+          const isExpanded = expandedKit === kit.id;
+          const isUploading = uploadKitId === kit.id;
+
+          return (
+            <Card key={kit.id} className="bg-white/5 border-white/10" data-testid={`admin-kit-${kit.id}`}>
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between">
+                  <div className="cursor-pointer" onClick={() => setExpandedKit(isExpanded ? null : kit.id)}>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      {kit.name}
+                      <Badge variant="secondary" className="text-xs">{kit.genre}</Badge>
+                      <Badge variant="outline" className="text-xs">{kit.instruments.length} instruments</Badge>
+                    </CardTitle>
+                    {kit.description && <CardDescription className="text-xs mt-0.5">{kit.description}</CardDescription>}
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => setUploadKitId(isUploading ? null : kit.id)}
+                      data-testid={`button-upload-to-kit-${kit.id}`}
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-destructive"
+                      onClick={() => handleDeleteKit(kit.id)}
+                      data-testid={`button-delete-kit-${kit.id}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+
+              {isUploading && (
+                <CardContent className="pt-0 pb-3 space-y-2">
+                  <div className="p-3 rounded-lg bg-white/5 space-y-2">
+                    <Input
+                      placeholder="Instrument name (e.g. Güira Principal)"
+                      value={instrForm.name}
+                      onChange={(e) => setInstrForm({ ...instrForm, name: e.target.value })}
+                      data-testid="input-instrument-name"
+                    />
+                    <select
+                      className="w-full rounded-md border border-white/10 bg-background px-3 py-2 text-sm"
+                      value={instrForm.type}
+                      onChange={(e) => setInstrForm({ ...instrForm, type: e.target.value })}
+                      data-testid="select-instrument-type"
+                    >
+                      {instrumentTypes.map((t) => (
+                        <option key={t} value={t}>{t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</option>
+                      ))}
+                    </select>
+                    <Input
+                      placeholder="Description (optional)"
+                      value={instrForm.description}
+                      onChange={(e) => setInstrForm({ ...instrForm, description: e.target.value })}
+                      data-testid="input-instrument-description"
+                    />
+                    <input
+                      type="file"
+                      accept=".wav,.mp3,.ogg,.flac,.m4a"
+                      className="text-xs file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:bg-primary file:text-primary-foreground file:cursor-pointer"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadInstrument(kit.id, file);
+                      }}
+                      data-testid="input-instrument-file"
+                    />
+                    {uploadInstrument.isPending && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading...
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              )}
+
+              {isExpanded && kit.instruments.length > 0 && (
+                <CardContent className="pt-0 pb-3">
+                  <div className="space-y-1">
+                    {kit.instruments.map((instr) => (
+                      <div key={instr.id} className="flex items-center gap-2 p-2 rounded bg-white/5 text-sm">
+                        <Music className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                        <span className="flex-1 truncate">{instr.name}</span>
+                        <Badge variant="outline" className="text-xs">{instr.type}</Badge>
+                        {instr.audioUrl && <CheckCircle className="h-3.5 w-3.5 text-green-400 flex-shrink-0" />}
+                        {!instr.audioUrl && <XCircle className="h-3.5 w-3.5 text-muted-foreground/30 flex-shrink-0" />}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 text-destructive"
+                          onClick={() => handleDeleteInstrument(instr.id)}
+                          data-testid={`button-delete-instrument-${instr.id}`}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          );
+        })}
+
+        {(!kits || kits.length === 0) && (
+          <div className="text-center py-12 text-muted-foreground">
+            <Disc className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p className="text-sm">No style kits created yet.</p>
+            <p className="text-xs">Click "New Kit" to create your first style kit and start uploading instruments.</p>
           </div>
         )}
       </div>

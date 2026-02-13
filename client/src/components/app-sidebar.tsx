@@ -39,6 +39,7 @@ const NAV_ITEMS = [
 const TOOLS_ITEMS = [
   { title: "Multitrack Studio", url: "/studio", icon: Scissors },
   { title: "Sample Lab", url: "/sample-lab", icon: Music },
+  { title: "Style Kits", url: "/style-kits", icon: Disc },
   { title: "Pricing", url: "/pricing", icon: CreditCard },
 ];
 

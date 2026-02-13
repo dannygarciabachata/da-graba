@@ -6,13 +6,13 @@ import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { processMusicGeneration, pendingTaskMap } from "./workers/music_tasks";
 import { generateCreativeLyrics } from "./core/antigravity_engine";
-import { buildMusicGenPrompt, PROMPT_VERSIONS } from "./core/prompt_engine";
+import { buildMusicGenPrompt, buildStyleKitPrompt, PROMPT_VERSIONS } from "./core/prompt_engine";
 import { downloadMusicGPTFile } from "./core/musicgpt_engine";
 import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engine";
 import { processStemSeparation } from "./core/stems_engine";
 import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong, processAudioCut } from "./workers/sample_tasks";
 import { seedDefaultMusicGPTProvider } from "./core/seed_providers";
-import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, insertApiProviderSchema, insertApiEndpointSchema } from "@shared/schema";
+import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, STYLE_KIT_GENRES, INSTRUMENT_TYPES, insertApiProviderSchema, insertApiEndpointSchema, insertStyleKitSchema, insertStyleKitInstrumentSchema } from "@shared/schema";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
 import path from "path";
@@ -74,11 +74,27 @@ export async function registerRoutes(
       const mode = input.mode || "standard";
       const style = input.style || "Bachata";
       const genre = input.genre || undefined;
+      const styleKitId = req.body.styleKitId ? Number(req.body.styleKitId) : undefined;
 
       let finalPrompt: string;
       let songTitle: string;
 
-      if (mode === "aggregate") {
+      if (styleKitId) {
+        const kit = await storage.getStyleKit(styleKitId);
+        if (kit) {
+          const instruments = await storage.getStyleKitInstruments(kit.id);
+          songTitle = (input.title || input.prompt || "Untitled").trim();
+          finalPrompt = buildStyleKitPrompt(
+            input.prompt || songTitle,
+            kit.name,
+            kit.genre,
+            instruments
+          );
+        } else {
+          songTitle = (input.title || input.prompt || "Untitled").trim();
+          finalPrompt = `${songTitle}, ${genre || style} style, high fidelity, studio quality`;
+        }
+      } else if (mode === "aggregate") {
         songTitle = (input.title || input.prompt || "Untitled").trim();
         finalPrompt = `${songTitle}, ${genre || style} style, high fidelity, studio quality`;
       } else {
@@ -936,6 +952,133 @@ export async function registerRoutes(
     try {
       const products = await storage.getStripeProducts();
       res.json(products);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ========== STYLE KITS ==========
+
+  app.get("/api/style-kits", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const genre = req.query.genre as string | undefined;
+      const kits = genre
+        ? await storage.getStyleKitsByGenre(genre)
+        : await storage.getStyleKits();
+
+      const kitsWithInstruments = await Promise.all(
+        kits.map(async (kit) => ({
+          ...kit,
+          instruments: await storage.getStyleKitInstruments(kit.id),
+        }))
+      );
+      res.json(kitsWithInstruments);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/style-kits/meta", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    res.json({ genres: STYLE_KIT_GENRES, instrumentTypes: INSTRUMENT_TYPES });
+  });
+
+  app.get("/api/style-kits/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const kit = await storage.getStyleKit(Number(req.params.id));
+      if (!kit) return res.sendStatus(404);
+      const instruments = await storage.getStyleKitInstruments(kit.id);
+      res.json({ ...kit, instruments });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/style-kits", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const userId = (req.user as any).claims.sub;
+      const parsed = insertStyleKitSchema.parse({ ...req.body, createdBy: userId });
+      const kit = await storage.createStyleKit(parsed);
+      res.status(201).json(kit);
+    } catch (err: any) {
+      if (err.name === "ZodError") return res.status(400).json({ message: err.errors });
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/style-kits/:id", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const kit = await storage.updateStyleKit(Number(req.params.id), req.body);
+      res.json(kit);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/style-kits/:id", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      await storage.deleteStyleKit(Number(req.params.id));
+      res.sendStatus(204);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/style-kits/:kitId/instruments", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const instruments = await storage.getStyleKitInstruments(Number(req.params.kitId));
+      res.json(instruments);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/style-kits/:kitId/instruments", upload.single("audio"), async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const kitId = Number(req.params.kitId);
+      const kit = await storage.getStyleKit(kitId);
+      if (!kit) return res.sendStatus(404);
+
+      const audioUrl = req.file ? `/audio/${req.file.filename}` : undefined;
+      const parsed = insertStyleKitInstrumentSchema.parse({
+        kitId,
+        name: req.body.name,
+        type: req.body.type || "other",
+        audioUrl,
+        description: req.body.description || null,
+        volume: req.body.volume ? Number(req.body.volume) : 100,
+        position: req.body.position ? Number(req.body.position) : 0,
+      });
+      const instrument = await storage.createStyleKitInstrument(parsed);
+      res.status(201).json(instrument);
+    } catch (err: any) {
+      if (err.name === "ZodError") return res.status(400).json({ message: err.errors });
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/style-kits/instruments/:id", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const instrument = await storage.updateStyleKitInstrument(Number(req.params.id), req.body);
+      res.json(instrument);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/style-kits/instruments/:id", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      await storage.deleteStyleKitInstrument(Number(req.params.id));
+      res.sendStatus(204);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }

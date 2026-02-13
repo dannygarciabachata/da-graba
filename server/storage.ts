@@ -3,13 +3,16 @@ import { eq, desc, and, sql, count } from "drizzle-orm";
 import { 
   songs, lyrics, quizResults, tracks, samples,
   apiProviders, apiEndpoints,
+  styleKits, styleKitInstruments,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
   type Track, type InsertTrack,
   type Sample, type InsertSample,
   type ApiProvider, type InsertApiProvider,
-  type ApiEndpoint, type InsertApiEndpoint
+  type ApiEndpoint, type InsertApiEndpoint,
+  type StyleKit, type InsertStyleKit,
+  type StyleKitInstrument, type InsertStyleKitInstrument
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -58,6 +61,19 @@ export interface IStorage {
   createApiEndpoint(endpoint: InsertApiEndpoint): Promise<ApiEndpoint>;
   updateApiEndpoint(id: number, data: Partial<ApiEndpoint>): Promise<ApiEndpoint>;
   deleteApiEndpoint(id: number): Promise<void>;
+
+  getStyleKits(): Promise<StyleKit[]>;
+  getStyleKit(id: number): Promise<StyleKit | undefined>;
+  getStyleKitsByGenre(genre: string): Promise<StyleKit[]>;
+  createStyleKit(kit: InsertStyleKit): Promise<StyleKit>;
+  updateStyleKit(id: number, data: Partial<StyleKit>): Promise<StyleKit>;
+  deleteStyleKit(id: number): Promise<void>;
+
+  getStyleKitInstruments(kitId: number): Promise<StyleKitInstrument[]>;
+  getStyleKitInstrument(id: number): Promise<StyleKitInstrument | undefined>;
+  createStyleKitInstrument(instrument: InsertStyleKitInstrument): Promise<StyleKitInstrument>;
+  updateStyleKitInstrument(id: number, data: Partial<StyleKitInstrument>): Promise<StyleKitInstrument>;
+  deleteStyleKitInstrument(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -371,6 +387,71 @@ export class DatabaseStorage implements IStorage {
     } catch {
       return [];
     }
+  }
+
+  // === Style Kit CRUD ===
+
+  async getStyleKits(): Promise<StyleKit[]> {
+    return await db.select().from(styleKits).orderBy(styleKits.genre, styleKits.name);
+  }
+
+  async getStyleKit(id: number): Promise<StyleKit | undefined> {
+    const [kit] = await db.select().from(styleKits).where(eq(styleKits.id, id));
+    return kit;
+  }
+
+  async getStyleKitsByGenre(genre: string): Promise<StyleKit[]> {
+    return await db.select().from(styleKits)
+      .where(and(eq(styleKits.genre, genre), eq(styleKits.isActive, true)))
+      .orderBy(styleKits.name);
+  }
+
+  async createStyleKit(kit: InsertStyleKit): Promise<StyleKit> {
+    const [created] = await db.insert(styleKits).values(kit).returning();
+    return created;
+  }
+
+  async updateStyleKit(id: number, data: Partial<StyleKit>): Promise<StyleKit> {
+    const [updated] = await db.update(styleKits).set(data).where(eq(styleKits.id, id)).returning();
+    return updated;
+  }
+
+  async deleteStyleKit(id: number): Promise<void> {
+    await db.delete(styleKitInstruments).where(eq(styleKitInstruments.kitId, id));
+    await db.delete(styleKits).where(eq(styleKits.id, id));
+  }
+
+  async getStyleKitInstruments(kitId: number): Promise<StyleKitInstrument[]> {
+    return await db.select().from(styleKitInstruments)
+      .where(eq(styleKitInstruments.kitId, kitId))
+      .orderBy(styleKitInstruments.position);
+  }
+
+  async getStyleKitInstrument(id: number): Promise<StyleKitInstrument | undefined> {
+    const [instrument] = await db.select().from(styleKitInstruments).where(eq(styleKitInstruments.id, id));
+    return instrument;
+  }
+
+  async createStyleKitInstrument(instrument: InsertStyleKitInstrument): Promise<StyleKitInstrument> {
+    const [created] = await db.insert(styleKitInstruments).values(instrument).returning();
+    return created;
+  }
+
+  async updateStyleKitInstrument(id: number, data: Partial<StyleKitInstrument>): Promise<StyleKitInstrument> {
+    const [updated] = await db.update(styleKitInstruments).set(data).where(eq(styleKitInstruments.id, id)).returning();
+    return updated;
+  }
+
+  async deleteStyleKitInstrument(id: number): Promise<void> {
+    const [instrument] = await db.select().from(styleKitInstruments).where(eq(styleKitInstruments.id, id));
+    if (instrument?.audioUrl && instrument.audioUrl.startsWith("/audio/")) {
+      try {
+        const fs = await import("fs");
+        const path = await import("path");
+        fs.default.unlinkSync(path.default.join(process.cwd(), "public", instrument.audioUrl));
+      } catch {}
+    }
+    await db.delete(styleKitInstruments).where(eq(styleKitInstruments.id, id));
   }
 
   async getStripeSubscriptions() {

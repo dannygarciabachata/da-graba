@@ -36,7 +36,7 @@ music, lyrics, image, audio_processing, voice
 - **generic_api_engine.ts** - API-agnostic engine: dynamic auth, request mapping, response extraction, submit/poll/download for ANY configured provider
 - **musicgpt_engine.ts** - MusicGPT-specific API client (fallback when no generic provider configured)
 - **seed_providers.ts** - Auto-seeds default MusicGPT provider with all 8 endpoints on first run
-- **prompt_engine.ts** - Lyrics system prompts (romantic/dance/heartbreak), structured JSON config generation
+- **prompt_engine.ts** - Lyrics system prompts (romantic/dance/heartbreak), structured JSON config generation, style kit prompt builder
 - **antigravity_engine.ts** - Creative AI engine for lyrics and full arrangement configs via OpenAI
 - **quiz_engine.ts** - Bachata knowledge quiz system (static bank + AI-generated questions)
 - **stems_engine.ts** - AI stem separation (uses generic engine with MusicGPT fallback)
@@ -48,6 +48,7 @@ music, lyrics, image, audio_processing, voice
 ## Key Features
 - "Heart Mula" branded music engine with style presets selector
 - **Admin Panel**: Owner-only API provider management with providers/endpoints tabs, test connection, Zod-validated CRUD
+- **Style Kits**: User-browsable library of custom instrument kits by Latin genre, with WAV/MP3 instrument audio upload and preview, integrated into music generation prompt engine
 - Dual generation modes: Aggregate (quick title+genre+style) and Standard (detailed prompt)
 - Bachata Mode auto-detection (keywords like "bachata", "bongo", "guira" auto-force Dominican instruments)
 - 6 style presets: Heart Mula Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana
@@ -80,15 +81,19 @@ client/src/
   pages/QuizPage.tsx             - Bachata quiz page
   pages/Studio.tsx               - Multitrack studio with stem separation + AI tools
   pages/SampleLab.tsx            - Sample Lab with recording, upload, AI Remix, Key/BPM detection
-  pages/AdminPage.tsx            - Admin panel for API provider/endpoint management
+  pages/AdminPage.tsx            - Admin panel for API provider/endpoint management + style kits
+  pages/StyleKitsPage.tsx        - User-facing style kit browser with instrument preview
+  pages/PricingPage.tsx          - Subscription plans and checkout
   components/AudioPlayer.tsx     - Waveform player
   components/SongHistory.tsx     - Track history list with Studio link
   components/BachataQuiz.tsx     - Interactive Bachata quiz
+  components/SupportChat.tsx     - AI-powered support chatbot
   hooks/use-songs.ts             - Song CRUD hooks
   hooks/use-tracks.ts            - Track/stem hooks + mastering, denoise, cover mutations
   hooks/use-lyrics.ts            - Lyrics generation hook
   hooks/use-samples.ts           - Sample Lab hooks + Key/BPM detection mutation
   hooks/use-admin.ts             - Admin panel hooks (providers, endpoints CRUD, test)
+  hooks/use-style-kits.ts        - Style kit data fetching and admin mutations
   hooks/use-auth.ts              - Auth state hook
 
 server/
@@ -109,7 +114,7 @@ server/
   replit_integrations/           - Auth, chat modules
 
 shared/
-  schema.ts                      - Drizzle schema (songs, tracks, lyrics, quiz_results, samples, api_providers, api_endpoints, users, sessions)
+  schema.ts                      - Drizzle schema (songs, tracks, lyrics, quiz_results, samples, api_providers, api_endpoints, users, sessions, style_kits, style_kit_instruments)
   routes.ts                      - API contract with Zod validation
 ```
 
@@ -152,6 +157,18 @@ shared/
 - `POST /api/samples/:id/key-bpm` - AI Key/BPM detection
 - `DELETE /api/samples/:id` - Delete sample
 - `PATCH /api/samples/:id` - Update sample metadata
+
+### Style Kits
+- `GET /api/style-kits` - List all active style kits with instruments
+- `GET /api/style-kits/meta` - Get available genres and instrument types
+- `GET /api/style-kits/:id` - Get single style kit with instruments
+- `POST /api/style-kits` - Create style kit (admin only)
+- `PATCH /api/style-kits/:id` - Update style kit (admin only)
+- `DELETE /api/style-kits/:id` - Delete style kit + instruments (admin only)
+- `GET /api/style-kits/:kitId/instruments` - List instruments for a kit
+- `POST /api/style-kits/:kitId/instruments` - Upload instrument audio file (admin only)
+- `PATCH /api/style-kits/instruments/:id` - Update instrument (admin only)
+- `DELETE /api/style-kits/instruments/:id` - Delete instrument (admin only)
 
 ### Admin (owner-only, requires ADMIN_USER_ID env var)
 - `GET /api/admin/check` - Check if current user is admin

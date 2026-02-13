@@ -15,6 +15,7 @@ import StudioPage from "@/pages/Studio";
 import SampleLab from "@/pages/SampleLab";
 import AdminPage from "@/pages/AdminPage";
 import PricingPage from "@/pages/PricingPage";
+import StyleKitsPage from "@/pages/StyleKitsPage";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
 
@@ -41,6 +42,7 @@ function AuthenticatedLayout() {
               <Route path="/quiz" component={QuizPage} />
               <Route path="/studio" component={StudioPage} />
               <Route path="/sample-lab" component={SampleLab} />
+              <Route path="/style-kits" component={StyleKitsPage} />
               <Route path="/pricing" component={PricingPage} />
               <Route path="/admin" component={AdminPage} />
               <Route component={NotFound} />
