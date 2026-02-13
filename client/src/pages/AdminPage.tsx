@@ -5,21 +5,23 @@ import {
   useCreateProvider, useUpdateProvider, useDeleteProvider,
   useCreateEndpoint, useUpdateEndpoint, useDeleteEndpoint,
   useTestEndpoint,
+  useAdminStats, useAdminUsers, useAdminSubscriptions, useAdminProducts,
 } from "@/hooks/use-admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   Settings, Plus, Trash2, Edit, CheckCircle, XCircle,
   Server, Zap, ArrowLeft, TestTube, Loader2, Save,
   Shield, Globe, Key, ToggleLeft, ToggleRight,
+  BarChart3, Users, CreditCard, Music, FileText, Mic,
 } from "lucide-react";
 import type { ApiProvider, ApiEndpoint } from "@shared/schema";
 
-type Tab = "providers" | "endpoints";
+type Tab = "dashboard" | "users" | "subscriptions" | "providers" | "endpoints";
 
 export default function AdminPage() {
   const [, setLocation] = useLocation();
@@ -51,10 +53,18 @@ export default function AdminPage() {
 }
 
 function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<Tab>("providers");
+  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [selectedProviderId, setSelectedProviderId] = useState<number | null>(null);
   const [editingProvider, setEditingProvider] = useState<Partial<ApiProvider> | null>(null);
   const [editingEndpoint, setEditingEndpoint] = useState<Partial<ApiEndpoint> | null>(null);
+
+  const tabs = [
+    { id: "dashboard" as Tab, label: "Dashboard", icon: BarChart3 },
+    { id: "users" as Tab, label: "Users", icon: Users },
+    { id: "subscriptions" as Tab, label: "Subscriptions", icon: CreditCard },
+    { id: "providers" as Tab, label: "API Providers", icon: Server },
+    { id: "endpoints" as Tab, label: "Endpoints", icon: Zap },
+  ];
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6" data-testid="admin-dashboard">
@@ -63,29 +73,31 @@ function AdminDashboard() {
           <Settings className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-xl font-bold">API Provider Admin</h1>
-          <p className="text-xs text-muted-foreground">Configure API providers, endpoints, and operation mappings</p>
+          <h1 className="text-xl font-bold">Admin Panel</h1>
+          <p className="text-xs text-muted-foreground">Manage users, subscriptions, API providers, and platform settings</p>
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <Button
-          variant={activeTab === "providers" ? "default" : "outline"}
-          size="sm"
-          onClick={() => { setActiveTab("providers"); setSelectedProviderId(null); }}
-          data-testid="tab-providers"
-        >
-          <Server className="h-4 w-4 mr-1" /> Providers
-        </Button>
-        <Button
-          variant={activeTab === "endpoints" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveTab("endpoints")}
-          data-testid="tab-endpoints"
-        >
-          <Zap className="h-4 w-4 mr-1" /> Endpoints
-        </Button>
+      <div className="flex gap-2 flex-wrap">
+        {tabs.map(tab => (
+          <Button
+            key={tab.id}
+            variant={activeTab === tab.id ? "default" : "outline"}
+            size="sm"
+            onClick={() => {
+              setActiveTab(tab.id);
+              if (tab.id === "providers") setSelectedProviderId(null);
+            }}
+            data-testid={`tab-${tab.id}`}
+          >
+            <tab.icon className="h-4 w-4 mr-1" /> {tab.label}
+          </Button>
+        ))}
       </div>
+
+      {activeTab === "dashboard" && <DashboardTab />}
+      {activeTab === "users" && <UsersTab />}
+      {activeTab === "subscriptions" && <SubscriptionsTab />}
 
       {activeTab === "providers" && (
         <ProvidersTab
@@ -105,6 +117,173 @@ function AdminDashboard() {
           onBack={() => setActiveTab("providers")}
         />
       )}
+    </div>
+  );
+}
+
+function DashboardTab() {
+  const { data: stats, isLoading } = useAdminStats();
+
+  if (isLoading) return <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>;
+
+  const statCards = [
+    { label: "Total Users", value: stats?.totalUsers || 0, icon: Users, color: "text-blue-400" },
+    { label: "Total Songs", value: stats?.totalSongs || 0, icon: Music, color: "text-green-400" },
+    { label: "Total Samples", value: stats?.totalSamples || 0, icon: Mic, color: "text-purple-400" },
+    { label: "Total Lyrics", value: stats?.totalLyrics || 0, icon: FileText, color: "text-yellow-400" },
+    { label: "Active Subscriptions", value: stats?.activeSubscriptions || 0, icon: CreditCard, color: "text-primary" },
+    { label: "Total Subscriptions", value: stats?.totalSubscriptions || 0, icon: BarChart3, color: "text-orange-400" },
+  ];
+
+  return (
+    <div className="space-y-4" data-testid="admin-dashboard-stats">
+      <h2 className="text-lg font-semibold">Platform Overview</h2>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {statCards.map(stat => (
+          <Card key={stat.label} data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, "-")}`}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <stat.icon className={`h-8 w-8 ${stat.color}`} />
+                <div>
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function UsersTab() {
+  const { data: usersList, isLoading } = useAdminUsers();
+
+  if (isLoading) return <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>;
+
+  return (
+    <div className="space-y-4" data-testid="admin-users-tab">
+      <h2 className="text-lg font-semibold">Users ({usersList?.length || 0})</h2>
+      <div className="space-y-2">
+        {usersList?.map((u: any) => (
+          <Card key={u.id} data-testid={`card-user-${u.id}`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {u.profileImageUrl ? (
+                    <img src={u.profileImageUrl} className="h-8 w-8 rounded-full" alt="" />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                      {u.firstName?.[0]}{u.lastName?.[0]}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium">{u.firstName} {u.lastName}</p>
+                    <p className="text-xs text-muted-foreground">{u.email || "No email"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={u.subscriptionTier === "premium" ? "default" : u.subscriptionTier === "pro" ? "secondary" : "outline"} className="text-[10px]">
+                    {u.subscriptionTier || "free"}
+                  </Badge>
+                  {u.stripeCustomerId && (
+                    <Badge variant="outline" className="text-[10px]">Stripe</Badge>
+                  )}
+                  <span className="text-[10px] text-muted-foreground">
+                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : ""}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        {(!usersList || usersList.length === 0) && (
+          <div className="text-center py-8 text-muted-foreground">
+            <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p className="text-sm">No users found.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SubscriptionsTab() {
+  const { data: subs, isLoading: subsLoading } = useAdminSubscriptions();
+  const { data: products, isLoading: prodsLoading } = useAdminProducts();
+
+  if (subsLoading || prodsLoading) return <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>;
+
+  return (
+    <div className="space-y-6" data-testid="admin-subscriptions-tab">
+      <div>
+        <h2 className="text-lg font-semibold mb-3">Products & Prices</h2>
+        {products && products.length > 0 ? (
+          <div className="grid gap-3">
+            {products.map((p: any) => (
+              <Card key={p.id || p.product_id} data-testid={`card-product-${p.id || p.product_id}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">{p.name || p.product_name}</p>
+                      <p className="text-xs text-muted-foreground">{p.description || p.product_description || ""}</p>
+                    </div>
+                    <div className="text-right">
+                      {p.unit_amount != null && (
+                        <p className="text-sm font-bold text-primary">
+                          ${(Number(p.unit_amount) / 100).toFixed(2)}/{(p.recurring as any)?.interval || "mo"}
+                        </p>
+                      )}
+                      <Badge variant={p.active || p.product_active ? "default" : "secondary"} className="text-[10px]">
+                        {p.active || p.product_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <CreditCard className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p className="text-sm">No products configured in Stripe yet.</p>
+            <p className="text-xs">Run the seed script to create subscription plans.</p>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold mb-3">Subscriptions ({subs?.length || 0})</h2>
+        {subs && subs.length > 0 ? (
+          <div className="space-y-2">
+            {subs.map((s: any) => (
+              <Card key={s.id} data-testid={`card-sub-${s.id}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-mono">{s.id?.substring(0, 20)}...</p>
+                      <p className="text-xs text-muted-foreground">Customer: {s.customer?.substring(0, 20)}...</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={s.status === "active" ? "default" : "secondary"} className="text-[10px]">
+                        {s.status}
+                      </Badge>
+                      {s.cancel_at_period_end && (
+                        <Badge variant="destructive" className="text-[10px]">Canceling</Badge>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <p className="text-sm">No subscriptions yet.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

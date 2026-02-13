@@ -13,6 +13,7 @@ import { processStemSeparation } from "./core/stems_engine";
 import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong, processAudioCut } from "./workers/sample_tasks";
 import { seedDefaultMusicGPTProvider } from "./core/seed_providers";
 import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, insertApiProviderSchema, insertApiEndpointSchema } from "@shared/schema";
+import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -889,6 +890,246 @@ export async function registerRoutes(
       });
     } catch (err: any) {
       res.json({ success: false, message: err.message || "Connection failed" });
+    }
+  });
+
+  // ========== ADMIN: EXPANDED DASHBOARD ==========
+
+  app.get("/api/admin/stats", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const stats = await storage.getAdminStats();
+      const subscriptions = await storage.getStripeSubscriptions();
+      const activeSubscriptions = subscriptions.filter((s: any) => s.status === "active" || s.status === "trialing");
+      res.json({
+        ...stats,
+        totalSubscriptions: subscriptions.length,
+        activeSubscriptions: activeSubscriptions.length,
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/admin/users", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const allUsers = await storage.getAllUsers();
+      res.json(allUsers);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/admin/subscriptions", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const subs = await storage.getStripeSubscriptions();
+      res.json(subs);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/admin/products", async (req, res) => {
+    if (!isAdmin(req)) return res.sendStatus(403);
+    try {
+      const products = await storage.getStripeProducts();
+      res.json(products);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ========== STRIPE: PUBLIC ROUTES ==========
+
+  app.get("/api/stripe/publishable-key", async (_req, res) => {
+    try {
+      const key = await getStripePublishableKey();
+      res.json({ publishableKey: key });
+    } catch (err: any) {
+      res.status(500).json({ message: "Stripe not configured" });
+    }
+  });
+
+  app.get("/api/stripe/products", async (_req, res) => {
+    try {
+      const products = await storage.getStripeProducts();
+      const productsMap = new Map<string, any>();
+      for (const row of products) {
+        const pid = (row as any).id;
+        if (!productsMap.has(pid)) {
+          productsMap.set(pid, {
+            id: pid,
+            name: (row as any).name,
+            description: (row as any).description,
+            metadata: (row as any).metadata,
+            prices: [],
+          });
+        }
+        if ((row as any).price_id) {
+          productsMap.get(pid).prices.push({
+            id: (row as any).price_id,
+            unitAmount: (row as any).unit_amount,
+            currency: (row as any).currency,
+            recurring: (row as any).recurring,
+          });
+        }
+      }
+      res.json(Array.from(productsMap.values()));
+    } catch {
+      res.json([]);
+    }
+  });
+
+  app.get("/api/stripe/subscription", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const user = await storage.getUser(userId);
+      if (!user?.stripeSubscriptionId) {
+        return res.json({ subscription: null, tier: user?.subscriptionTier || "free" });
+      }
+      const stripe = await getUncachableStripeClient();
+      const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId) as any;
+      res.json({
+        subscription: {
+          id: subscription.id,
+          status: subscription.status,
+          currentPeriodEnd: subscription.current_period_end,
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        },
+        tier: user.subscriptionTier || "free",
+      });
+    } catch {
+      res.json({ subscription: null, tier: "free" });
+    }
+  });
+
+  app.post("/api/stripe/checkout", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const { priceId } = req.body;
+    if (!priceId) return res.status(400).json({ message: "priceId required" });
+
+    try {
+      const stripe = await getUncachableStripeClient();
+      const user = await storage.getUser(userId);
+      if (!user) return res.sendStatus(404);
+
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email || undefined,
+          metadata: { userId },
+        });
+        customerId = customer.id;
+        await storage.updateUserStripeInfo(userId, { stripeCustomerId: customer.id });
+      }
+
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ["card"],
+        line_items: [{ price: priceId, quantity: 1 }],
+        mode: "subscription",
+        success_url: `${baseUrl}/pricing?success=true`,
+        cancel_url: `${baseUrl}/pricing?canceled=true`,
+      });
+
+      res.json({ url: session.url });
+    } catch (err: any) {
+      console.error("[Stripe] Checkout error:", err.message);
+      res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+
+  app.post("/api/stripe/portal", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+
+    try {
+      const stripe = await getUncachableStripeClient();
+      const user = await storage.getUser(userId);
+      if (!user?.stripeCustomerId) {
+        return res.status(400).json({ message: "No billing account found" });
+      }
+
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const session = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: `${baseUrl}/pricing`,
+      });
+
+      res.json({ url: session.url });
+    } catch (err: any) {
+      console.error("[Stripe] Portal error:", err.message);
+      res.status(500).json({ message: "Failed to create portal session" });
+    }
+  });
+
+  // ========== AI SUPPORT CHATBOT ==========
+
+  app.post("/api/support/chat", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { message, history } = req.body;
+    if (!message) return res.status(400).json({ message: "message required" });
+
+    try {
+      const OpenAI = (await import("openai")).default;
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const systemPrompt = `You are the DGB Audio Support Assistant, a helpful and friendly AI support agent for the DGB Audio music production platform (also known as "Heart Mula Engine").
+
+PLATFORM FEATURES:
+- Music Generation: AI-powered music creation supporting 20+ genres. Users can create songs with custom prompts, select genres, and choose from 6 style presets (Heart Mula Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana).
+- Multitrack Studio: AI stem separation splits songs into Vocals, Drums, Bass, and Melody tracks. Each track has individual volume, mute, and solo controls.
+- Studio AI Tools: Professional audio mastering, noise removal (denoise), AI cover songs with voice change, and audio trimming/cutting.
+- Sample Lab: Record audio from browser, upload audio files, AI remix transformation, and Key/BPM detection.
+- Lyrics Generator: AI-powered lyrics creation in romantic, dance, and heartbreak styles with Latin music influences.
+- Bachata Quiz: Interactive music knowledge quiz about bachata history, instruments, and culture.
+- Library: All generated songs stored with playback, download, and studio access.
+
+SUBSCRIPTION PLANS:
+- Free: Basic access to music generation and features
+- Pro: Enhanced features, more generations, priority processing
+- Premium: Unlimited access, all features, priority support
+
+HOW TO USE:
+1. Create Music: Go to "Create" page, enter a prompt describing your song, select genre and style, click generate
+2. Edit in Studio: After a song is generated, click "Studio" to separate stems and apply AI tools
+3. Sample Lab: Record or upload audio, then transform it with AI remix
+4. Generate Lyrics: Go to "Lyrics" page, enter a theme and style
+
+COMMON ISSUES:
+- Song stuck on "processing": Songs typically take 1-3 minutes. If stuck longer, try generating again.
+- Audio not playing: Check browser audio permissions and try refreshing.
+- Stem separation failed: Ensure the original song was fully generated first.
+
+IMPORTANT: Always be helpful, concise, and supportive. If you don't know something specific about the platform, suggest the user contact support. Respond in the same language the user writes in.`;
+
+      const messages: any[] = [
+        { role: "system", content: systemPrompt },
+        ...(history || []).slice(-10),
+        { role: "user", content: message },
+      ];
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages,
+        max_tokens: 500,
+        temperature: 0.7,
+      });
+
+      res.json({
+        reply: completion.choices[0]?.message?.content || "I'm sorry, I couldn't process your request. Please try again.",
+      });
+    } catch (err: any) {
+      console.error("[Support] Chat error:", err.message);
+      res.status(500).json({ message: "Support chat unavailable" });
     }
   });
 

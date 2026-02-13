@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql, count } from "drizzle-orm";
 import { 
   songs, lyrics, quizResults, tracks, samples,
   apiProviders, apiEndpoints,
@@ -11,6 +11,7 @@ import {
   type ApiProvider, type InsertApiProvider,
   type ApiEndpoint, type InsertApiEndpoint
 } from "@shared/schema";
+import { users, type User } from "@shared/models/auth";
 
 export { authStorage } from "./replit_integrations/auth/storage";
 export { chatStorage } from "./replit_integrations/chat/storage";
@@ -318,6 +319,72 @@ export class DatabaseStorage implements IStorage {
 
   async deleteApiEndpoint(id: number): Promise<void> {
     await db.delete(apiEndpoints).where(eq(apiEndpoints.id, id));
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateUserStripeInfo(userId: string, data: {
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string | null;
+    subscriptionTier?: string;
+  }): Promise<User> {
+    const [updated] = await db.update(users).set({ ...data, updatedAt: new Date() }).where(eq(users.id, userId)).returning();
+    return updated;
+  }
+
+  async getAdminStats(): Promise<{
+    totalUsers: number;
+    totalSongs: number;
+    totalSamples: number;
+    totalLyrics: number;
+  }> {
+    const [userCount] = await db.select({ count: count() }).from(users);
+    const [songCount] = await db.select({ count: count() }).from(songs);
+    const [sampleCount] = await db.select({ count: count() }).from(samples);
+    const [lyricCount] = await db.select({ count: count() }).from(lyrics);
+    return {
+      totalUsers: userCount.count,
+      totalSongs: songCount.count,
+      totalSamples: sampleCount.count,
+      totalLyrics: lyricCount.count,
+    };
+  }
+
+  async getStripeProducts() {
+    try {
+      const result = await db.execute(sql`
+        SELECT p.id, p.name, p.description, p.metadata, p.active,
+               pr.id as price_id, pr.unit_amount, pr.currency, pr.recurring, pr.active as price_active
+        FROM stripe.products p
+        LEFT JOIN stripe.prices pr ON pr.product = p.id AND pr.active = true
+        WHERE p.active = true
+        ORDER BY p.name, pr.unit_amount
+      `);
+      return result.rows;
+    } catch {
+      return [];
+    }
+  }
+
+  async getStripeSubscriptions() {
+    try {
+      const result = await db.execute(sql`
+        SELECT s.id, s.customer, s.status, s.current_period_start, s.current_period_end,
+               s.cancel_at_period_end, s.metadata
+        FROM stripe.subscriptions s
+        ORDER BY s.current_period_start DESC
+      `);
+      return result.rows;
+    } catch {
+      return [];
+    }
   }
 }
 

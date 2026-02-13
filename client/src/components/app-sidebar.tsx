@@ -25,6 +25,7 @@ import {
   Music,
   LogOut,
   Settings,
+  CreditCard,
 } from "lucide-react";
 import { useAdminCheck } from "@/hooks/use-admin";
 
@@ -38,6 +39,7 @@ const NAV_ITEMS = [
 const TOOLS_ITEMS = [
   { title: "Multitrack Studio", url: "/studio", icon: Scissors },
   { title: "Sample Lab", url: "/sample-lab", icon: Music },
+  { title: "Pricing", url: "/pricing", icon: CreditCard },
 ];
 
 export function AppSidebar() {

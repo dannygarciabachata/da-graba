@@ -1,17 +1,19 @@
 # DGB Audio - Heart Mula Music Engine
 
 ## Overview
-AI-powered music generation platform by Danny Garcia. The "Heart Mula" engine uses a **generic, API-agnostic architecture** where any API provider can be configured via the Admin Panel. Default provider is MusicGPT for all audio operations. OpenAI handles lyrics writing. Supports 20+ music genres. Uses webhook-based architecture for efficient async processing.
+AI-powered music generation SaaS platform by Danny Garcia. The "Heart Mula" engine uses a **generic, API-agnostic architecture** where any API provider can be configured via the Admin Panel. Default provider is MusicGPT for all audio operations. OpenAI handles lyrics writing. Supports 20+ music genres. Uses webhook-based architecture for efficient async processing. Includes Stripe subscription billing, comprehensive admin dashboard, and AI support chatbot.
 
 ## Architecture
 - **Frontend**: React + Vite + TailwindCSS + Shadcn UI
 - **Backend**: Express.js (TypeScript)
 - **Database**: PostgreSQL (Neon-backed via Replit)
 - **Auth**: Replit Auth (OpenID Connect)
+- **Payments**: Stripe via stripe-replit-sync (products, subscriptions, checkout, customer portal)
 - **API System**: Generic API engine with DB-driven provider configuration (api_providers + api_endpoints tables)
 - **Default Music AI**: MusicGPT (auto-seeded, all audio operations)
 - **Lyrics AI**: OpenAI via Replit AI Integrations (GPT-5.1)
-- **Admin Panel**: Owner-only UI for managing API providers, endpoints, and operation mappings
+- **Support AI**: OpenAI-powered chatbot with platform knowledge
+- **Admin Panel**: Owner-only UI for managing users, subscriptions, API providers, endpoints, and platform stats
 
 ## Generic API Provider System
 The system is API-agnostic. All audio operations route through a generic engine that:

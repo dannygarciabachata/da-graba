@@ -127,3 +127,38 @@ export function useTestEndpoint() {
     },
   });
 }
+
+export function useAdminStats() {
+  return useQuery<{
+    totalUsers: number;
+    totalSongs: number;
+    totalSamples: number;
+    totalLyrics: number;
+    totalSubscriptions: number;
+    activeSubscriptions: number;
+  }>({
+    queryKey: ["/api/admin/stats"],
+    retry: false,
+  });
+}
+
+export function useAdminUsers() {
+  return useQuery<any[]>({
+    queryKey: ["/api/admin/users"],
+    retry: false,
+  });
+}
+
+export function useAdminSubscriptions() {
+  return useQuery<any[]>({
+    queryKey: ["/api/admin/subscriptions"],
+    retry: false,
+  });
+}
+
+export function useAdminProducts() {
+  return useQuery<any[]>({
+    queryKey: ["/api/admin/products"],
+    retry: false,
+  });
+}
