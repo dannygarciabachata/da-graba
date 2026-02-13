@@ -29,7 +29,8 @@ interface ResolvedServer {
 
 function resolveFromCloudServer(server: CloudServer): ResolvedServer {
   let baseUrl = server.baseUrl.replace(/\/$/, "");
-  if (server.apiPort && !baseUrl.includes(`:${server.apiPort}`)) {
+  const isStandardPort = !server.apiPort || server.apiPort === 443 || server.apiPort === 80;
+  if (!isStandardPort && !baseUrl.includes(`:${server.apiPort}`)) {
     const url = new URL(baseUrl);
     url.port = String(server.apiPort);
     baseUrl = url.toString().replace(/\/$/, "");
