@@ -35,7 +35,7 @@ The "Heart Mula" music engine employs a microservices-oriented architecture with
     - **Fallback Mechanism:** If no specific provider is configured for an operation, the system defaults to a hardcoded fallback engine (`musicgpt_engine.ts`).
     - **Operation Types:** Supports a wide range of operations including music_generation, stem_separation, remix, mastering, denoise, key_bpm, cover, voice_change, audio_cut, lyrics_generation, and image_generation.
 - **AI Engines:**
-    - **Heart Mula Audio Engine:** Default for all audio operations (seeded as "Heart Mula Audio Engine"), API-agnostic.
+    - **DGB STUDIO Audio Engine:** Default for all audio operations (seeded as "DGB STUDIO Audio Engine"), API-agnostic.
     - **Heart Mula Cloud Engine:** Private cloud GPU engine for instrument processing, audio analysis, and MIDI conversion.
     - **OpenAI Integration:** Used for lyrics generation (via GPT-5.1) and powering the platform's support chatbot and instrument prompt generation.
     - **SAO Training Pipeline:** A Stable Audio Open-inspired fine-tuning pipeline for custom instrument kits, utilizing OpenAI for prompt generation and cloud GPU for training.

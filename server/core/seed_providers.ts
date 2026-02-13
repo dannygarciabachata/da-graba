@@ -7,10 +7,10 @@ export async function seedDefaultMusicGPTProvider(): Promise<void> {
     return;
   }
 
-  console.log("[Seed] Seeding default Heart Mula Audio Engine configuration...");
+  console.log("[Seed] Seeding default DGB STUDIO Audio Engine configuration...");
 
   const provider = await storage.createApiProvider({
-    name: "Heart Mula Audio Engine",
+    name: "DGB STUDIO Audio Engine",
     baseUrl: "https://api.musicgpt.com/api/public/v1",
     authType: "raw",
     authHeaderName: "Authorization",
@@ -155,7 +155,7 @@ export async function seedDefaultMusicGPTProvider(): Promise<void> {
     console.log(`[Seed] Created endpoint: ${ep.name}`);
   }
 
-  console.log(`[Seed] Heart Mula Audio Engine seeded with ${endpoints.length} endpoints`);
+  console.log(`[Seed] DGB STUDIO Audio Engine seeded with ${endpoints.length} endpoints`);
 
   await seedDgbRunPodProvider();
 }
