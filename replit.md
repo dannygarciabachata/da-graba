@@ -51,7 +51,7 @@ The "Heart Mula" music engine employs a microservices-oriented architecture with
 - **OpenAI:** Used for AI lyrics generation, AI support chatbot, and prompt generation within the SAO training pipeline.
 - **Neon (PostgreSQL):** Database hosting for all persistent data.
 - **Stripe:** Payment gateway for subscription management, checkouts, and customer portals.
-- **RunPod:** Utilized for AI training of custom instrument kits uploaded by users in the Producer Store.
+- **RunPod:** JupyterLab server for audio analysis (librosa-based key/BPM/energy detection) and SAO model fine-tuning. Connected via `RUNPOD_BASE_URL` env var. Uses Jupyter kernel API for job dispatch with webhook callbacks.
 - **Replit Auth:** OpenID Connect-based user authentication.
 - **Replit AI Integrations:** Facilitates connection to OpenAI services.
 - **Wavesurfer.js:** Frontend library for audio waveform visualization.
