@@ -215,6 +215,17 @@ print(f"[SAO Music] Job complete for song {song_id}")
 `;
 }
 
+function buildJupyterUrl(baseUrl: string, jupyterPort: number): string {
+  const cleanBase = baseUrl.replace(/\/$/, "");
+  const proxyMatch = cleanBase.match(/^(https?:\/\/)([a-z0-9]+)-\d+\.proxy\.runpod\.net/i);
+  if (proxyMatch) {
+    return `${proxyMatch[1]}${proxyMatch[2]}-${jupyterPort}.proxy.runpod.net`;
+  }
+  const url = new URL(cleanBase);
+  url.port = String(jupyterPort);
+  return url.toString().replace(/\/$/, "");
+}
+
 async function resolveJupyterServer(): Promise<{ base: string; token: string } | null> {
   try {
     const { storage } = await import("../storage");
@@ -222,19 +233,13 @@ async function resolveJupyterServer(): Promise<{ base: string; token: string } |
     if (!server) {
       const stemServer = await storage.getActiveCloudServer("stem_separation");
       if (stemServer && stemServer.baseUrl) {
-        const cleanBase = stemServer.baseUrl.replace(/\/$/, "");
         const port = stemServer.jupyterPort || 8888;
-        const url = new URL(cleanBase);
-        url.port = String(port);
-        return { base: url.toString().replace(/\/$/, ""), token: stemServer.jupyterToken || process.env.RUNPOD_JUPYTER_TOKEN || "" };
+        return { base: buildJupyterUrl(stemServer.baseUrl, port), token: stemServer.jupyterToken || process.env.RUNPOD_JUPYTER_TOKEN || "" };
       }
     }
     if (server && server.baseUrl) {
-      const cleanBase = server.baseUrl.replace(/\/$/, "");
       const port = server.jupyterPort || 8888;
-      const url = new URL(cleanBase);
-      url.port = String(port);
-      return { base: url.toString().replace(/\/$/, ""), token: server.jupyterToken || process.env.RUNPOD_JUPYTER_TOKEN || "" };
+      return { base: buildJupyterUrl(server.baseUrl, port), token: server.jupyterToken || process.env.RUNPOD_JUPYTER_TOKEN || "" };
     }
   } catch {}
   const base = (process.env.RUNPOD_BASE_URL || "").replace(/\/lab\/.*$/, "").replace(/\/$/, "");

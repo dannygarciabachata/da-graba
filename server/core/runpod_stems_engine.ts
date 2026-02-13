@@ -218,16 +218,24 @@ print(f"[Demucs Stems] Job finished for song {song_id}")
 `;
 }
 
+function buildJupyterUrl(baseUrl: string, jupyterPort: number): string {
+  const cleanBase = baseUrl.replace(/\/$/, "");
+  const proxyMatch = cleanBase.match(/^(https?:\/\/)([a-z0-9]+)-\d+\.proxy\.runpod\.net/i);
+  if (proxyMatch) {
+    return `${proxyMatch[1]}${proxyMatch[2]}-${jupyterPort}.proxy.runpod.net`;
+  }
+  const url = new URL(cleanBase);
+  url.port = String(jupyterPort);
+  return url.toString().replace(/\/$/, "");
+}
+
 async function resolveJupyterServer(): Promise<{ base: string; token: string } | null> {
   try {
     const { storage } = await import("../storage");
     const server = await storage.getActiveCloudServer("stem_separation");
     if (server && server.baseUrl) {
-      const cleanBase = server.baseUrl.replace(/\/$/, "");
       const port = server.jupyterPort || 8888;
-      const url = new URL(cleanBase);
-      url.port = String(port);
-      const base = url.toString().replace(/\/$/, "");
+      const base = buildJupyterUrl(server.baseUrl, port);
       const token = server.jupyterToken || process.env.RUNPOD_JUPYTER_TOKEN || "";
       return { base, token };
     }
