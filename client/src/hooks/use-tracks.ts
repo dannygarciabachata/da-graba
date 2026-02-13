@@ -132,8 +132,8 @@ export function useCoverSong() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ songId, voiceDescription }: { songId: number; voiceDescription: string }) => {
-      const res = await apiRequest("POST", `/api/songs/${songId}/cover`, { voiceDescription });
+    mutationFn: async ({ songId, voiceId }: { songId: number; voiceId: string }) => {
+      const res = await apiRequest("POST", `/api/songs/${songId}/cover`, { voiceId });
       return res.json();
     },
     onSuccess: () => {

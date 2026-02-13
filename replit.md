@@ -8,11 +8,11 @@ AI-powered music generation platform by Danny Garcia. The "Heart Mula" engine us
 - **Backend**: Express.js (TypeScript)
 - **Database**: PostgreSQL (Neon-backed via Replit)
 - **Auth**: Replit Auth (OpenID Connect)
-- **Music AI**: MusicGPT (exclusive provider for all audio: /MusicAI, /Extraction, /Remix, /AudioMastering, /Denoise, /KeyBPMExtraction, /Cover)
+- **Music AI**: MusicGPT (exclusive provider for all audio: /MusicAI, /Extraction, /Remix, /audio_mastering, /denoise, /extract_key_bpm, /Cover, /VoiceChanger, /audio_cutter)
 - **Lyrics AI**: OpenAI via Replit AI Integrations (GPT-5.1)
 
 ## Core Engines (server/core/)
-- **musicgpt_engine.ts** - MusicGPT API client with generic submit/poll helpers for all endpoints (MusicAI, Extraction, Remix, AudioMastering, Denoise, KeyBPMExtraction, Cover), file download utility, URL resolver, webhook URL helper
+- **musicgpt_engine.ts** - MusicGPT API client with generic submit/poll helpers for all endpoints (MusicAI, Extraction, Remix, audio_mastering, denoise, extract_key_bpm, Cover, VoiceChanger, audio_cutter), file download utility, URL resolver, webhook URL helper, conversionType mapping for status polling
 - **prompt_engine.ts** - Lyrics system prompts (romantic/dance/heartbreak), structured JSON config generation
 - **antigravity_engine.ts** - Creative AI engine for lyrics and full arrangement configs via OpenAI
 - **quiz_engine.ts** - Bachata knowledge quiz system (static bank + AI-generated questions)
@@ -104,9 +104,9 @@ shared/
 - `GET /api/songs/:id` - Get single song
 - `DELETE /api/songs/:id` - Delete song
 - `POST /api/songs/:id/stems` - Trigger AI stem separation (MusicGPT Extraction) for a completed song
-- `POST /api/songs/:id/master` - AI audio mastering (MusicGPT AudioMastering)
-- `POST /api/songs/:id/denoise` - AI noise removal (MusicGPT Denoise)
-- `POST /api/songs/:id/cover` - AI cover song with voice change (MusicGPT Cover, body: {voiceDescription})
+- `POST /api/songs/:id/master` - AI audio mastering (MusicGPT audio_mastering)
+- `POST /api/songs/:id/denoise` - AI noise removal (MusicGPT denoise)
+- `POST /api/songs/:id/cover` - AI cover song with voice change (MusicGPT Cover, body: {voiceId, pitch?})
 - `POST /api/songs/:id/trim` - Audio Cutter trim (MusicGPT audio_cutter, body: {startTimeMs, endTimeMs})
 - `GET /api/songs/:id/tracks` - Get individual tracks/stems for a song
 - `GET /api/tracks` - List all user's tracks
@@ -120,16 +120,18 @@ shared/
 - `POST /api/samples/upload` - Upload audio file (multipart/form-data with multer)
 - `POST /api/samples/record` - Save browser recording (base64 audio data)
 - `POST /api/samples/transform` - AI Remix transform (MusicGPT Remix)
-- `POST /api/samples/:id/key-bpm` - AI Key/BPM detection (MusicGPT KeyBPMExtraction)
+- `POST /api/samples/:id/key-bpm` - AI Key/BPM detection (MusicGPT extract_key_bpm)
 - `DELETE /api/samples/:id` - Delete sample (also removes audio file)
 - `PATCH /api/samples/:id` - Update sample metadata (name, bpm, key, position)
 
 ## MusicGPT API Pattern
 All MusicGPT endpoints use async task-based processing:
 1. Submit job → POST to /api/public/v1/{Endpoint} → receive task_id
-2. Poll status → GET /api/public/v1/byId?task_id={id} → check status
+2. Poll status → GET /api/public/v1/byId?task_id={id}&conversionType={type} → check status
 3. On COMPLETED → download audio from returned URL → save locally
 4. Authorization: raw API key in Authorization header (not Bearer)
+5. Content-type: MusicAI uses JSON (application/json), all others use FormData (multipart/form-data)
+6. conversionType values: MUSIC_AI, EXTRACTION, REMIX, AUDIO_MASTERING, DENOISING, KEY_BPM_EXTRACTION, COVER, VOICE_CONVERSION, AUDIO_CUTTER
 
 For music generation (MusicAI), webhook-based flow is preferred:
 1. Submit with webhook_url → receive task_id → store in songs.taskId

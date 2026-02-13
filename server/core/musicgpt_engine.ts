@@ -12,10 +12,12 @@ interface MusicGPTSubmitResponse {
   success: boolean;
   message: string;
   task_id: string;
-  conversion_id_1: string;
-  conversion_id_2: string;
+  conversion_id?: string;
+  conversion_id_1?: string;
+  conversion_id_2?: string;
   eta: number;
   credit_estimate?: number;
+  status?: string;
 }
 
 interface MusicGPTConversion {
@@ -26,14 +28,17 @@ interface MusicGPTConversion {
   audio_url?: string;
   conversion_path?: string;
   conversion_path_wav?: string;
+  output_file?: string;
   conversion_cost?: number;
   title?: string;
   lyrics?: string;
   music_style?: string;
   vocals_url?: string;
   accompaniment_url?: string;
-  key?: string;
+  key_changes?: Record<string, string[]>;
+  dominant_key?: string;
   bpm?: number;
+  key?: string;
 }
 
 interface MusicGPTStatusResponse {
@@ -47,6 +52,8 @@ export interface MusicGPTPollResult {
   accompanimentUrl?: string;
   key?: string;
   bpm?: number;
+  dominantKey?: string;
+  keyChanges?: Record<string, string[]>;
   raw: MusicGPTConversion;
 }
 
@@ -54,10 +61,24 @@ export type MusicGPTEndpoint =
   | "MusicAI"
   | "Extraction"
   | "Remix"
-  | "AudioMastering"
-  | "Denoise"
-  | "KeyBPMExtraction"
-  | "Cover";
+  | "audio_mastering"
+  | "denoise"
+  | "extract_key_bpm"
+  | "Cover"
+  | "VoiceChanger"
+  | "audio_cutter";
+
+const ENDPOINT_CONVERSION_TYPES: Record<string, string> = {
+  MusicAI: "MUSIC_AI",
+  Extraction: "EXTRACTION",
+  Remix: "REMIX",
+  audio_mastering: "AUDIO_MASTERING",
+  denoise: "DENOISING",
+  extract_key_bpm: "KEY_BPM_EXTRACTION",
+  Cover: "COVER",
+  VoiceChanger: "VOICE_CONVERSION",
+  audio_cutter: "AUDIO_CUTTER",
+};
 
 export function buildMusicGPTPrompt(userPrompt: string, style: string): { prompt: string; music_style: string } {
   const prompt = userPrompt.substring(0, 280);
@@ -126,23 +147,26 @@ export async function submitMusicGPTJob(
 export async function pollMusicGPTJob(
   taskId: string,
   timeoutMs: number = 600000,
-  intervalMs: number = 8000
+  intervalMs: number = 8000,
+  conversionType?: string
 ): Promise<MusicGPTPollResult> {
   const apiKey = getApiKey();
   const startTime = Date.now();
   let currentInterval = intervalMs;
 
-  console.log(`[MusicGPT] Polling task ${taskId} (timeout: ${timeoutMs / 1000}s)...`);
+  console.log(`[MusicGPT] Polling task ${taskId} (timeout: ${timeoutMs / 1000}s, type: ${conversionType || "auto"})...`);
 
   while (Date.now() - startTime < timeoutMs) {
     try {
-      const response = await fetch(
-        `${MUSICGPT_API_BASE}/byId?task_id=${encodeURIComponent(taskId)}`,
-        {
-          method: "GET",
-          headers: { Authorization: apiKey },
-        }
-      );
+      let pollUrl = `${MUSICGPT_API_BASE}/byId?task_id=${encodeURIComponent(taskId)}`;
+      if (conversionType) {
+        pollUrl += `&conversionType=${encodeURIComponent(conversionType)}`;
+      }
+
+      const response = await fetch(pollUrl, {
+        method: "GET",
+        headers: { Authorization: apiKey },
+      });
 
       if (!response.ok) {
         console.log(`[MusicGPT] Poll response ${response.status}, retrying...`);
@@ -160,7 +184,8 @@ export async function pollMusicGPTJob(
           const audioUrl =
             data.conversion.audio_url ||
             data.conversion.conversion_path ||
-            data.conversion.conversion_path_wav;
+            data.conversion.conversion_path_wav ||
+            data.conversion.output_file;
 
           console.log(`[MusicGPT] Task ${taskId} completed`);
 
@@ -168,7 +193,9 @@ export async function pollMusicGPTJob(
             audioUrl: audioUrl || undefined,
             vocalsUrl: data.conversion.vocals_url,
             accompanimentUrl: data.conversion.accompaniment_url,
-            key: data.conversion.key,
+            dominantKey: data.conversion.dominant_key,
+            keyChanges: data.conversion.key_changes,
+            key: data.conversion.dominant_key || data.conversion.key,
             bpm: data.conversion.bpm,
             raw: data.conversion,
           };
@@ -194,6 +221,10 @@ export async function pollMusicGPTJob(
   }
 
   throw new Error(`MusicGPT job timed out after ${timeoutMs / 1000}s`);
+}
+
+export function getConversionType(endpoint: MusicGPTEndpoint): string | undefined {
+  return ENDPOINT_CONVERSION_TYPES[endpoint];
 }
 
 export function getWebhookUrl(): string {
@@ -240,7 +271,7 @@ export async function pollMusicGPTStatus(
   timeoutMs: number = 600000,
   intervalMs: number = 8000
 ): Promise<string> {
-  const result = await pollMusicGPTJob(taskId, timeoutMs, intervalMs);
+  const result = await pollMusicGPTJob(taskId, timeoutMs, intervalMs, "MUSIC_AI");
   if (!result.audioUrl) {
     throw new Error("MusicGPT returned COMPLETED but no audio URL");
   }
@@ -270,37 +301,61 @@ export async function submitExtraction(
 export async function submitRemix(
   audioUrl: string,
   prompt: string,
-  options: { music_style?: string; duration?: number } = {}
+  options: { lyrics?: string; gender?: string; webhookUrl?: string } = {}
 ): Promise<MusicGPTSubmitResponse> {
   const body: Record<string, any> = {
     audio_url: audioUrl,
     prompt,
   };
-  if (options.music_style) body.music_style = options.music_style;
-  if (options.duration) body.output_length = options.duration;
+  if (options.lyrics) body.lyrics = options.lyrics;
+  if (options.gender) body.gender = options.gender;
+  if (options.webhookUrl) body.webhook_url = options.webhookUrl;
   return submitMusicGPTJob("Remix", body);
 }
 
-export async function submitMastering(audioUrl: string): Promise<MusicGPTSubmitResponse> {
-  return submitMusicGPTJob("AudioMastering", { audio_url: audioUrl });
+export async function submitMastering(
+  audioUrl: string,
+  options: { referenceAudioUrl?: string; outputExtension?: string; webhookUrl?: string } = {}
+): Promise<MusicGPTSubmitResponse> {
+  const body: Record<string, any> = {
+    audio_url: audioUrl,
+  };
+  if (options.referenceAudioUrl) body.reference_audio_url = options.referenceAudioUrl;
+  if (options.outputExtension) body.output_extension = options.outputExtension;
+  if (options.webhookUrl) body.webhook_url = options.webhookUrl;
+  return submitMusicGPTJob("audio_mastering", body);
 }
 
-export async function submitDenoise(audioUrl: string): Promise<MusicGPTSubmitResponse> {
-  return submitMusicGPTJob("Denoise", { audio_url: audioUrl });
+export async function submitDenoise(
+  audioUrl: string,
+  options: { webhookUrl?: string } = {}
+): Promise<MusicGPTSubmitResponse> {
+  const body: Record<string, any> = { audio_url: audioUrl };
+  if (options.webhookUrl) body.webhook_url = options.webhookUrl;
+  return submitMusicGPTJob("denoise", body);
 }
 
-export async function submitKeyBPMExtraction(audioUrl: string): Promise<MusicGPTSubmitResponse> {
-  return submitMusicGPTJob("KeyBPMExtraction", { audio_url: audioUrl });
+export async function submitKeyBPMExtraction(
+  audioUrl: string,
+  options: { webhookUrl?: string } = {}
+): Promise<MusicGPTSubmitResponse> {
+  const body: Record<string, any> = { audio_url: audioUrl };
+  if (options.webhookUrl) body.webhook_url = options.webhookUrl;
+  return submitMusicGPTJob("extract_key_bpm", body);
 }
 
 export async function submitCover(
   audioUrl: string,
-  voiceDescription: string
+  voiceId: string,
+  options: { pitch?: number; webhookUrl?: string } = {}
 ): Promise<MusicGPTSubmitResponse> {
-  return submitMusicGPTJob("Cover", {
+  const body: Record<string, any> = {
     audio_url: audioUrl,
-    voice_description: voiceDescription,
-  });
+    voice_id: voiceId,
+  };
+  if (options.pitch !== undefined) body.pitch = options.pitch;
+  if (options.webhookUrl) body.webhook_url = options.webhookUrl;
+  return submitMusicGPTJob("Cover", body);
 }
 
 export async function submitAudioCutter(
@@ -308,8 +363,7 @@ export async function submitAudioCutter(
   startTimeMs: number,
   endTimeMs: number,
   options: { outputExtension?: string; webhookUrl?: string } = {}
-): Promise<{ success: boolean; conversion_id: string; conversion_path?: string; message?: string }> {
-  const apiKey = getApiKey();
+): Promise<MusicGPTSubmitResponse> {
   const body: Record<string, any> = {
     audio_url: audioUrl,
     start_time: startTimeMs,
@@ -318,38 +372,9 @@ export async function submitAudioCutter(
   };
   if (options.webhookUrl) body.webhook_url = options.webhookUrl;
 
-  console.log(`[MusicGPT:AudioCutter] Submitting trim: ${startTimeMs}ms - ${endTimeMs}ms`);
+  console.log(`[MusicGPT:audio_cutter] Submitting trim: ${startTimeMs}ms - ${endTimeMs}ms`);
 
-  const formData = new FormData();
-  for (const [key, value] of Object.entries(body)) {
-    if (value !== undefined && value !== null) {
-      formData.append(key, String(value));
-    }
-  }
-
-  const response = await fetch(`${MUSICGPT_API_BASE}/audio_cutter`, {
-    method: "POST",
-    headers: {
-      Authorization: apiKey,
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    let errorMsg = `Audio Cutter API error: ${response.status}`;
-    try {
-      const errorData = await response.json();
-      errorMsg = errorData?.message || errorData?.error || JSON.stringify(errorData);
-    } catch {
-      const text = await response.text().catch(() => "");
-      if (text) errorMsg = text.substring(0, 300);
-    }
-    throw new Error(`MUSICGPT_ERROR: ${errorMsg}`);
-  }
-
-  const data = await response.json();
-  console.log(`[MusicGPT:AudioCutter] Result: conversion_id=${data.conversion_id}, path=${data.conversion_path?.substring(0, 80)}`);
-  return data;
+  return submitMusicGPTJob("audio_cutter", body);
 }
 
 import fs from "fs";

@@ -6,6 +6,7 @@ import {
   resolveFullAudioUrl,
   buildMusicGPTPrompt,
   submitAudioCutter,
+  getConversionType,
 } from "../core/musicgpt_engine";
 
 export async function processHummingToMusic(
@@ -28,11 +29,9 @@ export async function processHummingToMusic(
 
     console.log(`[SampleWorker] Using MusicGPT Remix with prompt: ${cleanPrompt}`);
 
-    const submitResult = await submitRemix(fullAudioUrl, cleanPrompt, {
-      duration: Math.min(duration, 30),
-    });
+    const submitResult = await submitRemix(fullAudioUrl, cleanPrompt);
 
-    const pollResult = await pollMusicGPTJob(submitResult.task_id, 600000, 8000);
+    const pollResult = await pollMusicGPTJob(submitResult.task_id, 600000, 8000, "REMIX");
 
     if (!pollResult.audioUrl) {
       throw new Error("MusicGPT Remix completed but no audio URL returned");
@@ -68,14 +67,15 @@ export async function processKeyBPMDetection(
 
     const fullAudioUrl = resolveFullAudioUrl(audioUrl);
     const submitResult = await submitKeyBPMExtraction(fullAudioUrl);
-    const pollResult = await poll(submitResult.task_id, 120000, 5000);
+    const pollResult = await poll(submitResult.task_id, 120000, 5000, "KEY_BPM_EXTRACTION");
 
     const updates: Record<string, any> = { status: "ready" };
-    if (pollResult.key) updates.key = pollResult.key;
+    if (pollResult.dominantKey) updates.key = pollResult.dominantKey;
+    else if (pollResult.key) updates.key = pollResult.key;
     if (pollResult.bpm) updates.bpm = Math.round(pollResult.bpm);
 
     await storage.updateSample(sampleId, updates);
-    console.log(`[SampleWorker] Key/BPM detection complete: key=${pollResult.key}, bpm=${pollResult.bpm}`);
+    console.log(`[SampleWorker] Key/BPM detection complete: key=${pollResult.dominantKey || pollResult.key}, bpm=${pollResult.bpm}`);
   } catch (err: any) {
     console.error(`[SampleWorker] Key/BPM error for sample ${sampleId}:`, err.message || err);
     const sample = await storage.getSample(sampleId);
@@ -97,8 +97,8 @@ export async function processMastering(
     await storage.updateSongStatus(songId, "mastering");
 
     const fullAudioUrl = resolve(audioUrl);
-    const submitResult = await submitMastering(fullAudioUrl);
-    const pollResult = await poll(submitResult.task_id, 600000, 8000);
+    const submitResult = await submitMastering(fullAudioUrl, { referenceAudioUrl: fullAudioUrl });
+    const pollResult = await poll(submitResult.task_id, 600000, 8000, "AUDIO_MASTERING");
 
     if (!pollResult.audioUrl) {
       throw new Error("Mastering completed but no audio URL returned");
@@ -125,7 +125,7 @@ export async function processDenoise(
 
     const fullAudioUrl = resolve(audioUrl);
     const submitResult = await submitDenoise(fullAudioUrl);
-    const pollResult = await poll(submitResult.task_id, 600000, 8000);
+    const pollResult = await poll(submitResult.task_id, 600000, 8000, "DENOISING");
 
     if (!pollResult.audioUrl) {
       throw new Error("Denoise completed but no audio URL returned");
@@ -143,8 +143,9 @@ export async function processDenoise(
 export async function processCoverSong(
   songId: number,
   audioUrl: string,
-  voiceDescription: string,
-  userId: string
+  voiceId: string,
+  userId: string,
+  pitch?: number
 ): Promise<void> {
   const { submitCover, pollMusicGPTJob: poll, downloadMusicGPTFile: download, resolveFullAudioUrl: resolve } = await import("../core/musicgpt_engine");
 
@@ -157,7 +158,7 @@ export async function processCoverSong(
     const coverSong = await storage.createSong({
       userId,
       title: `${song.title} (Cover)`,
-      prompt: `Cover of "${song.title}" with voice: ${voiceDescription}`,
+      prompt: `Cover of "${song.title}" with voice: ${voiceId}`,
       genre: song.genre,
       mode: "standard",
     });
@@ -165,8 +166,8 @@ export async function processCoverSong(
     await storage.updateSongStatus(coverSong.id, "processing");
 
     const fullAudioUrl = resolve(audioUrl);
-    const submitResult = await submitCover(fullAudioUrl, voiceDescription);
-    const pollResult = await poll(submitResult.task_id, 600000, 8000);
+    const submitResult = await submitCover(fullAudioUrl, voiceId, { pitch });
+    const pollResult = await poll(submitResult.task_id, 600000, 8000, "COVER");
 
     if (!pollResult.audioUrl) {
       throw new Error("Cover generation completed but no audio URL returned");
@@ -208,13 +209,17 @@ export async function processAudioCut(
     await storage.updateSongStatus(trimSong.id, "processing");
 
     const fullAudioUrl = resolveFullAudioUrl(audioUrl);
-    const result = await submitAudioCutter(fullAudioUrl, startTimeMs, endTimeMs);
+    const submitResult = await submitAudioCutter(fullAudioUrl, startTimeMs, endTimeMs);
 
-    if (!result.success || !result.conversion_path) {
-      throw new Error(result.message || "Audio cutter returned no output path");
+    const { pollMusicGPTJob: poll, downloadMusicGPTFile: download } = await import("../core/musicgpt_engine");
+    const pollResult = await poll(submitResult.task_id, 600000, 8000, "AUDIO_CUTTER");
+
+    const outputUrl = pollResult.audioUrl || pollResult.raw.output_file || pollResult.raw.conversion_path;
+    if (!outputUrl) {
+      throw new Error("Audio cutter completed but no output URL returned");
     }
 
-    const localUrl = await downloadMusicGPTFile(result.conversion_path, "trimmed", "trim");
+    const localUrl = await download(outputUrl, "trimmed", "trim");
     await storage.updateSongStatus(trimSong.id, "completed", localUrl);
     console.log(`[CutWorker] Trim complete for song ${songId}, new song: ${trimSong.id}`);
   } catch (err: any) {

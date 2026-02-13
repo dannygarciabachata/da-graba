@@ -621,7 +621,8 @@ export async function registerRoutes(
   });
 
   const coverSchema = z.object({
-    voiceDescription: z.string().min(1).max(500),
+    voiceId: z.string().min(1).max(500),
+    pitch: z.coerce.number().min(-12).max(12).optional(),
   });
 
   app.post("/api/songs/:id/cover", async (req, res) => {
@@ -637,7 +638,7 @@ export async function registerRoutes(
 
     try {
       const input = coverSchema.parse(req.body);
-      processCoverSong(songId, song.audioUrl, input.voiceDescription, userId);
+      processCoverSong(songId, song.audioUrl, input.voiceId, userId, input.pitch);
       res.status(202).json({ message: "Cover song generation started", songId });
     } catch (err) {
       if (err instanceof z.ZodError) {

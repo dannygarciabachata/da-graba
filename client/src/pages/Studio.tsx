@@ -713,7 +713,7 @@ export default function StudioPage() {
                             </div>
                             <div className="flex gap-2">
                               <Input
-                                placeholder="Describe the voice style... (e.g. smooth female R&B vocalist)"
+                                placeholder="Enter voice name... (e.g. Drake, Taylor Swift)"
                                 value={coverVoice}
                                 onChange={(e) => setCoverVoice(e.target.value)}
                                 className="flex-1 text-xs bg-black/20 border-white/10"
@@ -725,7 +725,7 @@ export default function StudioPage() {
                                 disabled={isCovering || !coverVoice.trim() || !selectedSongId}
                                 onClick={() => {
                                   if (selectedSongId && coverVoice.trim()) {
-                                    coverSong({ songId: selectedSongId, voiceDescription: coverVoice });
+                                    coverSong({ songId: selectedSongId, voiceId: coverVoice });
                                     setCoverVoice("");
                                   }
                                 }}

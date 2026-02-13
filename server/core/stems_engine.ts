@@ -46,7 +46,7 @@ export async function processStemSeparation(
       await storage.updateTrackStatus(track.id, "processing");
     }
 
-    const pollResult = await pollMusicGPTJob(submitResult.task_id, 600000, 8000);
+    const pollResult = await pollMusicGPTJob(submitResult.task_id, 600000, 8000, "EXTRACTION");
     console.log(`[Stems] Extraction completed, raw result keys:`, Object.keys(pollResult.raw || {}).join(", "));
 
     let stemUrls: Record<string, string> = {};
