@@ -15,7 +15,14 @@ import {
   Loader2,
   Library,
   Music,
+  Download,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { motion } from "framer-motion";
 
 export default function LibraryPage() {
@@ -133,6 +140,45 @@ export default function LibraryPage() {
                     </div>
 
                     <div className="flex items-center gap-1 flex-shrink-0">
+                      {song.status === "completed" && song.audioUrl && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-green-400"
+                              onClick={(e) => e.stopPropagation()}
+                              data-testid={`button-download-lib-${song.id}`}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                const a = document.createElement("a");
+                                a.href = `/api/songs/${song.id}/download?format=mp3`;
+                                a.download = `${(song.title || "track").replace(/\s+/g, "_")}.mp3`;
+                                a.click();
+                              }}
+                              data-testid={`button-download-mp3-${song.id}`}
+                            >
+                              Download MP3
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                const a = document.createElement("a");
+                                a.href = `/api/songs/${song.id}/download?format=wav`;
+                                a.download = `${(song.title || "track").replace(/\s+/g, "_")}.wav`;
+                                a.click();
+                              }}
+                              data-testid={`button-download-wav-${song.id}`}
+                            >
+                              Download WAV
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                       {song.status === "completed" && (
                         <Button
                           size="icon"

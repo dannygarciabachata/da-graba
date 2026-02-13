@@ -156,4 +156,95 @@ export async function seedDefaultMusicGPTProvider(): Promise<void> {
   }
 
   console.log(`[Seed] Default MusicGPT provider seeded with ${endpoints.length} endpoints`);
+
+  await seedDgbRunPodProvider();
+}
+
+export async function seedDgbRunPodProvider(): Promise<void> {
+  const existing = await storage.getApiProviders();
+  const hasDgb = existing.some(p => p.name === "DGB Audio RunPod");
+  if (hasDgb) {
+    console.log("[Seed] DGB Audio RunPod provider already exists, skipping");
+    return;
+  }
+
+  if (!process.env.DGB_API_KEY || !process.env.RUNPOD_BASE_URL) {
+    console.log("[Seed] DGB_API_KEY or RUNPOD_BASE_URL not set, skipping DGB RunPod seed");
+    return;
+  }
+
+  const runpodBase = (process.env.RUNPOD_BASE_URL || "").replace(/\/lab\/.*$/, "").replace(/\/$/, "");
+  const apiBase = runpodBase.replace(/:8888$/, ":7860").replace(/-8888\./, "-7860.");
+
+  console.log("[Seed] Seeding DGB Audio RunPod provider...");
+
+  const provider = await storage.createApiProvider({
+    name: "DGB Audio RunPod",
+    baseUrl: apiBase,
+    authType: "header",
+    authHeaderName: "X-DGB-API-Key",
+    apiKeyEnvVar: "DGB_API_KEY",
+    category: "music",
+    isActive: true,
+    description: "DGB Audio self-hosted GPU server on RunPod. Handles instrument kit processing, audio analysis, and MIDI conversion.",
+  });
+
+  const dgbEndpoints = [
+    {
+      name: "Upload Instrument",
+      operationType: "instrument_upload",
+      path: "/api/upload-instrument",
+      method: "POST",
+      contentType: "formdata",
+      requestMapping: {
+        audio: "$audio_file",
+        instrumentId: "$instrument_id",
+        kitId: "$kit_id",
+        instrumentName: "$instrument_name",
+        webhookUrl: "$webhook_url",
+      },
+      responseMapping: { status: "status", instrumentId: "instrumentId" },
+      asyncPattern: "webhook",
+      webhookSupported: true,
+      description: "Upload instrument audio to RunPod for analysis and MIDI conversion",
+    },
+    {
+      name: "Audio Analysis",
+      operationType: "audio_analysis",
+      path: "/api/analyze-audio",
+      method: "POST",
+      contentType: "formdata",
+      requestMapping: { audio: "$audio_file" },
+      responseMapping: {
+        key: "key",
+        bpm: "bpm",
+        energy: "energy",
+        durationMs: "durationMs",
+        tags: "tags",
+      },
+      asyncPattern: "sync",
+      description: "Analyze audio for key, BPM, energy, and musical tags using librosa",
+    },
+    {
+      name: "MIDI Conversion",
+      operationType: "midi_conversion",
+      path: "/api/convert-midi",
+      method: "POST",
+      contentType: "formdata",
+      requestMapping: { audio: "$audio_file" },
+      responseMapping: { midiBase64: "midiBase64", midiSize: "midiSize" },
+      asyncPattern: "sync",
+      description: "Convert audio to MIDI instrument using basic-pitch AI",
+    },
+  ];
+
+  for (const ep of dgbEndpoints) {
+    await storage.createApiEndpoint({
+      providerId: provider.id,
+      ...ep,
+    } as any);
+    console.log(`[Seed] Created DGB endpoint: ${ep.name}`);
+  }
+
+  console.log(`[Seed] DGB Audio RunPod provider seeded with ${dgbEndpoints.length} endpoints`);
 }

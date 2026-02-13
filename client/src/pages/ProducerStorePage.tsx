@@ -153,6 +153,8 @@ function InstrumentRow({
   const analysisStatus = (instrument as any).analysisStatus || "pending";
   const detectedKey = (instrument as any).detectedKey;
   const detectedBpm = (instrument as any).detectedBpm;
+  const hasMidi = !!(instrument as any).midiUrl;
+  const uploadStatus = (instrument as any).uploadStatus || "uploaded";
 
   return (
     <div
@@ -176,8 +178,18 @@ function InstrumentRow({
               {detectedBpm} BPM
             </Badge>
           )}
+          {hasMidi && (
+            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-green-400/30 text-green-400">
+              MIDI
+            </Badge>
+          )}
           {hasPrompt && (
             <Sparkles className="h-3 w-3 text-yellow-400" />
+          )}
+          {uploadStatus === "processing" && (
+            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-yellow-400/30 text-yellow-400 animate-pulse">
+              Processing
+            </Badge>
           )}
           {analysisStatus === "analyzing" && (
             <Loader2 className="h-3 w-3 animate-spin text-primary" />

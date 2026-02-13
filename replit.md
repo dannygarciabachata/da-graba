@@ -52,7 +52,11 @@ The "Heart Mula" music engine employs a microservices-oriented architecture with
 - **OpenAI:** Used for AI lyrics generation, AI support chatbot, and prompt generation within the SAO training pipeline.
 - **Neon (PostgreSQL):** Database hosting for all persistent data.
 - **Stripe:** Payment gateway for subscription management, checkouts, and customer portals.
+- **DGB Audio RunPod API:** Self-hosted Flask server (`dgb_api_receptor.py`) on RunPod GPU for Producer Store instrument processing. Receives audio uploads, converts to MIDI (basic-pitch), analyzes audio (librosa). Authenticated via shared `DGB_API_KEY`. Runs on port 7860. Webhook: `/api/dgb-runpod/webhook`. Auto-seeded as API Provider in Admin panel.
 - **RunPod:** JupyterLab server for audio analysis (librosa-based key/BPM/energy detection) and SAO model fine-tuning. Connected via `RUNPOD_BASE_URL` env var. Uses Jupyter kernel API for job dispatch with webhook callbacks.
 - **Replit Auth:** OpenID Connect-based user authentication.
 - **Replit AI Integrations:** Facilitates connection to OpenAI services.
 - **Wavesurfer.js:** Frontend library for audio waveform visualization.
+
+## Key Scripts
+- **`server/scripts/dgb_api_receptor.py`**: Flask API server for RunPod GPU. Run on RunPod with `export DGB_API_KEY=your_key && python3 /workspace/dgb_api_receptor.py`. Handles instrument uploads, audio-to-MIDI conversion, and audio analysis. Port 7860.

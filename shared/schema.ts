@@ -268,6 +268,7 @@ export const styleKitInstruments = pgTable("style_kit_instruments", {
   type: text("type").notNull(),
   audioUrl: text("audio_url"),
   processedUrl: text("processed_url"),
+  midiUrl: text("midi_url"),
   description: text("description"),
   volume: integer("volume").default(100),
   position: integer("position").default(0),

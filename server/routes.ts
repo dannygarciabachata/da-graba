@@ -12,9 +12,10 @@ import { downloadMusicGPTFile } from "./core/musicgpt_engine";
 import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engine";
 import { processStemSeparation } from "./core/stems_engine";
 import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong, processAudioCut } from "./workers/sample_tasks";
-import { seedDefaultMusicGPTProvider } from "./core/seed_providers";
+import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider } from "./core/seed_providers";
 import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfig, buildRunPodPayload, GENRE_STYLE_HINTS } from "./core/sao_training_engine";
 import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection } from "./core/runpod_client";
+import { isDgbRunPodApiConfigured, checkDgbRunPodHealth, uploadInstrumentToRunPod, saveMidiFile } from "./core/dgb_runpod_api";
 import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, STYLE_KIT_GENRES, INSTRUMENT_TYPES, SETTING_CATEGORIES, TICKET_STATUSES, TICKET_PRIORITIES, insertApiProviderSchema, insertApiEndpointSchema, insertStyleKitSchema, insertStyleKitInstrumentSchema, insertPlatformSettingSchema } from "@shared/schema";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
@@ -807,6 +808,10 @@ export async function registerRoutes(
     console.log("[Seed] Provider seed error:", err.message?.substring(0, 100))
   );
 
+  seedDgbRunPodProvider().catch((err: any) =>
+    console.log("[Seed] DGB RunPod seed error:", err.message?.substring(0, 100))
+  );
+
   app.get("/api/admin/check", (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = (req.user as any).claims.sub;
@@ -1459,6 +1464,31 @@ export async function registerRoutes(
 
       if (audioUrl) {
         await storage.updateStyleKit(kitId, { trainingStatus: "pending" });
+
+        if (isDgbRunPodApiConfigured()) {
+          const protocol = req.headers["x-forwarded-proto"] || "https";
+          const host = req.headers["host"] || "localhost:5000";
+          const webhookUrl = `${protocol}://${host}/api/dgb-runpod/webhook`;
+
+          console.log(`[DGB RunPod] Forwarding instrument ${instrument.id} to RunPod for processing...`);
+          const uploadResult = await uploadInstrumentToRunPod(
+            instrument.id,
+            kitId,
+            req.body.name,
+            audioUrl,
+            webhookUrl
+          );
+
+          if (uploadResult.success) {
+            await storage.updateStyleKitInstrument(instrument.id, {
+              uploadStatus: "processing",
+              analysisStatus: "analyzing",
+            });
+            console.log(`[DGB RunPod] Instrument ${instrument.id} sent to RunPod for analysis + MIDI conversion`);
+          } else {
+            console.error(`[DGB RunPod] Upload failed: ${uploadResult.error}`);
+          }
+        }
       }
 
       res.status(201).json(instrument);
@@ -1781,6 +1811,184 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (err: any) {
       console.error("[Training] Webhook error:", err.message);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ========== DGB RUNPOD API WEBHOOK ==========
+
+  app.post("/api/dgb-runpod/webhook", async (req, res) => {
+    try {
+      const dgbKey = process.env.DGB_API_KEY;
+      if (dgbKey) {
+        const incomingKey = req.headers["x-dgb-api-key"] || "";
+        if (incomingKey !== dgbKey) {
+          return res.status(401).json({ message: "Invalid DGB API key" });
+        }
+      }
+
+      const { instrumentId, kitId, status, analysis, midiConverted, midiBase64, midiError, error } = req.body;
+      if (!instrumentId) return res.status(400).json({ message: "instrumentId required" });
+
+      const instrument = await storage.getStyleKitInstrument(Number(instrumentId));
+      if (!instrument) return res.sendStatus(404);
+
+      console.log(`[DGB RunPod Webhook] Instrument ${instrumentId}: status=${status}, midi=${midiConverted}`);
+
+      if (status === "failed") {
+        await storage.updateStyleKitInstrument(Number(instrumentId), {
+          uploadStatus: "failed",
+          analysisStatus: "failed",
+          analysisError: error || "Processing failed on RunPod",
+        });
+        return res.json({ success: true });
+      }
+
+      const updateData: Record<string, any> = {
+        uploadStatus: "processed",
+      };
+
+      if (analysis) {
+        updateData.analysisStatus = "complete";
+        if (analysis.key) updateData.detectedKey = analysis.key;
+        if (analysis.bpm) updateData.detectedBpm = Number(analysis.bpm);
+        if (analysis.energy !== undefined) updateData.detectedEnergy = Number(analysis.energy);
+        if (analysis.tags) updateData.detectedTags = JSON.stringify(analysis.tags);
+        if (analysis.durationMs) updateData.durationMs = Number(analysis.durationMs);
+      }
+
+      if (midiConverted && midiBase64) {
+        try {
+          const midiUrl = await saveMidiFile(midiBase64, Number(instrumentId));
+          updateData.midiUrl = midiUrl;
+          console.log(`[DGB RunPod Webhook] MIDI saved: ${midiUrl}`);
+        } catch (err: any) {
+          console.error(`[DGB RunPod Webhook] MIDI save error: ${err.message}`);
+        }
+      }
+
+      await storage.updateStyleKitInstrument(Number(instrumentId), updateData);
+
+      const instrKitId = instrument.kitId;
+      const allInstruments = await storage.getStyleKitInstruments(instrKitId);
+      const audioInstruments = allInstruments.filter(i => i.audioUrl);
+      const allDone = audioInstruments.every(i => {
+        if (i.id === Number(instrumentId)) return true;
+        return i.uploadStatus === "processed" || i.uploadStatus === "failed" ||
+               i.analysisStatus === "complete" || i.analysisStatus === "failed";
+      });
+
+      if (allDone) {
+        console.log(`[DGB RunPod Webhook] All instruments processed for kit ${instrKitId}`);
+        const kit = await storage.getStyleKit(instrKitId);
+        if (kit) {
+          await storage.updateStyleKit(instrKitId, { pipelineStep: "prompt", trainingStatus: "prompting" });
+
+          const analyzed = (await storage.getStyleKitInstruments(instrKitId))
+            .filter(i => i.audioUrl && i.analysisStatus === "complete");
+
+          for (const instr of analyzed) {
+            try {
+              const prompt = await generateInstrumentPrompt(instr, kit.genre);
+              await storage.updateStyleKitInstrument(instr.id, { generatedPrompt: prompt });
+              console.log(`[DGB RunPod Webhook] Prompt for "${instr.name}": ${prompt.substring(0, 80)}...`);
+            } catch (err: any) {
+              console.error(`[DGB RunPod Webhook] Prompt gen failed for ${instr.id}:`, err.message);
+            }
+          }
+
+          const kitPrompt = await generateKitTrainingPrompt(kit, analyzed);
+          await storage.updateStyleKit(instrKitId, { trainingPrompt: kitPrompt, pipelineStep: "train" });
+          console.log(`[DGB RunPod Webhook] Kit ${instrKitId}: prompts generated, ready for training`);
+        }
+      }
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("[DGB RunPod Webhook] Error:", err.message);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/dgb-runpod/status", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const configured = isDgbRunPodApiConfigured();
+      if (!configured) {
+        return res.json({ configured: false, connected: false });
+      }
+      const health = await checkDgbRunPodHealth();
+      res.json({ configured: true, ...health });
+    } catch (err: any) {
+      res.json({ configured: isDgbRunPodApiConfigured(), connected: false, error: err.message });
+    }
+  });
+
+  // ========== SONG DOWNLOAD ==========
+
+  app.get("/api/songs/:id/download", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const songId = Number(req.params.id);
+      const song = await storage.getSong(songId);
+      if (!song) return res.sendStatus(404);
+
+      const userId = (req.user as any).claims.sub;
+      if (song.userId !== userId && !isAdmin(req)) return res.sendStatus(403);
+
+      if (!song.audioUrl) {
+        return res.status(400).json({ message: "Song has no audio file" });
+      }
+
+      const format = (req.query.format as string) || "mp3";
+      const audioPath = path.join(process.cwd(), "public", song.audioUrl);
+
+      if (!fs.existsSync(audioPath)) {
+        return res.status(404).json({ message: "Audio file not found on server" });
+      }
+
+      const safeName = (song.title || "song").replace(/[^a-zA-Z0-9_\- ]/g, "").replace(/\s+/g, "_");
+      const currentExt = path.extname(audioPath).toLowerCase();
+
+      if (format === "wav" && currentExt !== ".wav") {
+        const { execSync } = require("child_process");
+        const tmpWav = path.join("/tmp", `${safeName}_${songId}.wav`);
+        try {
+          execSync(`ffmpeg -i "${audioPath}" -acodec pcm_s16le -ar 44100 -y "${tmpWav}"`, { timeout: 60000 });
+          res.setHeader("Content-Disposition", `attachment; filename="${safeName}.wav"`);
+          res.setHeader("Content-Type", "audio/wav");
+          const stream = fs.createReadStream(tmpWav);
+          stream.pipe(res);
+          stream.on("end", () => { try { fs.unlinkSync(tmpWav); } catch {} });
+          return;
+        } catch (err: any) {
+          console.error("[Download] WAV conversion failed:", err.message);
+        }
+      }
+
+      if (format === "mp3" && currentExt !== ".mp3") {
+        const { execSync } = require("child_process");
+        const tmpMp3 = path.join("/tmp", `${safeName}_${songId}.mp3`);
+        try {
+          execSync(`ffmpeg -i "${audioPath}" -codec:a libmp3lame -b:a 192k -y "${tmpMp3}"`, { timeout: 60000 });
+          res.setHeader("Content-Disposition", `attachment; filename="${safeName}.mp3"`);
+          res.setHeader("Content-Type", "audio/mpeg");
+          const stream = fs.createReadStream(tmpMp3);
+          stream.pipe(res);
+          stream.on("end", () => { try { fs.unlinkSync(tmpMp3); } catch {} });
+          return;
+        } catch (err: any) {
+          console.error("[Download] MP3 conversion failed:", err.message);
+        }
+      }
+
+      const contentType = currentExt === ".wav" ? "audio/wav" : "audio/mpeg";
+      const ext = currentExt || ".mp3";
+      res.setHeader("Content-Disposition", `attachment; filename="${safeName}${ext}"`);
+      res.setHeader("Content-Type", contentType);
+      fs.createReadStream(audioPath).pipe(res);
+    } catch (err: any) {
+      console.error("[Download] Error:", err.message);
       res.status(500).json({ message: err.message });
     }
   });
