@@ -44,7 +44,7 @@ const FALLBACK_PLANS = [
       "Upload custom instrument kits",
       "AI training for your sounds",
       "Personal kit store",
-      "RunPod AI integration",
+      "Cloud GPU AI training",
       "Priority AI processing",
     ],
     icon: Disc,

@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 """
-DGB Audio API Receptor - RunPod GPU Server
-==========================================
-This Flask server runs on your RunPod GPU instance and receives
-instrument kit uploads from the DGB Audio platform (Replit).
+DGB Audio Cloud Engine - GPU Processing Server
+================================================
+This Flask server runs on your private GPU instance and receives
+instrument kit uploads from the DGB Audio platform.
 
-SETUP on RunPod:
+SETUP:
   1. pip install flask requests librosa soundfile numpy basic-pitch
   2. export DGB_API_KEY="your_shared_key_here"
-  3. python3 /workspace/dgb_api_receptor.py
+  3. export TRAINING_WEBHOOK_SECRET="your_webhook_secret_here"
+  4. python3 /workspace/dgb_api_receptor.py
 
 The server listens on port 7860 and handles:
   - Audio file uploads from Producer Store
   - Audio-to-MIDI conversion using basic-pitch
   - Audio analysis (key, BPM, energy detection)
-  - Webhook callbacks to Replit with results
+  - Webhook callbacks with results
 """
 
 import os
@@ -45,6 +46,7 @@ except ImportError:
 app = Flask(__name__)
 
 DGB_API_KEY = os.environ.get("DGB_API_KEY", "")
+TRAINING_WEBHOOK_SECRET = os.environ.get("TRAINING_WEBHOOK_SECRET", "")
 UPLOAD_DIR = Path("/workspace/dgb_audio/uploads")
 MIDI_DIR = Path("/workspace/dgb_audio/midi")
 ANALYSIS_DIR = Path("/workspace/dgb_audio/analysis")
@@ -62,6 +64,10 @@ def verify_api_key(req):
     if auth == f"Bearer {DGB_API_KEY}" and DGB_API_KEY:
         return True
     return False
+
+
+def get_webhook_secret():
+    return TRAINING_WEBHOOK_SECRET or DGB_API_KEY
 
 
 def convert_audio_to_midi(audio_path, output_midi_path):
@@ -184,12 +190,14 @@ def process_instrument_async(instrument_id, audio_path, webhook_url, kit_id):
 
         if webhook_url:
             try:
+                webhook_secret = get_webhook_secret()
                 resp = http_requests.post(
                     webhook_url,
                     json=result,
                     timeout=30,
                     headers={
                         "Content-Type": "application/json",
+                        "X-Webhook-Secret": webhook_secret,
                         "X-DGB-API-Key": DGB_API_KEY,
                     },
                 )
@@ -204,6 +212,7 @@ def process_instrument_async(instrument_id, audio_path, webhook_url, kit_id):
         traceback.print_exc()
         if webhook_url:
             try:
+                webhook_secret = get_webhook_secret()
                 http_requests.post(
                     webhook_url,
                     json={
@@ -213,7 +222,10 @@ def process_instrument_async(instrument_id, audio_path, webhook_url, kit_id):
                         "error": str(e),
                     },
                     timeout=10,
-                    headers={"X-DGB-API-Key": DGB_API_KEY},
+                    headers={
+                        "X-Webhook-Secret": webhook_secret,
+                        "X-DGB-API-Key": DGB_API_KEY,
+                    },
                 )
             except:
                 pass
@@ -223,10 +235,11 @@ def process_instrument_async(instrument_id, audio_path, webhook_url, kit_id):
 def health():
     return jsonify({
         "status": "ok",
-        "service": "DGB Audio RunPod Receptor",
+        "service": "DGB Cloud Engine",
         "gpu_available": os.path.exists("/dev/nvidia0"),
         "upload_dir": str(UPLOAD_DIR),
         "api_key_configured": bool(DGB_API_KEY),
+        "webhook_secret_configured": bool(TRAINING_WEBHOOK_SECRET),
     })
 
 
@@ -341,7 +354,7 @@ def status():
     uploads = len(list(UPLOAD_DIR.glob("*")))
     midis = len(list(MIDI_DIR.glob("*.mid")))
     return jsonify({
-        "service": "DGB Audio RunPod Receptor",
+        "service": "DGB Cloud Engine",
         "uploads_processed": uploads,
         "midi_files_generated": midis,
         "gpu_available": os.path.exists("/dev/nvidia0"),
@@ -354,11 +367,18 @@ if __name__ == "__main__":
         print("   export DGB_API_KEY='tu_clave_aqui'")
         print("")
 
+    if not TRAINING_WEBHOOK_SECRET:
+        print("⚠️  WARNING: TRAINING_WEBHOOK_SECRET no configurado. Configúralo con:")
+        print("   export TRAINING_WEBHOOK_SECRET='tu_secreto_aqui'")
+        print("   (Se usará DGB_API_KEY como fallback para webhooks)")
+        print("")
+
     print("=" * 60)
-    print("🎵 DGB AUDIO - RunPod API Receptor")
+    print("🎵 DGB AUDIO - Cloud Engine")
     print("=" * 60)
     print(f"  Puerto: 7860")
     print(f"  API Key: {'✅ Configurada' if DGB_API_KEY else '❌ NO CONFIGURADA'}")
+    print(f"  Webhook Secret: {'✅ Configurado' if TRAINING_WEBHOOK_SECRET else '⚠️ Usando DGB_API_KEY'}")
     print(f"  GPU: {'✅ Disponible' if os.path.exists('/dev/nvidia0') else '⚠️ No detectada'}")
     print(f"  Uploads: {UPLOAD_DIR}")
     print(f"  MIDI: {MIDI_DIR}")
@@ -371,7 +391,7 @@ if __name__ == "__main__":
     print("  POST /api/analyze-audio    - Analizar audio (key, BPM, energy)")
     print("  POST /api/convert-midi     - Convertir audio a MIDI")
     print("")
-    print("Esperando conexiones de DGB Audio...")
+    print("Esperando conexiones...")
     print("")
 
     app.run(host="0.0.0.0", port=7860, debug=False)

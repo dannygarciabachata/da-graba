@@ -15,7 +15,7 @@ import { processHummingToMusic, processKeyBPMDetection, processMastering, proces
 import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider } from "./core/seed_providers";
 import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfig, buildRunPodPayload, GENRE_STYLE_HINTS } from "./core/sao_training_engine";
 import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection } from "./core/runpod_client";
-import { isDgbRunPodApiConfigured, checkDgbRunPodHealth, uploadInstrumentToRunPod, saveMidiFile } from "./core/dgb_runpod_api";
+import { isDgbCloudConfigured, checkDgbCloudHealth, uploadInstrumentToCloud, saveMidiFile } from "./core/dgb_runpod_api";
 import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, STYLE_KIT_GENRES, INSTRUMENT_TYPES, SETTING_CATEGORIES, TICKET_STATUSES, TICKET_PRIORITIES, insertApiProviderSchema, insertApiEndpointSchema, insertStyleKitSchema, insertStyleKitInstrumentSchema, insertPlatformSettingSchema } from "@shared/schema";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
@@ -809,7 +809,7 @@ export async function registerRoutes(
   );
 
   seedDgbRunPodProvider().catch((err: any) =>
-    console.log("[Seed] DGB RunPod seed error:", err.message?.substring(0, 100))
+    console.log("[Seed] DGB Cloud seed error:", err.message?.substring(0, 100))
   );
 
   app.get("/api/admin/check", (req, res) => {
@@ -1465,13 +1465,13 @@ export async function registerRoutes(
       if (audioUrl) {
         await storage.updateStyleKit(kitId, { trainingStatus: "pending" });
 
-        if (isDgbRunPodApiConfigured()) {
+        if (isDgbCloudConfigured()) {
           const protocol = req.headers["x-forwarded-proto"] || "https";
           const host = req.headers["host"] || "localhost:5000";
-          const webhookUrl = `${protocol}://${host}/api/dgb-runpod/webhook`;
+          const webhookUrl = `${protocol}://${host}/api/dgb-cloud/webhook`;
 
-          console.log(`[DGB RunPod] Forwarding instrument ${instrument.id} to RunPod for processing...`);
-          const uploadResult = await uploadInstrumentToRunPod(
+          console.log(`[DGB Cloud] Forwarding instrument ${instrument.id} for GPU processing...`);
+          const uploadResult = await uploadInstrumentToCloud(
             instrument.id,
             kitId,
             req.body.name,
@@ -1484,9 +1484,9 @@ export async function registerRoutes(
               uploadStatus: "processing",
               analysisStatus: "analyzing",
             });
-            console.log(`[DGB RunPod] Instrument ${instrument.id} sent to RunPod for analysis + MIDI conversion`);
+            console.log(`[DGB Cloud] Instrument ${instrument.id} sent for analysis + MIDI conversion`);
           } else {
-            console.error(`[DGB RunPod] Upload failed: ${uploadResult.error}`);
+            console.error(`[DGB Cloud] Upload failed: ${uploadResult.error}`);
           }
         }
       }
@@ -1551,12 +1551,12 @@ export async function registerRoutes(
           } else {
             await storage.updateStyleKitInstrument(instr.id, {
               analysisStatus: "failed",
-              analysisError: `RunPod submission failed: ${result.error}`,
+              analysisError: `Cloud GPU submission failed: ${result.error}`,
             });
           }
         }
 
-        console.log(`[SAO Pipeline] Kit ${kitId}: ${submittedCount}/${withAudio.length} analysis jobs sent to RunPod`);
+        console.log(`[SAO Pipeline] Kit ${kitId}: ${submittedCount}/${withAudio.length} analysis jobs sent to cloud GPU`);
 
         const allComplete = submittedCount === 0;
         if (allComplete) {
@@ -1565,12 +1565,12 @@ export async function registerRoutes(
 
         res.json({
           message: submittedCount > 0
-            ? `Analysis submitted to RunPod for ${submittedCount} instruments. Results will arrive via webhook.`
+            ? `Analysis submitted to cloud GPU for ${submittedCount} instruments. Results will arrive via webhook.`
             : "No instruments could be submitted for analysis.",
           kitId,
           instrumentCount: withAudio.length,
           submittedCount,
-          runpodConnected: true,
+          gpuConnected: true,
           pipelineStep: submittedCount > 0 ? "analyze" : "upload",
         });
       } else {
@@ -1617,7 +1617,7 @@ export async function registerRoutes(
           kitId,
           instrumentCount: withAudio.length,
           analyzedCount: analyzed.length,
-          runpodConnected: false,
+          gpuConnected: false,
           pipelineStep: "train",
         });
       }
@@ -1666,24 +1666,24 @@ export async function registerRoutes(
             trainingStatus: "training",
             trainingJobId: result.jobId || null,
           });
-          console.log(`[SAO Pipeline] Job submitted to RunPod: ${result.jobId}`);
+          console.log(`[SAO Pipeline] Job submitted to cloud GPU: ${result.jobId}`);
         } else {
           await storage.updateStyleKit(kitId, {
             trainingStatus: "failed",
-            trainingError: `RunPod submission failed: ${result.error}`,
+            trainingError: `Cloud GPU submission failed: ${result.error}`,
           });
-          console.error(`[SAO Pipeline] RunPod submission failed: ${result.error}`);
+          console.error(`[SAO Pipeline] Cloud GPU submission failed: ${result.error}`);
         }
       }
 
       res.json({
         message: isRunPodConfigured()
-          ? "Training submitted to RunPod. Your kit is being fine-tuned with the SAO pipeline."
+          ? "Training submitted to cloud GPU. Your kit is being fine-tuned with the SAO pipeline."
           : "Training queued. Your kit will be fine-tuned using the SAO pipeline with AI-generated prompts.",
         kitId,
         instrumentCount: withPrompts.length,
         status: isRunPodConfigured() ? "training" : "queued",
-        runpodConnected: isRunPodConfigured(),
+        gpuConnected: isRunPodConfigured(),
         trainingConfig: {
           model_type: trainingConfig.model_type,
           sample_rate: trainingConfig.sample_rate,
@@ -1815,16 +1815,14 @@ export async function registerRoutes(
     }
   });
 
-  // ========== DGB RUNPOD API WEBHOOK ==========
+  // ========== DGB CLOUD ENGINE WEBHOOK ==========
 
-  app.post("/api/dgb-runpod/webhook", async (req, res) => {
+  app.post("/api/dgb-cloud/webhook", async (req, res) => {
     try {
-      const dgbKey = process.env.DGB_API_KEY;
-      if (dgbKey) {
-        const incomingKey = req.headers["x-dgb-api-key"] || "";
-        if (incomingKey !== dgbKey) {
-          return res.status(401).json({ message: "Invalid DGB API key" });
-        }
+      const webhookSecret = process.env.TRAINING_WEBHOOK_SECRET || process.env.DGB_API_KEY || "";
+      const incomingKey = (req.headers["x-webhook-secret"] || req.headers["x-dgb-api-key"] || "") as string;
+      if (webhookSecret && incomingKey !== webhookSecret) {
+        return res.status(401).json({ message: "Invalid webhook secret" });
       }
 
       const { instrumentId, kitId, status, analysis, midiConverted, midiBase64, midiError, error } = req.body;
@@ -1833,13 +1831,13 @@ export async function registerRoutes(
       const instrument = await storage.getStyleKitInstrument(Number(instrumentId));
       if (!instrument) return res.sendStatus(404);
 
-      console.log(`[DGB RunPod Webhook] Instrument ${instrumentId}: status=${status}, midi=${midiConverted}`);
+      console.log(`[DGB Cloud Webhook] Instrument ${instrumentId}: status=${status}, midi=${midiConverted}`);
 
       if (status === "failed") {
         await storage.updateStyleKitInstrument(Number(instrumentId), {
           uploadStatus: "failed",
           analysisStatus: "failed",
-          analysisError: error || "Processing failed on RunPod",
+          analysisError: error || "Processing failed on cloud GPU",
         });
         return res.json({ success: true });
       }
@@ -1861,9 +1859,9 @@ export async function registerRoutes(
         try {
           const midiUrl = await saveMidiFile(midiBase64, Number(instrumentId));
           updateData.midiUrl = midiUrl;
-          console.log(`[DGB RunPod Webhook] MIDI saved: ${midiUrl}`);
+          console.log(`[DGB Cloud Webhook] MIDI saved: ${midiUrl}`);
         } catch (err: any) {
-          console.error(`[DGB RunPod Webhook] MIDI save error: ${err.message}`);
+          console.error(`[DGB Cloud Webhook] MIDI save error: ${err.message}`);
         }
       }
 
@@ -1879,7 +1877,7 @@ export async function registerRoutes(
       });
 
       if (allDone) {
-        console.log(`[DGB RunPod Webhook] All instruments processed for kit ${instrKitId}`);
+        console.log(`[DGB Cloud Webhook] All instruments processed for kit ${instrKitId}`);
         const kit = await storage.getStyleKit(instrKitId);
         if (kit) {
           await storage.updateStyleKit(instrKitId, { pipelineStep: "prompt", trainingStatus: "prompting" });
@@ -1891,36 +1889,36 @@ export async function registerRoutes(
             try {
               const prompt = await generateInstrumentPrompt(instr, kit.genre);
               await storage.updateStyleKitInstrument(instr.id, { generatedPrompt: prompt });
-              console.log(`[DGB RunPod Webhook] Prompt for "${instr.name}": ${prompt.substring(0, 80)}...`);
+              console.log(`[DGB Cloud Webhook] Prompt for "${instr.name}": ${prompt.substring(0, 80)}...`);
             } catch (err: any) {
-              console.error(`[DGB RunPod Webhook] Prompt gen failed for ${instr.id}:`, err.message);
+              console.error(`[DGB Cloud Webhook] Prompt gen failed for ${instr.id}:`, err.message);
             }
           }
 
           const kitPrompt = await generateKitTrainingPrompt(kit, analyzed);
           await storage.updateStyleKit(instrKitId, { trainingPrompt: kitPrompt, pipelineStep: "train" });
-          console.log(`[DGB RunPod Webhook] Kit ${instrKitId}: prompts generated, ready for training`);
+          console.log(`[DGB Cloud Webhook] Kit ${instrKitId}: prompts generated, ready for training`);
         }
       }
 
       res.json({ success: true });
     } catch (err: any) {
-      console.error("[DGB RunPod Webhook] Error:", err.message);
+      console.error("[DGB Cloud Webhook] Error:", err.message);
       res.status(500).json({ message: err.message });
     }
   });
 
-  app.get("/api/dgb-runpod/status", async (req, res) => {
+  app.get("/api/dgb-cloud/status", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const configured = isDgbRunPodApiConfigured();
+      const configured = isDgbCloudConfigured();
       if (!configured) {
         return res.json({ configured: false, connected: false });
       }
-      const health = await checkDgbRunPodHealth();
+      const health = await checkDgbCloudHealth();
       res.json({ configured: true, ...health });
     } catch (err: any) {
-      res.json({ configured: isDgbRunPodApiConfigured(), connected: false, error: err.message });
+      res.json({ configured: isDgbCloudConfigured(), connected: false, error: err.message });
     }
   });
 

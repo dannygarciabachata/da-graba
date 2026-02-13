@@ -162,31 +162,31 @@ export async function seedDefaultMusicGPTProvider(): Promise<void> {
 
 export async function seedDgbRunPodProvider(): Promise<void> {
   const existing = await storage.getApiProviders();
-  const hasDgb = existing.some(p => p.name === "DGB Audio RunPod");
+  const hasDgb = existing.some(p => p.name === "DGB Cloud Engine" || p.name === "DGB Audio RunPod");
   if (hasDgb) {
-    console.log("[Seed] DGB Audio RunPod provider already exists, skipping");
+    console.log("[Seed] DGB Cloud Engine provider already exists, skipping");
     return;
   }
 
   if (!process.env.DGB_API_KEY || !process.env.RUNPOD_BASE_URL) {
-    console.log("[Seed] DGB_API_KEY or RUNPOD_BASE_URL not set, skipping DGB RunPod seed");
+    console.log("[Seed] DGB_API_KEY or RUNPOD_BASE_URL not set, skipping DGB Cloud Engine seed");
     return;
   }
 
-  const runpodBase = (process.env.RUNPOD_BASE_URL || "").replace(/\/lab\/.*$/, "").replace(/\/$/, "");
-  const apiBase = runpodBase.replace(/:8888$/, ":7860").replace(/-8888\./, "-7860.");
+  const gpuBase = (process.env.RUNPOD_BASE_URL || "").replace(/\/lab\/.*$/, "").replace(/\/$/, "");
+  const apiBase = gpuBase.replace(/:8888$/, ":7860").replace(/-8888\./, "-7860.");
 
-  console.log("[Seed] Seeding DGB Audio RunPod provider...");
+  console.log("[Seed] Seeding DGB Cloud Engine provider...");
 
   const provider = await storage.createApiProvider({
-    name: "DGB Audio RunPod",
+    name: "DGB Cloud Engine",
     baseUrl: apiBase,
     authType: "header",
     authHeaderName: "X-DGB-API-Key",
     apiKeyEnvVar: "DGB_API_KEY",
     category: "music",
     isActive: true,
-    description: "DGB Audio self-hosted GPU server on RunPod. Handles instrument kit processing, audio analysis, and MIDI conversion.",
+    description: "DGB Audio private cloud GPU engine. Handles instrument kit processing, audio analysis, and MIDI conversion.",
   });
 
   const dgbEndpoints = [
@@ -206,7 +206,7 @@ export async function seedDgbRunPodProvider(): Promise<void> {
       responseMapping: { status: "status", instrumentId: "instrumentId" },
       asyncPattern: "webhook",
       webhookSupported: true,
-      description: "Upload instrument audio to RunPod for analysis and MIDI conversion",
+      description: "Upload instrument audio to cloud GPU for analysis and MIDI conversion",
     },
     {
       name: "Audio Analysis",
@@ -246,5 +246,5 @@ export async function seedDgbRunPodProvider(): Promise<void> {
     console.log(`[Seed] Created DGB endpoint: ${ep.name}`);
   }
 
-  console.log(`[Seed] DGB Audio RunPod provider seeded with ${dgbEndpoints.length} endpoints`);
+  console.log(`[Seed] DGB Cloud Engine provider seeded with ${dgbEndpoints.length} endpoints`);
 }

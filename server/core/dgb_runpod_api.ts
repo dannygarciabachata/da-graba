@@ -3,7 +3,7 @@ import * as path from "path";
 
 const AUDIO_BASE_DIR = path.join(process.cwd(), "public", "audio");
 
-function getRunPodApiUrl(): string {
+function getCloudApiUrl(): string {
   const base = (process.env.RUNPOD_BASE_URL || "").replace(/\/lab\/.*$/, "").replace(/\/$/, "");
   return base.replace(/:8888$/, ":7860").replace(/-8888\./, "-7860.");
 }
@@ -12,13 +12,23 @@ function getApiKey(): string {
   return process.env.DGB_API_KEY || "";
 }
 
-export function isDgbRunPodApiConfigured(): boolean {
+function getWebhookSecret(): string {
+  return process.env.TRAINING_WEBHOOK_SECRET || process.env.DGB_API_KEY || "";
+}
+
+export function isDgbCloudConfigured(): boolean {
   return !!(process.env.RUNPOD_BASE_URL && process.env.DGB_API_KEY);
 }
 
-export async function checkDgbRunPodHealth(): Promise<{ connected: boolean; gpu?: boolean; error?: string }> {
+export function verifyWebhookSecret(headerValue: string): boolean {
+  const secret = getWebhookSecret();
+  if (!secret) return false;
+  return headerValue === secret;
+}
+
+export async function checkDgbCloudHealth(): Promise<{ connected: boolean; gpu?: boolean; error?: string }> {
   try {
-    const url = `${getRunPodApiUrl()}/api/health`;
+    const url = `${getCloudApiUrl()}/api/health`;
     const res = await fetch(url, {
       headers: { "X-DGB-API-Key": getApiKey() },
       signal: AbortSignal.timeout(10000),
@@ -33,7 +43,7 @@ export async function checkDgbRunPodHealth(): Promise<{ connected: boolean; gpu?
   }
 }
 
-export async function uploadInstrumentToRunPod(
+export async function uploadInstrumentToCloud(
   instrumentId: number,
   kitId: number,
   instrumentName: string,
@@ -46,7 +56,7 @@ export async function uploadInstrumentToRunPod(
   }
 
   try {
-    const apiUrl = `${getRunPodApiUrl()}/api/upload-instrument`;
+    const apiUrl = `${getCloudApiUrl()}/api/upload-instrument`;
 
     const FormData = (await import("form-data")).default;
     const form = new FormData();
@@ -70,7 +80,7 @@ export async function uploadInstrumentToRunPod(
 
     if (res.ok) {
       const data = await res.json();
-      console.log(`[DGB RunPod] Instrument ${instrumentId} uploaded: ${data.message}`);
+      console.log(`[DGB Cloud] Instrument ${instrumentId} uploaded: ${data.message}`);
       return { success: true };
     } else {
       const errText = await res.text();
@@ -95,6 +105,6 @@ export async function saveMidiFile(
   const buffer = Buffer.from(midiBase64, "base64");
   fs.writeFileSync(filePath, buffer);
 
-  console.log(`[DGB RunPod] MIDI saved for instrument ${instrumentId}: ${filePath} (${buffer.length} bytes)`);
+  console.log(`[DGB Cloud] MIDI saved for instrument ${instrumentId}: ${filePath} (${buffer.length} bytes)`);
   return `/audio/midi/${filename}`;
 }
