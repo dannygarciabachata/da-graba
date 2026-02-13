@@ -5,7 +5,7 @@ import {
   apiProviders, apiEndpoints,
   styleKits, styleKitInstruments,
   platformSettings, supportTickets, supportMessages,
-  cloudServers,
+  cloudServers, voiceModels, voiceSamples, styleReferences,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
@@ -19,6 +19,9 @@ import {
   type SupportTicket, type InsertSupportTicket,
   type SupportMessage, type InsertSupportMessage,
   type CloudServer, type InsertCloudServer,
+  type VoiceModel, type InsertVoiceModel,
+  type VoiceSample, type InsertVoiceSample,
+  type StyleReference, type InsertStyleReference,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -110,6 +113,25 @@ export interface IStorage {
   createCloudServer(server: InsertCloudServer): Promise<CloudServer>;
   updateCloudServer(id: number, data: Partial<CloudServer>): Promise<CloudServer>;
   deleteCloudServer(id: number): Promise<void>;
+
+  getVoiceModels(userId?: string): Promise<VoiceModel[]>;
+  getVoiceModel(id: number): Promise<VoiceModel | undefined>;
+  getUserVoiceModels(userId: string): Promise<VoiceModel[]>;
+  getPublicVoiceModels(): Promise<VoiceModel[]>;
+  createVoiceModel(model: InsertVoiceModel): Promise<VoiceModel>;
+  updateVoiceModel(id: number, data: Partial<VoiceModel>): Promise<VoiceModel>;
+  deleteVoiceModel(id: number): Promise<void>;
+
+  getVoiceSamples(voiceModelId: number): Promise<VoiceSample[]>;
+  createVoiceSample(sample: InsertVoiceSample): Promise<VoiceSample>;
+  updateVoiceSample(id: number, data: Partial<VoiceSample>): Promise<VoiceSample>;
+  deleteVoiceSample(id: number): Promise<void>;
+
+  getStyleReferences(userId: string): Promise<StyleReference[]>;
+  getStyleReference(id: number): Promise<StyleReference | undefined>;
+  createStyleReference(ref: InsertStyleReference): Promise<StyleReference>;
+  updateStyleReference(id: number, data: Partial<StyleReference>): Promise<StyleReference>;
+  deleteStyleReference(id: number): Promise<void>;
 
   getUser(id: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
@@ -697,6 +719,91 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCloudServer(id: number): Promise<void> {
     await db.delete(cloudServers).where(eq(cloudServers.id, id));
+  }
+
+  async getVoiceModels(userId?: string): Promise<VoiceModel[]> {
+    if (userId) {
+      return await db.select().from(voiceModels)
+        .where(eq(voiceModels.userId, userId))
+        .orderBy(desc(voiceModels.createdAt));
+    }
+    return await db.select().from(voiceModels).orderBy(desc(voiceModels.createdAt));
+  }
+
+  async getVoiceModel(id: number): Promise<VoiceModel | undefined> {
+    const [model] = await db.select().from(voiceModels).where(eq(voiceModels.id, id));
+    return model;
+  }
+
+  async getUserVoiceModels(userId: string): Promise<VoiceModel[]> {
+    return await db.select().from(voiceModels)
+      .where(eq(voiceModels.userId, userId))
+      .orderBy(desc(voiceModels.createdAt));
+  }
+
+  async getPublicVoiceModels(): Promise<VoiceModel[]> {
+    return await db.select().from(voiceModels)
+      .where(and(eq(voiceModels.isPublic, true), eq(voiceModels.isActive, true)))
+      .orderBy(desc(voiceModels.createdAt));
+  }
+
+  async createVoiceModel(model: InsertVoiceModel): Promise<VoiceModel> {
+    const [created] = await db.insert(voiceModels).values(model).returning();
+    return created;
+  }
+
+  async updateVoiceModel(id: number, data: Partial<VoiceModel>): Promise<VoiceModel> {
+    const [updated] = await db.update(voiceModels).set(data).where(eq(voiceModels.id, id)).returning();
+    return updated;
+  }
+
+  async deleteVoiceModel(id: number): Promise<void> {
+    await db.delete(voiceModels).where(eq(voiceModels.id, id));
+  }
+
+  async getVoiceSamples(voiceModelId: number): Promise<VoiceSample[]> {
+    return await db.select().from(voiceSamples)
+      .where(eq(voiceSamples.voiceModelId, voiceModelId))
+      .orderBy(desc(voiceSamples.createdAt));
+  }
+
+  async createVoiceSample(sample: InsertVoiceSample): Promise<VoiceSample> {
+    const [created] = await db.insert(voiceSamples).values(sample).returning();
+    return created;
+  }
+
+  async updateVoiceSample(id: number, data: Partial<VoiceSample>): Promise<VoiceSample> {
+    const [updated] = await db.update(voiceSamples).set(data).where(eq(voiceSamples.id, id)).returning();
+    return updated;
+  }
+
+  async deleteVoiceSample(id: number): Promise<void> {
+    await db.delete(voiceSamples).where(eq(voiceSamples.id, id));
+  }
+
+  async getStyleReferences(userId: string): Promise<StyleReference[]> {
+    return await db.select().from(styleReferences)
+      .where(eq(styleReferences.userId, userId))
+      .orderBy(desc(styleReferences.createdAt));
+  }
+
+  async getStyleReference(id: number): Promise<StyleReference | undefined> {
+    const [ref] = await db.select().from(styleReferences).where(eq(styleReferences.id, id));
+    return ref;
+  }
+
+  async createStyleReference(ref: InsertStyleReference): Promise<StyleReference> {
+    const [created] = await db.insert(styleReferences).values(ref).returning();
+    return created;
+  }
+
+  async updateStyleReference(id: number, data: Partial<StyleReference>): Promise<StyleReference> {
+    const [updated] = await db.update(styleReferences).set(data).where(eq(styleReferences.id, id)).returning();
+    return updated;
+  }
+
+  async deleteStyleReference(id: number): Promise<void> {
+    await db.delete(styleReferences).where(eq(styleReferences.id, id));
   }
 }
 

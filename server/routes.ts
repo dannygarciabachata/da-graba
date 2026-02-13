@@ -1950,6 +1950,305 @@ export async function registerRoutes(
     }
   });
 
+  // ========== VOICE MODELS & STYLE REFERENCES ==========
+
+  const voiceDir = path.join(process.cwd(), "public", "audio", "voices");
+  if (!fs.existsSync(voiceDir)) fs.mkdirSync(voiceDir, { recursive: true });
+  const refDir = path.join(process.cwd(), "public", "audio", "references");
+  if (!fs.existsSync(refDir)) fs.mkdirSync(refDir, { recursive: true });
+
+  const voiceUpload = multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, voiceDir),
+      filename: (_req, _file, cb) => {
+        const ext = path.extname(_file.originalname) || ".wav";
+        cb(null, `${uuidv4()}${ext}`);
+      },
+    }),
+    limits: { fileSize: 100 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const allowed = [".wav", ".mp3", ".ogg", ".webm", ".m4a", ".flac"];
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (allowed.includes(ext) || file.mimetype.startsWith("audio/")) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only audio files are allowed"));
+      }
+    },
+  });
+
+  const refUpload = multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, refDir),
+      filename: (_req, _file, cb) => {
+        const ext = path.extname(_file.originalname) || ".mp3";
+        cb(null, `ref_${uuidv4()}${ext}`);
+      },
+    }),
+    limits: { fileSize: 100 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const allowed = [".wav", ".mp3", ".ogg", ".webm", ".m4a", ".flac"];
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (allowed.includes(ext) || file.mimetype.startsWith("audio/")) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only audio files are allowed"));
+      }
+    },
+  });
+
+  app.get("/api/voice-models", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const own = await storage.getUserVoiceModels(userId);
+      const pub = await storage.getPublicVoiceModels();
+      const combined = [...own, ...pub.filter(p => p.userId !== userId)];
+      res.json(combined);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/voice-models/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const model = await storage.getVoiceModel(parseInt(req.params.id));
+      if (!model) return res.sendStatus(404);
+      const samples = await storage.getVoiceSamples(model.id);
+      res.json({ ...model, samples });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/voice-models", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const { name, description, type, provider, gender, language, tags, externalVoiceId } = req.body;
+      if (!name) return res.status(400).json({ message: "Name is required" });
+
+      const model = await storage.createVoiceModel({
+        userId,
+        name,
+        description: description || null,
+        type: type || "uploaded",
+        provider: provider || "custom",
+        gender: gender || null,
+        language: language || "es",
+        tags: tags || null,
+        externalVoiceId: externalVoiceId || null,
+        isActive: true,
+        isPublic: false,
+        trainingStatus: type === "uploaded" ? "ready" : "pending",
+        pipelineStep: type === "uploaded" ? "ready" : "upload",
+      });
+      res.json(model);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/voice-models/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const model = await storage.getVoiceModel(parseInt(req.params.id));
+      if (!model) return res.sendStatus(404);
+      if (model.userId !== userId) return res.sendStatus(403);
+
+      const { name, description, gender, language, tags, isPublic, isActive, externalVoiceId, provider } = req.body;
+      const updated = await storage.updateVoiceModel(model.id, {
+        ...(name !== undefined ? { name } : {}),
+        ...(description !== undefined ? { description } : {}),
+        ...(gender !== undefined ? { gender } : {}),
+        ...(language !== undefined ? { language } : {}),
+        ...(tags !== undefined ? { tags } : {}),
+        ...(isPublic !== undefined ? { isPublic } : {}),
+        ...(isActive !== undefined ? { isActive } : {}),
+        ...(externalVoiceId !== undefined ? { externalVoiceId } : {}),
+        ...(provider !== undefined ? { provider } : {}),
+      });
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/voice-models/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const model = await storage.getVoiceModel(parseInt(req.params.id));
+      if (!model) return res.sendStatus(404);
+      if (model.userId !== userId) return res.sendStatus(403);
+      await storage.deleteVoiceModel(model.id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/voice-models/:id/samples", voiceUpload.single("audio"), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const model = await storage.getVoiceModel(parseInt(req.params.id));
+      if (!model) return res.sendStatus(404);
+      if (model.userId !== userId) return res.sendStatus(403);
+
+      if (!req.file) return res.status(400).json({ message: "No audio file provided" });
+
+      const audioUrl = `/audio/voices/${req.file.filename}`;
+      const name = req.body.name || req.file.originalname || "Voice Sample";
+
+      const sample = await storage.createVoiceSample({
+        voiceModelId: model.id,
+        name,
+        audioUrl,
+        status: "uploaded",
+      });
+
+      if (model.trainingStatus === "ready" && model.type !== "uploaded") {
+        await storage.updateVoiceModel(model.id, {
+          trainingStatus: "pending",
+          pipelineStep: "upload",
+        });
+      }
+
+      res.json(sample);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/voice-samples/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      await storage.deleteVoiceSample(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/voice-models/:id/train", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const model = await storage.getVoiceModel(parseInt(req.params.id));
+      if (!model) return res.sendStatus(404);
+      if (model.userId !== userId) return res.sendStatus(403);
+
+      const samples = await storage.getVoiceSamples(model.id);
+      if (samples.length === 0) {
+        return res.status(400).json({ message: "Upload at least one voice sample before training" });
+      }
+
+      await storage.updateVoiceModel(model.id, {
+        trainingStatus: "training",
+        pipelineStep: "train",
+        trainingError: null,
+      });
+
+      console.log(`[Voice Training] Started training for model ${model.id} "${model.name}" with ${samples.length} samples`);
+
+      res.json({ success: true, message: "Voice training started" });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/webhooks/voice-training", async (req, res) => {
+    try {
+      const { getVoiceWebhookSecret } = await import("./core/voice_training_engine");
+      const expectedSecret = getVoiceWebhookSecret();
+      if (expectedSecret) {
+        const incomingSecret = req.headers["x-webhook-secret"] as string;
+        if (incomingSecret !== expectedSecret) {
+          return res.sendStatus(403);
+        }
+      }
+
+      const payload = req.body;
+      const voiceModelId = payload.voiceModelId;
+      console.log(`[Webhook] Voice training webhook received for model ${voiceModelId}, status: ${payload.status}`);
+
+      if (!voiceModelId) return res.sendStatus(200);
+
+      const model = await storage.getVoiceModel(voiceModelId);
+      if (!model) return res.sendStatus(200);
+
+      if (payload.status === "failed") {
+        await storage.updateVoiceModel(voiceModelId, {
+          trainingStatus: "failed",
+          trainingError: payload.error || "Training failed",
+          pipelineStep: "train",
+        });
+      } else if (payload.status === "completed") {
+        await storage.updateVoiceModel(voiceModelId, {
+          trainingStatus: "ready",
+          pipelineStep: "ready",
+          trainingError: null,
+          modelUrl: payload.model?.modelUrl || null,
+        });
+      }
+
+      res.sendStatus(200);
+    } catch (err: any) {
+      console.error("[Webhook] Voice training error:", err);
+      res.sendStatus(200);
+    }
+  });
+
+  app.get("/api/style-references", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const refs = await storage.getStyleReferences(userId);
+      res.json(refs);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/style-references", refUpload.single("audio"), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      if (!req.file) return res.status(400).json({ message: "No audio file provided" });
+
+      const audioUrl = `/audio/references/${req.file.filename}`;
+      const name = req.body.name || req.file.originalname || "Style Reference";
+
+      const ref = await storage.createStyleReference({
+        userId,
+        name,
+        audioUrl,
+        isActive: true,
+      });
+
+      res.json(ref);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/style-references/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const ref = await storage.getStyleReference(parseInt(req.params.id));
+      if (!ref) return res.sendStatus(404);
+      if (ref.userId !== userId) return res.sendStatus(403);
+      await storage.deleteStyleReference(ref.id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // ========== CLOUD SERVERS MANAGEMENT (Admin) ==========
 
   app.get("/api/admin/cloud-servers", async (req, res) => {

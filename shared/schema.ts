@@ -447,6 +447,8 @@ export type GenerateSongRequest = {
   mode?: "standard" | "aggregate";
   title?: string;
   genre?: string;
+  voiceModelId?: number;
+  styleReferenceId?: number;
 };
 
 export type GenerateLyricsRequest = {
@@ -461,6 +463,111 @@ export type SubmitQuizRequest = {
 
 export type SongResponse = Song;
 export type LyricResponse = Lyric;
+
+// === VOICE MODELS ===
+
+export const voiceModels = pgTable("voice_models", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  type: text("type").notNull().default("uploaded"),
+  imageUrl: text("image_url"),
+  modelUrl: text("model_url"),
+  externalVoiceId: text("external_voice_id"),
+  provider: text("provider").default("custom"),
+  gender: text("gender"),
+  language: text("language").default("es"),
+  tags: text("tags"),
+  isActive: boolean("is_active").default(true),
+  isPublic: boolean("is_public").default(false),
+  trainingStatus: text("training_status").default("ready"),
+  trainingJobId: text("training_job_id"),
+  trainingError: text("training_error"),
+  pipelineStep: text("pipeline_step").default("ready"),
+  lastUsedAt: timestamp("last_used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const voiceSamples = pgTable("voice_samples", {
+  id: serial("id").primaryKey(),
+  voiceModelId: integer("voice_model_id").notNull().references(() => voiceModels.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  audioUrl: text("audio_url"),
+  duration: integer("duration"),
+  status: text("status").notNull().default("uploaded"),
+  error: text("error"),
+  analysisData: text("analysis_data"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const styleReferences = pgTable("style_references", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  audioUrl: text("audio_url"),
+  duration: integer("duration"),
+  detectedGenre: text("detected_genre"),
+  detectedBpm: integer("detected_bpm"),
+  detectedKey: text("detected_key"),
+  analysisData: text("analysis_data"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const voiceModelsRelations = relations(voiceModels, ({ many }) => ({
+  samples: many(voiceSamples),
+}));
+
+export const voiceSamplesRelations = relations(voiceSamples, ({ one }) => ({
+  voiceModel: one(voiceModels, {
+    fields: [voiceSamples.voiceModelId],
+    references: [voiceModels.id],
+  }),
+}));
+
+export const insertVoiceModelSchema = createInsertSchema(voiceModels).omit({
+  id: true,
+  createdAt: true,
+  lastUsedAt: true,
+});
+
+export const insertVoiceSampleSchema = createInsertSchema(voiceSamples).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertStyleReferenceSchema = createInsertSchema(styleReferences).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type VoiceModel = typeof voiceModels.$inferSelect;
+export type InsertVoiceModel = z.infer<typeof insertVoiceModelSchema>;
+export type VoiceSample = typeof voiceSamples.$inferSelect;
+export type InsertVoiceSample = z.infer<typeof insertVoiceSampleSchema>;
+export type StyleReference = typeof styleReferences.$inferSelect;
+export type InsertStyleReference = z.infer<typeof insertStyleReferenceSchema>;
+
+export const VOICE_MODEL_TYPES = [
+  "uploaded",
+  "trained",
+  "cloned",
+] as const;
+
+export const VOICE_PROVIDERS = [
+  "custom",
+  "elevenlabs",
+  "rvc",
+  "so-vits",
+  "openvoice",
+  "cloud_gpu",
+] as const;
+
+export const VOICE_TRAINING_STEPS = ["upload", "analyze", "train", "ready"] as const;
+
+export type VoiceModelType = typeof VOICE_MODEL_TYPES[number];
+export type VoiceProvider = typeof VOICE_PROVIDERS[number];
 
 // === CLOUD SERVERS ===
 
