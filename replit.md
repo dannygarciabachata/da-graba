@@ -27,14 +27,16 @@ The "Heart Mula" music engine employs a microservices-oriented architecture with
 - **Technology Stack:** Express.js (TypeScript).
 - **Database:** PostgreSQL, hosted on Neon via Replit.
 - **Authentication:** Replit Auth (OpenID Connect).
+- **Admin Role System:** Role-based access control with 4 levels: `super_admin` (full access), `admin` (dashboard/analytics/users/subscriptions/support/style-kits), `moderator` (support only), `user` (no admin access). ADMIN_USER_ID env var is always super_admin. Roles stored in `users.role` column. Super admins can manage user roles from the Users tab.
 - **Payments:** Stripe integration via `stripe-replit-sync` for subscriptions, checkout, and customer portal.
 - **Generic API Provider System:**
     - A core architectural decision is the **API-agnostic engine** (`generic_api_engine.ts`). This system allows any API provider to be configured dynamically via the Admin Panel, storing configurations in `api_providers` and `api_endpoints` tables.
     - It supports dynamic authentication (raw, bearer, header, query), request mapping, response extraction, and various async patterns (polling, webhook).
-    - **Fallback Mechanism:** If no specific provider is configured for an operation, the system defaults to a hardcoded MusicGPT engine (`musicgpt_engine.ts`).
+    - **Fallback Mechanism:** If no specific provider is configured for an operation, the system defaults to a hardcoded fallback engine (`musicgpt_engine.ts`).
     - **Operation Types:** Supports a wide range of operations including music_generation, stem_separation, remix, mastering, denoise, key_bpm, cover, voice_change, audio_cut, lyrics_generation, and image_generation.
 - **AI Engines:**
-    - **MusicGPT Engine:** Default for all audio operations, auto-seeded on first run.
+    - **Heart Mula Audio Engine:** Default for all audio operations (seeded as "Heart Mula Audio Engine"), API-agnostic.
+    - **Heart Mula Cloud Engine:** Private cloud GPU engine for instrument processing, audio analysis, and MIDI conversion.
     - **OpenAI Integration:** Used for lyrics generation (via GPT-5.1) and powering the platform's support chatbot and instrument prompt generation.
     - **SAO Training Pipeline:** A Stable Audio Open-inspired fine-tuning pipeline for custom instrument kits, utilizing OpenAI for prompt generation and cloud GPU for training.
     - **Antigravity Engine:** A creative AI engine leveraging OpenAI for lyrics and full arrangement configurations.

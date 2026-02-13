@@ -11,6 +11,7 @@ import {
   useUpdateTicket, useReplyToTicket,
   useCloudServers, useCreateCloudServer, useUpdateCloudServer,
   useDeleteCloudServer, useTestCloudServer,
+  useUpdateUserRole,
 } from "@/hooks/use-admin";
 import {
   useStyleKits, useStyleKitMeta, useCreateStyleKit, useUpdateStyleKit,
@@ -60,16 +61,25 @@ export default function AdminPage() {
     );
   }
 
-  return <AdminDashboard />;
+  return <AdminDashboard role={adminCheck.role || "user"} />;
 }
 
-function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+const TAB_ROLE_ACCESS: Record<string, Tab[]> = {
+  super_admin: ["dashboard", "analytics", "users", "subscriptions", "support", "settings", "email", "style-kits", "cloud-servers", "providers", "endpoints"],
+  admin: ["dashboard", "analytics", "users", "subscriptions", "support", "style-kits"],
+  moderator: ["support"],
+};
+
+function AdminDashboard({ role }: { role: string }) {
+  const defaultTab = TAB_ROLE_ACCESS[role]?.[0] || "support";
+  const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
   const [selectedProviderId, setSelectedProviderId] = useState<number | null>(null);
   const [editingProvider, setEditingProvider] = useState<Partial<ApiProvider> | null>(null);
   const [editingEndpoint, setEditingEndpoint] = useState<Partial<ApiEndpoint> | null>(null);
 
-  const tabs = [
+  const allowedTabs = TAB_ROLE_ACCESS[role] || [];
+
+  const allTabs = [
     { id: "dashboard" as Tab, label: "Dashboard", icon: BarChart3 },
     { id: "analytics" as Tab, label: "Analytics", icon: TrendingUp },
     { id: "users" as Tab, label: "Users", icon: Users },
@@ -83,6 +93,8 @@ function AdminDashboard() {
     { id: "endpoints" as Tab, label: "Endpoints", icon: Zap },
   ];
 
+  const tabs = allTabs.filter(tab => allowedTabs.includes(tab.id));
+
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6" data-testid="admin-dashboard">
       <div className="flex items-center gap-3">
@@ -90,7 +102,10 @@ function AdminDashboard() {
           <Settings className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-xl font-bold">Admin Panel</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold">Admin Panel</h1>
+            <Badge variant="outline" className="text-xs capitalize" data-testid="badge-admin-role">{role.replace("_", " ")}</Badge>
+          </div>
           <p className="text-xs text-muted-foreground">Manage users, subscriptions, API providers, and platform settings</p>
         </div>
       </div>
@@ -114,7 +129,7 @@ function AdminDashboard() {
 
       {activeTab === "dashboard" && <DashboardTab />}
       {activeTab === "analytics" && <AnalyticsTab />}
-      {activeTab === "users" && <UsersTab />}
+      {activeTab === "users" && <UsersTab isSuperAdmin={role === "super_admin"} />}
       {activeTab === "subscriptions" && <SubscriptionsTab />}
       {activeTab === "support" && <SupportTab />}
       {activeTab === "settings" && <SettingsTab />}
@@ -180,8 +195,26 @@ function DashboardTab() {
   );
 }
 
-function UsersTab() {
+const ROLE_OPTIONS = [
+  { value: "super_admin", label: "Super Admin", color: "bg-red-500/10 text-red-500 border-red-500/30" },
+  { value: "admin", label: "Admin", color: "bg-blue-500/10 text-blue-500 border-blue-500/30" },
+  { value: "moderator", label: "Moderator", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/30" },
+  { value: "user", label: "User", color: "" },
+];
+
+function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   const { data: usersList, isLoading } = useAdminUsers();
+  const updateRole = useUpdateUserRole();
+  const { toast } = useToast();
+
+  async function handleRoleChange(userId: string, newRole: string) {
+    try {
+      await updateRole.mutateAsync({ userId, role: newRole });
+      toast({ title: "Role updated" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  }
 
   if (isLoading) return <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>;
 
@@ -189,38 +222,57 @@ function UsersTab() {
     <div className="space-y-4" data-testid="admin-users-tab">
       <h2 className="text-lg font-semibold">Users ({usersList?.length || 0})</h2>
       <div className="space-y-2">
-        {usersList?.map((u: any) => (
-          <Card key={u.id} data-testid={`card-user-${u.id}`}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {u.profileImageUrl ? (
-                    <img src={u.profileImageUrl} className="h-8 w-8 rounded-full" alt="" />
-                  ) : (
-                    <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
-                      {u.firstName?.[0]}{u.lastName?.[0]}
+        {usersList?.map((u: any) => {
+          const roleInfo = ROLE_OPTIONS.find(r => r.value === (u.role || "user")) || ROLE_OPTIONS[3];
+          return (
+            <Card key={u.id} data-testid={`card-user-${u.id}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {u.profileImageUrl ? (
+                      <img src={u.profileImageUrl} className="h-8 w-8 rounded-full" alt="" />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                        {u.firstName?.[0]}{u.lastName?.[0]}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-medium">{u.firstName} {u.lastName}</p>
+                      <p className="text-xs text-muted-foreground">{u.email || "No email"}</p>
                     </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-medium">{u.firstName} {u.lastName}</p>
-                    <p className="text-xs text-muted-foreground">{u.email || "No email"}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isSuperAdmin ? (
+                      <select
+                        value={u.role || "user"}
+                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                        className="text-xs bg-background border rounded px-2 py-1 cursor-pointer"
+                        data-testid={`select-role-${u.id}`}
+                      >
+                        {ROLE_OPTIONS.map(r => (
+                          <option key={r.value} value={r.value}>{r.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <Badge variant="outline" className={`text-[10px] ${roleInfo.color}`} data-testid={`badge-role-${u.id}`}>
+                        {roleInfo.label}
+                      </Badge>
+                    )}
+                    <Badge variant={u.subscriptionTier === "premium" ? "default" : u.subscriptionTier === "pro" ? "secondary" : "outline"} className="text-[10px]">
+                      {u.subscriptionTier || "free"}
+                    </Badge>
+                    {u.stripeCustomerId && (
+                      <Badge variant="outline" className="text-[10px]">Stripe</Badge>
+                    )}
+                    <span className="text-[10px] text-muted-foreground">
+                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : ""}
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={u.subscriptionTier === "premium" ? "default" : u.subscriptionTier === "pro" ? "secondary" : "outline"} className="text-[10px]">
-                    {u.subscriptionTier || "free"}
-                  </Badge>
-                  {u.stripeCustomerId && (
-                    <Badge variant="outline" className="text-[10px]">Stripe</Badge>
-                  )}
-                  <span className="text-[10px] text-muted-foreground">
-                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : ""}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
         {(!usersList || usersList.length === 0) && (
           <div className="text-center py-8 text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
@@ -1819,7 +1871,7 @@ function CloudServersTab() {
           <CardContent className="text-xs space-y-3">
             <div>
               <p className="font-semibold mb-1">1. Prepare your GPU server</p>
-              <p className="text-muted-foreground">Set up a GPU server on any cloud provider (AWS, Google Cloud, DigitalOcean, RunPod, etc.). Install the DGB Cloud Engine Flask API on it.</p>
+              <p className="text-muted-foreground">Set up a GPU server on any cloud provider (AWS, Google Cloud, DigitalOcean, RunPod, etc.). Install the Heart Mula Cloud Engine API on it.</p>
             </div>
             <div>
               <p className="font-semibold mb-1">2. Deploy the Flask API</p>

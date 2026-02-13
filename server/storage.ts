@@ -110,6 +110,10 @@ export interface IStorage {
   createCloudServer(server: InsertCloudServer): Promise<CloudServer>;
   updateCloudServer(id: number, data: Partial<CloudServer>): Promise<CloudServer>;
   deleteCloudServer(id: number): Promise<void>;
+
+  getUser(id: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
+  updateUserRole(userId: string, role: string): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -388,6 +392,11 @@ export class DatabaseStorage implements IStorage {
     subscriptionTier?: string;
   }): Promise<User> {
     const [updated] = await db.update(users).set({ ...data, updatedAt: new Date() }).where(eq(users.id, userId)).returning();
+    return updated;
+  }
+
+  async updateUserRole(userId: string, role: string): Promise<User> {
+    const [updated] = await db.update(users).set({ role, updatedAt: new Date() }).where(eq(users.id, userId)).returning();
     return updated;
   }
 

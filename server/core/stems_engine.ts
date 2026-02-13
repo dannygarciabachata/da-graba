@@ -57,7 +57,7 @@ export async function processStemSeparation(
       const pollResult = await pollGenericJob("stem_separation", submitResult.taskId!, 600000, 8000);
       rawResult = pollResult;
     } else {
-      console.log(`[Stems] Using MusicGPT fallback for stem separation`);
+      console.log(`[Stems] Using fallback engine for stem separation`);
       const submitResult = await submitExtraction(fullAudioUrl, stemsList);
       console.log(`[Stems] Extraction submitted, task_id: ${submitResult.task_id}`);
       const pollResult = await pollMusicGPTJob(submitResult.task_id, 600000, 8000, "EXTRACTION");

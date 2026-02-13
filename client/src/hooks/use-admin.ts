@@ -3,9 +3,21 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { ApiProvider, ApiEndpoint, PlatformSetting, SupportTicket, SupportMessage, CloudServer } from "@shared/schema";
 
 export function useAdminCheck() {
-  return useQuery<{ isAdmin: boolean }>({
+  return useQuery<{ isAdmin: boolean; role: string }>({
     queryKey: ["/api/admin/check"],
     retry: false,
+  });
+}
+
+export function useUpdateUserRole() {
+  return useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      const res = await apiRequest("PATCH", `/api/admin/users/${userId}/role`, { role });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
   });
 }
 

@@ -7,17 +7,17 @@ export async function seedDefaultMusicGPTProvider(): Promise<void> {
     return;
   }
 
-  console.log("[Seed] Seeding default MusicGPT provider configuration...");
+  console.log("[Seed] Seeding default Heart Mula Audio Engine configuration...");
 
   const provider = await storage.createApiProvider({
-    name: "MusicGPT",
+    name: "Heart Mula Audio Engine",
     baseUrl: "https://api.musicgpt.com/api/public/v1",
     authType: "raw",
     authHeaderName: "Authorization",
     apiKeyEnvVar: "MUSICGPT_API_KEY",
     category: "music",
     isActive: true,
-    description: "MusicGPT API - AI music generation, stem separation, mastering, and audio processing",
+    description: "Primary audio processing engine - AI music generation, stem separation, mastering, and audio tools",
   });
 
   const endpoints = [
@@ -155,38 +155,41 @@ export async function seedDefaultMusicGPTProvider(): Promise<void> {
     console.log(`[Seed] Created endpoint: ${ep.name}`);
   }
 
-  console.log(`[Seed] Default MusicGPT provider seeded with ${endpoints.length} endpoints`);
+  console.log(`[Seed] Heart Mula Audio Engine seeded with ${endpoints.length} endpoints`);
 
   await seedDgbRunPodProvider();
 }
 
 export async function seedDgbRunPodProvider(): Promise<void> {
   const existing = await storage.getApiProviders();
-  const hasDgb = existing.some(p => p.name === "DGB Cloud Engine" || p.name === "DGB Audio RunPod");
+  const hasDgb = existing.some(p =>
+    p.name === "DGB Cloud Engine" || p.name === "DGB Audio RunPod" ||
+    p.name === "Heart Mula Cloud Engine"
+  );
   if (hasDgb) {
-    console.log("[Seed] DGB Cloud Engine provider already exists, skipping");
+    console.log("[Seed] Cloud Engine provider already exists, skipping");
     return;
   }
 
   if (!process.env.DGB_API_KEY || !process.env.RUNPOD_BASE_URL) {
-    console.log("[Seed] DGB_API_KEY or RUNPOD_BASE_URL not set, skipping DGB Cloud Engine seed");
+    console.log("[Seed] DGB_API_KEY or RUNPOD_BASE_URL not set, skipping Cloud Engine seed");
     return;
   }
 
   const gpuBase = (process.env.RUNPOD_BASE_URL || "").replace(/\/lab\/.*$/, "").replace(/\/$/, "");
   const apiBase = gpuBase.replace(/:8888$/, ":7860").replace(/-8888\./, "-7860.");
 
-  console.log("[Seed] Seeding DGB Cloud Engine provider...");
+  console.log("[Seed] Seeding Heart Mula Cloud Engine provider...");
 
   const provider = await storage.createApiProvider({
-    name: "DGB Cloud Engine",
+    name: "Heart Mula Cloud Engine",
     baseUrl: apiBase,
     authType: "header",
     authHeaderName: "X-DGB-API-Key",
     apiKeyEnvVar: "DGB_API_KEY",
     category: "music",
     isActive: true,
-    description: "DGB Audio private cloud GPU engine. Handles instrument kit processing, audio analysis, and MIDI conversion.",
+    description: "Private cloud GPU engine for instrument processing, audio analysis, and MIDI conversion",
   });
 
   const dgbEndpoints = [
@@ -206,7 +209,7 @@ export async function seedDgbRunPodProvider(): Promise<void> {
       responseMapping: { status: "status", instrumentId: "instrumentId" },
       asyncPattern: "webhook",
       webhookSupported: true,
-      description: "Upload instrument audio to cloud GPU for analysis and MIDI conversion",
+      description: "Upload instrument audio for analysis and MIDI conversion",
     },
     {
       name: "Audio Analysis",
@@ -223,7 +226,7 @@ export async function seedDgbRunPodProvider(): Promise<void> {
         tags: "tags",
       },
       asyncPattern: "sync",
-      description: "Analyze audio for key, BPM, energy, and musical tags using librosa",
+      description: "Analyze audio for key, BPM, energy, and musical tags",
     },
     {
       name: "MIDI Conversion",
@@ -234,7 +237,7 @@ export async function seedDgbRunPodProvider(): Promise<void> {
       requestMapping: { audio: "$audio_file" },
       responseMapping: { midiBase64: "midiBase64", midiSize: "midiSize" },
       asyncPattern: "sync",
-      description: "Convert audio to MIDI instrument using basic-pitch AI",
+      description: "Convert audio to MIDI instrument data",
     },
   ];
 
@@ -243,8 +246,8 @@ export async function seedDgbRunPodProvider(): Promise<void> {
       providerId: provider.id,
       ...ep,
     } as any);
-    console.log(`[Seed] Created DGB endpoint: ${ep.name}`);
+    console.log(`[Seed] Created Cloud endpoint: ${ep.name}`);
   }
 
-  console.log(`[Seed] DGB Cloud Engine provider seeded with ${dgbEndpoints.length} endpoints`);
+  console.log(`[Seed] Heart Mula Cloud Engine seeded with ${dgbEndpoints.length} endpoints`);
 }

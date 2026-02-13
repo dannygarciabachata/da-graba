@@ -160,13 +160,13 @@ export async function registerRoutes(
     res.json(updated);
   });
 
-  // ========== MUSICGPT WEBHOOK ==========
+  // ========== AUDIO ENGINE WEBHOOK ==========
 
   app.post("/api/webhooks/musicgpt", async (req, res) => {
     try {
       const payload = req.body;
       const subtype = payload.subtype;
-      console.log(`[Webhook] Received MusicGPT webhook (subtype: ${subtype || "audio"}):`, JSON.stringify(payload).substring(0, 500));
+      console.log(`[Webhook] Received audio engine webhook (subtype: ${subtype || "audio"}):`, JSON.stringify(payload).substring(0, 500));
 
       const taskId = payload.task_id;
       if (!taskId) {
@@ -797,11 +797,32 @@ export async function registerRoutes(
     console.warn("[Admin] WARNING: ADMIN_USER_ID env var not set. Admin panel will be inaccessible. Set it to your Replit user ID to enable admin access.");
   }
 
+  async function getUserRole(req: any): Promise<string> {
+    if (!req.isAuthenticated()) return "user";
+    const userId = (req.user as any)?.claims?.sub;
+    if (!userId) return "user";
+    if (userId === ADMIN_USER_ID) return "super_admin";
+    const user = await storage.getUser(userId);
+    return user?.role || "user";
+  }
+
   function isAdmin(req: any): boolean {
     if (!req.isAuthenticated()) return false;
-    if (!ADMIN_USER_ID) return false;
     const userId = (req.user as any)?.claims?.sub;
-    return userId === ADMIN_USER_ID;
+    if (userId === ADMIN_USER_ID) return true;
+    return false;
+  }
+
+  async function hasRole(req: any, minRole: "super_admin" | "admin" | "moderator"): Promise<boolean> {
+    const role = await getUserRole(req);
+    const hierarchy: Record<string, number> = { super_admin: 3, admin: 2, moderator: 1, user: 0 };
+    return (hierarchy[role] || 0) >= (hierarchy[minRole] || 0);
+  }
+
+  async function requireRole(req: any, res: any, minRole: "super_admin" | "admin" | "moderator"): Promise<boolean> {
+    if (!req.isAuthenticated()) { res.sendStatus(401); return false; }
+    if (!(await hasRole(req, minRole))) { res.sendStatus(403); return false; }
+    return true;
   }
 
   seedDefaultMusicGPTProvider().catch((err: any) =>
@@ -812,14 +833,16 @@ export async function registerRoutes(
     console.log("[Seed] DGB Cloud seed error:", err.message?.substring(0, 100))
   );
 
-  app.get("/api/admin/check", (req, res) => {
+  app.get("/api/admin/check", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = (req.user as any).claims.sub;
-    res.json({ isAdmin: userId === ADMIN_USER_ID });
+    const role = await getUserRole(req);
+    const isAdminUser = role === "super_admin" || role === "admin" || role === "moderator";
+    res.json({ isAdmin: isAdminUser, role });
   });
 
-  app.get("/api/admin/meta", (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+  app.get("/api/admin/meta", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
     res.json({
       operationTypes: OPERATION_TYPES,
       providerCategories: PROVIDER_CATEGORIES,
@@ -828,20 +851,20 @@ export async function registerRoutes(
   });
 
   app.get("/api/admin/providers", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     const providers = await storage.getApiProviders();
     res.json(providers);
   });
 
   app.get("/api/admin/providers/:id", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     const provider = await storage.getApiProvider(Number(req.params.id));
     if (!provider) return res.sendStatus(404);
     res.json(provider);
   });
 
   app.post("/api/admin/providers", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     try {
       const data = insertApiProviderSchema.parse(req.body);
       const provider = await storage.createApiProvider(data);
@@ -866,7 +889,7 @@ export async function registerRoutes(
   });
 
   app.patch("/api/admin/providers/:id", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     const id = Number(req.params.id);
     const existing = await storage.getApiProvider(id);
     if (!existing) return res.sendStatus(404);
@@ -881,7 +904,7 @@ export async function registerRoutes(
   });
 
   app.delete("/api/admin/providers/:id", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     const id = Number(req.params.id);
     const existing = await storage.getApiProvider(id);
     if (!existing) return res.sendStatus(404);
@@ -890,21 +913,21 @@ export async function registerRoutes(
   });
 
   app.get("/api/admin/endpoints", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     const providerId = req.query.providerId ? Number(req.query.providerId) : undefined;
     const endpoints = await storage.getApiEndpoints(providerId);
     res.json(endpoints);
   });
 
   app.get("/api/admin/endpoints/:id", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     const endpoint = await storage.getApiEndpoint(Number(req.params.id));
     if (!endpoint) return res.sendStatus(404);
     res.json(endpoint);
   });
 
   app.post("/api/admin/endpoints", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     try {
       const data = insertApiEndpointSchema.parse(req.body);
       const endpoint = await storage.createApiEndpoint(data);
@@ -934,7 +957,7 @@ export async function registerRoutes(
   });
 
   app.patch("/api/admin/endpoints/:id", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     const id = Number(req.params.id);
     const existing = await storage.getApiEndpoint(id);
     if (!existing) return res.sendStatus(404);
@@ -949,7 +972,7 @@ export async function registerRoutes(
   });
 
   app.delete("/api/admin/endpoints/:id", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     const id = Number(req.params.id);
     const existing = await storage.getApiEndpoint(id);
     if (!existing) return res.sendStatus(404);
@@ -958,7 +981,7 @@ export async function registerRoutes(
   });
 
   app.post("/api/admin/endpoints/:id/test", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     const endpoint = await storage.getApiEndpoint(Number(req.params.id));
     if (!endpoint) return res.sendStatus(404);
     const provider = await storage.getApiProvider(endpoint.providerId);
@@ -992,7 +1015,7 @@ export async function registerRoutes(
   // ========== ADMIN: EXPANDED DASHBOARD ==========
 
   app.get("/api/admin/stats", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "admin"))) return;
     try {
       const stats = await storage.getAdminStats();
       const subscriptions = await storage.getStripeSubscriptions();
@@ -1008,7 +1031,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/admin/users", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "admin"))) return;
     try {
       const allUsers = await storage.getAllUsers();
       res.json(allUsers);
@@ -1017,8 +1040,23 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/admin/users/:id/role", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    const { role } = req.body;
+    const validRoles = ["super_admin", "admin", "moderator", "user"];
+    if (!role || !validRoles.includes(role)) {
+      return res.status(400).json({ message: "Invalid role. Must be one of: " + validRoles.join(", ") });
+    }
+    try {
+      const updated = await storage.updateUserRole(req.params.id, role);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/admin/subscriptions", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "admin"))) return;
     try {
       const subs = await storage.getStripeSubscriptions();
       res.json(subs);
@@ -1028,7 +1066,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/admin/products", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "admin"))) return;
     try {
       const products = await storage.getStripeProducts();
       res.json(products);
@@ -1040,7 +1078,7 @@ export async function registerRoutes(
   // ========== ADMIN: PLATFORM SETTINGS ==========
 
   app.get("/api/admin/settings", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     try {
       const category = req.query.category as string | undefined;
       const settings = await storage.getPlatformSettings(category);
@@ -1051,7 +1089,7 @@ export async function registerRoutes(
   });
 
   app.put("/api/admin/settings", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     try {
       const data = insertPlatformSettingSchema.parse(req.body);
       const setting = await storage.upsertPlatformSetting(data);
@@ -1063,7 +1101,7 @@ export async function registerRoutes(
   });
 
   app.put("/api/admin/settings/bulk", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     try {
       const { settings } = req.body;
       if (!Array.isArray(settings)) return res.status(400).json({ message: "settings array required" });
@@ -1080,7 +1118,7 @@ export async function registerRoutes(
   });
 
   app.delete("/api/admin/settings/:key", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     try {
       await storage.deletePlatformSetting(req.params.key);
       res.sendStatus(204);
@@ -1089,15 +1127,15 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/admin/settings/meta", (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+  app.get("/api/admin/settings/meta", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
     res.json({ categories: SETTING_CATEGORIES });
   });
 
   // ========== ADMIN: ANALYTICS ==========
 
   app.get("/api/admin/analytics", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "admin"))) return;
     try {
       const analytics = await storage.getAnalytics();
       res.json(analytics);
@@ -1108,13 +1146,13 @@ export async function registerRoutes(
 
   // ========== ADMIN: SUPPORT TICKETS ==========
 
-  app.get("/api/admin/tickets/meta", (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+  app.get("/api/admin/tickets/meta", async (req, res) => {
+    if (!(await requireRole(req, res, "moderator"))) return;
     res.json({ statuses: TICKET_STATUSES, priorities: TICKET_PRIORITIES });
   });
 
   app.get("/api/admin/tickets", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "moderator"))) return;
     try {
       const status = req.query.status as string | undefined;
       const tickets = await storage.getSupportTickets(status);
@@ -1125,7 +1163,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/admin/tickets/:id", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "moderator"))) return;
     try {
       const ticket = await storage.getSupportTicket(Number(req.params.id));
       if (!ticket) return res.sendStatus(404);
@@ -1137,7 +1175,7 @@ export async function registerRoutes(
   });
 
   app.patch("/api/admin/tickets/:id", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "moderator"))) return;
     try {
       const ticket = await storage.updateSupportTicket(Number(req.params.id), req.body);
       res.json(ticket);
@@ -1147,7 +1185,7 @@ export async function registerRoutes(
   });
 
   app.post("/api/admin/tickets/:id/reply", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "moderator"))) return;
     const { content } = req.body;
     if (!content) return res.status(400).json({ message: "content required" });
     try {
@@ -1270,7 +1308,7 @@ export async function registerRoutes(
   });
 
   app.post("/api/style-kits", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "admin"))) return;
     try {
       const userId = (req.user as any).claims.sub;
       const parsed = insertStyleKitSchema.parse({ ...req.body, createdBy: userId });
@@ -1283,7 +1321,7 @@ export async function registerRoutes(
   });
 
   app.patch("/api/style-kits/:id", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "admin"))) return;
     try {
       const kit = await storage.updateStyleKit(Number(req.params.id), req.body);
       res.json(kit);
@@ -1293,7 +1331,7 @@ export async function registerRoutes(
   });
 
   app.delete("/api/style-kits/:id", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "admin"))) return;
     try {
       await storage.deleteStyleKit(Number(req.params.id));
       res.sendStatus(204);
@@ -1313,7 +1351,7 @@ export async function registerRoutes(
   });
 
   app.post("/api/style-kits/:kitId/instruments", upload.single("audio"), async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "admin"))) return;
     try {
       const kitId = Number(req.params.kitId);
       const kit = await storage.getStyleKit(kitId);
@@ -1338,7 +1376,7 @@ export async function registerRoutes(
   });
 
   app.patch("/api/style-kits/instruments/:id", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "admin"))) return;
     try {
       const instrument = await storage.updateStyleKitInstrument(Number(req.params.id), req.body);
       res.json(instrument);
@@ -1348,7 +1386,7 @@ export async function registerRoutes(
   });
 
   app.delete("/api/style-kits/instruments/:id", async (req, res) => {
-    if (!isAdmin(req)) return res.sendStatus(403);
+    if (!(await requireRole(req, res, "admin"))) return;
     try {
       await storage.deleteStyleKitInstrument(Number(req.params.id));
       res.sendStatus(204);
@@ -1821,7 +1859,7 @@ export async function registerRoutes(
   // ========== CLOUD SERVERS MANAGEMENT (Admin) ==========
 
   app.get("/api/admin/cloud-servers", async (req, res) => {
-    if (!req.isAuthenticated() || !isAdmin(req)) return res.sendStatus(401);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     try {
       const servers = await storage.getCloudServers();
       const safeServers = servers.map(s => ({
@@ -1836,7 +1874,7 @@ export async function registerRoutes(
   });
 
   app.post("/api/admin/cloud-servers", async (req, res) => {
-    if (!req.isAuthenticated() || !isAdmin(req)) return res.sendStatus(401);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     try {
       const server = await storage.createCloudServer(req.body);
       res.status(201).json({ ...server, apiKey: server.apiKey ? "••••" + server.apiKey.slice(-4) : null, webhookSecret: server.webhookSecret ? "••••" + server.webhookSecret.slice(-4) : null });
@@ -1846,7 +1884,7 @@ export async function registerRoutes(
   });
 
   app.patch("/api/admin/cloud-servers/:id", async (req, res) => {
-    if (!req.isAuthenticated() || !isAdmin(req)) return res.sendStatus(401);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     try {
       const id = Number(req.params.id);
       const existing = await storage.getCloudServer(id);
@@ -1862,7 +1900,7 @@ export async function registerRoutes(
   });
 
   app.delete("/api/admin/cloud-servers/:id", async (req, res) => {
-    if (!req.isAuthenticated() || !isAdmin(req)) return res.sendStatus(401);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     try {
       await storage.deleteCloudServer(Number(req.params.id));
       res.sendStatus(204);
@@ -1872,7 +1910,7 @@ export async function registerRoutes(
   });
 
   app.post("/api/admin/cloud-servers/:id/health", async (req, res) => {
-    if (!req.isAuthenticated() || !isAdmin(req)) return res.sendStatus(401);
+    if (!(await requireRole(req, res, "super_admin"))) return;
     try {
       const id = Number(req.params.id);
       const server = await storage.getCloudServer(id);
