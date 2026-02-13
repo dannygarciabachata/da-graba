@@ -55,12 +55,49 @@ The "Heart Mula" music engine employs a microservices-oriented architecture with
 - **OpenAI:** Used for AI lyrics generation, AI support chatbot, and prompt generation within the SAO training pipeline.
 - **Neon (PostgreSQL):** Database hosting for all persistent data.
 - **Stripe:** Payment gateway for subscription management, checkouts, and customer portals.
-- **DGB Cloud Engine:** Self-hosted Flask server (`dgb_api_receptor.py`) on private cloud GPU for Producer Store instrument processing. Receives audio uploads, converts to MIDI (basic-pitch), analyzes audio (librosa). Authenticated via `DGB_API_KEY` + `TRAINING_WEBHOOK_SECRET` for webhooks. Runs on port 7860. Webhook: `/api/dgb-cloud/webhook`. Auto-seeded as API Provider "DGB Cloud Engine" in Admin panel.
-- **Cloud GPU Server:** JupyterLab server for audio analysis (librosa-based key/BPM/energy detection) and SAO model fine-tuning. Connected via `RUNPOD_BASE_URL` env var (internal only). Uses Jupyter kernel API for job dispatch with webhook callbacks.
+- **DGB Cloud Engine:** FastAPI/Uvicorn server (`dgb_api_receptor.py`) on private cloud GPU for Producer Store instrument processing. Receives audio uploads, converts to MIDI (basic-pitch), analyzes audio (librosa). Authenticated via `DGB_API_KEY` + `TRAINING_WEBHOOK_SECRET` for webhooks. Runs on port 8000. Webhook: `/api/dgb-cloud/webhook`. Auto-seeded as API Provider "DGB Cloud Engine" in Admin panel.
+- **Cloud GPU Server:** JupyterLab server on port 8888 for audio analysis, stem separation (Demucs), and music generation (Stable Audio Open). Connected via RunPod proxy URLs. Uses Jupyter kernel WebSocket API for job dispatch with webhook callbacks.
 - **Generic Cloud Server System:** Database-driven (`cloud_servers` table) management of multiple GPU servers from any provider (AWS, Google Cloud, DigitalOcean, RunPod, etc.). Admin panel "Cloud Servers" tab allows adding/editing/testing servers without code changes. System auto-selects highest-priority active server by capability. Falls back to env vars if no DB servers configured. Each server stores: baseUrl, apiPort, apiKey, webhookSecret, capabilities, priority, custom auth/webhook headers, and endpoint paths.
 - **Replit Auth:** OpenID Connect-based user authentication.
 - **Replit AI Integrations:** Facilitates connection to OpenAI services.
 - **Wavesurfer.js:** Frontend library for audio waveform visualization.
 
+## RunPod GPU Server Setup (Current Session Progress)
+**Status:** Connected but GPU NOT detected. Need to create a new GPU Pod.
+
+**Current Pod:** `thfsq2tu5n45vk` (CPU-only, no nvidia-smi)
+- FastAPI receptor: `https://thfsq2tu5n45vk-8000.proxy.runpod.net` (port 8000, `/docs` endpoint)
+- Jupyter: `https://thfsq2tu5n45vk-8888.proxy.runpod.net` (port 8888, working)
+- Cloud server DB record: id=2, base_url uses RunPod proxy format
+- Health endpoint: `/docs` (FastAPI auto-generated Swagger UI)
+- Health check updated to accept both JSON and HTML responses
+
+**RunPod Proxy URL Format:** `https://{podId}-{port}.proxy.runpod.net`
+- Jupyter URL builder (`buildJupyterUrl`) in both `runpod_stems_engine.ts` and `runpod_music_engine.ts` handles this format automatically by detecting `.proxy.runpod.net` in the base URL and swapping the port in the subdomain.
+
+**NEXT STEPS (when user returns):**
+1. User needs to create a NEW RunPod **GPU Pod** (not CPU) with a real GPU (RTX A6000 or similar)
+   - Template: `runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04`
+   - Volume: 100GB at `/workspace`
+   - Expose HTTP Ports: `8000, 8888`
+   - Expose TCP Ports: `22`
+2. On the new pod, install: `pip install fastapi uvicorn python-multipart stable-audio-tools diffusers demucs accelerate transformers soundfile`
+3. Run `/workspace/start.sh` to start FastAPI receptor
+4. Get the NEW Pod ID and update the cloud_servers DB record:
+   ```sql
+   UPDATE cloud_servers SET base_url = 'https://{NEW_POD_ID}-8000.proxy.runpod.net' WHERE id = 2;
+   ```
+5. Update `RUNPOD_JUPYTER_TOKEN` secret if it changes
+6. Verify `nvidia-smi` shows the GPU
+7. Test music generation and stem separation end-to-end
+
+**Start script** (`/workspace/start.sh`):
+```bash
+#!/bin/bash
+pip install fastapi uvicorn python-multipart
+python3 /workspace/dgb_api_receptor.py
+```
+
 ## Key Scripts
-- **`server/scripts/dgb_api_receptor.py`**: DGB Cloud Engine Flask API server for private GPU. Run on GPU server with `export DGB_API_KEY='key' && export TRAINING_WEBHOOK_SECRET='secret' && python3 /workspace/dgb_api_receptor.py`. Handles instrument uploads, audio-to-MIDI conversion, and audio analysis. Port 7860. Webhook authentication uses `TRAINING_WEBHOOK_SECRET` (falls back to `DGB_API_KEY`).
+- **`server/scripts/dgb_api_receptor.py`**: DGB Cloud Engine FastAPI server for private GPU. Run on GPU server with `export DGB_API_KEY='key' && export TRAINING_WEBHOOK_SECRET='secret' && python3 /workspace/dgb_api_receptor.py`. Handles instrument uploads, audio-to-MIDI conversion, and audio analysis. Port 8000. Webhook authentication uses `TRAINING_WEBHOOK_SECRET` (falls back to `DGB_API_KEY`).
+- **`/workspace/start.sh`** (on RunPod pod): Quick-start script that installs deps and runs the receptor. Also needs `stable-audio-tools diffusers demucs` for full GPU functionality.
