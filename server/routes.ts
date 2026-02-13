@@ -23,11 +23,21 @@ async function recoverStuckSongs() {
   try {
     const { db } = await import("./db");
     const { songs } = await import("@shared/schema");
-    const { eq } = await import("drizzle-orm");
-    await db.update(songs)
-      .set({ status: "failed", error: "Generation interrupted - please try again" })
-      .where(eq(songs.status, "processing"));
-    console.log("[Recovery] Checked for stuck processing songs");
+    const { eq, inArray } = await import("drizzle-orm");
+    const stuckStatuses = ["processing", "mastering", "denoising"];
+    const stuckSongs = await db.select({ id: songs.id, status: songs.status, audioUrl: songs.audioUrl })
+      .from(songs)
+      .where(inArray(songs.status, stuckStatuses));
+    for (const s of stuckSongs) {
+      if (s.audioUrl) {
+        await db.update(songs).set({ status: "completed", error: null }).where(eq(songs.id, s.id));
+        console.log(`[Recovery] Restored song ${s.id} from "${s.status}" to "completed" (has audio)`);
+      } else {
+        await db.update(songs).set({ status: "failed", error: "Generation interrupted - please try again" }).where(eq(songs.id, s.id));
+        console.log(`[Recovery] Marked song ${s.id} as failed (was "${s.status}", no audio)`);
+      }
+    }
+    console.log(`[Recovery] Checked ${stuckSongs.length} stuck songs`);
   } catch (err) {
     console.log("[Recovery] Could not check stuck songs:", (err as any).message);
   }

@@ -126,7 +126,11 @@ function TrackStrip({
               </span>
             )}
             {isFailed && (
-              <span className="text-[10px] text-destructive">Failed</span>
+              <span className="text-[10px] text-destructive" title={track.error || "Processing failed"}>
+                {track.error?.includes("QUOTA_EXCEEDED") || track.error?.includes("Insufficient credits")
+                  ? "No API credits"
+                  : "Failed"}
+              </span>
             )}
             {track.status === "completed" && track.isSolo && (
               <span className="text-[10px] text-yellow-500 uppercase tracking-wider font-bold">
