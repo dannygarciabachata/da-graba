@@ -40,6 +40,7 @@ The "Heart Mula" music engine employs a microservices-oriented architecture with
     - **OpenAI Integration:** Used for lyrics generation (via GPT-5.1) and powering the platform's support chatbot and instrument prompt generation.
     - **SAO Training Pipeline:** A Stable Audio Open-inspired fine-tuning pipeline for custom instrument kits, utilizing OpenAI for prompt generation and cloud GPU for training.
     - **Antigravity Engine:** A creative AI engine leveraging OpenAI for lyrics and full arrangement configurations.
+- **Stem Separation Engine:** Cloud GPU-first stem separation using Demucs (htdemucs model) via RunPod Jupyter. Falls back to generic API providers if GPU unavailable. Webhook: `/api/webhooks/runpod-stems`. Produces 4 stems: vocals, drums, bass, other/melody.
 - **Workers:** Dedicated background workers (`music_tasks.ts`, `sample_tasks.ts`) for asynchronous processing of music generation and various audio sample transformations (Remix, Key/BPM, Mastering, Denoise, Cover, Audio Cut).
 - **Key Features Implemented:**
     - **Heart Mula branded engine:** Includes style presets (Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana).

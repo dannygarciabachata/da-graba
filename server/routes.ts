@@ -11,6 +11,7 @@ import { buildMusicGenPrompt, buildStyleKitPrompt, PROMPT_VERSIONS } from "./cor
 import { downloadMusicGPTFile } from "./core/musicgpt_engine";
 import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engine";
 import { processStemSeparation } from "./core/stems_engine";
+import { saveStemAudio, getStemsWebhookSecret } from "./core/runpod_stems_engine";
 import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong, processAudioCut } from "./workers/sample_tasks";
 import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider } from "./core/seed_providers";
 import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfig, buildRunPodPayload, GENRE_STYLE_HINTS } from "./core/sao_training_engine";
@@ -301,6 +302,99 @@ export async function registerRoutes(
       res.sendStatus(200);
     } catch (err: any) {
       console.error("[Webhook] Error processing RunPod music webhook:", err);
+      res.sendStatus(200);
+    }
+  });
+
+  // ========== RUNPOD STEMS WEBHOOK ==========
+
+  app.post("/api/webhooks/runpod-stems", async (req, res) => {
+    try {
+      const expectedSecret = getStemsWebhookSecret();
+      if (expectedSecret) {
+        const incomingSecret = req.headers["x-webhook-secret"] as string;
+        if (incomingSecret !== expectedSecret) {
+          console.log("[Webhook] Stems webhook: invalid secret, rejecting");
+          return res.sendStatus(403);
+        }
+      }
+
+      const payload = req.body;
+      const songId = payload.songId;
+      console.log(`[Webhook] RunPod stems webhook received for song ${songId}, status: ${payload.status}`);
+
+      if (!songId) {
+        console.log("[Webhook] No songId in stems payload, ignoring");
+        return res.sendStatus(200);
+      }
+
+      const tracks = await storage.getTracksBySongId(songId);
+      if (tracks.length === 0) {
+        console.log(`[Webhook] No tracks found for song ${songId}`);
+        return res.sendStatus(200);
+      }
+
+      if (payload.status === "failed") {
+        const errorMsg = payload.error || "Cloud GPU stem separation failed";
+        console.log(`[Webhook] Stems failed for song ${songId}: ${errorMsg}`);
+        for (const track of tracks) {
+          if (track.status === "processing" || track.status === "pending") {
+            await storage.updateTrackStatus(track.id, "failed", undefined, errorMsg);
+          }
+        }
+        return res.sendStatus(200);
+      }
+
+      if (payload.status === "completed" && payload.stems) {
+        const stemKeys = Object.keys(payload.stems);
+        console.log(`[Webhook] Stems completed for song ${songId}! Received: ${stemKeys.join(", ")}`);
+
+        const stemTypeMapping: Record<string, string> = {
+          vocals: "vocals",
+          drums: "drums",
+          bass: "bass",
+          other: "other",
+          instrumental: "other",
+        };
+
+        const processedTrackIds = new Set<number>();
+
+        for (const [stemName, stemData] of Object.entries(payload.stems) as [string, any][]) {
+          const trackType = stemTypeMapping[stemName];
+          if (!trackType) continue;
+
+          const track = tracks.find(t => t.type === trackType && !processedTrackIds.has(t.id));
+          if (!track) continue;
+          processedTrackIds.add(track.id);
+
+          try {
+            const localUrl = await saveStemAudio(
+              stemData.audioBase64,
+              songId,
+              stemName,
+              stemData.format || "wav"
+            );
+            await storage.updateTrackStatus(track.id, "completed", localUrl);
+            console.log(`[Webhook] Stem ${stemName} saved: ${localUrl}`);
+          } catch (saveErr: any) {
+            console.error(`[Webhook] Failed to save stem ${stemName}:`, saveErr.message);
+            await storage.updateTrackStatus(track.id, "failed", undefined, saveErr.message);
+          }
+        }
+
+        for (const track of tracks) {
+          if (!processedTrackIds.has(track.id) && (track.status === "processing" || track.status === "pending")) {
+            await storage.updateTrackStatus(track.id, "completed", undefined);
+            console.log(`[Webhook] Stem ${track.type}: no data from Demucs, marked completed (no audio)`);
+          }
+        }
+
+        console.log(`[Webhook] All stems processed for song ${songId}`);
+      }
+
+      res.sendStatus(200);
+    } catch (err: any) {
+      console.error("[Webhook] Error processing stems webhook:", err);
       res.sendStatus(200);
     }
   });

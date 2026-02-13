@@ -6,6 +6,9 @@ import {
 import {
   submitExtraction, pollMusicGPTJob, downloadMusicGPTFile,
 } from "./musicgpt_engine";
+import {
+  canUseRunPodStems, submitRunPodStemSeparation,
+} from "./runpod_stems_engine";
 
 const STEM_TYPES = [
   { type: "vocals", name: "Vocals", icon: "mic" },
@@ -39,12 +42,22 @@ export async function processStemSeparation(
     const fullAudioUrl = resolveFullAudioUrl(audioUrl);
     console.log(`[Stems] Audio URL for extraction: ${fullAudioUrl}`);
 
-    const stemsList = ["vocals", "drums", "bass", "instrumental"];
-    const useGeneric = await hasProviderForOperation("stem_separation");
-
     for (const track of trackRecords) {
       await storage.updateTrackStatus(track.id, "processing");
     }
+
+    if (canUseRunPodStems()) {
+      console.log(`[Stems] Using cloud GPU (Demucs) for stem separation`);
+      const result = await submitRunPodStemSeparation(songId, fullAudioUrl);
+      if (result.success) {
+        console.log(`[Stems] Cloud GPU job submitted: ${result.jobId} - waiting for webhook`);
+        return;
+      }
+      console.log(`[Stems] Cloud GPU submission failed: ${result.error}, falling back to API`);
+    }
+
+    const stemsList = ["vocals", "drums", "bass", "instrumental"];
+    const useGeneric = await hasProviderForOperation("stem_separation");
 
     let rawResult: any;
 
