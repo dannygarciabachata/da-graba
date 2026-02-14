@@ -7,7 +7,7 @@ import {
   submitMusicGPTGeneration, pollMusicGPTStatus, downloadMusicGPTFile, 
   getWebhookUrl as getMusicGPTWebhookUrl 
 } from "../core/musicgpt_engine";
-import { generateCreativeLyrics } from "../core/antigravity_engine";
+import { generateCreativeLyrics, enrichPromptForMusicGen } from "../core/antigravity_engine";
 import { canUseRunPodMusic, submitRunPodMusicGeneration } from "../core/runpod_music_engine";
 
 export const pendingTaskMap = new Map<string, number>();
@@ -91,8 +91,11 @@ export async function processMusicGeneration(
       console.log(`[Worker] Using API provider for music generation`);
       const webhookUrl = getWebhookUrl();
 
+      const enrichedPrompt = await enrichPromptForMusicGen(safePrompt, style);
+      console.log(`[Worker] Enriched prompt for providers: "${enrichedPrompt.substring(0, 120)}"`);
+
       const submitResult = await submitGenericJob("music_generation", {
-        prompt: safePrompt,
+        prompt: enrichedPrompt,
         music_style: style,
         lyrics: generatedLyrics || undefined,
         output_length: duration,

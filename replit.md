@@ -39,7 +39,8 @@ The "DGB Studio" music engine employs a microservices-oriented architecture with
     - **DGB Studio Cloud Engine:** Private cloud GPU engine for instrument processing, audio analysis, and MIDI conversion.
     - **OpenAI Integration:** Used for lyrics generation (via GPT-5.1) and powering the platform's support chatbot and instrument prompt generation.
     - **SAO Training Pipeline:** A Stable Audio Open-inspired fine-tuning pipeline for custom instrument kits, utilizing OpenAI for prompt generation and cloud GPU for training.
-    - **Antigravity Engine:** A creative AI engine leveraging OpenAI for lyrics and full arrangement configurations.
+    - **Antigravity Engine:** A creative AI engine leveraging OpenAI for lyrics, full arrangement configurations, and prompt enrichment for AI music generation models.
+    - **Prompt Enrichment System:** `enrichPromptForMusicGen()` in `antigravity_engine.ts` - Uses OpenAI (gpt-4o-mini) to translate user prompts (Spanish/any language) into descriptive English music descriptions optimized for MusicGen. Includes genre-specific instrument/tempo/mood mappings for Bachata, Bolero, Salsa, Merengue, Reggaeton, etc. Falls back to genre template if OpenAI fails.
 - **Stem Separation Engine:** Multi-tier fallback: 1) Private Cloud GPU (RunPod Demucs via Jupyter), 2) Replicate serverless GPU (Demucs htdemucs, pay-per-use ~$0.01-0.05/song), 3) Generic API providers, 4) MusicGPT fallback. Webhook: `/api/webhooks/runpod-stems`. Produces 4 stems: vocals, drums, bass, other/melody.
     - **Replicate Stems Engine:** `replicate_stems_engine.ts` - Uses `cjwbw/demucs` model on Replicate for serverless stem separation. No server to maintain, pay only per use.
 - **Workers:** Dedicated background workers (`music_tasks.ts`, `sample_tasks.ts`) for asynchronous processing of music generation and various audio sample transformations (Remix, Key/BPM, Mastering, Denoise, Cover, Audio Cut).

@@ -344,7 +344,15 @@ export async function pollGenericJob(
       console.log(`[GenericAPI:${operationType}] Task ${taskId} status: ${normalizedStatus}`);
 
       if (normalizedStatus === "COMPLETED") {
-        const audioUrl = extracted.audioUrl || conversion.audio_url || conversion.conversion_path || conversion.conversion_path_wav || conversion.output_file;
+        let audioUrl = extracted.audioUrl || conversion.audio_url || conversion.conversion_path || conversion.conversion_path_wav || conversion.output_file;
+
+        if (!audioUrl && rawData.output) {
+          if (typeof rawData.output === "string") {
+            audioUrl = rawData.output;
+          } else if (Array.isArray(rawData.output) && rawData.output.length > 0) {
+            audioUrl = rawData.output[0];
+          }
+        }
 
         return {
           status: "COMPLETED",

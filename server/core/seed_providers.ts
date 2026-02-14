@@ -315,8 +315,8 @@ export async function seedReplicateProvider(): Promise<void> {
       method: "POST",
       contentType: "json",
       requestMapping: {
-        "version": "671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
-        "input.model_version": "stereo-large",
+        "version": "b05b1dff1d8c6dc63d14b0cdb42135378dcb87f6373b0d3d341ede46e59e2b38",
+        "input.model_version": "stereo-melody-large",
         "input.prompt": "$prompt",
         "input.duration": "$output_length",
         "input.temperature": 1.0,
