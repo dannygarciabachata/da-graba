@@ -124,6 +124,10 @@ export default function CreatePage() {
   }
   const recentGroups = groupedSongs.slice(0, 6);
 
+  const activeSong = currentSong
+    ? allSongs.find((s: any) => s.id === currentSong.id) || currentSong
+    : null;
+
   const handleGenerate = () => {
     if (!prompt.trim() && !title.trim()) return;
     const finalPrompt = isInstrumental
@@ -438,6 +442,49 @@ export default function CreatePage() {
             </motion.div>
           )}
 
+          <AnimatePresence>
+            {activeSong && activeSong.status === "completed" && activeSong.audioUrl && (
+              <motion.div
+                key={`player-${activeSong.id}`}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-8"
+              >
+                <AudioPlayer
+                  url={activeSong.audioUrl}
+                  title={activeSong.title || activeSong.prompt || "Untitled Track"}
+                  imageUrl={activeSong.imageUrl}
+                  genre={activeSong.genre}
+                  duration={activeSong.duration}
+                  createdAt={activeSong.createdAt}
+                  onOpenStudio={() => setLocation("/studio")}
+                />
+              </motion.div>
+            )}
+            {activeSong && (activeSong.status === "processing" || activeSong.status === "pending") && (
+              <motion.div
+                key={`processing-${activeSong.id}`}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-8"
+              >
+                <Card className="p-4 border-yellow-500/20 bg-yellow-500/5">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-md bg-yellow-500/10 flex items-center justify-center">
+                      <Loader2 className="h-5 w-5 text-yellow-500 animate-spin" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{activeSong.title || activeSong.prompt || "Track"}</p>
+                      <p className="text-xs text-muted-foreground">Generando... el player aparecerá cuando esté listo</p>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {recentGroups.length > 0 && (
             <div className="mb-8">
               <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
@@ -481,7 +528,7 @@ export default function CreatePage() {
                                 ? "border-primary/50 bg-primary/5"
                                 : "hover-elevate"
                             )}
-                            onClick={() => song.status === "completed" && setCurrentSong(song)}
+                            onClick={() => setCurrentSong(song)}
                             data-testid={`card-recent-song-${song.id}`}
                           >
                             <div className="flex items-start gap-3 p-3">
@@ -563,16 +610,6 @@ export default function CreatePage() {
             </div>
           )}
 
-          {currentSong && (
-            <div className="mb-8">
-              <AudioPlayer
-                url={currentSong.audioUrl}
-                title={currentSong.title || "Untitled Track"}
-                imageUrl={currentSong.imageUrl}
-                genre={currentSong.genre}
-              />
-            </div>
-          )}
 
         </div>
       </div>
