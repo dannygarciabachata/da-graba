@@ -37,6 +37,8 @@ async function recoverStuckSongs() {
     const now = Date.now();
     const MAX_AGE_MS = 20 * 60 * 1000;
 
+    const { users } = await import("@shared/schema");
+    const { sql } = await import("drizzle-orm");
     for (const s of stuckSongs) {
       if (s.audioUrl) {
         await db.update(songs).set({ status: "completed", error: null }).where(eq(songs.id, s.id));
@@ -44,8 +46,17 @@ async function recoverStuckSongs() {
       } else {
         const songAge = now - new Date(s.createdAt || now).getTime();
         if (songAge > MAX_AGE_MS) {
+          const [songRecord] = await db.select({ userId: songs.userId }).from(songs).where(eq(songs.id, s.id));
           await db.update(songs).set({ status: "failed", error: "Generation timed out - please try again" }).where(eq(songs.id, s.id));
           console.log(`[Recovery] Marked song ${s.id} as failed (was "${s.status}", age ${Math.round(songAge/60000)}min, no audio)`);
+          if (songRecord?.userId) {
+            try {
+              await db.update(users).set({ credits: sql`${users.credits} + 1` }).where(eq(users.id, songRecord.userId));
+              console.log(`[Recovery] Refunded 1 credit to user ${songRecord.userId} for timed-out song ${s.id}`);
+            } catch (refundErr) {
+              console.log(`[Recovery] Credit refund failed for song ${s.id}:`, (refundErr as any).message);
+            }
+          }
         } else {
           console.log(`[Recovery] Keeping song ${s.id} as "${s.status}" (age ${Math.round(songAge/60000)}min, GPU may still be working)`);
         }
@@ -66,6 +77,7 @@ export async function registerRoutes(
   registerAuthRoutes(app);
 
   recoverStuckSongs();
+  setInterval(() => recoverStuckSongs(), 5 * 60 * 1000);
 
   // ========== MUSIC ROUTES ==========
 
@@ -92,7 +104,7 @@ export async function registerRoutes(
     const userId = (req.user as any).claims.sub;
     const user = await storage.getUser(userId);
     if (!user) return res.sendStatus(404);
-    const isUnlimited = user.subscriptionTier === "premium";
+    const isUnlimited = user.subscriptionTier === "premium" || user.role === "super_admin" || user.role === "admin";
     res.json({ credits: user.credits, tier: user.subscriptionTier || "free", isUnlimited });
   });
 
@@ -104,7 +116,7 @@ export async function registerRoutes(
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ error: "User not found" });
 
-      const isUnlimited = user.subscriptionTier === "premium";
+      const isUnlimited = user.subscriptionTier === "premium" || user.role === "super_admin" || user.role === "admin";
 
       if (!isUnlimited) {
         const remaining = await storage.deductCredit(userId);

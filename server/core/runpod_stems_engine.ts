@@ -13,7 +13,7 @@ interface RunPodStemsResult {
 }
 
 export function getStemsWebhookUrl(): string {
-  const appDomain = process.env.REPLIT_DEV_DOMAIN || process.env.APP_DOMAIN || process.env.REPLIT_DOMAINS?.split(",")[0];
+  const appDomain = process.env.REPLIT_DOMAINS?.split(",")[0] || process.env.REPLIT_DEV_DOMAIN || process.env.APP_DOMAIN;
   const base = appDomain
     ? (appDomain.startsWith("http") ? appDomain : `https://${appDomain}`)
     : "http://localhost:5000";

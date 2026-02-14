@@ -1025,7 +1025,7 @@ cuda_ok = torch.cuda.is_available()
 results.append(f"CUDA: {'AVAILABLE' if cuda_ok else 'NOT AVAILABLE'}")
 if cuda_ok:
     results.append(f"GPU: {torch.cuda.get_device_name(0)}")
-    results.append(f"Memory: {torch.cuda.get_device_properties(0).total_mem / 1e9:.1f} GB")
+    results.append(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
 
 # Install ffmpeg if missing
 try:
