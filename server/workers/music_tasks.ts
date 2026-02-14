@@ -9,9 +9,39 @@ import {
 } from "../core/musicgpt_engine";
 import { generateCreativeLyrics, enrichPromptForMusicGen } from "../core/antigravity_engine";
 import { canUseRunPodMusic, submitRunPodMusicGeneration } from "../core/runpod_music_engine";
+import { generateImageBuffer } from "../replit_integrations/image/client";
+import * as fs from "fs";
+import * as path from "path";
+import * as crypto from "crypto";
 
 export const pendingTaskMap = new Map<string, number>();
 export const pendingRunPodSongs = new Map<number, NodeJS.Timeout>();
+
+const AUDIO_BASE_DIR = path.join(process.cwd(), "public", "audio");
+
+async function generateSongCoverImage(songId: number, prompt: string, genre: string): Promise<void> {
+  try {
+    console.log(`[Worker] Generating cover image for song ${songId}...`);
+    const imagePrompt = `Album cover art for a ${genre} song about "${prompt}". Vibrant, artistic, music-themed digital illustration with warm tropical colors, musical instruments, abstract shapes. No text or words. Professional album artwork style.`;
+    
+    const imageBuffer = await generateImageBuffer(imagePrompt, "512x512");
+    
+    const imagesDir = path.join(AUDIO_BASE_DIR, "images");
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir, { recursive: true });
+    }
+    
+    const filename = `${crypto.randomUUID()}_cover.png`;
+    const filePath = path.join(imagesDir, filename);
+    fs.writeFileSync(filePath, imageBuffer);
+    
+    const imageUrl = `/audio/images/${filename}`;
+    await storage.updateSongImage(songId, imageUrl);
+    console.log(`[Worker] Cover image saved for song ${songId}: ${imageUrl}`);
+  } catch (err: any) {
+    console.log(`[Worker] Cover image generation failed for song ${songId}: ${err.message}`);
+  }
+}
 
 function mapStyleToLyricsStyle(style: string): "romantic" | "dance" | "heartbreak" {
   const danceStyles = ["EDM", "Dance Pop", "Reggaeton", "Afrobeat", "House", "Drum & Bass"];
@@ -108,7 +138,8 @@ export async function processMusicGeneration(
         await storage.updateSongTaskId(songId, submitResult.taskId);
         pendingTaskMap.set(submitResult.taskId, songId);
         console.log(`[Worker] Task ${submitResult.taskId} submitted for song ${songId} via ${submitResult.providerName}`);
-        startFallbackPoller(songId, submitResult.taskId, true, submitResult.endpointId);
+        const needsImage = !submitResult.imageUrl;
+        startFallbackPoller(songId, submitResult.taskId, true, submitResult.endpointId, needsImage ? { prompt: safePrompt, genre: style } : undefined);
       }
     } else {
       // Last resort: MusicGPT fallback
@@ -149,7 +180,7 @@ function startRunPodTimeout(songId: number, timeoutMs: number) {
   pendingRunPodSongs.set(songId, timer);
 }
 
-function startFallbackPoller(songId: number, taskId: string, useGeneric: boolean, endpointId?: number) {
+function startFallbackPoller(songId: number, taskId: string, useGeneric: boolean, endpointId?: number, imageContext?: { prompt: string; genre: string }) {
   const checkInterval = 30000;
   const maxChecks = 40;
   let checks = 0;
@@ -177,7 +208,14 @@ function startFallbackPoller(songId: number, taskId: string, useGeneric: boolean
           const pollResult = await pollGenericJob("music_generation", taskId, 5000, 5000, endpointId);
           if (pollResult.status === "COMPLETED" && pollResult.audioUrl) {
             const localUrl = await downloadFile(pollResult.audioUrl, "songs", "song");
+            const imageUrl = pollResult.imageUrl || undefined;
             await storage.updateSongStatus(songId, "completed", localUrl);
+            if (imageUrl) {
+              const localImageUrl = await downloadFile(imageUrl, "images", "cover");
+              await storage.updateSongImage(songId, localImageUrl);
+            } else if (imageContext) {
+              await generateSongCoverImage(songId, imageContext.prompt, imageContext.genre);
+            }
             clearInterval(timer);
           }
         } catch {}
