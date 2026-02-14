@@ -414,3 +414,59 @@ export async function seedReplicateProvider(): Promise<void> {
 
   console.log(`[Seed] Replicate provider seeded with ${replicateEndpoints.length} endpoints`);
 }
+
+export async function seedTrainingKits(): Promise<void> {
+  const existingKits = await storage.getStyleKits();
+
+  const bachatKit = existingKits.find(k => k.name === "Bachata" && k.genre === "bachata");
+  const boleroKit = existingKits.find(k => k.name === "Baladas Boleros" && k.genre === "bolero");
+
+  if (bachatKit && boleroKit) {
+    console.log("[Seed] Training kits (Bachata, Baladas Boleros) already exist, skipping");
+    return;
+  }
+
+  console.log("[Seed] Seeding training orchestras...");
+
+  if (!bachatKit) {
+    const kit = await storage.createStyleKit({
+      name: "Bachata",
+      genre: "bachata",
+      description: "Orquesta de bachata dominicana con guitarra requinto, segunda guitarra, bongó, güira y bajo eléctrico. El sonido auténtico de la bachata con el DNA de Danny Garcia.",
+      createdBy: "system",
+    });
+    const bachataInstruments = [
+      { name: "Guitarra Requinto", type: "requinto", description: "Guitarra requinto lead - melodía principal y punteos de bachata", position: 1 },
+      { name: "Guitarra Segunda", type: "segunda_guitarra", description: "Guitarra rítmica segunda - acompañamiento y rasgueo de bachata", position: 2 },
+      { name: "Bongó", type: "bongo", description: "Bongó de bachata - patrón rítmico tradicional dominicano", position: 3 },
+      { name: "Güira", type: "guira", description: "Güira metálica - ritmo constante característico de la bachata", position: 4 },
+      { name: "Bajo Eléctrico", type: "bass", description: "Bajo eléctrico de bachata - línea de bajo melódica y rítmica", position: 5 },
+    ];
+    for (const instr of bachataInstruments) {
+      await storage.createStyleKitInstrument({ kitId: kit.id, ...instr, volume: 100, uploadStatus: "pending", analysisStatus: "pending" });
+    }
+    console.log(`[Seed] Created Bachata kit (id=${kit.id}) with ${bachataInstruments.length} instruments`);
+  }
+
+  if (!boleroKit) {
+    const kit = await storage.createStyleKit({
+      name: "Baladas Boleros",
+      genre: "bolero",
+      description: "Orquesta de baladas y boleros con guitarra clásica nylon, requinto, piano, cuerdas (violines/cello), maracas, congas y bajo acústico. Sonido íntimo y romántico para boleros clásicos.",
+      createdBy: "system",
+    });
+    const boleroInstruments = [
+      { name: "Guitarra Clásica Nylon", type: "requinto", description: "Guitarra clásica con cuerdas de nylon - arpegios y melodías suaves de bolero", position: 1 },
+      { name: "Requinto Bolero", type: "requinto", description: "Requinto para bolero - punteos delicados y melodías románticas", position: 2 },
+      { name: "Piano", type: "piano", description: "Piano acústico - acordes y arreglos armónicos de balada/bolero", position: 3 },
+      { name: "Cuerdas", type: "other", description: "Sección de cuerdas (violines, violas, cellos) - arreglos orquestales románticos", position: 4 },
+      { name: "Maracas", type: "maracas", description: "Maracas suaves - ritmo delicado para boleros", position: 5 },
+      { name: "Congas", type: "conga", description: "Congas - percusión suave para baladas y boleros", position: 6 },
+      { name: "Bajo Acústico", type: "bass", description: "Bajo acústico/contrabajo - línea grave y cálida para boleros", position: 7 },
+    ];
+    for (const instr of boleroInstruments) {
+      await storage.createStyleKitInstrument({ kitId: kit.id, ...instr, volume: 100, uploadStatus: "pending", analysisStatus: "pending" });
+    }
+    console.log(`[Seed] Created Baladas Boleros kit (id=${kit.id}) with ${boleroInstruments.length} instruments`);
+  }
+}

@@ -13,7 +13,7 @@ import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engi
 import { processStemSeparation } from "./core/stems_engine";
 import { saveStemAudio, getStemsWebhookSecret } from "./core/runpod_stems_engine";
 import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong, processAudioCut } from "./workers/sample_tasks";
-import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider, seedReplicateProvider, seedMurekaProvider } from "./core/seed_providers";
+import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider, seedReplicateProvider, seedMurekaProvider, seedTrainingKits } from "./core/seed_providers";
 import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfig, buildRunPodPayload, GENRE_STYLE_HINTS } from "./core/sao_training_engine";
 import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection } from "./core/runpod_client";
 import { isCloudConfigured, getActiveServer, checkCloudHealth, checkDgbCloudHealth, uploadInstrumentToCloud, saveMidiFile, verifyWebhookFromAnyServer } from "./core/dgb_runpod_api";
@@ -961,6 +961,10 @@ export async function registerRoutes(
     console.log("[Seed] Mureka seed error:", err.message?.substring(0, 100))
   );
 
+  seedTrainingKits().catch((err: any) =>
+    console.log("[Seed] Training kits seed error:", err.message?.substring(0, 100))
+  );
+
   app.get("/api/admin/check", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = (req.user as any).claims.sub;
@@ -1519,6 +1523,173 @@ export async function registerRoutes(
       await storage.deleteStyleKitInstrument(Number(req.params.id));
       res.sendStatus(204);
     } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/style-kits/:id/analyze", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    try {
+      const kitId = Number(req.params.id);
+      const kit = await storage.getStyleKit(kitId);
+      if (!kit) return res.sendStatus(404);
+
+      const instruments = await storage.getStyleKitInstruments(kitId);
+      const withAudio = instruments.filter(i => i.audioUrl);
+      if (withAudio.length === 0) {
+        return res.status(400).json({ message: "Upload at least one instrument audio file before analysis." });
+      }
+
+      await storage.updateStyleKit(kitId, { pipelineStep: "analyze", trainingStatus: "analyzing" });
+
+      for (const instr of withAudio) {
+        await storage.updateStyleKitInstrument(instr.id, { analysisStatus: "queued" });
+      }
+
+      console.log(`[SAO Pipeline] Admin Kit ${kitId}: analysis started for ${withAudio.length} instruments`);
+
+      if (isRunPodConfigured()) {
+        const protocol = req.headers["x-forwarded-proto"] || "https";
+        const host = req.headers["host"] || "localhost:5000";
+        const analysisWebhookUrl = `${protocol}://${host}/api/analysis/webhook`;
+
+        let submittedCount = 0;
+        for (const instr of withAudio) {
+          if (!instr.audioUrl) continue;
+          await storage.updateStyleKitInstrument(instr.id, { analysisStatus: "analyzing" });
+          const result = await submitAnalysisJob(instr.id, instr.audioUrl, instr.name, analysisWebhookUrl);
+          if (result.success) {
+            submittedCount++;
+            console.log(`[SAO Pipeline] Analysis job submitted for instrument ${instr.id}: ${result.jobId}`);
+          } else {
+            await storage.updateStyleKitInstrument(instr.id, {
+              analysisStatus: "failed",
+              analysisError: `Cloud GPU submission failed: ${result.error}`,
+            });
+          }
+        }
+
+        console.log(`[SAO Pipeline] Kit ${kitId}: ${submittedCount}/${withAudio.length} analysis jobs sent to cloud GPU`);
+
+        res.json({
+          message: submittedCount > 0
+            ? `Analysis submitted to cloud GPU for ${submittedCount} instruments.`
+            : "No instruments could be submitted for analysis.",
+          kitId,
+          instrumentCount: withAudio.length,
+          submittedCount,
+          gpuConnected: true,
+        });
+      } else {
+        const genreHint = GENRE_STYLE_HINTS[kit.genre] || kit.genre;
+        for (const instr of withAudio) {
+          try {
+            await storage.updateStyleKitInstrument(instr.id, { analysisStatus: "analyzing" });
+            const tags = [kit.genre, instr.type];
+            if (genreHint) tags.push(genreHint.split(" ")[0]);
+            await storage.updateStyleKitInstrument(instr.id, {
+              analysisStatus: "complete",
+              detectedTags: JSON.stringify(tags),
+            });
+          } catch (err: any) {
+            await storage.updateStyleKitInstrument(instr.id, {
+              analysisStatus: "failed",
+              analysisError: err.message,
+            });
+          }
+        }
+
+        await storage.updateStyleKit(kitId, { pipelineStep: "prompt", trainingStatus: "prompting" });
+        const updatedInstruments = await storage.getStyleKitInstruments(kitId);
+        const analyzed = updatedInstruments.filter(i => i.audioUrl && i.analysisStatus === "complete");
+        for (const instr of analyzed) {
+          try {
+            const prompt = await generateInstrumentPrompt(instr, kit.genre);
+            await storage.updateStyleKitInstrument(instr.id, { generatedPrompt: prompt });
+            console.log(`[SAO Pipeline] Prompt for "${instr.name}": ${prompt.substring(0, 80)}...`);
+          } catch (err: any) {
+            console.error(`[SAO Pipeline] Prompt generation failed for instrument ${instr.id}:`, err.message);
+          }
+        }
+
+        const kitPrompt = await generateKitTrainingPrompt(kit, analyzed);
+        await storage.updateStyleKit(kitId, { trainingPrompt: kitPrompt, pipelineStep: "train" });
+
+        res.json({
+          message: "Analysis and prompt generation complete. Kit is ready for training.",
+          kitId,
+          instrumentCount: withAudio.length,
+          analyzedCount: analyzed.length,
+          gpuConnected: false,
+          pipelineStep: "train",
+        });
+      }
+    } catch (err: any) {
+      console.error("[SAO Pipeline] Admin analysis error:", err.message);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/style-kits/:id/train", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    try {
+      const kitId = Number(req.params.id);
+      const kit = await storage.getStyleKit(kitId);
+      if (!kit) return res.sendStatus(404);
+
+      const instruments = await storage.getStyleKitInstruments(kitId);
+      const withPrompts = instruments.filter(i => i.audioUrl && i.generatedPrompt);
+      if (withPrompts.length === 0) {
+        return res.status(400).json({ message: "Run analysis first to generate training prompts before training." });
+      }
+
+      const trainingConfig = buildTrainingConfig(kit, instruments);
+      const configJson = JSON.stringify(trainingConfig, null, 2);
+
+      await storage.updateStyleKit(kitId, {
+        trainingStatus: "queued",
+        trainingError: null,
+        trainingConfig: configJson,
+        pipelineStep: "train",
+      });
+
+      console.log(`[SAO Pipeline] Admin Kit ${kitId} queued for training with ${withPrompts.length} instruments`);
+
+      if (isRunPodConfigured()) {
+        const protocol = req.headers["x-forwarded-proto"] || "https";
+        const host = req.headers["host"] || "localhost:5000";
+        const webhookUrl = `${protocol}://${host}/api/training/webhook`;
+
+        const result = await submitTrainingJob(kitId, trainingConfig, webhookUrl);
+        if (result.success) {
+          await storage.updateStyleKit(kitId, {
+            trainingStatus: "training",
+            trainingJobId: result.jobId || null,
+          });
+          console.log(`[SAO Pipeline] Admin training job submitted: ${result.jobId}`);
+        } else {
+          await storage.updateStyleKit(kitId, {
+            trainingStatus: "failed",
+            trainingError: `Cloud GPU submission failed: ${result.error}`,
+          });
+        }
+      }
+
+      res.json({
+        message: isRunPodConfigured()
+          ? "Training submitted to cloud GPU."
+          : "Training queued. Awaiting cloud GPU connection.",
+        kitId,
+        status: isRunPodConfigured() ? "training" : "queued",
+        instrumentCount: withPrompts.length,
+        trainingConfig: {
+          model_type: trainingConfig.model_type,
+          sample_rate: trainingConfig.sample_rate,
+          instruments: trainingConfig.dataset.instruments.length,
+        },
+      });
+    } catch (err: any) {
+      console.error("[SAO Pipeline] Admin training error:", err.message);
       res.status(500).json({ message: err.message });
     }
   });

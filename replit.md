@@ -79,29 +79,33 @@ The "DGB Studio" music engine employs a microservices-oriented architecture with
 **RunPod Proxy URL Format:** `https://{podId}-{port}.proxy.runpod.net`
 - Jupyter URL builder (`buildJupyterUrl`) in both `runpod_stems_engine.ts` and `runpod_music_engine.ts` handles this format automatically by detecting `.proxy.runpod.net` in the base URL and swapping the port in the subdomain.
 
-**NEXT STEPS (when user returns):**
-1. User needs to create a NEW RunPod **GPU Pod** (not CPU) with a real GPU (RTX A6000 or similar)
-   - Template: `runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04`
-   - Volume: 100GB at `/workspace`
-   - Expose HTTP Ports: `8000, 8888`
-   - Expose TCP Ports: `22`
-2. On the new pod, install: `pip install fastapi uvicorn python-multipart stable-audio-tools diffusers demucs accelerate transformers soundfile`
-3. Run `/workspace/start.sh` to start FastAPI receptor
-4. Get the NEW Pod ID and update the cloud_servers DB record:
-   ```sql
-   UPDATE cloud_servers SET base_url = 'https://{NEW_POD_ID}-8000.proxy.runpod.net' WHERE id = 2;
-   ```
-5. Update `RUNPOD_JUPYTER_TOKEN` secret if it changes
-6. Verify `nvidia-smi` shows the GPU
-7. Test music generation and stem separation end-to-end
+**GPU Pod Status:** CONNECTED and OPERATIONAL
+- Pod ID: `cx47yfmi0b2mi9`, RTX A6000 (48GB VRAM)
+- FastAPI Receptor: `https://cx47yfmi0b2mi9-8000.proxy.runpod.net` (port 8000, exposed)
+- Jupyter: `https://cx47yfmi0b2mi9-8888.proxy.runpod.net` (port 8888)
+- Health: `GET /api/health` returns GPU status
+
+**Training Orchestras (Style Kits):**
+- **Bachata** (Kit ID varies, seeded): 5 instruments - Guitarra Requinto, Guitarra Segunda, Bongó, Güira, Bajo Eléctrico
+- **Baladas Boleros** (Kit ID varies, seeded): 7 instruments - Guitarra Clásica Nylon, Requinto Bolero, Piano, Cuerdas, Maracas, Congas, Bajo Acústico
+- Both kits auto-seeded via `seedTrainingKits()` in `server/core/seed_providers.ts`
+- Admin routes: `POST /api/style-kits/:id/analyze`, `POST /api/style-kits/:id/train` (requireRole admin)
+- Pipeline: upload → analyze (GPU) → prompt (OpenAI) → train (SAO/GPU) → ready
+
+**AFTER POD RESTART:**
+1. Run `bash /workspace/start.sh` on the pod (installs deps + starts receptor)
+2. Verify health: `curl https://cx47yfmi0b2mi9-8000.proxy.runpod.net/api/health`
+3. If pod ID changes, update: `RUNPOD_BASE_URL` env var and `cloud_servers` table base_url
 
 **Start script** (`/workspace/start.sh`):
 ```bash
 #!/bin/bash
-pip install fastapi uvicorn python-multipart
-python3 /workspace/dgb_api_receptor.py
+pip install -q fastapi "uvicorn[standard]" python-multipart typing_extensions librosa soundfile basic-pitch demucs
+pkill -f dgb_api_receptor 2>/dev/null; sleep 1
+nohup python3 /workspace/dgb_api_receptor.py > /workspace/receptor.log 2>&1 &
+sleep 5; curl -s http://localhost:8000/api/health
 ```
 
 ## Key Scripts
 - **`server/scripts/dgb_api_receptor.py`**: DGB Cloud Engine FastAPI server for private GPU. Run on GPU server with `export DGB_API_KEY='key' && export TRAINING_WEBHOOK_SECRET='secret' && python3 /workspace/dgb_api_receptor.py`. Handles instrument uploads, audio-to-MIDI conversion, and audio analysis. Port 8000. Webhook authentication uses `TRAINING_WEBHOOK_SECRET` (falls back to `DGB_API_KEY`).
-- **`/workspace/start.sh`** (on RunPod pod): Quick-start script that installs deps and runs the receptor. Also needs `stable-audio-tools diffusers demucs` for full GPU functionality.
+- **`/workspace/start.sh`** (on RunPod pod): Auto-installs all deps (fastapi, uvicorn, librosa, soundfile, basic-pitch, demucs) and starts the receptor.

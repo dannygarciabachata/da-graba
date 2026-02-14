@@ -16,6 +16,7 @@ import {
 import {
   useStyleKits, useStyleKitMeta, useCreateStyleKit, useUpdateStyleKit,
   useDeleteStyleKit, useUploadInstrument, useDeleteInstrument,
+  useAdminAnalyzeKit, useAdminTrainKit,
 } from "@/hooks/use-style-kits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +30,7 @@ import {
   Shield, Globe, Key, ToggleLeft, ToggleRight,
   BarChart3, Users, CreditCard, Music, FileText, Mic, Disc, Upload,
   TrendingUp, MessageSquare, Mail, Sliders, Clock,
-  AlertCircle, Send, Eye, Cloud, Wifi, WifiOff, Activity,
+  AlertCircle, Send, Eye, Cloud, Wifi, WifiOff, Activity, Play, Cpu, Search,
 } from "lucide-react";
 import type { ApiProvider, ApiEndpoint, CloudServer } from "@shared/schema";
 
@@ -1488,6 +1489,8 @@ function StyleKitsAdminTab() {
   const deleteKit = useDeleteStyleKit();
   const uploadInstrument = useUploadInstrument();
   const deleteInstrument = useDeleteInstrument();
+  const analyzeKit = useAdminAnalyzeKit();
+  const trainKit = useAdminTrainKit();
   const { toast } = useToast();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -1546,13 +1549,83 @@ function StyleKitsAdminTab() {
     }
   };
 
+  const handleAnalyze = async (kitId: number) => {
+    try {
+      const result = await analyzeKit.mutateAsync(kitId);
+      toast({ title: result.message || "Analysis started" });
+    } catch (err: any) {
+      toast({ title: err.message || "Analysis failed", variant: "destructive" });
+    }
+  };
+
+  const handleTrain = async (kitId: number) => {
+    try {
+      const result = await trainKit.mutateAsync(kitId);
+      toast({ title: result.message || "Training started" });
+    } catch (err: any) {
+      toast({ title: err.message || "Training failed", variant: "destructive" });
+    }
+  };
+
+  const getStatusBadge = (kit: any) => {
+    const status = kit.trainingStatus || "pending";
+    const step = kit.pipelineStep || "upload";
+    const colors: Record<string, string> = {
+      pending: "bg-gray-500/20 text-gray-400",
+      analyzing: "bg-blue-500/20 text-blue-400",
+      prompting: "bg-purple-500/20 text-purple-400",
+      queued: "bg-yellow-500/20 text-yellow-400",
+      training: "bg-orange-500/20 text-orange-400",
+      ready: "bg-green-500/20 text-green-400",
+      failed: "bg-red-500/20 text-red-400",
+    };
+    const labels: Record<string, string> = {
+      pending: "Pendiente",
+      analyzing: "Analizando...",
+      prompting: "Generando Prompts...",
+      queued: "En Cola",
+      training: "Entrenando...",
+      ready: "Entrenado",
+      failed: "Error",
+    };
+    return (
+      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[status] || colors.pending}`}>
+        {labels[status] || status}
+      </span>
+    );
+  };
+
+  const getPipelineSteps = (kit: any) => {
+    const steps = ["upload", "analyze", "prompt", "train", "ready"];
+    const stepLabels: Record<string, string> = {
+      upload: "Subir Audio",
+      analyze: "Analizar",
+      prompt: "AI Prompts",
+      train: "Entrenar",
+      ready: "Listo",
+    };
+    const currentIdx = steps.indexOf(kit.pipelineStep || "upload");
+    return (
+      <div className="flex items-center gap-1 mt-2">
+        {steps.map((step, idx) => (
+          <div key={step} className="flex items-center gap-1">
+            <div className={`h-1.5 w-8 rounded-full ${idx <= currentIdx ? "bg-primary" : "bg-white/10"}`} />
+            {idx === steps.length - 1 && (
+              <span className="text-[10px] text-muted-foreground ml-1">{stepLabels[steps[currentIdx]] || ""}</span>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   if (isLoading) return <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>;
 
   return (
     <div className="space-y-4" data-testid="admin-style-kits">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Disc className="h-5 w-5 text-primary" /> Style Kits
+          <Disc className="h-5 w-5 text-primary" /> Orquestas / Style Kits
         </h2>
         <Button size="sm" onClick={() => setShowCreateForm(!showCreateForm)} data-testid="button-create-kit">
           <Plus className="h-4 w-4 mr-1" /> New Kit
@@ -1563,7 +1636,7 @@ function StyleKitsAdminTab() {
         <Card className="bg-white/5 border-white/10" data-testid="create-kit-form">
           <CardContent className="pt-4 space-y-3">
             <Input
-              placeholder="Kit name (e.g. Bachata Clásica)"
+              placeholder="Kit name (e.g. Bachata)"
               value={kitForm.name}
               onChange={(e) => setKitForm({ ...kitForm, name: e.target.value })}
               data-testid="input-kit-name"
@@ -1600,29 +1673,62 @@ function StyleKitsAdminTab() {
         {kits?.map((kit) => {
           const isExpanded = expandedKit === kit.id;
           const isUploading = uploadKitId === kit.id;
+          const hasAudio = kit.instruments.some((i: any) => i.audioUrl);
+          const allHaveAudio = kit.instruments.length > 0 && kit.instruments.every((i: any) => i.audioUrl);
+          const canAnalyze = hasAudio && kit.trainingStatus !== "analyzing" && kit.trainingStatus !== "training";
+          const canTrain = (kit.pipelineStep === "train" || kit.pipelineStep === "prompt") && kit.trainingStatus !== "training" && kit.trainingStatus !== "analyzing";
 
           return (
             <Card key={kit.id} className="bg-white/5 border-white/10" data-testid={`admin-kit-${kit.id}`}>
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
-                  <div className="cursor-pointer" onClick={() => setExpandedKit(isExpanded ? null : kit.id)}>
-                    <CardTitle className="text-sm flex items-center gap-2">
+                  <div className="cursor-pointer flex-1" onClick={() => setExpandedKit(isExpanded ? null : kit.id)}>
+                    <CardTitle className="text-sm flex items-center gap-2 flex-wrap">
                       {kit.name}
                       <Badge variant="secondary" className="text-xs">{kit.genre}</Badge>
-                      <Badge variant="outline" className="text-xs">{kit.instruments.length} instruments</Badge>
+                      <Badge variant="outline" className="text-xs">{kit.instruments.length} instrumentos</Badge>
+                      {getStatusBadge(kit)}
                     </CardTitle>
                     {kit.description && <CardDescription className="text-xs mt-0.5">{kit.description}</CardDescription>}
+                    {getPipelineSteps(kit)}
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-shrink-0">
                     <Button
                       size="icon"
                       variant="ghost"
                       className="h-7 w-7"
                       onClick={() => setUploadKitId(isUploading ? null : kit.id)}
+                      title="Upload instrument audio"
                       data-testid={`button-upload-to-kit-${kit.id}`}
                     >
                       <Upload className="h-3.5 w-3.5" />
                     </Button>
+                    {canAnalyze && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-blue-400"
+                        onClick={() => handleAnalyze(kit.id)}
+                        disabled={analyzeKit.isPending}
+                        title="Analyze instruments (GPU)"
+                        data-testid={`button-analyze-kit-${kit.id}`}
+                      >
+                        {analyzeKit.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+                      </Button>
+                    )}
+                    {canTrain && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-green-400"
+                        onClick={() => handleTrain(kit.id)}
+                        disabled={trainKit.isPending}
+                        title="Start training (GPU)"
+                        data-testid={`button-train-kit-${kit.id}`}
+                      >
+                        {trainKit.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Cpu className="h-3.5 w-3.5" />}
+                      </Button>
+                    )}
                     <Button
                       size="icon"
                       variant="ghost"
@@ -1636,11 +1742,20 @@ function StyleKitsAdminTab() {
                 </div>
               </CardHeader>
 
+              {kit.trainingError && (
+                <CardContent className="pt-0 pb-2">
+                  <div className="text-xs text-red-400 bg-red-500/10 p-2 rounded flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                    {kit.trainingError}
+                  </div>
+                </CardContent>
+              )}
+
               {isUploading && (
                 <CardContent className="pt-0 pb-3 space-y-2">
                   <div className="p-3 rounded-lg bg-white/5 space-y-2">
                     <Input
-                      placeholder="Instrument name (e.g. Güira Principal)"
+                      placeholder="Instrument name (e.g. Guitarra Requinto)"
                       value={instrForm.name}
                       onChange={(e) => setInstrForm({ ...instrForm, name: e.target.value })}
                       data-testid="input-instrument-name"
@@ -1683,13 +1798,19 @@ function StyleKitsAdminTab() {
               {isExpanded && kit.instruments.length > 0 && (
                 <CardContent className="pt-0 pb-3">
                   <div className="space-y-1">
-                    {kit.instruments.map((instr) => (
+                    {kit.instruments.map((instr: any) => (
                       <div key={instr.id} className="flex items-center gap-2 p-2 rounded bg-white/5 text-sm">
                         <Music className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                         <span className="flex-1 truncate">{instr.name}</span>
                         <Badge variant="outline" className="text-xs">{instr.type}</Badge>
-                        {instr.audioUrl && <CheckCircle className="h-3.5 w-3.5 text-green-400 flex-shrink-0" />}
-                        {!instr.audioUrl && <XCircle className="h-3.5 w-3.5 text-muted-foreground/30 flex-shrink-0" />}
+                        {instr.analysisStatus === "complete" && (
+                          <Badge variant="outline" className="text-xs text-green-400 border-green-400/30">
+                            {instr.detectedKey && `${instr.detectedKey}`}
+                            {instr.detectedBpm && ` ${instr.detectedBpm}bpm`}
+                          </Badge>
+                        )}
+                        {instr.analysisStatus === "analyzing" && <Loader2 className="h-3 w-3 animate-spin text-blue-400" />}
+                        {instr.audioUrl ? <CheckCircle className="h-3.5 w-3.5 text-green-400 flex-shrink-0" /> : <XCircle className="h-3.5 w-3.5 text-muted-foreground/30 flex-shrink-0" />}
                         <Button
                           size="icon"
                           variant="ghost"
@@ -1702,6 +1823,13 @@ function StyleKitsAdminTab() {
                       </div>
                     ))}
                   </div>
+
+                  {!allHaveAudio && (
+                    <div className="mt-2 text-xs text-yellow-400/80 bg-yellow-500/10 p-2 rounded flex items-center gap-1.5">
+                      <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                      Faltan audios. Sube un archivo de audio para cada instrumento antes de analizar.
+                    </div>
+                  )}
                 </CardContent>
               )}
             </Card>
@@ -1711,8 +1839,8 @@ function StyleKitsAdminTab() {
         {(!kits || kits.length === 0) && (
           <div className="text-center py-12 text-muted-foreground">
             <Disc className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No style kits created yet.</p>
-            <p className="text-xs">Click "New Kit" to create your first style kit and start uploading instruments.</p>
+            <p className="text-sm">No hay orquestas creadas.</p>
+            <p className="text-xs">Click "New Kit" para crear una nueva orquesta.</p>
           </div>
         )}
       </div>

@@ -191,3 +191,27 @@ export function useTrainKit() {
     },
   });
 }
+
+export function useAdminAnalyzeKit() {
+  return useMutation({
+    mutationFn: async (kitId: number) => {
+      const res = await apiRequest("POST", `/api/style-kits/${kitId}/analyze`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/style-kits"] });
+    },
+  });
+}
+
+export function useAdminTrainKit() {
+  return useMutation({
+    mutationFn: async (kitId: number) => {
+      const res = await apiRequest("POST", `/api/style-kits/${kitId}/train`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/style-kits"] });
+    },
+  });
+}
