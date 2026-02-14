@@ -15,6 +15,8 @@ export interface GenericSubmitResult {
   imageUrl?: string;
   data?: Record<string, any>;
   raw: any;
+  endpointId?: number;
+  providerName?: string;
 }
 
 export interface GenericPollResult {
@@ -158,20 +160,14 @@ function getNestedValue(obj: any, path: string): any {
   return current;
 }
 
-export async function submitGenericJob(
+async function submitToEndpoint(
   operationType: OperationType,
-  inputParams: Record<string, any>
+  inputParams: Record<string, any>,
+  endpointConfig: ApiEndpoint & { provider?: ApiProvider }
 ): Promise<GenericSubmitResult> {
-  const endpointConfig = await storage.getApiEndpointByOperation(operationType);
-
-  if (!endpointConfig || !endpointConfig.provider) {
-    throw new Error(`NO_PROVIDER: No active API provider configured for operation "${operationType}"`);
-  }
-
   const { provider } = endpointConfig;
+  if (!provider) throw new Error(`No provider for endpoint ${endpointConfig.name}`);
   const endpoint = endpointConfig as ApiEndpoint;
-
-  console.log(`[GenericAPI:${operationType}] Using provider "${provider.name}" endpoint "${endpoint.name}"`);
 
   const headers = buildAuthHeaders(provider);
   const mappedParams = applyRequestMapping(endpoint.requestMapping, inputParams);
@@ -194,6 +190,7 @@ export async function submitGenericJob(
 
   console.log(`[GenericAPI:${operationType}] ${endpoint.method} ${url} (${endpoint.contentType})`);
   console.log(`[GenericAPI:${operationType}] Params: ${Object.keys(mappedParams).join(", ")}`);
+  console.log(`[GenericAPI:${operationType}] Using provider "${provider.name}" endpoint "${endpoint.name}"`);
 
   const response = await fetch(url, {
     method: endpoint.method || "POST",
@@ -224,7 +221,7 @@ export async function submitGenericJob(
   const rawData = await response.json();
   const extracted = extractFromResponse(endpoint.responseMapping, rawData);
 
-  console.log(`[GenericAPI:${operationType}] Response: task_id=${rawData.task_id || "N/A"}, success=${rawData.success}`);
+  console.log(`[GenericAPI:${operationType}] Response: task_id=${rawData.task_id || extracted.taskId || "N/A"}, success=${rawData.success !== false}`);
 
   return {
     success: rawData.success !== false,
@@ -235,16 +232,58 @@ export async function submitGenericJob(
     imageUrl: extracted.imageUrl || rawData.image_url,
     data: extracted,
     raw: rawData,
+    endpointId: endpoint.id,
+    providerName: provider.name,
   };
+}
+
+export async function submitGenericJob(
+  operationType: OperationType,
+  inputParams: Record<string, any>
+): Promise<GenericSubmitResult> {
+  const allEndpoints = await storage.getApiEndpointsByOperation(operationType);
+
+  if (!allEndpoints || allEndpoints.length === 0) {
+    throw new Error(`NO_PROVIDER: No active API provider configured for operation "${operationType}"`);
+  }
+
+  console.log(`[GenericAPI:${operationType}] Found ${allEndpoints.length} provider(s) to try`);
+
+  const errors: string[] = [];
+
+  for (const endpointConfig of allEndpoints) {
+    try {
+      return await submitToEndpoint(operationType, inputParams, endpointConfig);
+    } catch (err: any) {
+      const providerName = endpointConfig.provider?.name || "unknown";
+      console.log(`[GenericAPI:${operationType}] Provider "${providerName}" failed: ${err.message}, trying next...`);
+      errors.push(`${providerName}: ${err.message}`);
+    }
+  }
+
+  throw new Error(`ALL_PROVIDERS_FAILED: All ${allEndpoints.length} providers failed for "${operationType}": ${errors.join(" | ")}`);
 }
 
 export async function pollGenericJob(
   operationType: OperationType,
   taskId: string,
   timeoutMs: number = 600000,
-  intervalMs: number = 8000
+  intervalMs: number = 8000,
+  endpointId?: number
 ): Promise<GenericPollResult> {
-  const endpointConfig = await storage.getApiEndpointByOperation(operationType);
+  let endpointConfig: (ApiEndpoint & { provider?: ApiProvider }) | undefined;
+
+  if (endpointId) {
+    const ep = await storage.getApiEndpoint(endpointId);
+    if (ep) {
+      const prov = await storage.getApiProvider(ep.providerId);
+      if (prov) endpointConfig = { ...ep, provider: prov };
+    }
+  }
+
+  if (!endpointConfig) {
+    endpointConfig = await storage.getApiEndpointByOperation(operationType);
+  }
 
   if (!endpointConfig || !endpointConfig.provider) {
     throw new Error(`NO_PROVIDER: No active API provider configured for polling "${operationType}"`);

@@ -67,6 +67,7 @@ export interface IStorage {
   getApiEndpoints(providerId?: number): Promise<ApiEndpoint[]>;
   getApiEndpoint(id: number): Promise<ApiEndpoint | undefined>;
   getApiEndpointByOperation(operationType: string): Promise<(ApiEndpoint & { provider?: ApiProvider }) | undefined>;
+  getApiEndpointsByOperation(operationType: string): Promise<(ApiEndpoint & { provider?: ApiProvider })[]>;
   createApiEndpoint(endpoint: InsertApiEndpoint): Promise<ApiEndpoint>;
   updateApiEndpoint(id: number, data: Partial<ApiEndpoint>): Promise<ApiEndpoint>;
   deleteApiEndpoint(id: number): Promise<void>;
@@ -382,6 +383,25 @@ export class DatabaseStorage implements IStorage {
     if (!provider || !provider.isActive) return undefined;
 
     return { ...result, provider };
+  }
+
+  async getApiEndpointsByOperation(operationType: string): Promise<(ApiEndpoint & { provider?: ApiProvider })[]> {
+    const results = await db
+      .select()
+      .from(apiEndpoints)
+      .where(and(
+        eq(apiEndpoints.operationType, operationType),
+        eq(apiEndpoints.isActive, true)
+      ));
+
+    const withProviders: (ApiEndpoint & { provider?: ApiProvider })[] = [];
+    for (const result of results) {
+      const provider = await this.getApiProvider(result.providerId);
+      if (provider && provider.isActive) {
+        withProviders.push({ ...result, provider });
+      }
+    }
+    return withProviders;
   }
 
   async createApiEndpoint(endpoint: InsertApiEndpoint): Promise<ApiEndpoint> {

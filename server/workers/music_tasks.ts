@@ -104,8 +104,8 @@ export async function processMusicGeneration(
       if (submitResult.taskId) {
         await storage.updateSongTaskId(songId, submitResult.taskId);
         pendingTaskMap.set(submitResult.taskId, songId);
-        console.log(`[Worker] Task ${submitResult.taskId} submitted for song ${songId}`);
-        startFallbackPoller(songId, submitResult.taskId, true);
+        console.log(`[Worker] Task ${submitResult.taskId} submitted for song ${songId} via ${submitResult.providerName}`);
+        startFallbackPoller(songId, submitResult.taskId, true, submitResult.endpointId);
       }
     } else {
       // Last resort: MusicGPT fallback
@@ -146,7 +146,7 @@ function startRunPodTimeout(songId: number, timeoutMs: number) {
   pendingRunPodSongs.set(songId, timer);
 }
 
-function startFallbackPoller(songId: number, taskId: string, useGeneric: boolean) {
+function startFallbackPoller(songId: number, taskId: string, useGeneric: boolean, endpointId?: number) {
   const checkInterval = 30000;
   const maxChecks = 40;
   let checks = 0;
@@ -171,7 +171,7 @@ function startFallbackPoller(songId: number, taskId: string, useGeneric: boolean
 
       if (useGeneric) {
         try {
-          const pollResult = await pollGenericJob("music_generation", taskId, 5000, 5000);
+          const pollResult = await pollGenericJob("music_generation", taskId, 5000, 5000, endpointId);
           if (pollResult.status === "COMPLETED" && pollResult.audioUrl) {
             const localUrl = await downloadFile(pollResult.audioUrl, "songs", "song");
             await storage.updateSongStatus(songId, "completed", localUrl);

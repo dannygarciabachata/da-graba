@@ -69,7 +69,7 @@ export async function processStemSeparation(
         audio_url: fullAudioUrl,
         stems: JSON.stringify(stemsList),
       });
-      const pollResult = await pollGenericJob("stem_separation", submitResult.taskId!, 600000, 8000);
+      const pollResult = await pollGenericJob("stem_separation", submitResult.taskId!, 600000, 8000, submitResult.endpointId);
       rawResult = pollResult;
     } else {
       // Last resort: MusicGPT fallback

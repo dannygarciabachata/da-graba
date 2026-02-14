@@ -30,7 +30,7 @@ export async function processHummingToMusic(
         audio_url: fullAudioUrl,
         prompt: cleanPrompt,
       });
-      const pollResult = await pollGenericJob("remix", submitResult.taskId!, 600000, 8000);
+      const pollResult = await pollGenericJob("remix", submitResult.taskId!, 600000, 8000, submitResult.endpointId);
       if (!pollResult.audioUrl) throw new Error("Remix completed but no audio URL returned");
       const localUrl = await downloadFile(pollResult.audioUrl, "samples", "remix");
       await storage.updateSample(sampleId, { status: "ready", audioUrl: localUrl, sourceType: "ai-transform" });
@@ -65,7 +65,7 @@ export async function processKeyBPMDetection(
 
     if (useGeneric) {
       const submitResult = await submitGenericJob("key_bpm", { audio_url: fullAudioUrl });
-      const pollResult = await pollGenericJob("key_bpm", submitResult.taskId!, 120000, 5000);
+      const pollResult = await pollGenericJob("key_bpm", submitResult.taskId!, 120000, 5000, submitResult.endpointId);
       key = pollResult.dominantKey;
       bpm = pollResult.bpm;
     } else {
@@ -105,7 +105,7 @@ export async function processMastering(
         audio_url: fullAudioUrl,
         reference_audio_url: fullAudioUrl,
       });
-      const pollResult = await pollGenericJob("mastering", submitResult.taskId!, 600000, 8000);
+      const pollResult = await pollGenericJob("mastering", submitResult.taskId!, 600000, 8000, submitResult.endpointId);
       if (!pollResult.audioUrl) throw new Error("Mastering completed but no audio URL returned");
       localUrl = await downloadFile(pollResult.audioUrl, "mastered", "master");
     } else {
@@ -138,7 +138,7 @@ export async function processDenoise(
 
     if (useGeneric) {
       const submitResult = await submitGenericJob("denoise", { audio_url: fullAudioUrl });
-      const pollResult = await pollGenericJob("denoise", submitResult.taskId!, 600000, 8000);
+      const pollResult = await pollGenericJob("denoise", submitResult.taskId!, 600000, 8000, submitResult.endpointId);
       if (!pollResult.audioUrl) throw new Error("Denoise completed but no audio URL returned");
       localUrl = await downloadFile(pollResult.audioUrl, "denoised", "clean");
     } else {
@@ -190,7 +190,7 @@ export async function processCoverSong(
         voice_id: voiceId,
         pitch: pitch ?? 0,
       });
-      const pollResult = await pollGenericJob("cover", submitResult.taskId!, 600000, 8000);
+      const pollResult = await pollGenericJob("cover", submitResult.taskId!, 600000, 8000, submitResult.endpointId);
       if (!pollResult.audioUrl) throw new Error("Cover generation completed but no audio URL returned");
       localUrl = await downloadFile(pollResult.audioUrl, "covers", "cover");
     } else {
@@ -246,7 +246,7 @@ export async function processAudioCut(
         end_time: endTimeMs,
         output_extension: "mp3",
       });
-      const pollResult = await pollGenericJob("audio_cut", submitResult.taskId!, 600000, 8000);
+      const pollResult = await pollGenericJob("audio_cut", submitResult.taskId!, 600000, 8000, submitResult.endpointId);
       const outputUrl = pollResult.audioUrl || pollResult.outputFile;
       if (!outputUrl) throw new Error("Audio cutter completed but no output URL returned");
       localUrl = await downloadFile(outputUrl, "trimmed", "trim");
