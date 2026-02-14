@@ -69,6 +69,18 @@ function buildAuthHeaders(provider: ApiProvider): Record<string, string> {
   return headers;
 }
 
+function setNestedValue(obj: Record<string, any>, path: string, value: any): void {
+  const parts = path.split(".");
+  let current = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (!(parts[i] in current) || typeof current[parts[i]] !== "object") {
+      current[parts[i]] = {};
+    }
+    current = current[parts[i]];
+  }
+  current[parts[parts.length - 1]] = value;
+}
+
 function applyRequestMapping(
   mapping: Record<string, any> | null | undefined,
   inputParams: Record<string, any>
@@ -78,27 +90,39 @@ function applyRequestMapping(
   const result: Record<string, any> = {};
 
   for (const [apiParamName, mappingValue] of Object.entries(mapping)) {
+    let resolvedValue: any = undefined;
+
     if (typeof mappingValue === "string") {
       if (mappingValue.startsWith("$")) {
         const inputKey = mappingValue.substring(1);
         if (inputParams[inputKey] !== undefined) {
-          result[apiParamName] = inputParams[inputKey];
+          resolvedValue = inputParams[inputKey];
         }
       } else if (mappingValue.startsWith("@env:")) {
         const envKey = mappingValue.substring(5);
         const envVal = process.env[envKey];
-        if (envVal) result[apiParamName] = envVal;
+        if (envVal) resolvedValue = envVal;
       } else {
-        result[apiParamName] = mappingValue;
+        resolvedValue = mappingValue;
       }
     } else {
-      result[apiParamName] = mappingValue;
+      resolvedValue = mappingValue;
+    }
+
+    if (resolvedValue !== undefined) {
+      if (apiParamName.includes(".")) {
+        setNestedValue(result, apiParamName, resolvedValue);
+      } else {
+        result[apiParamName] = resolvedValue;
+      }
     }
   }
 
   for (const [key, value] of Object.entries(inputParams)) {
     if (!(key in result) && value !== undefined && value !== null) {
-      result[key] = value;
+      if (!Object.keys(mapping).some(k => k === key || k.startsWith(key + "."))) {
+        result[key] = value;
+      }
     }
   }
 
@@ -241,9 +265,15 @@ export async function pollGenericJob(
   let currentInterval = intervalMs;
 
   const pollPath = endpoint.pollPath || "/byId";
-  let pollUrl = `${provider.baseUrl}${pollPath}?task_id=${encodeURIComponent(taskId)}`;
-  if (endpoint.conversionType) {
-    pollUrl += `&conversionType=${encodeURIComponent(endpoint.conversionType)}`;
+  let pollUrl: string;
+
+  if (pollPath.includes("{taskId}")) {
+    pollUrl = `${provider.baseUrl}${pollPath.replace("{taskId}", encodeURIComponent(taskId))}`;
+  } else {
+    pollUrl = `${provider.baseUrl}${pollPath}?task_id=${encodeURIComponent(taskId)}`;
+    if (endpoint.conversionType) {
+      pollUrl += `&conversionType=${encodeURIComponent(endpoint.conversionType)}`;
+    }
   }
 
   console.log(`[GenericAPI:${operationType}] Polling ${pollUrl} (timeout: ${timeoutMs / 1000}s)`);
@@ -265,11 +295,13 @@ export async function pollGenericJob(
       const extracted = extractFromResponse(endpoint.pollResponseMapping, rawData);
 
       const conversion = rawData.conversion || rawData;
-      const status = (extracted.status || conversion.status || "").toUpperCase();
+      const rawStatus = (extracted.status || conversion.status || "").toUpperCase();
 
-      console.log(`[GenericAPI:${operationType}] Task ${taskId} status: ${status}`);
+      const normalizedStatus = rawStatus === "SUCCEEDED" ? "COMPLETED" : rawStatus;
 
-      if (status === "COMPLETED") {
+      console.log(`[GenericAPI:${operationType}] Task ${taskId} status: ${normalizedStatus}`);
+
+      if (normalizedStatus === "COMPLETED") {
         const audioUrl = extracted.audioUrl || conversion.audio_url || conversion.conversion_path || conversion.conversion_path_wav || conversion.output_file;
 
         return {
@@ -287,8 +319,8 @@ export async function pollGenericJob(
         };
       }
 
-      if (status === "FAILED" || status === "ERROR") {
-        throw new Error(`Job failed: ${conversion.status_msg || extracted.error || "Unknown error"}`);
+      if (normalizedStatus === "FAILED" || normalizedStatus === "ERROR" || normalizedStatus === "CANCELED") {
+        throw new Error(`Job failed: ${conversion.status_msg || rawData.error || extracted.error || "Unknown error"}`);
       }
     } catch (err: any) {
       if (err.message.includes("Job failed")) throw err;

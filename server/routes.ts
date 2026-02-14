@@ -13,7 +13,7 @@ import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engi
 import { processStemSeparation } from "./core/stems_engine";
 import { saveStemAudio, getStemsWebhookSecret } from "./core/runpod_stems_engine";
 import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong, processAudioCut } from "./workers/sample_tasks";
-import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider } from "./core/seed_providers";
+import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider, seedReplicateProvider } from "./core/seed_providers";
 import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfig, buildRunPodPayload, GENRE_STYLE_HINTS } from "./core/sao_training_engine";
 import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection } from "./core/runpod_client";
 import { isCloudConfigured, getActiveServer, checkCloudHealth, checkDgbCloudHealth, uploadInstrumentToCloud, saveMidiFile, verifyWebhookFromAnyServer } from "./core/dgb_runpod_api";
@@ -951,6 +951,10 @@ export async function registerRoutes(
 
   seedDgbRunPodProvider().catch((err: any) =>
     console.log("[Seed] DGB Cloud seed error:", err.message?.substring(0, 100))
+  );
+
+  seedReplicateProvider().catch((err: any) =>
+    console.log("[Seed] Replicate seed error:", err.message?.substring(0, 100))
   );
 
   app.get("/api/admin/check", async (req, res) => {
@@ -2120,7 +2124,7 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = (req.user as any).claims.sub;
     try {
-      const model = await storage.getVoiceModel(parseInt(req.params.id));
+      const model = await storage.getVoiceModel(parseInt(req.params.id as string));
       if (!model) return res.sendStatus(404);
       if (model.userId !== userId) return res.sendStatus(403);
 

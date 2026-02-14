@@ -251,3 +251,101 @@ export async function seedDgbRunPodProvider(): Promise<void> {
 
   console.log(`[Seed] DGB Studio Cloud Engine seeded with ${dgbEndpoints.length} endpoints`);
 }
+
+export async function seedReplicateProvider(): Promise<void> {
+  const existing = await storage.getApiProviders();
+  const hasReplicate = existing.some(p =>
+    p.name === "Replicate" || p.name === "Replicate AI"
+  );
+  if (hasReplicate) {
+    console.log("[Seed] Replicate provider already exists, skipping");
+    return;
+  }
+
+  if (!process.env.REPLICATE_API_TOKEN) {
+    console.log("[Seed] REPLICATE_API_TOKEN not set, skipping Replicate seed");
+    return;
+  }
+
+  console.log("[Seed] Seeding Replicate AI provider...");
+
+  const provider = await storage.createApiProvider({
+    name: "Replicate",
+    baseUrl: "https://api.replicate.com/v1",
+    authType: "bearer",
+    authHeaderName: "Authorization",
+    apiKeyEnvVar: "REPLICATE_API_TOKEN",
+    category: "music",
+    isActive: true,
+    description: "Serverless GPU platform - stem separation (Demucs) and music generation (MusicGen). Pay-per-use, no server to maintain.",
+  });
+
+  const replicateEndpoints = [
+    {
+      name: "Stem Separation (Demucs)",
+      operationType: "stem_separation",
+      path: "/predictions",
+      method: "POST",
+      contentType: "json",
+      requestMapping: {
+        "version": "25a173108cff36ef9f80f854c162d01df9e6528be175794b81571f6e0feadce7",
+        "input.audio": "$audio_url",
+        "input.model": "htdemucs",
+        "input.stem": "all",
+        "input.mp3": true,
+        "input.mp3_bitrate": 320,
+        "input.shifts": 1,
+        "input.overlap": 0.25,
+      },
+      responseMapping: { taskId: "id", status: "status" },
+      pollPath: "/predictions/{taskId}",
+      pollMethod: "GET",
+      pollResponseMapping: {
+        status: "status",
+        audioUrl: "output",
+      },
+      asyncPattern: "polling",
+      webhookSupported: false,
+      description: "Separate audio into vocals, drums, bass, and other stems using Demucs htdemucs model (~$0.01-0.05/song)",
+    },
+    {
+      name: "Music Generation (MusicGen)",
+      operationType: "music_generation",
+      path: "/predictions",
+      method: "POST",
+      contentType: "json",
+      requestMapping: {
+        "version": "671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
+        "input.model_version": "stereo-large",
+        "input.prompt": "$prompt",
+        "input.duration": "$output_length",
+        "input.temperature": 1.0,
+        "input.top_k": 250,
+        "input.top_p": 0.0,
+        "input.classifier_free_guidance": 3,
+        "input.output_format": "wav",
+        "input.normalization_strategy": "loudness",
+      },
+      responseMapping: { taskId: "id", status: "status" },
+      pollPath: "/predictions/{taskId}",
+      pollMethod: "GET",
+      pollResponseMapping: {
+        status: "status",
+        audioUrl: "output",
+      },
+      asyncPattern: "polling",
+      webhookSupported: false,
+      description: "Generate music from text prompts using Meta MusicGen stereo-large model",
+    },
+  ];
+
+  for (const ep of replicateEndpoints) {
+    await storage.createApiEndpoint({
+      providerId: provider.id,
+      ...ep,
+    } as any);
+    console.log(`[Seed] Created Replicate endpoint: ${ep.name}`);
+  }
+
+  console.log(`[Seed] Replicate provider seeded with ${replicateEndpoints.length} endpoints`);
+}

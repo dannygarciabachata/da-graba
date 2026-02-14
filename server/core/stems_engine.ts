@@ -9,9 +9,6 @@ import {
 import {
   canUseRunPodStems, submitRunPodStemSeparation,
 } from "./runpod_stems_engine";
-import {
-  canUseReplicate, separateStemsWithReplicate,
-} from "./replicate_stems_engine";
 
 const STEM_TYPES = [
   { type: "vocals", name: "Vocals", icon: "mic" },
@@ -49,7 +46,7 @@ export async function processStemSeparation(
       await storage.updateTrackStatus(track.id, "processing");
     }
 
-    // Priority 1: Private Cloud GPU (RunPod/DigitalOcean) - for private model processing
+    // Priority 1: Private Cloud GPU (RunPod/DigitalOcean) - webhook-based
     if (canUseRunPodStems()) {
       console.log(`[Stems] Using cloud GPU (Demucs) for stem separation`);
       const result = await submitRunPodStemSeparation(songId, fullAudioUrl);
@@ -60,37 +57,14 @@ export async function processStemSeparation(
       console.log(`[Stems] Cloud GPU submission failed: ${result.error}, falling back`);
     }
 
-    // Priority 2: Replicate (serverless GPU) - pay-per-use, no server to maintain
-    if (canUseReplicate()) {
-      console.log(`[Stems] Using Replicate (Demucs) for stem separation`);
-      const result = await separateStemsWithReplicate(fullAudioUrl, songId);
-      if (result.success) {
-        for (const trackRecord of trackRecords) {
-          const stemDef = STEM_TYPES.find(s => s.type === trackRecord.type);
-          const apiKey = (stemDef as any)?.apiKey || trackRecord.type;
-          const localUrl = result.stems[apiKey] || result.stems[trackRecord.type];
-          if (localUrl) {
-            await storage.updateTrackStatus(trackRecord.id, "completed", localUrl);
-            console.log(`[Stems] ${trackRecord.type} stem completed via Replicate: ${localUrl}`);
-          } else {
-            await storage.updateTrackStatus(trackRecord.id, "completed", undefined);
-            console.log(`[Stems] ${trackRecord.type} stem: no separate URL from Replicate`);
-          }
-        }
-        console.log(`[Stems] Stem separation completed via Replicate for song ${songId}`);
-        return;
-      }
-      console.log(`[Stems] Replicate failed: ${result.error}, falling back to API providers`);
-    }
-
-    // Priority 3: Generic API providers (configured in Admin panel)
+    // Priority 2+: Generic API providers (Replicate, custom servers, etc.) configured in Admin panel
     const stemsList = ["vocals", "drums", "bass", "instrumental"];
     const useGeneric = await hasProviderForOperation("stem_separation");
 
     let rawResult: any;
 
     if (useGeneric) {
-      console.log(`[Stems] Using generic API engine for stem separation`);
+      console.log(`[Stems] Using API provider for stem separation`);
       const submitResult = await submitGenericJob("stem_separation", {
         audio_url: fullAudioUrl,
         stems: JSON.stringify(stemsList),
@@ -98,7 +72,7 @@ export async function processStemSeparation(
       const pollResult = await pollGenericJob("stem_separation", submitResult.taskId!, 600000, 8000);
       rawResult = pollResult;
     } else {
-      // Priority 4: MusicGPT fallback
+      // Last resort: MusicGPT fallback
       console.log(`[Stems] Using MusicGPT fallback engine for stem separation`);
       const submitResult = await submitExtraction(fullAudioUrl, stemsList);
       console.log(`[Stems] Extraction submitted, task_id: ${submitResult.task_id}`);
@@ -110,14 +84,27 @@ export async function processStemSeparation(
 
     let stemUrls: Record<string, string> = {};
 
-    const audioUrlField = rawResult.raw?.audio_url || rawResult.audioUrl;
-    if (audioUrlField && typeof audioUrlField === "string") {
-      try {
-        stemUrls = JSON.parse(audioUrlField);
-        console.log(`[Stems] Parsed stem URLs:`, Object.keys(stemUrls).join(", "));
-      } catch {
-        console.log(`[Stems] audio_url is not JSON, treating as single URL`);
-        stemUrls = { vocals: audioUrlField };
+    // Handle Replicate-style output: { output: { vocals: url, drums: url, bass: url, other: url } }
+    const replicateOutput = rawResult.raw?.output;
+    if (replicateOutput && typeof replicateOutput === "object" && !Array.isArray(replicateOutput)) {
+      if (replicateOutput.vocals) stemUrls.vocals = String(replicateOutput.vocals);
+      if (replicateOutput.drums) stemUrls.drums = String(replicateOutput.drums);
+      if (replicateOutput.bass) stemUrls.bass = String(replicateOutput.bass);
+      if (replicateOutput.other) stemUrls.instrumental = String(replicateOutput.other);
+      console.log(`[Stems] Extracted stems from output object: ${Object.keys(stemUrls).join(", ")}`);
+    }
+
+    // Handle MusicGPT/generic style: audio_url as JSON string
+    if (Object.keys(stemUrls).length === 0) {
+      const audioUrlField = rawResult.raw?.audio_url || rawResult.audioUrl;
+      if (audioUrlField && typeof audioUrlField === "string") {
+        try {
+          stemUrls = JSON.parse(audioUrlField);
+          console.log(`[Stems] Parsed stem URLs:`, Object.keys(stemUrls).join(", "));
+        } catch {
+          console.log(`[Stems] audio_url is not JSON, treating as single URL`);
+          stemUrls = { vocals: audioUrlField };
+        }
       }
     }
 
