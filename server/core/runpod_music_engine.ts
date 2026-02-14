@@ -234,12 +234,14 @@ async function resolveJupyterServer(): Promise<{ base: string; token: string } |
       const stemServer = await storage.getActiveCloudServer("stem_separation");
       if (stemServer && stemServer.baseUrl) {
         const port = stemServer.jupyterPort || 8888;
-        return { base: buildJupyterUrl(stemServer.baseUrl, port), token: stemServer.jupyterToken || process.env.RUNPOD_JUPYTER_TOKEN || "" };
+        const token = process.env.RUNPOD_JUPYTER_TOKEN || stemServer.jupyterToken || "";
+        return { base: buildJupyterUrl(stemServer.baseUrl, port), token };
       }
     }
     if (server && server.baseUrl) {
       const port = server.jupyterPort || 8888;
-      return { base: buildJupyterUrl(server.baseUrl, port), token: server.jupyterToken || process.env.RUNPOD_JUPYTER_TOKEN || "" };
+      const token = process.env.RUNPOD_JUPYTER_TOKEN || server.jupyterToken || "";
+      return { base: buildJupyterUrl(server.baseUrl, port), token };
     }
   } catch {}
   const base = (process.env.RUNPOD_BASE_URL || "").replace(/\/lab\/.*$/, "").replace(/\/$/, "");

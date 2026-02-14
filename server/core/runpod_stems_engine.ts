@@ -236,7 +236,7 @@ async function resolveJupyterServer(): Promise<{ base: string; token: string } |
     if (server && server.baseUrl) {
       const port = server.jupyterPort || 8888;
       const base = buildJupyterUrl(server.baseUrl, port);
-      const token = server.jupyterToken || process.env.RUNPOD_JUPYTER_TOKEN || "";
+      const token = process.env.RUNPOD_JUPYTER_TOKEN || server.jupyterToken || "";
       return { base, token };
     }
   } catch {}
