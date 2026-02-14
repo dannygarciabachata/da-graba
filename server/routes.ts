@@ -333,9 +333,13 @@ export async function registerRoutes(
           console.log(`[Webhook] Song ${songId} already completed, ignoring failure`);
           return res.sendStatus(200);
         }
-        const errorMsg = payload.error || "SAO generation failed";
+        const errorMsg = payload.error || "GPU generation failed";
+        const isGpuSetupError = errorMsg.includes("No module") || errorMsg.includes("not available") || errorMsg.includes("ImportError") || errorMsg.includes("CUDA");
+        const userError = isGpuSetupError
+          ? "El GPU necesita configuración. Contacta al administrador para instalar los modelos de música."
+          : errorMsg;
         console.log(`[Webhook] Song ${songId} failed: ${errorMsg}`);
-        await storage.updateSongStatus(songId, "failed", undefined, errorMsg);
+        await storage.updateSongStatus(songId, "failed", undefined, userError);
         return res.sendStatus(200);
       }
 
