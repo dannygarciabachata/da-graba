@@ -240,7 +240,7 @@ export async function processMusicGeneration(
   }
 }
 
-function startRunPodTimeout(songId: number, timeoutMs: number) {
+export function startRunPodTimeout(songId: number, timeoutMs: number) {
   const timer = setTimeout(async () => {
     try {
       const song = await storage.getSong(songId);

@@ -102,7 +102,8 @@ def send_result(audio_file, gen_time, device, sample_rate):
         "duration": duration_seconds,
         "generationTime": round(gen_time, 1),
         "fileSize": file_size,
-        "device": device
+        "device": device,
+        "engine": "sao"
     }
     
     print(f"[SAO Music] Sending webhook ({file_size / 1024 / 1024:.1f}MB, {'mp3' if is_mp3 else 'wav'})...")
@@ -119,7 +120,8 @@ def send_error(error_msg):
         requests.post(webhook_url, json={
             "songId": song_id,
             "status": "failed",
-            "error": error_msg
+            "error": error_msg,
+            "engine": "sao"
         }, timeout=30)
     except Exception as we:
         print(f"[SAO Music] Error webhook failed: {we}")

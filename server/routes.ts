@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
-import { processMusicGeneration, pendingTaskMap, pendingRunPodSongs } from "./workers/music_tasks";
+import { processMusicGeneration, pendingTaskMap, pendingRunPodSongs, startRunPodTimeout } from "./workers/music_tasks";
 import { saveRunPodAudio } from "./core/runpod_music_engine";
 import { generateCreativeLyrics } from "./core/antigravity_engine";
 import { buildMusicGenPrompt, buildStyleKitPrompt, PROMPT_VERSIONS } from "./core/prompt_engine";
@@ -346,11 +346,33 @@ export async function registerRoutes(
           return res.sendStatus(200);
         }
         const errorMsg = payload.error || "GPU generation failed";
-        const isGpuSetupError = errorMsg.includes("No module") || errorMsg.includes("not available") || errorMsg.includes("ImportError") || errorMsg.includes("CUDA");
+        const engine = payload.engine || (song.taskId?.startsWith("heartmula_") ? "heartmula" : "unknown");
+        console.error(`[Webhook] Song ${songId} GPU ERROR (${engine}): ${errorMsg}`);
+
+        if (engine === "heartmula") {
+          console.log(`[Webhook] HeartMuLa failed for song ${songId}, attempting SAO fallback...`);
+          try {
+            const { submitRunPodMusicGeneration, canUseRunPodMusic } = await import("./core/runpod_music_engine");
+            if (canUseRunPodMusic()) {
+              await storage.updateSongStatus(songId, "processing", undefined, "Switching to instrumental engine...");
+              const saoResult = await submitRunPodMusicGeneration(songId, song.prompt || "", 30);
+              if (saoResult.success) {
+                await storage.updateSongTaskId(songId, saoResult.jobId);
+                console.log(`[Webhook] SAO fallback submitted for song ${songId}: ${saoResult.jobId}`);
+                startRunPodTimeout(songId, 300000);
+                return res.sendStatus(200);
+              }
+              console.log(`[Webhook] SAO fallback also failed: ${saoResult.error}`);
+            }
+          } catch (fallbackErr: any) {
+            console.log(`[Webhook] SAO fallback error: ${fallbackErr.message}`);
+          }
+        }
+
+        const isGpuSetupError = errorMsg.includes("No module") || errorMsg.includes("ImportError") || errorMsg.includes("not available") || errorMsg.includes("CUDA");
         const userError = isGpuSetupError
-          ? "El GPU necesita configuración. Contacta al administrador para instalar los modelos de música."
-          : errorMsg;
-        console.log(`[Webhook] Song ${songId} failed: ${errorMsg}`);
+          ? "El motor de música necesita configuración en el GPU. Contacta al administrador."
+          : errorMsg.substring(0, 300);
         await storage.updateSongStatus(songId, "failed", undefined, userError);
         return res.sendStatus(200);
       }
