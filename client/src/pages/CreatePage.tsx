@@ -110,7 +110,9 @@ export default function CreatePage() {
     if (seen.has(song.id)) continue;
     seen.add(song.id);
     if (song.pairId) {
-      const pair = allSongs.filter((s: any) => s.pairId === song.pairId);
+      const pair = allSongs
+        .filter((s: any) => s.pairId === song.pairId)
+        .sort((a: any, b: any) => (a.variationLabel || "").localeCompare(b.variationLabel || ""));
       pair.forEach((s: any) => seen.add(s.id));
       const existing = groupedSongs.find((g) => g.pairId === song.pairId);
       if (!existing) {

@@ -170,11 +170,13 @@ export async function registerRoutes(
         lyrics,
       });
 
-      processMusicGeneration(song2.id, finalPrompt, {
-        style,
-        duration,
-        lyrics,
-      });
+      setTimeout(() => {
+        processMusicGeneration(song2.id, finalPrompt, {
+          style,
+          duration,
+          lyrics,
+        });
+      }, 20000);
 
       const remainingCredits = isUnlimited ? -1 : await storage.getUserCredits(userId);
       res.status(202).json({ ...song1, pairId, remainingCredits });
