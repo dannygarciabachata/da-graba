@@ -2652,6 +2652,19 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/gpu/diagnostics", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const { runGpuDiagnostics } = await import("./core/runpod_music_engine");
+      console.log("[Admin] Running GPU diagnostics...");
+      const result = await runGpuDiagnostics();
+      console.log("[Admin] GPU diagnostics completed:", JSON.stringify(result).substring(0, 500));
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ output: [], errors: [err.message], status: "error" });
+    }
+  });
+
   // ========== DGB CLOUD ENGINE WEBHOOK ==========
 
   app.post("/api/dgb-cloud/webhook", async (req, res) => {

@@ -781,6 +781,134 @@ export async function submitRunPodMusicGeneration(
   }
 }
 
+export async function runGpuDiagnostics(): Promise<{output: string[], errors: string[], status: string}> {
+  const server = await resolveJupyterServer();
+  if (!server) return { output: [], errors: ["No GPU server configured"], status: "error" };
+  const { base, token } = server;
+
+  const diagLines = [
+    "import json, os, sys, subprocess",
+    "",
+    'result = {"packages": {}, "gpu": {}, "workspace": {}, "install_test": {}}',
+    "",
+    "try:",
+    "    import torch",
+    '    result["gpu"]["torch"] = torch.__version__',
+    '    result["gpu"]["cuda_available"] = torch.cuda.is_available()',
+    "    if torch.cuda.is_available():",
+    '        result["gpu"]["device_name"] = torch.cuda.get_device_name(0)',
+    '        result["gpu"]["memory_gb"] = round(torch.cuda.get_device_properties(0).total_mem / 1024**3, 1)',
+    "except Exception as e:",
+    '    result["gpu"]["error"] = str(e)',
+    "",
+    'for pkg_name, import_name in [("heartlib", "heartlib"), ("stable_audio_tools", "stable_audio_tools"), ("torchaudio", "torchaudio"), ("diffusers", "diffusers"), ("huggingface_hub", "huggingface_hub"), ("soundfile", "soundfile")]:',
+    "    try:",
+    "        mod = __import__(import_name)",
+    '        result["packages"][pkg_name] = getattr(mod, "__version__", "installed")',
+    "    except ImportError as e:",
+    '        result["packages"][pkg_name] = "MISSING: " + str(e)',
+    "",
+    'workspace = "/workspace"',
+    "if os.path.exists(workspace):",
+    '    result["workspace"]["contents"] = sorted(os.listdir(workspace))',
+    '    ckpt_dir = os.path.join(workspace, "heartmula_ckpt")',
+    "    if os.path.exists(ckpt_dir):",
+    '        result["workspace"]["heartmula_ckpt"] = sorted(os.listdir(ckpt_dir))',
+    '        mula_dir = os.path.join(ckpt_dir, "HeartMuLa-oss-3B")',
+    "        if os.path.exists(mula_dir):",
+    '            result["workspace"]["mula_model_files"] = sorted(os.listdir(mula_dir))[:10]',
+    '        codec_dir = os.path.join(ckpt_dir, "HeartCodec-oss")',
+    "        if os.path.exists(codec_dir):",
+    '            result["workspace"]["codec_model_files"] = sorted(os.listdir(codec_dir))[:10]',
+    '    heartlib_dir = os.path.join(workspace, "heartlib")',
+    "    if os.path.exists(heartlib_dir):",
+    '        result["workspace"]["heartlib_dir"] = sorted(os.listdir(heartlib_dir))[:10]',
+    "",
+    "try:",
+    '    r = subprocess.run([sys.executable, "-c", "from heartlib import HeartMuLaGenPipeline; print(\'OK\')"], capture_output=True, text=True, timeout=30)',
+    '    result["install_test"]["heartlib_import"] = r.stdout.strip()',
+    "    if r.returncode != 0:",
+    '        result["install_test"]["heartlib_error"] = r.stderr[-500:] if r.stderr else "unknown error"',
+    "except Exception as e:",
+    '    result["install_test"]["heartlib_error"] = str(e)',
+    "",
+    "result['python'] = sys.version",
+    'result["pip_packages"] = subprocess.run([sys.executable, "-m", "pip", "list", "--format=columns"], capture_output=True, text=True, timeout=30).stdout[-2000:]',
+    "",
+    'print("DIAG_RESULT:" + json.dumps(result))',
+  ];
+  const diagScript = diagLines.join("\n");
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = "token " + token;
+
+  const listRes = await fetchWithTimeout(base + "/api/kernels", { headers }, 15000);
+  if (!listRes.ok) return { output: [], errors: ["Cannot reach GPU kernels"], status: "error" };
+  const kernels = await listRes.json();
+  if (!Array.isArray(kernels) || kernels.length === 0) {
+    return { output: [], errors: ["No kernels available on GPU"], status: "error" };
+  }
+  const kernelId = kernels[0].id;
+
+  const wsProtocol = base.startsWith("https") ? "wss" : "ws";
+  const wsBase = base.replace(/^https?/, wsProtocol);
+  const tokenParam = token ? "?token=" + token : "";
+
+  return new Promise((resolve) => {
+    const output: string[] = [];
+    const errors: string[] = [];
+    const timeoutHandle = setTimeout(() => {
+      try { ws.close(); } catch {}
+      resolve({ output, errors: [...errors, "Diagnostics timed out after 120s"], status: "timeout" });
+    }, 120000);
+
+    let ws: any;
+    try {
+      ws = new WebSocket(wsBase + "/api/kernels/" + kernelId + "/channels" + tokenParam);
+    } catch (err: any) {
+      clearTimeout(timeoutHandle);
+      resolve({ output: [], errors: ["WebSocket failed: " + err.message], status: "error" });
+      return;
+    }
+
+    const msgId = "diag_" + Date.now();
+
+    ws.on("open", () => {
+      ws.send(JSON.stringify({
+        header: { msg_id: msgId, msg_type: "execute_request", username: "dgb_studio", session: "session_" + Date.now(), date: new Date().toISOString(), version: "5.3" },
+        parent_header: {}, metadata: {},
+        content: { code: diagScript, silent: false, store_history: false, user_expressions: {}, allow_stdin: false, stop_on_error: true },
+        channel: "shell", buffers: [],
+      }));
+    });
+
+    ws.on("message", (data: any) => {
+      try {
+        const msg = JSON.parse(data.toString());
+        if (msg.parent_header?.msg_id !== msgId) return;
+
+        if (msg.msg_type === "stream") {
+          const text = msg.content?.text || "";
+          output.push(text);
+        }
+        if (msg.msg_type === "error") {
+          errors.push(msg.content?.evalue || "Unknown error");
+        }
+        if (msg.msg_type === "execute_reply") {
+          clearTimeout(timeoutHandle);
+          ws.close();
+          resolve({ output, errors, status: msg.content?.status || "ok" });
+        }
+      } catch {}
+    });
+
+    ws.on("error", (err: any) => {
+      clearTimeout(timeoutHandle);
+      resolve({ output, errors: ["WebSocket error: " + err.message], status: "error" });
+    });
+  });
+}
+
 export async function saveRunPodAudio(
   audioBase64: string,
   songId: number,
