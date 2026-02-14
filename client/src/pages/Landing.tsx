@@ -303,18 +303,18 @@ export default function Landing() {
               className="space-y-6 md:space-y-8 text-center lg:text-left"
             >
               <div className="inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs md:text-sm font-medium mb-2 md:mb-4">
-                DGB Studio Engine
+                The DNA of Danny Garcia
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight leading-tight" data-testid="text-hero-title">
-                Create Music with{" "}
+                Create Bachata with the{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500">
-                  AI Power
+                  DNA of Danny Garcia
                 </span>
               </h1>
 
               <p className="text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed mx-auto lg:mx-0" data-testid="text-hero-subtitle">
-                Generate studio-quality tracks, separate stems, write lyrics, and master your music — all powered by your own private cloud GPU. No per-song API costs. Start with 12 free credits.
+                Create Bachata, Boleros, and Latin music with the signature sound and DNA of Danny Garcia. AI-powered studio with private cloud GPU — no per-song API costs. Start with 12 free credits.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center lg:justify-start pt-2 md:pt-4">
