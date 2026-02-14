@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Play, Mic2, Wand2, Music, Headphones, Sparkles, Scissors, Zap,
+  Play, Pause, Mic2, Wand2, Music, Headphones, Sparkles, Scissors, Zap,
   Crown, Shield, Globe, Layers, ArrowRight, CheckCircle2, Star,
   Radio, Volume2, SlidersHorizontal, Palette, Upload
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 const FEATURES = [
   {
@@ -89,6 +90,162 @@ const fadeUp = {
   viewport: { once: true, margin: "-50px" },
   transition: { duration: 0.6 },
 };
+
+const DEMO_SONG = {
+  title: "Regreso al Edén",
+  artist: "DGB Studio AI",
+  genre: "Bachata",
+  url: "/audio/songs/ac1a3408-dc10-4b06-a8d4-39f0aebdf587_song.mp3",
+};
+
+const STEM_HEIGHTS = [
+  [80, 50, 95, 65],
+  [60, 90, 45, 75],
+  [70, 55, 85, 40],
+  [90, 70, 60, 80],
+];
+
+function DemoPlayer() {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+
+  const formatTime = useCallback((t: number) => {
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }, []);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onTime = () => {
+      setCurrentTime(audio.currentTime);
+      setProgress(audio.duration ? (audio.currentTime / audio.duration) * 100 : 0);
+    };
+    const onMeta = () => setDuration(audio.duration);
+    const onEnd = () => { setIsPlaying(false); setProgress(0); setCurrentTime(0); };
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    audio.addEventListener("timeupdate", onTime);
+    audio.addEventListener("loadedmetadata", onMeta);
+    audio.addEventListener("ended", onEnd);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    return () => {
+      audio.removeEventListener("timeupdate", onTime);
+      audio.removeEventListener("loadedmetadata", onMeta);
+      audio.removeEventListener("ended", onEnd);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+    };
+  }, []);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) {
+      audio.play().catch(() => setIsPlaying(false));
+    } else {
+      audio.pause();
+    }
+  };
+
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    const bar = progressBarRef.current;
+    const audio = audioRef.current;
+    if (!bar || !audio || !audio.duration) return;
+    const rect = bar.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    audio.currentTime = pct * audio.duration;
+  };
+
+  return (
+    <div className="relative glass-panel rounded-2xl p-6 border border-white/10 shadow-2xl">
+      <audio ref={audioRef} src={DEMO_SONG.url} preload="metadata" />
+      <div className="rounded-xl bg-gradient-to-br from-gray-900 to-black overflow-hidden relative p-6">
+        <div className="flex flex-col items-center gap-5">
+          <div className="flex items-center gap-2 text-xs text-primary/80">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>AI-Generated Demo</span>
+          </div>
+
+          <button
+            onClick={togglePlay}
+            className="w-20 h-20 rounded-full bg-primary/20 hover:bg-primary/30 border border-primary/30 flex items-center justify-center transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(0,243,255,0.3)]"
+            data-testid="button-demo-play"
+          >
+            {isPlaying ? (
+              <Pause className="w-8 h-8 text-primary" />
+            ) : (
+              <Play className="w-8 h-8 text-primary ml-1" />
+            )}
+          </button>
+
+          <div className="text-center space-y-1">
+            <p className="font-bold text-lg" data-testid="text-demo-title">{DEMO_SONG.title}</p>
+            <p className="text-xs text-muted-foreground">{DEMO_SONG.artist} &middot; {DEMO_SONG.genre}</p>
+          </div>
+
+          <div className="w-full space-y-2">
+            <div
+              ref={progressBarRef}
+              className="relative h-6 w-full cursor-pointer group flex items-center"
+              onClick={handleSeek}
+              data-testid="progress-demo"
+            >
+              <div className="h-1.5 w-full bg-white/10 rounded-full pointer-events-none">
+                <div
+                  className="h-full bg-gradient-to-r from-primary to-blue-500 rounded-full relative transition-all duration-100"
+                  style={{ width: `${progress}%` }}
+                >
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span data-testid="text-demo-current">{formatTime(currentTime)}</span>
+              <span data-testid="text-demo-duration">{formatTime(duration)}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 w-full">
+            {["Vocals", "Drums", "Bass", "Melody"].map((stem, i) => (
+              <div key={stem} className="flex-1 text-center p-2 rounded-lg bg-white/5 border border-white/5">
+                <div className="h-6 flex items-end justify-center gap-[2px]">
+                  {STEM_HEIGHTS[i].map((h, j) => (
+                    <div
+                      key={j}
+                      className={`w-[3px] rounded-full bg-primary/60 ${isPlaying ? "animate-pulse" : ""}`}
+                      style={{ height: `${h}%`, animationDelay: `${j * 0.15}s` }}
+                    />
+                  ))}
+                </div>
+                <p className="text-[9px] text-muted-foreground mt-1">{stem}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-purple-500/20 rounded-lg">
+            <Mic2 className="w-5 h-5 text-purple-400" />
+          </div>
+          <div className="text-left">
+            <p className="text-xs text-muted-foreground">Powered by</p>
+            <p className="text-sm font-bold">DGB Studio Engine</p>
+          </div>
+        </div>
+        <Wand2 className="w-5 h-5 text-white/20" />
+      </div>
+    </div>
+  );
+}
 
 export default function Landing() {
   const { user, isLoading } = useAuth();
@@ -180,68 +337,17 @@ export default function Landing() {
                   <span>12 free credits</span>
                 </div>
               </div>
+
             </motion.div>
 
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, duration: 0.8 }}
-              className="relative hidden md:block"
+              className="relative"
             >
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl animate-pulse" />
-
-              <div className="relative glass-panel rounded-2xl p-6 border border-white/10 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500">
-                <div className="aspect-square rounded-xl bg-gradient-to-br from-gray-900 to-black overflow-hidden relative">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center space-y-4">
-                      <div className="w-20 h-20 mx-auto rounded-full bg-primary/20 flex items-center justify-center">
-                        <Play className="w-8 h-8 text-primary ml-1" />
-                      </div>
-                      <div className="space-y-2">
-                        <div className="h-2 w-32 bg-white/10 rounded-full mx-auto" />
-                        <div className="h-2 w-24 bg-white/5 rounded-full mx-auto" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="absolute bottom-6 left-6 right-6 p-4 glass-panel rounded-xl flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-purple-500/20 rounded-lg">
-                        <Mic2 className="w-5 h-5 text-purple-400" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-xs text-muted-foreground">AI Engine</p>
-                        <p className="text-sm font-bold">DGB Studio</p>
-                      </div>
-                    </div>
-                    <Wand2 className="w-5 h-5 text-white/20" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="absolute -bottom-4 -left-8 glass-panel rounded-xl p-3 border border-white/10 shadow-xl">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-green-500/20 rounded-lg">
-                    <CheckCircle2 className="w-4 h-4 text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-muted-foreground">Status</p>
-                    <p className="text-xs font-bold">Track Generated</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="absolute -top-4 -right-4 glass-panel rounded-xl p-3 border border-white/10 shadow-xl">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-primary/20 rounded-lg">
-                    <Layers className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-muted-foreground">Stems</p>
-                    <p className="text-xs font-bold">4 Tracks Ready</p>
-                  </div>
-                </div>
-              </div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl animate-pulse hidden md:block" />
+              <DemoPlayer />
             </motion.div>
           </div>
         </section>
