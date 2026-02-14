@@ -9,6 +9,7 @@ import {
 } from "../core/musicgpt_engine";
 import { generateCreativeLyrics } from "../core/antigravity_engine";
 import { canUseRunPodMusic, submitRunPodMusicGeneration } from "../core/runpod_music_engine";
+import { generateMusic } from "../core/music_engine";
 
 export const pendingTaskMap = new Map<string, number>();
 export const pendingRunPodSongs = new Map<number, NodeJS.Timeout>();
@@ -68,6 +69,7 @@ export async function processMusicGeneration(
       ? `${safePrompt}. Lyrics: ${generatedLyrics.substring(0, 200)}` 
       : safePrompt;
 
+    // Priority 1: Private Cloud GPU (RunPod SAO) - proprietary Danny Garcia model
     if (canUseRunPodMusic()) {
       console.log(`[Worker] Using RunPod SAO engine for music generation (self-hosted)`);
 
@@ -83,6 +85,28 @@ export async function processMusicGeneration(
       }
     }
 
+    // Priority 2: Replicate (serverless GPU) - MusicGen/Mureka, pay-per-use
+    if (process.env.REPLICATE_API_TOKEN) {
+      console.log(`[Worker] Using Replicate/Mureka for music generation (serverless)`);
+      try {
+        const result = await generateMusic(safePrompt, {
+          isBachata: style?.toLowerCase().includes("bachata") || style?.toLowerCase().includes("bolero"),
+          style,
+          duration,
+          lyrics: generatedLyrics || undefined,
+        });
+        if (result.audioUrl) {
+          const localUrl = await downloadFile(result.audioUrl, "songs", "song");
+          await storage.updateSongStatus(songId, "completed", localUrl);
+          console.log(`[Worker] Song ${songId} completed via ${result.provider}`);
+          return;
+        }
+      } catch (repErr: any) {
+        console.log(`[Worker] Replicate/Mureka failed: ${repErr.message}, trying generic providers...`);
+      }
+    }
+
+    // Priority 3: Generic API providers (configured in Admin panel)
     const useGeneric = await hasProviderForOperation("music_generation");
 
     if (useGeneric) {
@@ -106,6 +130,7 @@ export async function processMusicGeneration(
         startFallbackPoller(songId, submitResult.taskId, true);
       }
     } else {
+      // Priority 4: MusicGPT fallback
       console.log(`[Worker] Using MusicGPT fallback for music generation`);
       const webhookUrl = getMusicGPTWebhookUrl();
 

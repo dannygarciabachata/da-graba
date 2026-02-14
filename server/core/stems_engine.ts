@@ -9,6 +9,9 @@ import {
 import {
   canUseRunPodStems, submitRunPodStemSeparation,
 } from "./runpod_stems_engine";
+import {
+  canUseReplicate, separateStemsWithReplicate,
+} from "./replicate_stems_engine";
 
 const STEM_TYPES = [
   { type: "vocals", name: "Vocals", icon: "mic" },
@@ -46,6 +49,7 @@ export async function processStemSeparation(
       await storage.updateTrackStatus(track.id, "processing");
     }
 
+    // Priority 1: Private Cloud GPU (RunPod/DigitalOcean) - for private model processing
     if (canUseRunPodStems()) {
       console.log(`[Stems] Using cloud GPU (Demucs) for stem separation`);
       const result = await submitRunPodStemSeparation(songId, fullAudioUrl);
@@ -53,9 +57,33 @@ export async function processStemSeparation(
         console.log(`[Stems] Cloud GPU job submitted: ${result.jobId} - waiting for webhook`);
         return;
       }
-      console.log(`[Stems] Cloud GPU submission failed: ${result.error}, falling back to API`);
+      console.log(`[Stems] Cloud GPU submission failed: ${result.error}, falling back`);
     }
 
+    // Priority 2: Replicate (serverless GPU) - pay-per-use, no server to maintain
+    if (canUseReplicate()) {
+      console.log(`[Stems] Using Replicate (Demucs) for stem separation`);
+      const result = await separateStemsWithReplicate(fullAudioUrl, songId);
+      if (result.success) {
+        for (const trackRecord of trackRecords) {
+          const stemDef = STEM_TYPES.find(s => s.type === trackRecord.type);
+          const apiKey = (stemDef as any)?.apiKey || trackRecord.type;
+          const localUrl = result.stems[apiKey] || result.stems[trackRecord.type];
+          if (localUrl) {
+            await storage.updateTrackStatus(trackRecord.id, "completed", localUrl);
+            console.log(`[Stems] ${trackRecord.type} stem completed via Replicate: ${localUrl}`);
+          } else {
+            await storage.updateTrackStatus(trackRecord.id, "completed", undefined);
+            console.log(`[Stems] ${trackRecord.type} stem: no separate URL from Replicate`);
+          }
+        }
+        console.log(`[Stems] Stem separation completed via Replicate for song ${songId}`);
+        return;
+      }
+      console.log(`[Stems] Replicate failed: ${result.error}, falling back to API providers`);
+    }
+
+    // Priority 3: Generic API providers (configured in Admin panel)
     const stemsList = ["vocals", "drums", "bass", "instrumental"];
     const useGeneric = await hasProviderForOperation("stem_separation");
 
@@ -70,7 +98,8 @@ export async function processStemSeparation(
       const pollResult = await pollGenericJob("stem_separation", submitResult.taskId!, 600000, 8000);
       rawResult = pollResult;
     } else {
-      console.log(`[Stems] Using fallback engine for stem separation`);
+      // Priority 4: MusicGPT fallback
+      console.log(`[Stems] Using MusicGPT fallback engine for stem separation`);
       const submitResult = await submitExtraction(fullAudioUrl, stemsList);
       console.log(`[Stems] Extraction submitted, task_id: ${submitResult.task_id}`);
       const pollResult = await pollMusicGPTJob(submitResult.task_id, 600000, 8000, "EXTRACTION");

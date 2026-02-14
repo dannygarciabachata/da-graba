@@ -40,7 +40,8 @@ The "DGB Studio" music engine employs a microservices-oriented architecture with
     - **OpenAI Integration:** Used for lyrics generation (via GPT-5.1) and powering the platform's support chatbot and instrument prompt generation.
     - **SAO Training Pipeline:** A Stable Audio Open-inspired fine-tuning pipeline for custom instrument kits, utilizing OpenAI for prompt generation and cloud GPU for training.
     - **Antigravity Engine:** A creative AI engine leveraging OpenAI for lyrics and full arrangement configurations.
-- **Stem Separation Engine:** Cloud GPU-first stem separation using Demucs (htdemucs model) via RunPod Jupyter. Falls back to generic API providers if GPU unavailable. Webhook: `/api/webhooks/runpod-stems`. Produces 4 stems: vocals, drums, bass, other/melody.
+- **Stem Separation Engine:** Multi-tier fallback: 1) Private Cloud GPU (RunPod Demucs via Jupyter), 2) Replicate serverless GPU (Demucs htdemucs, pay-per-use ~$0.01-0.05/song), 3) Generic API providers, 4) MusicGPT fallback. Webhook: `/api/webhooks/runpod-stems`. Produces 4 stems: vocals, drums, bass, other/melody.
+    - **Replicate Stems Engine:** `replicate_stems_engine.ts` - Uses `cjwbw/demucs` model on Replicate for serverless stem separation. No server to maintain, pay only per use.
 - **Workers:** Dedicated background workers (`music_tasks.ts`, `sample_tasks.ts`) for asynchronous processing of music generation and various audio sample transformations (Remix, Key/BPM, Mastering, Denoise, Cover, Audio Cut).
 - **Key Features Implemented:**
     - **DGB Studio branded engine:** Includes style presets (Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana).
@@ -50,8 +51,10 @@ The "DGB Studio" music engine employs a microservices-oriented architecture with
     - **Song History:** Tracks processing status via polling.
 
 ## External Dependencies
-- **Stable Audio Open (Self-Hosted):** Primary music generation engine running on private cloud GPU. Uses `runpod_music_engine.ts` to submit inference jobs via Jupyter WebSocket protocol. Generates audio from text prompts with no per-song API cost. Webhook: `/api/webhooks/runpod-music`. Falls back to external APIs (Generic/MusicGPT) if GPU is unavailable.
-- **MusicGPT:** Fallback AI provider for audio-related operations (music generation, stem separation, remix, mastering, etc.).
+- **Stable Audio Open (Self-Hosted):** Primary music generation engine running on private cloud GPU. Uses `runpod_music_engine.ts` to submit inference jobs via Jupyter WebSocket protocol. Generates audio from text prompts with no per-song API cost. Webhook: `/api/webhooks/runpod-music`. Falls back to Replicate → Generic API → MusicGPT if GPU is unavailable.
+- **Replicate:** Serverless GPU platform for stem separation (Demucs `cjwbw/demucs`) and music generation (MusicGen `meta/musicgen`). Pay-per-use pricing (~$0.01-0.05/song for stems). Used as Priority 2 fallback when private GPU is unavailable. Token: `REPLICATE_API_TOKEN`.
+- **Mureka AI:** Music generation with vocals and lyrics support. Used as primary provider in `music_engine.ts`, falls back to Replicate MusicGen if quota exceeded. Token: `MUREKA_API_KEY`.
+- **MusicGPT:** Last-resort fallback AI provider for audio-related operations (music generation, stem separation, remix, mastering, etc.).
 - **OpenAI:** Used for AI lyrics generation, AI support chatbot, and prompt generation within the SAO training pipeline.
 - **Neon (PostgreSQL):** Database hosting for all persistent data.
 - **Stripe:** Payment gateway for subscription management, checkouts, and customer portals.
