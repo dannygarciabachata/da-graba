@@ -27,11 +27,17 @@ function getBaseUrl(): string {
   return base.replace(/\/lab\/.*$/, "").replace(/\/$/, "");
 }
 
+function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number = 15000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 async function getOrCreateKernel(): Promise<string> {
   const base = getBaseUrl();
   const headers = getHeaders();
 
-  const listRes = await fetch(`${base}/api/kernels`, { headers });
+  const listRes = await fetchWithTimeout(`${base}/api/kernels`, { headers }, 15000);
   if (listRes.ok) {
     const kernels = await listRes.json();
     if (Array.isArray(kernels) && kernels.length > 0) {
@@ -39,11 +45,11 @@ async function getOrCreateKernel(): Promise<string> {
     }
   }
 
-  const createRes = await fetch(`${base}/api/kernels`, {
+  const createRes = await fetchWithTimeout(`${base}/api/kernels`, {
     method: "POST",
     headers,
     body: JSON.stringify({ name: "python3" }),
-  });
+  }, 15000);
 
   if (!createRes.ok) {
     const errorText = await createRes.text();

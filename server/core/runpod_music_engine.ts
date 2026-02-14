@@ -4,6 +4,12 @@ import * as fs from "fs";
 import * as path from "path";
 import WebSocket from "ws";
 
+function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number = 15000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 const AUDIO_BASE_DIR = path.join(process.cwd(), "public", "audio");
 
 interface RunPodMusicResult {
@@ -475,7 +481,7 @@ export async function submitHeartMuLaGeneration(
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `token ${token}`;
 
-    const listRes = await fetch(`${base}/api/kernels`, { headers });
+    const listRes = await fetchWithTimeout(`${base}/api/kernels`, { headers }, 15000);
     let kernelId: string;
 
     if (listRes.ok) {
@@ -483,9 +489,9 @@ export async function submitHeartMuLaGeneration(
       if (Array.isArray(kernels) && kernels.length > 0) {
         kernelId = kernels[0].id;
       } else {
-        const createRes = await fetch(`${base}/api/kernels`, {
+        const createRes = await fetchWithTimeout(`${base}/api/kernels`, {
           method: "POST", headers, body: JSON.stringify({ name: "python3" }),
-        });
+        }, 15000);
         if (!createRes.ok) throw new Error(`Failed to create kernel: ${createRes.status}`);
         const kernel = await createRes.json();
         kernelId = kernel.id;
@@ -651,7 +657,7 @@ export async function submitRunPodMusicGeneration(
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `token ${token}`;
 
-    const listRes = await fetch(`${base}/api/kernels`, { headers });
+    const listRes = await fetchWithTimeout(`${base}/api/kernels`, { headers }, 15000);
     let kernelId: string;
 
     if (listRes.ok) {
@@ -659,9 +665,9 @@ export async function submitRunPodMusicGeneration(
       if (Array.isArray(kernels) && kernels.length > 0) {
         kernelId = kernels[0].id;
       } else {
-        const createRes = await fetch(`${base}/api/kernels`, {
+        const createRes = await fetchWithTimeout(`${base}/api/kernels`, {
           method: "POST", headers, body: JSON.stringify({ name: "python3" }),
-        });
+        }, 15000);
         if (!createRes.ok) throw new Error(`Failed to create kernel: ${createRes.status}`);
         const kernel = await createRes.json();
         kernelId = kernel.id;

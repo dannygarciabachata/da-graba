@@ -123,17 +123,18 @@ export async function processMusicGeneration(
     const enrichedPrompt = await enrichPromptForMusicGen(safePrompt, style);
     console.log(`[Worker] Enriched prompt: "${enrichedPrompt.substring(0, 150)}"`);
 
-    // Auto-setup GPU if needed before attempting generation
     if (canUseRunPodMusic()) {
       try {
-        const gpuReady = await ensureGpuReady();
+        const gpuCheckPromise = ensureGpuReady();
+        const gpuTimeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 30000));
+        const gpuReady = await Promise.race([gpuCheckPromise, gpuTimeout]);
         if (gpuReady) {
           console.log(`[Worker] GPU confirmed ready for song ${songId}`);
         } else {
-          console.log(`[Worker] GPU setup incomplete, will attempt generation anyway`);
+          console.log(`[Worker] GPU not ready (timeout or setup incomplete), will attempt generation anyway`);
         }
       } catch (err: any) {
-        console.log(`[Worker] GPU readiness check failed: ${err.message}`);
+        console.log(`[Worker] GPU readiness check failed: ${err.message}, will attempt generation anyway`);
       }
     }
 
