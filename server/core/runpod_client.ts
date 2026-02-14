@@ -759,3 +759,261 @@ export async function checkRunPodConnection(): Promise<{ connected: boolean; ker
     return { connected: false, error: err.message };
   }
 }
+
+function getRunPodApiKey(): string {
+  return process.env.RUNPOD_API_KEY || "";
+}
+
+function getRunPodPodId(): string {
+  return process.env.RUNPOD_POD_ID || "";
+}
+
+export async function getGpuStatus(): Promise<{
+  podId: string;
+  podName: string;
+  gpuCount: number;
+  gpuName: string;
+  status: string;
+  cudaAvailable: boolean;
+  installedPackages: string[];
+  missingPackages: string[];
+  error?: string;
+}> {
+  const podId = getRunPodPodId();
+  const apiKey = getRunPodApiKey();
+  const result: any = {
+    podId,
+    podName: "",
+    gpuCount: 0,
+    gpuName: "",
+    status: "unknown",
+    cudaAvailable: false,
+    installedPackages: [],
+    missingPackages: [],
+  };
+
+  if (apiKey && podId) {
+    try {
+      const res = await fetch(`https://api.runpod.io/graphql?api_key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: `query { pod(input: { podId: "${podId}" }) { id name gpuCount desiredStatus machine { gpuDisplayName } runtime { uptimeInSeconds gpus { id } } } }`,
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const data = await res.json();
+      if (data?.data?.pod) {
+        const pod = data.data.pod;
+        result.podName = pod.name || "";
+        result.gpuCount = pod.gpuCount || 0;
+        result.gpuName = pod.machine?.gpuDisplayName || "";
+        result.status = pod.desiredStatus || "unknown";
+      }
+    } catch (err: any) {
+      result.error = `API: ${err.message}`;
+    }
+  }
+
+  if (isRunPodConfigured()) {
+    try {
+      const conn = await checkRunPodConnection();
+      if (conn.connected) {
+        result.status = result.gpuCount > 0 ? "running_with_gpu" : "running_cpu_only";
+        const kernelId = await getOrCreateKernel();
+        const diagOutput = await executeCode(kernelId, `
+import json, sys
+pkgs = {}
+for p in ["torch", "torchaudio", "diffusers", "transformers", "accelerate", "stable_audio_tools", "demucs", "librosa", "soundfile", "scipy"]:
+    try:
+        mod = __import__(p)
+        pkgs[p] = getattr(mod, "__version__", "ok")
+    except ImportError:
+        pkgs[p] = None
+cuda = False
+try:
+    import torch
+    cuda = torch.cuda.is_available()
+except: pass
+print(json.dumps({"packages": pkgs, "cuda": cuda}))
+`);
+        try {
+          const diag = JSON.parse(diagOutput.trim().split("\n").pop() || "{}");
+          result.cudaAvailable = diag.cuda || false;
+          for (const [pkg, ver] of Object.entries(diag.packages || {})) {
+            if (ver) result.installedPackages.push(`${pkg}@${ver}`);
+            else result.missingPackages.push(pkg);
+          }
+        } catch {}
+      } else {
+        result.status = "disconnected";
+      }
+    } catch (err: any) {
+      result.status = "error";
+      result.error = err.message;
+    }
+  }
+
+  return result;
+}
+
+export async function resumeGpuPod(): Promise<{ success: boolean; message: string }> {
+  const apiKey = getRunPodApiKey();
+  const podId = getRunPodPodId();
+
+  if (!apiKey || !podId) {
+    return { success: false, message: "RunPod API key or Pod ID not configured" };
+  }
+
+  try {
+    const res = await fetch(`https://api.runpod.io/graphql?api_key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: `mutation { podResume(input: { podId: "${podId}", gpuCount: 1 }) { id desiredStatus gpuCount } }`,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const data = await res.json();
+
+    if (data?.data?.podResume) {
+      return {
+        success: true,
+        message: `Pod resumed with ${data.data.podResume.gpuCount} GPU(s). Status: ${data.data.podResume.desiredStatus}`,
+      };
+    }
+
+    const errMsg = data?.errors?.[0]?.message || "Unknown error";
+    return { success: false, message: errMsg };
+  } catch (err: any) {
+    return { success: false, message: err.message };
+  }
+}
+
+export async function stopGpuPod(): Promise<{ success: boolean; message: string }> {
+  const apiKey = getRunPodApiKey();
+  const podId = getRunPodPodId();
+
+  if (!apiKey || !podId) {
+    return { success: false, message: "RunPod API key or Pod ID not configured" };
+  }
+
+  try {
+    const res = await fetch(`https://api.runpod.io/graphql?api_key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: `mutation { podStop(input: { podId: "${podId}" }) { id desiredStatus } }`,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const data = await res.json();
+
+    if (data?.data?.podStop) {
+      return { success: true, message: `Pod stopped. Status: ${data.data.podStop.desiredStatus}` };
+    }
+
+    const errMsg = data?.errors?.[0]?.message || "Unknown error";
+    return { success: false, message: errMsg };
+  } catch (err: any) {
+    return { success: false, message: err.message };
+  }
+}
+
+export async function setupGpuEnvironment(): Promise<{ success: boolean; output: string }> {
+  try {
+    const kernelId = await getOrCreateKernel();
+    const setupScript = `
+import subprocess, sys, os
+
+results = []
+
+# Fix CUDA environment
+os.environ["LD_LIBRARY_PATH"] = "/usr/local/cuda-12.4/compat:" + os.environ.get("LD_LIBRARY_PATH", "")
+if "NVIDIA_CPU_ONLY" in os.environ:
+    del os.environ["NVIDIA_CPU_ONLY"]
+
+# Create NVIDIA device nodes if missing
+if not os.path.exists("/dev/nvidia0"):
+    os.system("mknod -m 666 /dev/nvidia0 c 195 0 2>/dev/null")
+    os.system("mknod -m 666 /dev/nvidiactl c 195 255 2>/dev/null")
+    os.system("mknod -m 666 /dev/nvidia-uvm c 507 0 2>/dev/null")
+    results.append("Created NVIDIA device nodes")
+
+# Symlink CUDA compat libs
+import glob
+compat = "/usr/local/cuda-12.4/compat"
+if os.path.exists(compat):
+    for dst_dir in ["/usr/local/nvidia/lib64", "/usr/lib/x86_64-linux-gnu"]:
+        os.makedirs(dst_dir, exist_ok=True)
+        for src in glob.glob(compat + "/lib*"):
+            dst = os.path.join(dst_dir, os.path.basename(src))
+            if not os.path.exists(dst):
+                try:
+                    os.symlink(src, dst)
+                except: pass
+    results.append("Symlinked CUDA compat libraries")
+
+# Test CUDA
+import torch
+cuda_ok = torch.cuda.is_available()
+results.append(f"CUDA: {'AVAILABLE' if cuda_ok else 'NOT AVAILABLE'}")
+if cuda_ok:
+    results.append(f"GPU: {torch.cuda.get_device_name(0)}")
+    results.append(f"Memory: {torch.cuda.get_device_properties(0).total_mem / 1e9:.1f} GB")
+
+# Install ffmpeg if missing
+try:
+    subprocess.run(["ffmpeg", "-version"], capture_output=True, timeout=5, check=True)
+    results.append("ffmpeg: already installed")
+except:
+    results.append("Installing ffmpeg...")
+    r = subprocess.run(["apt-get", "update", "-qq"], capture_output=True, text=True, timeout=60)
+    r = subprocess.run(["apt-get", "install", "-y", "-qq", "ffmpeg"], capture_output=True, text=True, timeout=120)
+    results.append(f"ffmpeg install: {'OK' if r.returncode == 0 else r.stderr[:100]}")
+
+# Install required Python packages
+packages = {
+    "diffusers": "diffusers",
+    "stable_audio_tools": "stable-audio-tools",
+    "demucs": "demucs",
+    "librosa": "librosa",
+    "scipy": "scipy",
+}
+for pkg_import, pkg_pip in packages.items():
+    try:
+        __import__(pkg_import)
+        results.append(f"{pkg_pip}: already installed")
+    except ImportError:
+        results.append(f"Installing {pkg_pip}...")
+        r = subprocess.run([sys.executable, "-m", "pip", "install", pkg_pip, "--quiet"], 
+                          capture_output=True, text=True, timeout=300)
+        results.append(f"{pkg_pip}: {'OK' if r.returncode == 0 else r.stderr[:100]}")
+
+# Verify all packages
+for pkg in ["torch", "torchaudio", "diffusers", "transformers", "accelerate", "stable_audio_tools", "demucs", "librosa", "soundfile", "scipy"]:
+    try:
+        mod = __import__(pkg)
+        ver = getattr(mod, "__version__", "ok")
+        results.append(f"  {pkg}: {ver}")
+    except ImportError:
+        results.append(f"  {pkg}: MISSING")
+
+print("\\n".join(results))
+`;
+
+    const output = await executeCode(kernelId, setupScript);
+    const isTimeout = output === "execution_timeout_submitted" || output === "timeout";
+    if (isTimeout) {
+      return { success: false, output: "Setup timed out. The installation may still be running on the GPU. Check status again in a few minutes." };
+    }
+    const hasCuda = output.includes("CUDA: AVAILABLE");
+    const hasMissing = output.includes("MISSING");
+    return {
+      success: hasCuda && !hasMissing,
+      output: output || "Setup completed",
+    };
+  } catch (err: any) {
+    return { success: false, output: err.message };
+  }
+}

@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import type { ApiProvider, ApiEndpoint, CloudServer } from "@shared/schema";
 
-type Tab = "dashboard" | "analytics" | "users" | "subscriptions" | "support" | "settings" | "email" | "style-kits" | "providers" | "endpoints" | "cloud-servers";
+type Tab = "dashboard" | "analytics" | "users" | "subscriptions" | "support" | "settings" | "email" | "style-kits" | "providers" | "endpoints" | "cloud-servers" | "gpu";
 
 export default function AdminPage() {
   const [, setLocation] = useLocation();
@@ -66,8 +66,8 @@ export default function AdminPage() {
 }
 
 const TAB_ROLE_ACCESS: Record<string, Tab[]> = {
-  super_admin: ["dashboard", "analytics", "users", "subscriptions", "support", "settings", "email", "style-kits", "cloud-servers", "providers", "endpoints"],
-  admin: ["dashboard", "analytics", "users", "subscriptions", "support", "style-kits"],
+  super_admin: ["dashboard", "analytics", "users", "subscriptions", "support", "settings", "email", "style-kits", "gpu", "cloud-servers", "providers", "endpoints"],
+  admin: ["dashboard", "analytics", "users", "subscriptions", "support", "style-kits", "gpu"],
   moderator: ["support"],
 };
 
@@ -89,6 +89,7 @@ function AdminDashboard({ role }: { role: string }) {
     { id: "settings" as Tab, label: "Settings", icon: Sliders },
     { id: "email" as Tab, label: "Email", icon: Mail },
     { id: "style-kits" as Tab, label: "Style Kits", icon: Disc },
+    { id: "gpu" as Tab, label: "GPU", icon: Cpu },
     { id: "cloud-servers" as Tab, label: "Cloud Servers", icon: Cloud },
     { id: "providers" as Tab, label: "API Providers", icon: Server },
     { id: "endpoints" as Tab, label: "Endpoints", icon: Zap },
@@ -136,6 +137,7 @@ function AdminDashboard({ role }: { role: string }) {
       {activeTab === "settings" && <SettingsTab />}
       {activeTab === "email" && <EmailSettingsTab />}
       {activeTab === "style-kits" && <StyleKitsAdminTab />}
+      {activeTab === "gpu" && <GpuTab role={role} />}
       {activeTab === "cloud-servers" && <CloudServersTab />}
 
       {activeTab === "providers" && (
@@ -1857,6 +1859,157 @@ const CAPABILITY_OPTIONS = [
   { value: "midi_conversion", label: "MIDI Conversion" },
   { value: "voice_training", label: "Voice Training" },
 ];
+
+function GpuTab({ role }: { role: string }) {
+  const { toast } = useToast();
+  const [status, setStatus] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState("");
+  const isSuperAdmin = role === "super_admin";
+
+  async function fetchStatus() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/gpu-status", { credentials: "include" });
+      if (res.ok) setStatus(await res.json());
+      else toast({ title: "Error", description: "Failed to fetch GPU status", variant: "destructive" });
+    } catch {
+      toast({ title: "Error", description: "Connection failed", variant: "destructive" });
+    }
+    setLoading(false);
+  }
+
+  async function gpuAction(action: string) {
+    setActionLoading(action);
+    try {
+      const res = await fetch(`/api/admin/gpu/${action}`, { method: "POST", credentials: "include" });
+      const data = await res.json();
+      toast({
+        title: data.success ? "Success" : "Error",
+        description: data.message || data.output?.substring(0, 200) || "Done",
+        variant: data.success ? "default" : "destructive",
+      });
+      if (data.success) setTimeout(fetchStatus, 3000);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+    setActionLoading("");
+  }
+
+  return (
+    <div className="space-y-4" data-testid="gpu-tab">
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Cpu className="h-5 w-5 text-primary" />
+              <CardTitle className="text-base">GPU Pod Management</CardTitle>
+            </div>
+            <Button size="sm" variant="outline" onClick={fetchStatus} disabled={loading} data-testid="button-gpu-refresh">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
+              <span className="ml-1">{loading ? "Checking..." : "Check Status"}</span>
+            </Button>
+          </div>
+          <CardDescription>Monitor and control your RunPod GPU pod for music generation</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!status && !loading && (
+            <p className="text-sm text-muted-foreground" data-testid="text-gpu-hint">Click "Check Status" to see your GPU pod status.</p>
+          )}
+
+          {status && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-card border rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {status.gpuCount > 0 ? <Wifi className="h-3.5 w-3.5 text-green-500" /> : <WifiOff className="h-3.5 w-3.5 text-red-500" />}
+                    <p className="text-sm font-medium" data-testid="text-gpu-status">
+                      {status.gpuCount > 0 ? "GPU Active" : status.status === "EXITED" ? "Stopped" : "CPU Only"}
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-card border rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">GPU</p>
+                  <p className="text-sm font-medium mt-1" data-testid="text-gpu-name">{status.gpuName || "None"}</p>
+                </div>
+                <div className="bg-card border rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">CUDA</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {status.cudaAvailable ? <CheckCircle className="h-3.5 w-3.5 text-green-500" /> : <XCircle className="h-3.5 w-3.5 text-red-500" />}
+                    <p className="text-sm font-medium" data-testid="text-cuda-status">{status.cudaAvailable ? "Available" : "Not Available"}</p>
+                  </div>
+                </div>
+                <div className="bg-card border rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">Pod ID</p>
+                  <p className="text-sm font-mono mt-1" data-testid="text-pod-id">{status.podId || "N/A"}</p>
+                </div>
+              </div>
+
+              {(status.installedPackages?.length > 0 || status.missingPackages?.length > 0) && (
+                <div className="border rounded-lg p-3">
+                  <p className="text-xs font-medium mb-2">Packages</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {status.installedPackages?.map((p: string) => (
+                      <Badge key={p} variant="outline" className="text-xs text-green-600 border-green-600/30" data-testid={`badge-pkg-${p.split("@")[0]}`}>
+                        <CheckCircle className="h-3 w-3 mr-1" /> {p}
+                      </Badge>
+                    ))}
+                    {status.missingPackages?.map((p: string) => (
+                      <Badge key={p} variant="outline" className="text-xs text-red-500 border-red-500/30" data-testid={`badge-missing-${p}`}>
+                        <XCircle className="h-3 w-3 mr-1" /> {p}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {status.error && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                  <p className="text-xs text-red-500" data-testid="text-gpu-error">{status.error}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isSuperAdmin && (
+            <div className="flex gap-2 flex-wrap pt-2 border-t">
+              <Button
+                size="sm"
+                onClick={() => gpuAction("resume")}
+                disabled={!!actionLoading}
+                data-testid="button-gpu-resume"
+              >
+                {actionLoading === "resume" ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Play className="h-4 w-4 mr-1" />}
+                Start with GPU
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => gpuAction("stop")}
+                disabled={!!actionLoading}
+                data-testid="button-gpu-stop"
+              >
+                {actionLoading === "stop" ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <XCircle className="h-4 w-4 mr-1" />}
+                Stop Pod
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => gpuAction("setup")}
+                disabled={!!actionLoading}
+                data-testid="button-gpu-setup"
+              >
+                {actionLoading === "setup" ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Settings className="h-4 w-4 mr-1" />}
+                Install Dependencies
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 function CloudServersTab() {
   const { data: servers, isLoading } = useCloudServers();

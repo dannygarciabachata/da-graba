@@ -48,3 +48,5 @@ integrations = ["javascript_openai_ai_integrations:2.0.0", "javascript_log_in_wi
 ADMIN_USER_ID = "54352911"
 RUNPOD_BASE_URL = "https://cx47yfmi0b2mi9-8888.proxy.runpod.net"
 APP_DOMAIN = "dgbstudio.com"
+RUNPOD_POD_ID = "cx47yfmi0b2mi9"
+RUNPOD_API_KEY = "rpa_CFWZPCVKF00ED7L9VGYVN6SSV50MS4HG7UQK4IF9l7vxnm"

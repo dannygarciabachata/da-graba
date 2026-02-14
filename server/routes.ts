@@ -15,7 +15,7 @@ import { saveStemAudio, getStemsWebhookSecret } from "./core/runpod_stems_engine
 import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong, processAudioCut } from "./workers/sample_tasks";
 import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider, seedReplicateProvider, seedMurekaProvider, seedTrainingKits } from "./core/seed_providers";
 import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfig, buildRunPodPayload, GENRE_STYLE_HINTS } from "./core/sao_training_engine";
-import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection } from "./core/runpod_client";
+import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection, getGpuStatus, resumeGpuPod, stopGpuPod, setupGpuEnvironment } from "./core/runpod_client";
 import { isCloudConfigured, getActiveServer, checkCloudHealth, checkDgbCloudHealth, uploadInstrumentToCloud, saveMidiFile, verifyWebhookFromAnyServer } from "./core/dgb_runpod_api";
 import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, STYLE_KIT_GENRES, INSTRUMENT_TYPES, SETTING_CATEGORIES, TICKET_STATUSES, TICKET_PRIORITIES, insertApiProviderSchema, insertApiEndpointSchema, insertStyleKitSchema, insertStyleKitInstrumentSchema, insertPlatformSettingSchema } from "@shared/schema";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
@@ -2573,6 +2573,48 @@ export async function registerRoutes(
       res.json({ ...health, status });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ========== GPU POD MANAGEMENT ==========
+
+  app.get("/api/admin/gpu-status", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    try {
+      const status = await getGpuStatus();
+      res.json(status);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/gpu/resume", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const result = await resumeGpuPod();
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.post("/api/admin/gpu/stop", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const result = await stopGpuPod();
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.post("/api/admin/gpu/setup", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const result = await setupGpuEnvironment();
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, output: err.message });
     }
   });
 
