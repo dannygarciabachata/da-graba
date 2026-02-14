@@ -5,4 +5,5 @@ description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
     "websocket-client>=1.9.0",
+    "websockets>=16.0",
 ]
