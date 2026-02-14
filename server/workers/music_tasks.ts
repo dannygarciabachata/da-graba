@@ -8,7 +8,7 @@ import {
   getWebhookUrl as getMusicGPTWebhookUrl 
 } from "../core/musicgpt_engine";
 import { generateCreativeLyrics, enrichPromptForMusicGen } from "../core/antigravity_engine";
-import { canUseRunPodMusic, submitRunPodMusicGeneration } from "../core/runpod_music_engine";
+import { canUseRunPodMusic, submitRunPodMusicGeneration, submitHeartMuLaGeneration } from "../core/runpod_music_engine";
 import { generateImageBuffer } from "../replit_integrations/image/client";
 import * as fs from "fs";
 import * as path from "path";
@@ -74,6 +74,32 @@ async function generateSmartPrompt(
   return { enhancedPrompt: finalPrompt, generatedLyrics };
 }
 
+function buildHeartMuLaTags(prompt: string, style: string): string {
+  const genreTagMap: Record<string, string[]> = {
+    bachata: ["bachata", "latin", "romantic", "guitar", "bongo", "guira", "tropical"],
+    bolero: ["bolero", "latin", "romantic", "ballad", "nylon guitar", "soft", "intimate"],
+    salsa: ["salsa", "latin", "energetic", "brass", "piano", "congas", "timbales"],
+    merengue: ["merengue", "latin", "energetic", "accordion", "tambora", "dance"],
+    cumbia: ["cumbia", "latin", "tropical", "accordion", "rhythmic", "dance"],
+    reggaeton: ["reggaeton", "latin", "urban", "dembow", "808", "trap"],
+    son: ["son cubano", "latin", "tres cubano", "bongo", "claves", "traditional"],
+    latin_pop: ["latin pop", "pop", "modern", "piano", "acoustic guitar", "ballad"],
+    vallenato: ["vallenato", "latin", "romantic", "accordion", "colombian"],
+  };
+
+  const normalizedStyle = style.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z_]/g, "");
+  let tags = genreTagMap[normalizedStyle] || genreTagMap[normalizedStyle.replace(/_/g, "")] || genreTagMap["bachata"] || [];
+
+  if (prompt.toLowerCase().includes("romantic") || prompt.toLowerCase().includes("amor")) {
+    tags = [...tags, "romantic", "love song"];
+  }
+  if (prompt.toLowerCase().includes("dance") || prompt.toLowerCase().includes("bailar")) {
+    tags = [...tags, "dance", "upbeat"];
+  }
+
+  return Array.from(new Set(tags)).join(", ");
+}
+
 export async function processMusicGeneration(
   songId: number,
   finalPrompt: string,
@@ -81,9 +107,10 @@ export async function processMusicGeneration(
     style?: string;
     duration?: number;
     lyrics?: string;
+    instrumental?: boolean;
   } = {}
 ): Promise<void> {
-  const { duration = 30, style = "Bachata", lyrics } = options;
+  const { duration = 30, style = "Bachata", lyrics, instrumental = false } = options;
 
   try {
     console.log(`[Worker] Starting music generation for song ${songId}`);
@@ -93,11 +120,44 @@ export async function processMusicGeneration(
     console.log(`[Worker] Prompt: "${safePrompt.substring(0, 120)}"`);
 
     const enrichedPrompt = await enrichPromptForMusicGen(safePrompt, style);
-    console.log(`[Worker] Enriched prompt for SAO: "${enrichedPrompt.substring(0, 150)}"`);
+    console.log(`[Worker] Enriched prompt: "${enrichedPrompt.substring(0, 150)}"`);
 
-    // Priority 1: Private Cloud GPU (RunPod Stable Audio Open) — our own engine
+    // Priority 1: HeartMuLa — lyrics + vocals + Spanish support (unless instrumental-only)
+    if (canUseRunPodMusic() && !instrumental) {
+      console.log(`[Worker] Priority 1: HeartMuLa engine for song ${songId}`);
+
+      let songLyrics = lyrics || "";
+      if (!songLyrics) {
+        try {
+          const lyricsStyle = mapStyleToLyricsStyle(style);
+          songLyrics = await generateCreativeLyrics(safePrompt, lyricsStyle);
+          console.log(`[Worker] Generated ${songLyrics.length} chars of lyrics for HeartMuLa`);
+        } catch (err: any) {
+          console.log(`[Worker] Lyrics generation failed: ${err.message}, will generate without lyrics`);
+        }
+      }
+
+      const tags = buildHeartMuLaTags(safePrompt, style);
+      console.log(`[Worker] HeartMuLa tags: ${tags}`);
+
+      const heartResult = await submitHeartMuLaGeneration(
+        songId, enrichedPrompt, songLyrics, tags, duration
+      );
+
+      if (heartResult.success) {
+        await storage.updateSongTaskId(songId, heartResult.jobId);
+        console.log(`[Worker] HeartMuLa job ${heartResult.jobId} submitted for song ${songId}`);
+        startRunPodTimeout(songId, 600000);
+        generateSongCoverImage(songId, safePrompt, style).catch(() => {});
+        return;
+      } else {
+        console.log(`[Worker] HeartMuLa failed: ${heartResult.error}, falling back to SAO...`);
+      }
+    }
+
+    // Priority 2: SAO — instrumental generation on private GPU
     if (canUseRunPodMusic()) {
-      console.log(`[Worker] Using DGB Private GPU (Stable Audio Open) for song ${songId}`);
+      console.log(`[Worker] Priority 2: SAO engine (instrumental) for song ${songId}`);
 
       const result = await submitRunPodMusicGeneration(songId, enrichedPrompt, duration);
 
@@ -108,7 +168,7 @@ export async function processMusicGeneration(
         generateSongCoverImage(songId, safePrompt, style).catch(() => {});
         return;
       } else {
-        console.log(`[Worker] Private GPU failed: ${result.error}, trying API fallback...`);
+        console.log(`[Worker] SAO failed: ${result.error}, trying API fallback...`);
       }
     } else {
       console.log(`[Worker] Private GPU not configured, trying API fallback...`);

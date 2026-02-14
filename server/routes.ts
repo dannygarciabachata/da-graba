@@ -164,10 +164,13 @@ export async function registerRoutes(
         variationLabel: "B",
       });
 
+      const makeInstrumental = req.body.make_instrumental === true;
+
       processMusicGeneration(song1.id, finalPrompt, {
         style,
         duration,
         lyrics,
+        instrumental: makeInstrumental,
       });
 
       setTimeout(() => {
@@ -175,6 +178,7 @@ export async function registerRoutes(
           style,
           duration,
           lyrics,
+          instrumental: makeInstrumental,
         });
       }, 20000);
 

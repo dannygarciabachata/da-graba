@@ -1,111 +1,47 @@
 # DGB Audio - DGB Studio
 
 ## Overview
-DGB Audio is building an AI-powered music generation SaaS platform, "DGB Studio," designed to revolutionize music creation. The platform uses a **self-hosted private GPU architecture** with Stable Audio Open on RunPod (RTX A6000) as the primary music generation engine. External APIs (Mureka, Replicate) are disabled — all generation runs on the private GPU. OpenAI is used for lyrics and prompt enrichment. The platform supports custom model fine-tuning via Style Kits (instrument upload → analysis → SAO training → generation with fine-tuned weights).
-
-The platform includes a robust subscription model (Free, Pro, Producer, Premium tiers) powered by Stripe, a comprehensive admin dashboard for analytics, settings, and support management, and an AI-driven support chatbot. A key differentiator is the "Producer Store," enabling paying customers to upload custom instrument kits for AI training via a private cloud GPU engine, fostering a unique and evolving sound library. The business vision is to empower musicians and producers with cutting-edge AI tools to create high-quality, genre-diverse music effortlessly, tapping into the growing market for AI-assisted creative tools.
+DGB Audio is developing "DGB Studio," an AI-powered SaaS platform for music generation. It utilizes a self-hosted private GPU architecture on RunPod, featuring a dual-engine system: HeartMuLa for songs with lyrics and vocals (including native Spanish support), and Stable Audio Open for instrumental-only tracks. All generation occurs on the private GPU, with OpenAI used for lyrics and prompt enrichment. A key feature is custom model fine-tuning through "Style Kits," where users can upload instruments for AI analysis and training. The platform incorporates a comprehensive subscription model via Stripe, an admin dashboard, and an AI-driven support chatbot. The business aims to empower musicians with advanced AI tools for high-quality, diverse music creation, leveraging the growing market for AI-assisted creative tools.
 
 ## User Preferences
 I prefer clear and concise communication. For coding, I favor modular and maintainable solutions. I appreciate an iterative development approach with regular updates. Before implementing significant architectural changes or new external dependencies, please ask for my approval. I expect the agent to prioritize secure and scalable solutions.
 
 ## System Architecture
-The "DGB Studio" music engine employs a microservices-oriented architecture with a clear separation of concerns.
+The "DGB Studio" music engine employs a microservices-oriented architecture.
 
 **Frontend:**
 - **Technology Stack:** React, Vite, TailwindCSS, Shadcn UI.
-- **UI/UX Design:** Features a premium dark mode theme with a carbon black background (`#121212`), neon blue accents (`#00F3FF`), and silver highlights (`#C0C0C0`). Typography uses Inter and JetBrains Mono. The design is mobile-first and responsive, with a consistent bottom tab navigation for core features.
-- **Layout:** A left sidebar provides navigation and user/admin controls, while the main content area is dynamic and full-width.
-- **Key UI Components:**
-    - **CreatePage:** Suno-style music creation with both aggregate and detailed prompt modes.
-    - **LibraryPage:** Displays user's generated songs with an inline audio player.
-    - **Studio:** Multitrack studio with AI stem separation (Vocals, Drums, Bass, Melody), individual track controls (volume, mute, solo, waveform visualization), and AI tools (Master, Denoise, AI Cover, Audio Cutter).
-    - **Sample Lab:** Features audio recording, file upload, AI Remix transformation, and Key/BPM detection.
-    - **AdminPage:** Owner-only interface for managing API providers, endpoints, style kits, users, and subscriptions.
-    - **Producer Store/Style Kits:** User-browsable and uploadable custom instrument kits with audio preview and integration into the music generation prompt engine.
+- **UI/UX Design:** Dark mode theme (`#121212`) with neon blue accents (`#00F3FF`) and silver highlights (`#C0C0C0`). Uses Inter and JetBrains Mono fonts. Mobile-first, responsive design with consistent bottom tab navigation.
+- **Layout:** Left sidebar for navigation and controls, dynamic full-width main content area.
+- **Key UI Components:** CreatePage (Suno-style music creation), LibraryPage (user songs, audio player), Studio (multitrack editor with AI stem separation, track controls, AI tools), Sample Lab (audio recording, upload, AI Remix, Key/BPM detection), AdminPage (owner-only management), Producer Store/Style Kits (user-browsable/uploadable instrument kits).
 
 **Backend:**
 - **Technology Stack:** Express.js (TypeScript).
-- **Database:** PostgreSQL, hosted on Neon via Replit.
+- **Database:** PostgreSQL on Neon.
 - **Authentication:** Replit Auth (OpenID Connect).
-- **Admin Role System:** Role-based access control with 4 levels: `super_admin` (full access), `admin` (dashboard/analytics/users/subscriptions/support/style-kits), `moderator` (support only), `user` (no admin access). ADMIN_USER_ID env var is always super_admin. Roles stored in `users.role` column. Super admins can manage user roles from the Users tab.
-- **Payments:** Stripe integration via `stripe-replit-sync` for subscriptions, checkout, and customer portal.
-- **Generic API Provider System:**
-    - A core architectural decision is the **API-agnostic engine** (`generic_api_engine.ts`). This system allows any API provider to be configured dynamically via the Admin Panel, storing configurations in `api_providers` and `api_endpoints` tables.
-    - It supports dynamic authentication (raw, bearer, header, query), request mapping, response extraction, and various async patterns (polling, webhook).
-    - **Fallback Mechanism:** If no specific provider is configured for an operation, the system defaults to a hardcoded fallback engine (`musicgpt_engine.ts`).
-    - **Operation Types:** Supports a wide range of operations including music_generation, stem_separation, remix, mastering, denoise, key_bpm, cover, voice_change, audio_cut, lyrics_generation, and image_generation.
+- **Admin Role System:** Role-based access control with `super_admin`, `admin`, `moderator`, `user` roles.
+- **Payments:** Stripe integration for subscriptions.
+- **Generic API Provider System:** API-agnostic engine (`generic_api_engine.ts`) for dynamic configuration of API providers via the Admin Panel, supporting various authentication, request/response patterns, and asynchronous operations (polling, webhooks). Includes a fallback mechanism to `musicgpt_engine.ts`.
 - **AI Engines:**
-    - **DGB STUDIO Audio Engine:** Default for all audio operations (seeded as "DGB STUDIO Audio Engine"), API-agnostic.
-    - **DGB Studio Cloud Engine:** Private cloud GPU engine for instrument processing, audio analysis, and MIDI conversion.
-    - **OpenAI Integration:** Used for lyrics generation (via GPT-5.1) and powering the platform's support chatbot and instrument prompt generation.
-    - **SAO Training Pipeline:** A Stable Audio Open-inspired fine-tuning pipeline for custom instrument kits, utilizing OpenAI for prompt generation and cloud GPU for training.
-    - **Antigravity Engine:** A creative AI engine leveraging OpenAI for lyrics, full arrangement configurations, and prompt enrichment for AI music generation models.
-    - **Prompt Enrichment System:** `enrichPromptForMusicGen()` in `antigravity_engine.ts` - Uses OpenAI (gpt-4o-mini) to translate user prompts (Spanish/any language) into descriptive English music descriptions optimized for MusicGen. Includes genre-specific instrument/tempo/mood mappings for Bachata, Bolero, Salsa, Merengue, Reggaeton, etc. Falls back to genre template if OpenAI fails.
-- **Stem Separation Engine:** Multi-tier fallback: 1) Private Cloud GPU (RunPod Demucs via Jupyter), 2) Replicate serverless GPU (Demucs htdemucs, pay-per-use ~$0.01-0.05/song), 3) Generic API providers, 4) MusicGPT fallback. Webhook: `/api/webhooks/runpod-stems`. Produces 4 stems: vocals, drums, bass, other/melody.
-    - **Replicate Stems Engine:** `replicate_stems_engine.ts` - Uses `cjwbw/demucs` model on Replicate for serverless stem separation. No server to maintain, pay only per use.
-- **Workers:** Dedicated background workers (`music_tasks.ts`, `sample_tasks.ts`) for asynchronous processing of music generation and various audio sample transformations (Remix, Key/BPM, Mastering, Denoise, Cover, Audio Cut).
-- **Key Features Implemented:**
-    - **DGB Studio branded engine:** Includes style presets (Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana).
-    - **Bachata Mode:** Auto-detection of Bachata-related keywords to force Dominican instrument sounds.
-    - **AI Lyrics Generator:** Offers romantic, dance, and heartbreak styles, influenced by artists like Frank Reyes and Romeo Santos.
-    - **Bachata Quiz:** A knowledge quiz system.
-    - **Song History:** Tracks processing status via polling.
+    - **HeartMuLa (Primary):** 3B parameter model for full songs with vocals/lyrics, supports Spanish. Runs on private RunPod GPU.
+    - **Stable Audio Open (Instrumental):** Secondary engine for instrumental generation. Supports fine-tuned models from Style Kits. Runs on private RunPod GPU.
+    - **DGB Studio Audio Engine:** MusicGPT-based fallback.
+    - **OpenAI Integration:** Used for lyrics generation (GPT-5.1), support chatbot, and instrument prompt generation.
+    - **SAO Training Pipeline:** Fine-tuning pipeline for custom instrument kits using OpenAI for prompts and cloud GPU for training.
+    - **Antigravity Engine:** Leverages OpenAI for lyrics, arrangement, and prompt enrichment, translating user prompts into optimized English descriptions for music generation, including genre-specific mappings.
+- **Stem Separation Engine:** Multi-tier fallback system: Private Cloud GPU (Demucs), Replicate serverless GPU (Demucs), Generic API providers, MusicGPT fallback. Produces vocals, drums, bass, and melody stems.
+- **Workers:** Background workers for asynchronous processing of music generation and audio sample transformations.
+- **Key Features:** DGB Studio branded engine with style presets, Bachata Mode (genre-specific instrument sounds), AI Lyrics Generator, Song History tracking.
 
 ## External Dependencies
-- **Stable Audio Open (Self-Hosted):** Primary music generation engine running on private cloud GPU. Uses `runpod_music_engine.ts` to submit inference jobs via Jupyter WebSocket protocol. Generates audio from text prompts with no per-song API cost. Webhook: `/api/webhooks/runpod-music`. Falls back to Replicate → Generic API → MusicGPT if GPU is unavailable.
-- **Replicate:** Serverless GPU platform for stem separation (Demucs `cjwbw/demucs`) and music generation (MusicGen `meta/musicgen`). Pay-per-use pricing (~$0.01-0.05/song for stems). Used as Priority 2 fallback when private GPU is unavailable. Token: `REPLICATE_API_TOKEN`.
-- **Mureka AI:** Music generation with vocals and lyrics support. Used as primary provider in `music_engine.ts`, falls back to Replicate MusicGen if quota exceeded. Token: `MUREKA_API_KEY`.
-- **MusicGPT:** Last-resort fallback AI provider for audio-related operations (music generation, stem separation, remix, mastering, etc.).
-- **OpenAI:** Used for AI lyrics generation, AI support chatbot, and prompt generation within the SAO training pipeline.
-- **Neon (PostgreSQL):** Database hosting for all persistent data.
-- **Stripe:** Payment gateway for subscription management, checkouts, and customer portals.
-- **DGB Cloud Engine:** FastAPI/Uvicorn server (`dgb_api_receptor.py`) on private cloud GPU for Producer Store instrument processing. Receives audio uploads, converts to MIDI (basic-pitch), analyzes audio (librosa). Authenticated via `DGB_API_KEY` + `TRAINING_WEBHOOK_SECRET` for webhooks. Runs on port 8000. Webhook: `/api/dgb-cloud/webhook`. Auto-seeded as API Provider "DGB Cloud Engine" in Admin panel.
-- **Cloud GPU Server:** JupyterLab server on port 8888 for audio analysis, stem separation (Demucs), and music generation (Stable Audio Open). Connected via RunPod proxy URLs. Uses Jupyter kernel WebSocket API for job dispatch with webhook callbacks.
-- **Generic Cloud Server System:** Database-driven (`cloud_servers` table) management of multiple GPU servers from any provider (AWS, Google Cloud, DigitalOcean, RunPod, etc.). Admin panel "Cloud Servers" tab allows adding/editing/testing servers without code changes. System auto-selects highest-priority active server by capability. Falls back to env vars if no DB servers configured. Each server stores: baseUrl, apiPort, apiKey, webhookSecret, capabilities, priority, custom auth/webhook headers, and endpoint paths.
-- **Replit Auth:** OpenID Connect-based user authentication.
-- **Replit AI Integrations:** Facilitates connection to OpenAI services.
+- **HeartMuLa:** Self-hosted on private RunPod GPU for primary music generation.
+- **Stable Audio Open:** Self-hosted on private RunPod GPU for instrumental music generation.
+- **Replicate:** Used exclusively for serverless stem separation (Demucs model).
+- **OpenAI:** Used for AI lyrics generation, support chatbot, and prompt enrichment/generation.
+- **Neon (PostgreSQL):** Database hosting.
+- **Stripe:** Payment gateway for subscriptions.
+- **DGB Cloud Engine:** FastAPI/Uvicorn server on private cloud GPU for Producer Store instrument processing, audio analysis, and MIDI conversion.
+- **Cloud GPU Server:** JupyterLab server on private cloud GPU for audio analysis, stem separation, and music generation.
+- **Generic Cloud Server System:** Database-driven management of multiple GPU servers from various providers, allowing dynamic configuration and auto-selection.
+- **Replit Auth:** User authentication.
 - **Wavesurfer.js:** Frontend library for audio waveform visualization.
-
-## RunPod GPU Server Setup (Current Session Progress)
-**Status:** Connected but GPU NOT detected. Need to create a new GPU Pod.
-
-**Current Pod:** `thfsq2tu5n45vk` (CPU-only, no nvidia-smi)
-- FastAPI receptor: `https://thfsq2tu5n45vk-8000.proxy.runpod.net` (port 8000, `/docs` endpoint)
-- Jupyter: `https://thfsq2tu5n45vk-8888.proxy.runpod.net` (port 8888, working)
-- Cloud server DB record: id=2, base_url uses RunPod proxy format
-- Health endpoint: `/docs` (FastAPI auto-generated Swagger UI)
-- Health check updated to accept both JSON and HTML responses
-
-**RunPod Proxy URL Format:** `https://{podId}-{port}.proxy.runpod.net`
-- Jupyter URL builder (`buildJupyterUrl`) in both `runpod_stems_engine.ts` and `runpod_music_engine.ts` handles this format automatically by detecting `.proxy.runpod.net` in the base URL and swapping the port in the subdomain.
-
-**GPU Pod Status:** CONNECTED and OPERATIONAL
-- Pod ID: `cx47yfmi0b2mi9`, RTX A6000 (48GB VRAM)
-- FastAPI Receptor: `https://cx47yfmi0b2mi9-8000.proxy.runpod.net` (port 8000, exposed)
-- Jupyter: `https://cx47yfmi0b2mi9-8888.proxy.runpod.net` (port 8888)
-- Health: `GET /api/health` returns GPU status
-
-**Training Orchestras (Style Kits):**
-- **Bachata** (Kit ID varies, seeded): 5 instruments - Guitarra Requinto, Guitarra Segunda, Bongó, Güira, Bajo Eléctrico
-- **Baladas Boleros** (Kit ID varies, seeded): 7 instruments - Guitarra Clásica Nylon, Requinto Bolero, Piano, Cuerdas, Maracas, Congas, Bajo Acústico
-- Both kits auto-seeded via `seedTrainingKits()` in `server/core/seed_providers.ts`
-- Admin routes: `POST /api/style-kits/:id/analyze`, `POST /api/style-kits/:id/train` (requireRole admin)
-- Pipeline: upload → analyze (GPU) → prompt (OpenAI) → train (SAO/GPU) → ready
-
-**AFTER POD RESTART:**
-1. Run `bash /workspace/start.sh` on the pod (installs deps + starts receptor)
-2. Verify health: `curl https://cx47yfmi0b2mi9-8000.proxy.runpod.net/api/health`
-3. If pod ID changes, update: `RUNPOD_BASE_URL` env var and `cloud_servers` table base_url
-
-**Start script** (`/workspace/start.sh`):
-```bash
-#!/bin/bash
-pip install -q fastapi "uvicorn[standard]" python-multipart typing_extensions librosa soundfile basic-pitch demucs
-pkill -f dgb_api_receptor 2>/dev/null; sleep 1
-nohup python3 /workspace/dgb_api_receptor.py > /workspace/receptor.log 2>&1 &
-sleep 5; curl -s http://localhost:8000/api/health
-```
-
-## Key Scripts
-- **`server/scripts/dgb_api_receptor.py`**: DGB Cloud Engine FastAPI server for private GPU. Run on GPU server with `export DGB_API_KEY='key' && export TRAINING_WEBHOOK_SECRET='secret' && python3 /workspace/dgb_api_receptor.py`. Handles instrument uploads, audio-to-MIDI conversion, and audio analysis. Port 8000. Webhook authentication uses `TRAINING_WEBHOOK_SECRET` (falls back to `DGB_API_KEY`).
-- **`/workspace/start.sh`** (on RunPod pod): Auto-installs all deps (fastapi, uvicorn, librosa, soundfile, basic-pitch, demucs) and starts the receptor.

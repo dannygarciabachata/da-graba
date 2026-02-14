@@ -12,6 +12,8 @@ interface RunPodMusicResult {
   error?: string;
 }
 
+export type MusicEngine = "heartmula" | "sao";
+
 export function getRunPodMusicWebhookUrl(): string {
   const appDomain = process.env.APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN;
   const base = appDomain
@@ -241,6 +243,353 @@ except Exception as e:
 
 print(f"[SAO Music] Job complete for song {song_id}")
 `;
+}
+
+function buildHeartMuLaGenerationScript(
+  songId: number,
+  prompt: string,
+  lyrics: string,
+  tags: string,
+  duration: number,
+  webhookUrl: string
+): string {
+  const safePrompt = prompt.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '\\"');
+  const safeLyrics = lyrics.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '\\"');
+  const safeTags = tags.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '\\"');
+  const hfToken = process.env.HF_TOKEN || "";
+  const durationMs = Math.min(duration * 1000, 240000);
+
+  return `
+import json
+import os
+import sys
+import time
+import subprocess
+import requests
+
+song_id = ${songId}
+prompt = "${safePrompt}"
+lyrics_text = """${safeLyrics}"""
+tags_text = """${safeTags}"""
+duration_ms = ${durationMs}
+webhook_url = "${webhookUrl}"
+hf_token = "${hfToken}"
+
+if hf_token:
+    os.environ["HF_TOKEN"] = hf_token
+    os.environ["HUGGING_FACE_HUB_TOKEN"] = hf_token
+
+print(f"[HeartMuLa] Starting generation for song {song_id}")
+print(f"[HeartMuLa] Tags: {tags_text[:200]}")
+print(f"[HeartMuLa] Lyrics: {lyrics_text[:200]}...")
+print(f"[HeartMuLa] Duration: {duration_ms}ms")
+
+output_dir = "/workspace/generated_music"
+os.makedirs(output_dir, exist_ok=True)
+output_path = os.path.join(output_dir, f"song_{song_id}_{int(time.time())}.mp3")
+
+def send_result(audio_file, gen_time, device):
+    import base64
+    with open(audio_file, "rb") as f:
+        audio_b64 = base64.b64encode(f.read()).decode("utf-8")
+    file_size = os.path.getsize(audio_file)
+    result = {
+        "songId": song_id,
+        "status": "completed",
+        "audioBase64": audio_b64,
+        "audioFormat": "mp3",
+        "sampleRate": 44100,
+        "duration": duration_ms // 1000,
+        "generationTime": round(gen_time, 1),
+        "fileSize": file_size,
+        "device": device,
+        "engine": "heartmula"
+    }
+    print(f"[HeartMuLa] Sending webhook ({file_size / 1024 / 1024:.1f}MB)...")
+    resp = requests.post(webhook_url, json=result, timeout=120, headers={"Content-Type": "application/json"})
+    print(f"[HeartMuLa] Webhook response: {resp.status_code}")
+
+def send_error(error_msg):
+    try:
+        requests.post(webhook_url, json={
+            "songId": song_id,
+            "status": "failed",
+            "error": error_msg,
+            "engine": "heartmula"
+        }, timeout=30)
+    except Exception as we:
+        print(f"[HeartMuLa] Error webhook failed: {we}")
+
+try:
+    # === STEP 1: Ensure heartlib is installed ===
+    try:
+        from heartlib import HeartMuLaGenPipeline
+        print("[HeartMuLa] heartlib already installed")
+    except ImportError:
+        print("[HeartMuLa] Installing heartlib...")
+        heartlib_dir = "/workspace/heartlib"
+        if not os.path.exists(heartlib_dir):
+            subprocess.run(["git", "clone", "https://github.com/HeartMuLa/heartlib.git", heartlib_dir], check=True, timeout=120)
+        subprocess.run([sys.executable, "-m", "pip", "install", "-e", heartlib_dir, "--quiet"], check=True, timeout=300)
+        from heartlib import HeartMuLaGenPipeline
+        print("[HeartMuLa] heartlib installed successfully")
+
+    # === STEP 2: Download model checkpoints if needed ===
+    ckpt_dir = "/workspace/heartmula_ckpt"
+    mula_dir = os.path.join(ckpt_dir, "HeartMuLa-oss-3B")
+    codec_dir = os.path.join(ckpt_dir, "HeartCodec-oss")
+    gen_config = os.path.join(ckpt_dir, "gen_config.json")
+    tokenizer = os.path.join(ckpt_dir, "tokenizer.json")
+
+    if not os.path.exists(gen_config) or not os.path.exists(tokenizer):
+        print("[HeartMuLa] Downloading base config files...")
+        subprocess.run([
+            sys.executable, "-m", "huggingface_hub", "download",
+            "--local-dir", ckpt_dir,
+            "HeartMuLa/HeartMuLaGen",
+            "--include", "gen_config.json", "tokenizer.json"
+        ], check=True, timeout=300)
+
+    if not os.path.exists(mula_dir) or len(os.listdir(mula_dir)) < 2:
+        print("[HeartMuLa] Downloading HeartMuLa-RL-oss-3B model...")
+        os.makedirs(mula_dir, exist_ok=True)
+        subprocess.run([
+            sys.executable, "-m", "huggingface_hub", "download",
+            "--local-dir", mula_dir,
+            "HeartMuLa/HeartMuLa-RL-oss-3B-20260123"
+        ], check=True, timeout=600)
+
+    if not os.path.exists(codec_dir) or len(os.listdir(codec_dir)) < 2:
+        print("[HeartMuLa] Downloading HeartCodec model...")
+        os.makedirs(codec_dir, exist_ok=True)
+        subprocess.run([
+            sys.executable, "-m", "huggingface_hub", "download",
+            "--local-dir", codec_dir,
+            "HeartMuLa/HeartCodec-oss-20260123"
+        ], check=True, timeout=600)
+
+    print("[HeartMuLa] All checkpoints ready")
+
+    # === STEP 3: Write lyrics and tags to temp files ===
+    lyrics_file = os.path.join(output_dir, f"lyrics_{song_id}.txt")
+    tags_file = os.path.join(output_dir, f"tags_{song_id}.txt")
+
+    with open(lyrics_file, "w", encoding="utf-8") as f:
+        f.write(lyrics_text)
+    with open(tags_file, "w", encoding="utf-8") as f:
+        f.write(tags_text)
+
+    print(f"[HeartMuLa] Lyrics file: {lyrics_file}")
+    print(f"[HeartMuLa] Tags file: {tags_file}")
+
+    # === STEP 4: Load pipeline and generate ===
+    import torch
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"[HeartMuLa] Device: {device} | GPU: {torch.cuda.get_device_name(0) if device == 'cuda' else 'N/A'}")
+
+    print("[HeartMuLa] Loading HeartMuLa pipeline...")
+    pipe = HeartMuLaGenPipeline.from_pretrained(
+        ckpt_dir,
+        device={
+            "mula": torch.device(device),
+            "codec": torch.device(device),
+        },
+        dtype={
+            "mula": torch.bfloat16 if device == "cuda" else torch.float32,
+            "codec": torch.float32,
+        },
+        version="3B",
+        lazy_load=True,
+    )
+    print("[HeartMuLa] Pipeline loaded, starting generation...")
+
+    gen_start = time.time()
+
+    with torch.no_grad():
+        pipe(
+            {
+                "lyrics": lyrics_file,
+                "tags": tags_file,
+            },
+            max_audio_length_ms=duration_ms,
+            save_path=output_path,
+            topk=50,
+            temperature=1.0,
+            cfg_scale=1.5,
+        )
+
+    gen_time = time.time() - gen_start
+
+    if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+        print(f"[HeartMuLa] Generated audio in {gen_time:.1f}s ({os.path.getsize(output_path) / 1024 / 1024:.1f}MB)")
+        send_result(output_path, gen_time, device)
+    else:
+        send_error("HeartMuLa generated empty output")
+
+    # Cleanup temp files
+    for f in [lyrics_file, tags_file]:
+        try:
+            os.remove(f)
+        except:
+            pass
+
+    # Free GPU memory
+    del pipe
+    if device == "cuda":
+        torch.cuda.empty_cache()
+
+except Exception as e:
+    print(f"[HeartMuLa] Generation failed: {e}")
+    import traceback
+    traceback.print_exc()
+    send_error(str(e))
+
+print(f"[HeartMuLa] Job complete for song {song_id}")
+`;
+}
+
+export async function submitHeartMuLaGeneration(
+  songId: number,
+  prompt: string,
+  lyrics: string,
+  tags: string,
+  duration: number
+): Promise<RunPodMusicResult> {
+  const server = await resolveJupyterServer();
+  if (!server) {
+    return { success: false, jobId: "", error: "No cloud server configured" };
+  }
+  const { base, token } = server;
+
+  const webhookUrl = getRunPodMusicWebhookUrl();
+  const script = buildHeartMuLaGenerationScript(songId, prompt, lyrics, tags, duration, webhookUrl);
+  const jobId = `heartmula_${songId}_${Date.now()}`;
+
+  try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `token ${token}`;
+
+    const listRes = await fetch(`${base}/api/kernels`, { headers });
+    let kernelId: string;
+
+    if (listRes.ok) {
+      const kernels = await listRes.json();
+      if (Array.isArray(kernels) && kernels.length > 0) {
+        kernelId = kernels[0].id;
+      } else {
+        const createRes = await fetch(`${base}/api/kernels`, {
+          method: "POST", headers, body: JSON.stringify({ name: "python3" }),
+        });
+        if (!createRes.ok) throw new Error(`Failed to create kernel: ${createRes.status}`);
+        const kernel = await createRes.json();
+        kernelId = kernel.id;
+      }
+    } else {
+      throw new Error(`Cannot list kernels: ${listRes.status}`);
+    }
+
+    console.log(`[HeartMuLa] Submitting generation for song ${songId}, kernel ${kernelId}`);
+
+    const wsProtocol = base.startsWith("https") ? "wss" : "ws";
+    const wsBase = base.replace(/^https?/, wsProtocol);
+    const tokenParam = token ? `?token=${token}` : "";
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        try { ws.close(); } catch {}
+        resolve();
+      }, 60000);
+
+      let ws: any;
+      try {
+        ws = new WebSocket(`${wsBase}/api/kernels/${kernelId}/channels${tokenParam}`);
+      } catch (err: any) {
+        clearTimeout(timeout);
+        reject(new Error(`WebSocket connection failed: ${err.message}`));
+        return;
+      }
+
+      const msgId = `heartmula_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      let shellReplyReceived = false;
+
+      ws.on("open", () => {
+        ws.send(JSON.stringify({
+          header: {
+            msg_id: msgId,
+            msg_type: "execute_request",
+            username: "dgb_studio",
+            session: `session_${Date.now()}`,
+            date: new Date().toISOString(),
+            version: "5.3",
+          },
+          parent_header: {},
+          metadata: {},
+          content: {
+            code: script,
+            silent: false,
+            store_history: true,
+            user_expressions: {},
+            allow_stdin: false,
+            stop_on_error: false,
+          },
+          channel: "shell",
+          buffers: [],
+        }));
+        console.log(`[HeartMuLa] Script sent to kernel`);
+      });
+
+      ws.on("message", (data: any) => {
+        try {
+          const msg = JSON.parse(data.toString());
+          if (msg.parent_header?.msg_id !== msgId) return;
+
+          if (msg.msg_type === "stream") {
+            const text = msg.content?.text || "";
+            if (text.includes("[HeartMuLa]")) {
+              console.log(`[HeartMuLa GPU] ${text.trim()}`);
+            }
+          }
+
+          if (msg.msg_type === "error") {
+            clearTimeout(timeout);
+            ws.close();
+            reject(new Error(msg.content?.evalue || "Execution error"));
+            return;
+          }
+
+          if (msg.msg_type === "execute_reply") {
+            shellReplyReceived = true;
+            if (msg.content?.status === "error") {
+              clearTimeout(timeout);
+              ws.close();
+              reject(new Error(msg.content?.evalue || "Execution failed"));
+              return;
+            }
+          }
+
+          if (msg.msg_type === "status" && msg.content?.execution_state === "busy" && !shellReplyReceived) {
+            console.log(`[HeartMuLa] Kernel accepted job, script is running`);
+            clearTimeout(timeout);
+            ws.close();
+            resolve();
+          }
+        } catch {}
+      });
+
+      ws.on("error", (err: any) => {
+        clearTimeout(timeout);
+        reject(new Error(`WebSocket error: ${err.message}`));
+      });
+    });
+
+    console.log(`[HeartMuLa] Job ${jobId} submitted successfully`);
+    return { success: true, jobId };
+
+  } catch (err: any) {
+    console.error(`[HeartMuLa] Submission failed:`, err.message);
+    return { success: false, jobId, error: err.message };
+  }
 }
 
 function buildJupyterUrl(baseUrl: string, jupyterPort: number): string {
