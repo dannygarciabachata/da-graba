@@ -117,17 +117,45 @@ try:
     from stable_audio_tools import get_pretrained_model
     from stable_audio_tools.inference.generation import generate_diffusion_cond
     
-    print("[SAO Music] Loading Stable Audio Open model...")
-    
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"[SAO Music] Using device: {device}")
+    print(f"[SAO Music] Device: {device} | GPU: {torch.cuda.get_device_name(0) if device == 'cuda' else 'N/A'}")
     
+    # Check for fine-tuned model first
+    finetuned_model = None
+    models_dir = "/workspace/trained_models"
+    if os.path.exists(models_dir):
+        kit_dirs = sorted([d for d in os.listdir(models_dir) if d.startswith("kit_")], reverse=True)
+        for kd in kit_dirs:
+            final_path_check = os.path.join(models_dir, kd, "final_model.pt")
+            best_path_check = os.path.join(models_dir, kd, "best_model.pt")
+            if os.path.exists(final_path_check):
+                finetuned_model = final_path_check
+                break
+            elif os.path.exists(best_path_check):
+                finetuned_model = best_path_check
+                break
+    
+    print("[SAO Music] Loading Stable Audio Open model...")
     model, model_config = get_pretrained_model("stabilityai/stable-audio-open-1.0")
-    
     sample_rate = model_config["sample_rate"]
     sample_size = model_config["sample_size"]
-    
     model = model.to(device)
+    
+    if finetuned_model:
+        try:
+            print(f"[SAO Music] Loading fine-tuned weights from {finetuned_model}")
+            checkpoint = torch.load(finetuned_model, map_location=device)
+            state_dict = checkpoint.get("model_state_dict", checkpoint)
+            model.load_state_dict(state_dict, strict=False)
+            kit_name = checkpoint.get("kit_name", "custom")
+            genre = checkpoint.get("genre", "unknown")
+            print(f"[SAO Music] Fine-tuned model loaded: {kit_name} ({genre})")
+        except Exception as e:
+            print(f"[SAO Music] Could not load fine-tuned model, using base: {e}")
+    else:
+        print("[SAO Music] Using base Stable Audio Open model (no fine-tuned model found)")
+    
+    model.eval()
     
     conditioning = [{
         "prompt": prompt,
@@ -135,7 +163,7 @@ try:
         "seconds_total": min(duration_seconds, 47)
     }]
     
-    print("[SAO Music] Generating audio...")
+    print(f"[SAO Music] Generating audio... prompt: {prompt[:150]}")
     gen_start = time.time()
     
     with torch.no_grad():

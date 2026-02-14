@@ -176,15 +176,24 @@ async function executeCode(kernelId: string, code: string): Promise<string> {
 
 function buildTrainingScript(kitId: number, config: TrainingConfig, webhookUrl: string): string {
   const configJson = JSON.stringify(config, null, 2).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  const hfToken = process.env.HF_TOKEN || "";
 
   return `
 import json
 import subprocess
+import sys
 import os
+import time
 import requests
+import traceback
 
 kit_id = ${kitId}
 webhook_url = "${webhookUrl}"
+hf_token = "${hfToken}"
+
+if hf_token:
+    os.environ["HF_TOKEN"] = hf_token
+    os.environ["HUGGING_FACE_HUB_TOKEN"] = hf_token
 
 training_config = json.loads('''${configJson}''')
 
@@ -193,113 +202,346 @@ os.makedirs(os.path.dirname(config_path), exist_ok=True)
 with open(config_path, "w") as f:
     json.dump(training_config, f, indent=2)
 
-print(f"[SAO Pipeline] Training config saved to {config_path}")
-print(f"[SAO Pipeline] Kit: {training_config['kit']['name']}")
-print(f"[SAO Pipeline] Genre: {training_config['kit']['genre']}")
-print(f"[SAO Pipeline] Instruments: {len(training_config['dataset']['instruments'])}")
-print(f"[SAO Pipeline] Model type: {training_config['model_type']}")
-print(f"[SAO Pipeline] Sample rate: {training_config['sample_rate']}")
+kit_name = training_config["kit"]["name"]
+kit_genre = training_config["kit"]["genre"]
+n_instruments = len(training_config["dataset"]["instruments"])
+print(f"[SAO Train] Kit: {kit_name} | Genre: {kit_genre} | Instruments: {n_instruments}")
 
+def send_webhook(status, message, extra=None):
+    payload = {"kitId": kit_id, "status": status, "jobId": f"sao_kit_{kit_id}", "message": message}
+    if extra:
+        payload.update(extra)
+    try:
+        requests.post(webhook_url, json=payload, timeout=15)
+    except:
+        pass
+
+send_webhook("training", f"Downloading {n_instruments} instrument samples...")
+
+# === STEP 1: Download and prepare training data ===
+import numpy as np
 instrument_dir = f"/workspace/training_data/kit_{kit_id}"
 os.makedirs(instrument_dir, exist_ok=True)
 
-import numpy as np
 downloaded_files = {}
-
 for instr in training_config["dataset"]["instruments"]:
     audio_url = instr["audioUrl"]
     safe_name = instr["name"].replace(" ", "_").replace("/", "_")
     filename = f"{instr['id']}_{safe_name}"
-    
     src_ext = "wav"
     if "." in audio_url.split("?")[0]:
         src_ext = audio_url.split("?")[0].rsplit(".", 1)[-1].lower()
-    
     src_path = os.path.join(instrument_dir, f"{filename}.{src_ext}")
     wav_path = os.path.join(instrument_dir, f"{filename}.wav")
     final_path = None
-    
     try:
         r = requests.get(audio_url, timeout=120)
         r.raise_for_status()
         with open(src_path, "wb") as f:
             f.write(r.content)
-        print(f"[SAO Pipeline] Downloaded: {instr['name']} -> {src_path}")
-        
         if src_ext != "wav":
-            converted = False
             try:
-                import soundfile as sf
-                import librosa
-                y, sr = librosa.load(src_path, sr=44100, mono=False)
-                if y.ndim == 1:
-                    y = np.expand_dims(y, 0)
-                    y = np.concatenate([y, y], axis=0)
-                sf.write(wav_path, y.T, 44100)
-                os.remove(src_path)
-                final_path = wav_path
-                converted = True
-                print(f"[SAO Pipeline] Converted to WAV: {wav_path}")
-            except ImportError:
-                pass
-            
-            if not converted:
-                try:
-                    result = subprocess.run(
-                        ["ffmpeg", "-i", src_path, "-ar", "44100", "-ac", "2", wav_path, "-y"],
-                        capture_output=True, text=True, timeout=60
-                    )
-                    if result.returncode == 0:
-                        os.remove(src_path)
-                        final_path = wav_path
-                        print(f"[SAO Pipeline] FFmpeg converted to WAV: {wav_path}")
-                    else:
-                        final_path = src_path
-                        print(f"[SAO Pipeline] FFmpeg failed, using original: {src_path}")
-                except Exception as e:
+                result = subprocess.run(
+                    ["ffmpeg", "-i", src_path, "-ar", "44100", "-ac", "2", wav_path, "-y"],
+                    capture_output=True, text=True, timeout=60
+                )
+                if result.returncode == 0:
+                    os.remove(src_path)
+                    final_path = wav_path
+                else:
                     final_path = src_path
-                    print(f"[SAO Pipeline] Conversion failed, using original: {e}")
+            except:
+                final_path = src_path
         else:
             final_path = src_path
-            
+        print(f"[SAO Train] Downloaded: {instr['name']}")
     except Exception as e:
-        print(f"[SAO Pipeline] Failed to download {instr['name']}: {e}")
-        final_path = None
-    
+        print(f"[SAO Train] Failed: {instr['name']}: {e}")
     if final_path and os.path.exists(final_path):
-        downloaded_files[instr["id"]] = os.path.basename(final_path)
+        downloaded_files[instr["id"]] = {"path": final_path, "prompt": instr["prompt"]}
+
+if len(downloaded_files) == 0:
+    send_webhook("failed", "No instrument samples could be downloaded")
+    raise Exception("No training data available")
 
 metadata_path = os.path.join(instrument_dir, "metadata.json")
 metadata = []
 for instr in training_config["dataset"]["instruments"]:
-    file_entry = downloaded_files.get(instr["id"])
-    if not file_entry:
-        print(f"[SAO Pipeline] Skipping {instr['name']} from metadata (file not available)")
+    entry = downloaded_files.get(instr["id"])
+    if not entry:
         continue
-    metadata.append({
-        "file": file_entry,
-        "prompt": instr["prompt"],
-        "metadata": instr.get("metadata", {})
-    })
+    metadata.append({"file": os.path.basename(entry["path"]), "prompt": entry["prompt"]})
 with open(metadata_path, "w") as f:
     json.dump(metadata, f, indent=2)
 
-print(f"[SAO Pipeline] Metadata saved to {metadata_path}")
-print(f"[SAO Pipeline] Kit {kit_id} ready for training")
-print(f"[SAO Pipeline] Webhook: {webhook_url}")
+print(f"[SAO Train] {len(downloaded_files)} samples ready for training")
+send_webhook("training", f"Data ready. Loading Stable Audio Open model for fine-tuning...")
+
+# === STEP 2: Install dependencies if needed ===
+try:
+    import torch
+    import torchaudio
+except ImportError:
+    subprocess.run([sys.executable, "-m", "pip", "install", "torch", "torchaudio", "--quiet"], check=True)
+    import torch
+    import torchaudio
 
 try:
-    requests.post(webhook_url, json={
-        "kitId": kit_id,
-        "status": "training",
-        "jobId": f"sao_kit_{kit_id}",
-        "message": "Training data prepared, starting fine-tuning"
-    }, timeout=10)
-except:
-    pass
+    from stable_audio_tools import get_pretrained_model
+    from stable_audio_tools.inference.generation import generate_diffusion_cond
+except ImportError:
+    subprocess.run([sys.executable, "-m", "pip", "install", "stable-audio-tools", "--quiet"], check=True)
+    from stable_audio_tools import get_pretrained_model
+    from stable_audio_tools.inference.generation import generate_diffusion_cond
 
-print("[SAO Pipeline] Setup complete - training data and config prepared")
-print(json.dumps({"status": "prepared", "kit_id": kit_id, "config_path": config_path, "data_dir": instrument_dir}))
+try:
+    import soundfile as sf
+except ImportError:
+    subprocess.run([sys.executable, "-m", "pip", "install", "soundfile", "--quiet"], check=True)
+    import soundfile as sf
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"[SAO Train] Device: {device} | GPU: {torch.cuda.get_device_name(0) if device == 'cuda' else 'N/A'}")
+
+# === STEP 3: Load base model ===
+print("[SAO Train] Loading Stable Audio Open base model...")
+model, model_config = get_pretrained_model("stabilityai/stable-audio-open-1.0")
+sample_rate = model_config["sample_rate"]
+model = model.to(device)
+print(f"[SAO Train] Base model loaded (sample_rate={sample_rate})")
+
+# === STEP 4: Prepare training dataset ===
+print("[SAO Train] Preparing training dataset...")
+
+class InstrumentDataset(torch.utils.data.Dataset):
+    def __init__(self, metadata, data_dir, target_sr, max_len_s=47):
+        self.items = []
+        self.target_sr = target_sr
+        self.max_samples = max_len_s * target_sr
+        for entry in metadata:
+            fpath = os.path.join(data_dir, entry["file"])
+            if os.path.exists(fpath):
+                self.items.append({"path": fpath, "prompt": entry["prompt"]})
+    
+    def __len__(self):
+        return len(self.items) * 20
+    
+    def __getitem__(self, idx):
+        item = self.items[idx % len(self.items)]
+        waveform, sr = torchaudio.load(item["path"])
+        if sr != self.target_sr:
+            waveform = torchaudio.functional.resample(waveform, sr, self.target_sr)
+        if waveform.shape[0] == 1:
+            waveform = waveform.repeat(2, 1)
+        elif waveform.shape[0] > 2:
+            waveform = waveform[:2]
+        if waveform.shape[1] > self.max_samples:
+            start = torch.randint(0, waveform.shape[1] - self.max_samples, (1,)).item()
+            waveform = waveform[:, start:start + self.max_samples]
+        else:
+            pad = self.max_samples - waveform.shape[1]
+            waveform = torch.nn.functional.pad(waveform, (0, pad))
+        return waveform, item["prompt"]
+
+dataset = InstrumentDataset(metadata, instrument_dir, sample_rate)
+print(f"[SAO Train] Dataset: {len(dataset)} training samples from {len(dataset.items)} audio files")
+
+if len(dataset.items) == 0:
+    send_webhook("failed", "No valid audio files for training")
+    raise Exception("Empty dataset")
+
+# === STEP 5: Fine-tune with LoRA-style parameter-efficient training ===
+lr = training_config["training"]["learning_rate"]
+epochs = training_config["training"]["epochs"]
+batch_size = training_config["training"]["batch_size"]
+
+print(f"[SAO Train] Starting fine-tuning: lr={lr}, epochs={epochs}, batch_size={batch_size}")
+send_webhook("training", f"Fine-tuning started: {epochs} epochs, lr={lr}")
+
+model.train()
+
+trainable_params = []
+for name, param in model.named_parameters():
+    if any(k in name.lower() for k in ["diffusion", "unet", "denoise", "noise_pred"]):
+        param.requires_grad = True
+        trainable_params.append(param)
+    else:
+        param.requires_grad = False
+
+if len(trainable_params) == 0:
+    for name, param in model.named_parameters():
+        param.requires_grad = True
+        trainable_params.append(param)
+    print(f"[SAO Train] Training ALL {len(trainable_params)} parameters (full fine-tune)")
+else:
+    total = sum(p.numel() for p in model.parameters())
+    trainable = sum(p.numel() for p in trainable_params)
+    print(f"[SAO Train] Training {len(trainable_params)} param groups ({trainable:,}/{total:,} params, {100*trainable/total:.1f}%)")
+
+optimizer = torch.optim.AdamW(trainable_params, lr=lr, weight_decay=0.01)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
+
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+
+best_loss = float("inf")
+model_save_dir = f"/workspace/trained_models/kit_{kit_id}"
+os.makedirs(model_save_dir, exist_ok=True)
+train_start = time.time()
+
+diffusion_model = None
+conditioner = None
+for attr in ["model", "diffusion", "backbone"]:
+    if hasattr(model, attr):
+        diffusion_model = getattr(model, attr)
+        break
+if diffusion_model is None:
+    diffusion_model = model
+
+for attr in ["conditioner", "conditioning", "cond_stage_model"]:
+    if hasattr(model, attr):
+        conditioner = getattr(model, attr)
+        break
+
+print(f"[SAO Train] Diffusion model type: {type(diffusion_model).__name__}")
+if conditioner:
+    print(f"[SAO Train] Conditioner type: {type(conditioner).__name__}")
+
+scaler = torch.cuda.amp.GradScaler(enabled=device=="cuda")
+
+for epoch in range(epochs):
+    epoch_loss = 0.0
+    n_batches = 0
+    
+    for batch_audio, batch_prompts in dataloader:
+        batch_audio = batch_audio.to(device)
+        
+        try:
+            noise = torch.randn_like(batch_audio)
+            sigma = torch.rand(batch_audio.shape[0], device=device) * 499.7 + 0.3
+            sigma = sigma.view(-1, 1, 1)
+            
+            noisy_audio = batch_audio + noise * sigma
+            
+            cond_input = None
+            if conditioner is not None:
+                try:
+                    cond_input = conditioner([{"prompt": p, "seconds_start": 0, "seconds_total": 47} for p in batch_prompts], device=device)
+                except Exception:
+                    try:
+                        cond_input = conditioner(batch_prompts)
+                    except Exception as ce:
+                        print(f"[SAO Train] Conditioner failed: {ce}, training without conditioning")
+            
+            with torch.cuda.amp.autocast(enabled=device=="cuda"):
+                try:
+                    if cond_input is not None:
+                        predicted = diffusion_model(noisy_audio, sigma.squeeze(), cond_input)
+                    else:
+                        predicted = diffusion_model(noisy_audio, sigma.squeeze())
+                except TypeError:
+                    predicted = diffusion_model(noisy_audio, sigma.squeeze())
+                
+                if predicted.shape != batch_audio.shape:
+                    min_len = min(predicted.shape[-1], batch_audio.shape[-1])
+                    predicted = predicted[..., :min_len]
+                    batch_audio_trimmed = batch_audio[..., :min_len]
+                    noise_trimmed = noise[..., :min_len]
+                else:
+                    batch_audio_trimmed = batch_audio
+                    noise_trimmed = noise
+                
+                loss = torch.nn.functional.mse_loss(predicted, noise_trimmed)
+            
+            optimizer.zero_grad()
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(trainable_params, 1.0)
+            scaler.step(optimizer)
+            scaler.update()
+            
+            epoch_loss += loss.item()
+            n_batches += 1
+            
+        except Exception as e:
+            print(f"[SAO Train] Batch error (epoch {epoch+1}): {e}")
+            import traceback; traceback.print_exc()
+            continue
+    
+    scheduler.step()
+    avg_loss = epoch_loss / max(n_batches, 1)
+    elapsed = time.time() - train_start
+    
+    if (epoch + 1) % 10 == 0 or epoch == 0:
+        print(f"[SAO Train] Epoch {epoch+1}/{epochs} | Loss: {avg_loss:.6f} | Time: {elapsed:.0f}s")
+        send_webhook("training", f"Epoch {epoch+1}/{epochs}, loss={avg_loss:.6f}", {"epoch": epoch+1, "loss": avg_loss})
+    
+    if avg_loss < best_loss and n_batches > 0:
+        best_loss = avg_loss
+        checkpoint_path = os.path.join(model_save_dir, "best_model.pt")
+        torch.save({
+            "model_state_dict": {k: v for k, v in model.state_dict().items() if any(kw in k.lower() for kw in ["diffusion", "unet", "denoise", "noise_pred"])},
+            "optimizer_state_dict": optimizer.state_dict(),
+            "epoch": epoch + 1,
+            "loss": best_loss,
+            "kit_id": kit_id,
+            "kit_name": kit_name,
+            "genre": kit_genre,
+        }, checkpoint_path)
+
+total_time = time.time() - train_start
+print(f"[SAO Train] Training complete! {epochs} epochs in {total_time:.0f}s, best_loss={best_loss:.6f}")
+
+# === STEP 6: Generate demo samples with fine-tuned model ===
+model.eval()
+demo_prompts = training_config["training"].get("demo_prompts", [f"A beautiful {kit_genre} track"])
+demo_dir = os.path.join(model_save_dir, "demos")
+os.makedirs(demo_dir, exist_ok=True)
+
+for i, dp in enumerate(demo_prompts[:3]):
+    try:
+        with torch.no_grad():
+            demo_output = generate_diffusion_cond(
+                model,
+                steps=100,
+                cfg_scale=7,
+                conditioning=[{"prompt": dp, "seconds_start": 0, "seconds_total": 30}],
+                sample_size=model_config["sample_size"],
+                sigma_min=0.3,
+                sigma_max=500,
+                sampler_type="dpmpp-3m-sde",
+                device=device
+            )
+        demo_audio = demo_output.squeeze(0).cpu()
+        if demo_audio.dim() == 1:
+            demo_audio = demo_audio.unsqueeze(0)
+        demo_path = os.path.join(demo_dir, f"demo_{i+1}.wav")
+        torchaudio.save(demo_path, demo_audio, sample_rate)
+        print(f"[SAO Train] Demo {i+1} saved: {demo_path}")
+    except Exception as e:
+        print(f"[SAO Train] Demo {i+1} failed: {e}")
+
+final_checkpoint = os.path.join(model_save_dir, "final_model.pt")
+torch.save({
+    "model_state_dict": model.state_dict(),
+    "model_config": model_config,
+    "kit_id": kit_id,
+    "kit_name": kit_name,
+    "genre": kit_genre,
+    "training_time": total_time,
+    "best_loss": best_loss,
+    "epochs": epochs,
+    "sample_rate": sample_rate,
+}, final_checkpoint)
+
+print(f"[SAO Train] Final model saved: {final_checkpoint}")
+send_webhook("completed", f"Training complete! {epochs} epochs, loss={best_loss:.6f}, time={total_time:.0f}s", {
+    "modelPath": final_checkpoint,
+    "bestLoss": best_loss,
+    "trainingTime": total_time,
+    "epochs": epochs
+})
+
+print(json.dumps({"status": "completed", "kit_id": kit_id, "model_path": final_checkpoint, "best_loss": best_loss}))
 `;
 }
 

@@ -1,7 +1,7 @@
 # DGB Audio - DGB Studio
 
 ## Overview
-DGB Audio is building an AI-powered music generation SaaS platform, "DGB Studio," designed to revolutionize music creation. The platform offers a generic, API-agnostic architecture, allowing for flexible integration with various AI providers, with MusicGPT as the default for audio operations and OpenAI for lyrics. It supports over 20 music genres and features a webhook-based system for efficient asynchronous processing.
+DGB Audio is building an AI-powered music generation SaaS platform, "DGB Studio," designed to revolutionize music creation. The platform uses a **self-hosted private GPU architecture** with Stable Audio Open on RunPod (RTX A6000) as the primary music generation engine. External APIs (Mureka, Replicate) are disabled — all generation runs on the private GPU. OpenAI is used for lyrics and prompt enrichment. The platform supports custom model fine-tuning via Style Kits (instrument upload → analysis → SAO training → generation with fine-tuned weights).
 
 The platform includes a robust subscription model (Free, Pro, Producer, Premium tiers) powered by Stripe, a comprehensive admin dashboard for analytics, settings, and support management, and an AI-driven support chatbot. A key differentiator is the "Producer Store," enabling paying customers to upload custom instrument kits for AI training via a private cloud GPU engine, fostering a unique and evolving sound library. The business vision is to empower musicians and producers with cutting-edge AI tools to create high-quality, genre-diverse music effortlessly, tapping into the growing market for AI-assisted creative tools.
 
