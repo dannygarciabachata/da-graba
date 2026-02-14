@@ -165,10 +165,10 @@ function DemoPlayer() {
   };
 
   return (
-    <div className="relative glass-panel rounded-2xl p-6 border border-white/10 shadow-2xl">
+    <div className="relative glass-panel rounded-2xl p-3 sm:p-6 border border-white/10 shadow-2xl">
       <audio ref={audioRef} src={DEMO_SONG.url} preload="metadata" />
       <div className="rounded-xl bg-gradient-to-br from-gray-900 to-black overflow-hidden relative">
-        <div className="relative aspect-square w-full overflow-hidden">
+        <div className="relative aspect-[4/3] sm:aspect-square w-full overflow-hidden">
           <img
             src={DEMO_SONG.image}
             alt={DEMO_SONG.title}
@@ -287,8 +287,8 @@ export default function Landing() {
           <Button variant="ghost" className="hidden sm:inline-flex text-sm" onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} data-testid="link-pricing">
             Pricing
           </Button>
-          <Button variant="outline" className="border-white/10" onClick={handleLogin} data-testid="button-member-login">
-            Member Login
+          <Button variant="outline" className="border-white/10 text-xs sm:text-sm px-3 sm:px-4" onClick={handleLogin} data-testid="button-member-login">
+            Login
           </Button>
         </div>
       </nav>
@@ -306,15 +306,15 @@ export default function Landing() {
                 The DNA of Danny Garcia
               </div>
 
-              <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight leading-tight" data-testid="text-hero-title">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight leading-tight" data-testid="text-hero-title">
                 Create Bachata with the{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500">
                   DNA of Danny Garcia
                 </span>
               </h1>
 
-              <p className="text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed mx-auto lg:mx-0" data-testid="text-hero-subtitle">
-                Create Bachata, Boleros, and Latin music with the signature sound and DNA of Danny Garcia. AI-powered studio with private cloud GPU — no per-song API costs. Start with 12 free credits.
+              <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed mx-auto lg:mx-0" data-testid="text-hero-subtitle">
+                Create Bachata, Boleros, and Latin music with the signature sound and DNA of Danny Garcia. AI-powered studio — no per-song API costs. Start with 12 free credits.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center lg:justify-start pt-2 md:pt-4">
@@ -338,13 +338,13 @@ export default function Landing() {
                 </Button>
               </div>
 
-              <div className="flex items-center gap-6 justify-center lg:justify-start pt-2 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 justify-center lg:justify-start pt-2 text-xs sm:text-sm text-muted-foreground">
                 <div className="flex items-center gap-1.5">
-                  <Shield className="h-4 w-4 text-green-400" />
+                  <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-400 shrink-0" />
                   <span>No credit card required</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Zap className="h-4 w-4 text-yellow-400" />
+                  <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-400 shrink-0" />
                   <span>12 free credits</span>
                 </div>
               </div>
@@ -387,7 +387,7 @@ export default function Landing() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
             {FEATURES.map((feature, i) => (
               <motion.div key={i} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.08 }}>
                 <Card className="bg-white/[0.02] border-white/5 hover:border-primary/20 transition-colors h-full" data-testid={`card-feature-${i}`}>
@@ -441,7 +441,7 @@ export default function Landing() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
             {PLANS_PREVIEW.map((plan, i) => (
               <motion.div key={i} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.1 }}>
                 <Card
@@ -453,27 +453,27 @@ export default function Landing() {
                       <Badge className="bg-primary text-black font-semibold">Most Popular</Badge>
                     </div>
                   )}
-                  <CardContent className="p-5 md:p-6 flex flex-col h-full">
-                    <h3 className="font-bold text-lg">{plan.name}</h3>
-                    <div className="mt-2 mb-4">
-                      <span className="text-3xl font-bold">{plan.price}</span>
-                      {plan.price !== "$0" && <span className="text-muted-foreground text-sm">/mo</span>}
+                  <CardContent className="p-3 sm:p-5 md:p-6 flex flex-col h-full">
+                    <h3 className="font-bold text-sm sm:text-lg">{plan.name}</h3>
+                    <div className="mt-1.5 sm:mt-2 mb-3 sm:mb-4">
+                      <span className="text-2xl sm:text-3xl font-bold">{plan.price}</span>
+                      {plan.price !== "$0" && <span className="text-muted-foreground text-xs sm:text-sm">/mo</span>}
                     </div>
-                    <ul className="space-y-2 flex-1">
+                    <ul className="space-y-1.5 sm:space-y-2 flex-1">
                       {plan.features.map((f, j) => (
-                        <li key={j} className="flex items-start gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <li key={j} className="flex items-start gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                          <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0 mt-0.5" />
                           <span className="text-muted-foreground">{f}</span>
                         </li>
                       ))}
                     </ul>
                     <Button
-                      className={`w-full mt-6 ${plan.highlight ? "bg-primary text-black" : ""}`}
+                      className={`w-full mt-4 sm:mt-6 text-xs sm:text-sm ${plan.highlight ? "bg-primary text-black" : ""}`}
                       variant={plan.highlight ? "default" : "outline"}
                       onClick={handleLogin}
                       data-testid={`button-plan-${plan.name.toLowerCase()}`}
                     >
-                      {plan.price === "$0" ? "Get Started Free" : "Start Trial"}
+                      {plan.price === "$0" ? "Get Started" : "Start Trial"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -486,16 +486,16 @@ export default function Landing() {
           <motion.div {...fadeUp}>
             <div className="relative rounded-2xl overflow-hidden border border-white/10">
               <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-blue-600/10" />
-              <div className="relative p-8 md:p-16 text-center space-y-6">
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-cta-title">
+              <div className="relative p-6 sm:p-8 md:p-16 text-center space-y-4 sm:space-y-6">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-cta-title">
                   Ready to Create Your First Track?
                 </h2>
-                <p className="text-muted-foreground max-w-xl mx-auto text-lg">
+                <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-lg">
                   Join DGB Audio today and get 12 free credits to start making music with AI. No credit card needed.
                 </p>
                 <Button
                   size="lg"
-                  className="h-14 px-10 text-lg bg-primary text-black font-bold shadow-[0_0_30px_rgba(0,243,255,0.3)] gap-2"
+                  className="h-12 sm:h-14 px-6 sm:px-10 text-base sm:text-lg bg-primary text-black font-bold shadow-[0_0_30px_rgba(0,243,255,0.3)] gap-2"
                   onClick={handleLogin}
                   data-testid="button-cta-signup"
                 >
@@ -510,7 +510,7 @@ export default function Landing() {
 
       <footer className="border-t border-white/5 py-8 md:py-12 px-4" data-testid="footer-landing">
         <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <div className="bg-gradient-to-tr from-primary to-blue-600 p-1.5 rounded-lg">
