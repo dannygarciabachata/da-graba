@@ -126,7 +126,9 @@ export default function LibraryPage() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-medium truncate">{song.title || song.prompt}</h4>
+                      <h4 className="text-sm font-medium truncate">
+                        {song.variationLabel ? `${song.title || song.prompt} (${song.variationLabel})` : (song.title || song.prompt)}
+                      </h4>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                         <span>
                           {song.createdAt && formatDistanceToNow(new Date(song.createdAt), { addSuffix: true })}

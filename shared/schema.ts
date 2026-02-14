@@ -22,6 +22,8 @@ export const songs = pgTable("songs", {
   isPublic: boolean("is_public").default(false),
   mode: text("mode").default("standard"),
   taskId: text("task_id"),
+  pairId: text("pair_id"),
+  variationLabel: text("variation_label"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

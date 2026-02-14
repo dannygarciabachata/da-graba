@@ -142,22 +142,42 @@ export async function registerRoutes(
         finalPrompt = input.prompt;
       }
 
-      const song = await storage.createSong({
+      const pairId = `pair_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+      const song1 = await storage.createSong({
         userId,
         title: songTitle,
         prompt: finalPrompt,
         genre: genre || null,
         mode,
+        pairId,
+        variationLabel: "A",
       });
 
-      processMusicGeneration(song.id, finalPrompt, {
+      const song2 = await storage.createSong({
+        userId,
+        title: songTitle,
+        prompt: finalPrompt,
+        genre: genre || null,
+        mode,
+        pairId,
+        variationLabel: "B",
+      });
+
+      processMusicGeneration(song1.id, finalPrompt, {
+        style,
+        duration,
+        lyrics,
+      });
+
+      processMusicGeneration(song2.id, finalPrompt, {
         style,
         duration,
         lyrics,
       });
 
       const remainingCredits = isUnlimited ? -1 : await storage.getUserCredits(userId);
-      res.status(202).json({ ...song, remainingCredits });
+      res.status(202).json({ ...song1, pairId, remainingCredits });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });

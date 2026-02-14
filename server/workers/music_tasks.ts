@@ -98,27 +98,11 @@ export async function processMusicGeneration(
       ? `${safePrompt}. Lyrics: ${generatedLyrics.substring(0, 200)}` 
       : safePrompt;
 
-    // Priority 1: Private Cloud GPU (RunPod SAO) - proprietary Danny Garcia model
-    if (canUseRunPodMusic()) {
-      console.log(`[Worker] Using RunPod SAO engine for music generation (self-hosted)`);
-
-      const result = await submitRunPodMusicGeneration(songId, fullPrompt, duration);
-
-      if (result.success) {
-        await storage.updateSongTaskId(songId, result.jobId);
-        console.log(`[Worker] RunPod job ${result.jobId} submitted for song ${songId}`);
-        startRunPodTimeout(songId, 600000);
-        return;
-      } else {
-        console.log(`[Worker] RunPod submission failed: ${result.error}, trying fallback providers...`);
-      }
-    }
-
-    // Priority 2+: Generic API providers (Replicate, Mureka, custom servers, etc.) configured in Admin panel
+    // Priority 1: Generic API providers (Replicate, Mureka) - fastest, serverless
     const useGeneric = await hasProviderForOperation("music_generation");
 
     if (useGeneric) {
-      console.log(`[Worker] Using API provider for music generation`);
+      console.log(`[Worker] Using API provider for music generation (fast path)`);
       const webhookUrl = getWebhookUrl();
 
       const enrichedPrompt = await enrichPromptForMusicGen(safePrompt, style);
@@ -140,23 +124,40 @@ export async function processMusicGeneration(
         console.log(`[Worker] Task ${submitResult.taskId} submitted for song ${songId} via ${submitResult.providerName}`);
         const needsImage = !submitResult.imageUrl;
         startFallbackPoller(songId, submitResult.taskId, true, submitResult.endpointId, needsImage ? { prompt: safePrompt, genre: style } : undefined);
+        return;
       }
-    } else {
-      // Last resort: MusicGPT fallback
-      console.log(`[Worker] Using MusicGPT fallback for music generation`);
-      const webhookUrl = getMusicGPTWebhookUrl();
-
-      const submitResult = await submitMusicGPTGeneration(safePrompt, style, {
-        lyrics: generatedLyrics || undefined,
-        duration,
-        webhookUrl,
-      });
-
-      await storage.updateSongTaskId(songId, submitResult.task_id);
-      pendingTaskMap.set(submitResult.task_id, songId);
-      console.log(`[Worker] Task ${submitResult.task_id} submitted for song ${songId}`);
-      startFallbackPoller(songId, submitResult.task_id, false);
     }
+
+    // Priority 2: Private Cloud GPU (RunPod SAO) - slower but proprietary model
+    if (canUseRunPodMusic()) {
+      console.log(`[Worker] Using RunPod SAO engine for music generation (self-hosted)`);
+
+      const result = await submitRunPodMusicGeneration(songId, fullPrompt, duration);
+
+      if (result.success) {
+        await storage.updateSongTaskId(songId, result.jobId);
+        console.log(`[Worker] RunPod job ${result.jobId} submitted for song ${songId}`);
+        startRunPodTimeout(songId, 300000);
+        return;
+      } else {
+        console.log(`[Worker] RunPod submission failed: ${result.error}, trying MusicGPT fallback...`);
+      }
+    }
+
+    // Last resort: MusicGPT fallback
+    console.log(`[Worker] Using MusicGPT fallback for music generation`);
+    const webhookUrl = getMusicGPTWebhookUrl();
+
+    const submitResult = await submitMusicGPTGeneration(safePrompt, style, {
+      lyrics: generatedLyrics || undefined,
+      duration,
+      webhookUrl,
+    });
+
+    await storage.updateSongTaskId(songId, submitResult.task_id);
+    pendingTaskMap.set(submitResult.task_id, songId);
+    console.log(`[Worker] Task ${submitResult.task_id} submitted for song ${songId}`);
+    startFallbackPoller(songId, submitResult.task_id, false);
   } catch (err: any) {
     console.error(`[Worker] Music generation failed for song ${songId}:`, err);
     await storage.updateSongStatus(songId, "failed", undefined, err.message || "Generation failed");

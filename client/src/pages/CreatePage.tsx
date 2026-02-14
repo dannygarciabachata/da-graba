@@ -103,7 +103,24 @@ export default function CreatePage() {
   const { mutate: deleteSong } = useDeleteSong();
   const { data: styleKits } = useStyleKits();
 
-  const recentSongs = songs?.slice(0, 6) ?? [];
+  const allSongs = songs ?? [];
+  const groupedSongs: { pairId: string | null; songs: any[] }[] = [];
+  const seen = new Set<number>();
+  for (const song of allSongs) {
+    if (seen.has(song.id)) continue;
+    seen.add(song.id);
+    if (song.pairId) {
+      const pair = allSongs.filter((s: any) => s.pairId === song.pairId);
+      pair.forEach((s: any) => seen.add(s.id));
+      const existing = groupedSongs.find((g) => g.pairId === song.pairId);
+      if (!existing) {
+        groupedSongs.push({ pairId: song.pairId, songs: pair });
+      }
+    } else {
+      groupedSongs.push({ pairId: null, songs: [song] });
+    }
+  }
+  const recentGroups = groupedSongs.slice(0, 6);
 
   const handleGenerate = () => {
     if (!prompt.trim() && !title.trim()) return;
@@ -411,15 +428,15 @@ export default function CreatePage() {
                     <Loader2 className="h-5 w-5 text-primary animate-spin" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Generating your track...</p>
-                    <p className="text-xs text-muted-foreground">This usually takes 30-60 seconds</p>
+                    <p className="text-sm font-medium">Generando 2 versiones de tu track...</p>
+                    <p className="text-xs text-muted-foreground">Elige la que más te guste. ~30-60 segundos</p>
                   </div>
                 </div>
               </Card>
             </motion.div>
           )}
 
-          {recentSongs.length > 0 && (
+          {recentGroups.length > 0 && (
             <div className="mb-8">
               <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
@@ -436,80 +453,110 @@ export default function CreatePage() {
                   <ChevronRight className="h-3 w-3 ml-1" />
                 </Button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                {recentSongs.map((song: any) => (
-                  <Card
-                    key={song.id}
-                    className={cn(
-                      "overflow-visible cursor-pointer transition-all border-white/5",
-                      currentSong?.id === song.id
-                        ? "border-primary/50 bg-primary/5"
-                        : "hover-elevate"
-                    )}
-                    onClick={() => song.status === "completed" && setCurrentSong(song)}
-                    data-testid={`card-recent-song-${song.id}`}
-                  >
-                    <div className="flex items-start gap-3 p-3">
-                      <div className="h-12 w-12 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        {song.imageUrl ? (
-                          <img
-                            src={song.imageUrl}
-                            alt={song.title}
-                            className="h-12 w-12 rounded-md object-cover"
-                          />
-                        ) : song.status === "processing" ? (
-                          <Loader2 className="h-5 w-5 text-primary animate-spin" />
-                        ) : song.status === "completed" ? (
-                          <Play className="h-5 w-5 text-primary fill-current" />
-                        ) : (
-                          <AlertCircle className="h-5 w-5 text-destructive" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium line-clamp-1">
-                          {song.title || song.prompt}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          {song.genre && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-white/10">
-                              {song.genre}
-                            </Badge>
-                          )}
-                          <span className="text-[10px] text-muted-foreground">
-                            {song.createdAt && formatDistanceToNow(new Date(song.createdAt), { addSuffix: true })}
+              <div className="space-y-3">
+                {recentGroups.map((group) => {
+                  const isPair = group.songs.length > 1;
+                  return (
+                    <div key={group.pairId || group.songs[0]?.id} data-testid={`group-${group.pairId || group.songs[0]?.id}`}>
+                      {isPair && (
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">
+                            <Zap className="h-2.5 w-2.5 mr-1" />
+                            2 versiones
+                          </Badge>
+                          <span className="text-[10px] text-muted-foreground line-clamp-1">
+                            {group.songs[0]?.title || group.songs[0]?.prompt}
                           </span>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-0.5 flex-shrink-0">
-                        {song.status === "completed" && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setLocation("/studio");
-                            }}
-                            data-testid={`button-studio-${song.id}`}
+                      )}
+                      <div className={cn("grid gap-2.5", isPair ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3")}>
+                        {group.songs.map((song: any) => (
+                          <Card
+                            key={song.id}
+                            className={cn(
+                              "overflow-visible cursor-pointer transition-all border-white/5",
+                              currentSong?.id === song.id
+                                ? "border-primary/50 bg-primary/5"
+                                : "hover-elevate"
+                            )}
+                            onClick={() => song.status === "completed" && setCurrentSong(song)}
+                            data-testid={`card-recent-song-${song.id}`}
                           >
-                            <Scissors className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-muted-foreground"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteSong(song.id);
-                          }}
-                          data-testid={`button-delete-${song.id}`}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                            <div className="flex items-start gap-3 p-3">
+                              <div className="h-12 w-12 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0 relative">
+                                {song.imageUrl ? (
+                                  <img
+                                    src={song.imageUrl}
+                                    alt={song.title}
+                                    className="h-12 w-12 rounded-md object-cover"
+                                  />
+                                ) : song.status === "processing" || song.status === "pending" ? (
+                                  <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                                ) : song.status === "completed" ? (
+                                  <Play className="h-5 w-5 text-primary fill-current" />
+                                ) : (
+                                  <AlertCircle className="h-5 w-5 text-destructive" />
+                                )}
+                                {song.variationLabel && (
+                                  <span className="absolute -top-1.5 -left-1.5 h-5 w-5 rounded-full bg-primary text-black text-[10px] font-bold flex items-center justify-center">
+                                    {song.variationLabel}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-medium line-clamp-1">
+                                  {song.variationLabel ? `Version ${song.variationLabel}` : (song.title || song.prompt)}
+                                  {!song.variationLabel && ""}
+                                </h4>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {song.genre && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-white/10">
+                                      {song.genre}
+                                    </Badge>
+                                  )}
+                                  {song.status === "processing" || song.status === "pending" ? (
+                                    <span className="text-[10px] text-primary">Generando...</span>
+                                  ) : (
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {song.createdAt && formatDistanceToNow(new Date(song.createdAt), { addSuffix: true })}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-0.5 flex-shrink-0">
+                                {song.status === "completed" && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setLocation("/studio");
+                                    }}
+                                    data-testid={`button-studio-${song.id}`}
+                                  >
+                                    <Scissors className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteSong(song.id);
+                                  }}
+                                  data-testid={`button-delete-${song.id}`}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
                       </div>
                     </div>
-                  </Card>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

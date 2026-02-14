@@ -62,7 +62,7 @@ export function useGenerateSong() {
       queryClient.invalidateQueries({ queryKey: ["/api/user/credits"] });
       toast({
         title: "DGB Studio Activated",
-        description: "Your track is being composed by the DGB Studio engine.",
+        description: "Generando 2 versiones de tu track. Elige la mejor.",
       });
     },
     onError: (error: Error) => {
