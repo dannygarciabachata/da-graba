@@ -239,7 +239,7 @@ export default function LibraryPage() {
             >
               <CoverArtDesigner
                 songTitle={designCoverFor.title || ""}
-                artistName={user?.username || ""}
+                artistName={user?.firstName || ""}
                 onClose={() => setDesignCoverFor(null)}
                 onSave={(dataUrl) => {
                   const link = document.createElement("a");
