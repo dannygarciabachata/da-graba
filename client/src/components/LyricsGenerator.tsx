@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Mic2, Copy } from "lucide-react";
+import { Loader2, Mic2, Copy, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 export function LyricsGenerator() {
   const [theme, setTheme] = useState("");
@@ -15,6 +16,7 @@ export function LyricsGenerator() {
   const [currentLyrics, setCurrentLyrics] = useState("");
   const { mutate: generate, isPending } = useGenerateLyrics();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const handleGenerate = () => {
     if (!theme.trim()) return;
@@ -28,6 +30,25 @@ export function LyricsGenerator() {
   const copyToClipboard = () => {
     navigator.clipboard.writeText(currentLyrics);
     toast({ description: "Lyrics copied to clipboard" });
+  };
+
+  const handleCreateSong = () => {
+    const styleToGenre: Record<string, string> = {
+      romantic: "Bachata",
+      dance: "Reggaeton",
+      heartbreak: "Bolero",
+    };
+    const genre = styleToGenre[style] || "Bachata";
+    const titleFromTheme = theme.trim().split(/\s+/).slice(0, 5).map(
+      (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+    ).join(" ");
+
+    const params = new URLSearchParams({
+      lyrics: currentLyrics,
+      title: titleFromTheme,
+      genre,
+    });
+    setLocation(`/create?${params.toString()}`);
   };
 
   return (
@@ -95,17 +116,30 @@ export function LyricsGenerator() {
         </ScrollArea>
         
         {currentLyrics && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="absolute top-2 right-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-            onClick={copyToClipboard}
-            data-testid="button-copy-lyrics"
-          >
-            <Copy className="h-4 w-4" />
-          </Button>
+          <div className="absolute top-2 right-2 flex items-center gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+              onClick={copyToClipboard}
+              data-testid="button-copy-lyrics"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
         )}
       </div>
+
+      {currentLyrics && (
+        <Button
+          onClick={handleCreateSong}
+          className="w-full mt-4 bg-primary text-black font-semibold gap-2"
+          data-testid="button-create-song-from-lyrics"
+        >
+          <Sparkles className="h-4 w-4" />
+          Create Song
+        </Button>
+      )}
     </motion.div>
   );
 }

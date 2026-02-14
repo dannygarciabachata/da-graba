@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGenerateSong, useSongs } from "@/hooks/use-songs";
 import { useStyleKits } from "@/hooks/use-style-kits";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,7 @@ const GENRE_CARDS = [
   { value: "House", likes: "18K" },
   { value: "Soul", likes: "23K" },
   { value: "Country", likes: "15K" },
+  { value: "Bolero", likes: "16K" },
   { value: "Blues", likes: "12K" },
   { value: "Indie", likes: "21K" },
   { value: "Classical", likes: "9K" },
@@ -103,6 +104,28 @@ export default function CreatePage() {
   const { mutate: deleteSong } = useDeleteSong();
   const { data: styleKits } = useStyleKits();
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const lyricsParam = params.get("lyrics");
+    const titleParam = params.get("title");
+    const genreParam = params.get("genre");
+    if (lyricsParam) {
+      setLyrics(lyricsParam);
+      setShowProControls(true);
+    }
+    if (titleParam) setTitle(titleParam);
+    if (genreParam) {
+      const match = GENRE_CARDS.find(
+        (g) => g.value.toLowerCase() === genreParam.toLowerCase()
+      );
+      if (match) setSelectedGenre(match.value);
+      else setSelectedGenre(genreParam);
+    }
+    if (lyricsParam || titleParam) {
+      window.history.replaceState({}, "", "/create");
+    }
+  }, []);
+
   const allSongs = songs ?? [];
   const groupedSongs: { pairId: string | null; songs: any[] }[] = [];
   const seen = new Set<number>();
@@ -129,7 +152,7 @@ export default function CreatePage() {
     : null;
 
   const handleGenerate = () => {
-    if (!prompt.trim() && !title.trim()) return;
+    if (!prompt.trim() && !title.trim() && !lyrics.trim()) return;
     const finalPrompt = isInstrumental
       ? `${prompt || title} (instrumental, no vocals)`
       : prompt || title;
@@ -170,44 +193,44 @@ export default function CreatePage() {
             </p>
           </motion.div>
 
-          <div className="mb-6">
-            <div className="relative">
-              <Textarea
-                placeholder={`${selectedGenre} with vocals about...`}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="bg-card border-white/10 focus:border-primary/50 focus:ring-primary/20 min-h-[100px] resize-none text-base pr-24"
-                data-testid="input-prompt"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                    handleGenerate();
-                  }
-                }}
-              />
-              <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-muted-foreground"
-                  onClick={handleRandomPrompt}
-                  data-testid="button-random-prompt"
-                >
-                  <Dices className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  onClick={handleGenerate}
-                  disabled={isPending || (!prompt.trim() && !title.trim())}
-                  className="bg-primary text-black"
-                  data-testid="button-submit"
-                >
-                  {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
+          <div className="mb-6 space-y-3">
+            <Textarea
+              placeholder={`${selectedGenre} with vocals about...`}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              className="bg-card border-white/10 focus:border-primary/50 focus:ring-primary/20 min-h-[100px] resize-none text-base"
+              data-testid="input-prompt"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  handleGenerate();
+                }
+              }}
+            />
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                variant="ghost"
+                className="text-muted-foreground gap-1.5"
+                onClick={handleRandomPrompt}
+                data-testid="button-random-prompt"
+              >
+                <Dices className="h-4 w-4" />
+                <span className="text-xs">Random</span>
+              </Button>
+              <Button
+                onClick={handleGenerate}
+                disabled={isPending || (!prompt.trim() && !title.trim() && !lyrics.trim())}
+                className="bg-primary text-black gap-2"
+                data-testid="button-submit"
+              >
+                {isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
                     <Send className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+                    <span>Create</span>
+                  </>
+                )}
+              </Button>
             </div>
           </div>
 
