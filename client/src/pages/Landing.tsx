@@ -96,6 +96,7 @@ const DEMO_SONG = {
   artist: "DGB Studio AI",
   genre: "Bachata",
   url: "/audio/songs/ac1a3408-dc10-4b06-a8d4-39f0aebdf587_song.mp3",
+  image: "https://lalals.s3.amazonaws.com/GenImages/1f6ff91d-a91e-4abc-87cd-f155ce2ea1fe.jpg",
 };
 
 const STEM_HEIGHTS = [
@@ -166,31 +167,41 @@ function DemoPlayer() {
   return (
     <div className="relative glass-panel rounded-2xl p-6 border border-white/10 shadow-2xl">
       <audio ref={audioRef} src={DEMO_SONG.url} preload="metadata" />
-      <div className="rounded-xl bg-gradient-to-br from-gray-900 to-black overflow-hidden relative p-6">
-        <div className="flex flex-col items-center gap-5">
-          <div className="flex items-center gap-2 text-xs text-primary/80">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>AI-Generated Demo</span>
+      <div className="rounded-xl bg-gradient-to-br from-gray-900 to-black overflow-hidden relative">
+        <div className="relative aspect-square w-full overflow-hidden">
+          <img
+            src={DEMO_SONG.image}
+            alt={DEMO_SONG.title}
+            className="w-full h-full object-cover"
+            data-testid="img-demo-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/10">
+            <Sparkles className="w-3 h-3 text-primary" />
+            <span className="text-[10px] text-primary font-medium">AI-Generated</span>
           </div>
 
           <button
             onClick={togglePlay}
-            className="w-20 h-20 rounded-full bg-primary/20 hover:bg-primary/30 border border-primary/30 flex items-center justify-center transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(0,243,255,0.3)]"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-black/40 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-primary/30 hover:border-primary/40 hover:shadow-[0_0_30px_rgba(0,243,255,0.3)]"
             data-testid="button-demo-play"
           >
             {isPlaying ? (
-              <Pause className="w-8 h-8 text-primary" />
+              <Pause className="w-7 h-7 text-white" />
             ) : (
-              <Play className="w-8 h-8 text-primary ml-1" />
+              <Play className="w-7 h-7 text-white ml-0.5" />
             )}
           </button>
 
-          <div className="text-center space-y-1">
-            <p className="font-bold text-lg" data-testid="text-demo-title">{DEMO_SONG.title}</p>
-            <p className="text-xs text-muted-foreground">{DEMO_SONG.artist} &middot; {DEMO_SONG.genre}</p>
+          <div className="absolute bottom-4 left-4 right-4">
+            <p className="font-bold text-lg text-white drop-shadow-lg" data-testid="text-demo-title">{DEMO_SONG.title}</p>
+            <p className="text-xs text-white/70">{DEMO_SONG.artist} &middot; {DEMO_SONG.genre}</p>
           </div>
+        </div>
 
-          <div className="w-full space-y-2">
+        <div className="px-4 pb-4 pt-3 space-y-3">
+          <div className="w-full space-y-1">
             <div
               ref={progressBarRef}
               className="relative h-6 w-full cursor-pointer group flex items-center"
@@ -212,10 +223,10 @@ function DemoPlayer() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full">
+          <div className="flex items-center gap-2 w-full">
             {["Vocals", "Drums", "Bass", "Melody"].map((stem, i) => (
-              <div key={stem} className="flex-1 text-center p-2 rounded-lg bg-white/5 border border-white/5">
-                <div className="h-6 flex items-end justify-center gap-[2px]">
+              <div key={stem} className="flex-1 text-center p-1.5 rounded-lg bg-white/5 border border-white/5">
+                <div className="h-5 flex items-end justify-center gap-[2px]">
                   {STEM_HEIGHTS[i].map((h, j) => (
                     <div
                       key={j}
