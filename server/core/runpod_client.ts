@@ -54,7 +54,7 @@ async function getOrCreateKernel(): Promise<string> {
   return kernel.id;
 }
 
-async function executeCode(kernelId: string, code: string): Promise<string> {
+async function executeCode(kernelId: string, code: string, timeoutMs: number = 60000): Promise<string> {
   const base = getBaseUrl();
   const token = RUNPOD_TOKEN();
 
@@ -66,7 +66,7 @@ async function executeCode(kernelId: string, code: string): Promise<string> {
     const timeout = setTimeout(() => {
       try { ws.close(); } catch {}
       resolve("execution_timeout_submitted");
-    }, 60000);
+    }, timeoutMs);
 
     let ws: any;
 
@@ -920,6 +920,71 @@ export async function stopGpuPod(): Promise<{ success: boolean; message: string 
   }
 }
 
+let gpuSetupDone = false;
+let gpuSetupRunning = false;
+
+export async function ensureGpuReady(): Promise<boolean> {
+  if (gpuSetupDone) return true;
+  if (gpuSetupRunning) {
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      if (gpuSetupDone) return true;
+    }
+    return false;
+  }
+  
+  try {
+    gpuSetupRunning = true;
+    console.log("[GPU] Checking if dependencies are installed...");
+    const kernelId = await getOrCreateKernel();
+    
+    const checkCode = `
+import torch
+missing = []
+for mod in ['diffusers', 'stable_audio_tools', 'demucs', 'librosa', 'scipy', 'soundfile']:
+    try:
+        __import__(mod)
+    except ImportError:
+        missing.append(mod)
+cuda_ok = torch.cuda.is_available()
+if not missing and cuda_ok:
+    print("GPU_READY")
+else:
+    print(f"MISSING:{','.join(missing)}")
+    print(f"CUDA:{'OK' if cuda_ok else 'NO'}")
+`;
+    const checkResult = await executeCode(kernelId, checkCode);
+    
+    if (checkResult.includes("GPU_READY")) {
+      console.log("[GPU] All dependencies ready, CUDA available");
+      gpuSetupDone = true;
+      gpuSetupRunning = false;
+      return true;
+    }
+    
+    console.log("[GPU] Missing dependencies, running auto-setup...");
+    const result = await setupGpuEnvironment();
+    gpuSetupDone = result.success;
+    gpuSetupRunning = false;
+    
+    if (result.success) {
+      console.log("[GPU] Auto-setup completed successfully");
+    } else {
+      console.log(`[GPU] Auto-setup failed: ${result.output.substring(0, 200)}`);
+    }
+    return result.success;
+  } catch (err: any) {
+    gpuSetupRunning = false;
+    console.log(`[GPU] Setup check failed: ${err.message}`);
+    return false;
+  }
+}
+
+export function resetGpuSetupState() {
+  gpuSetupDone = false;
+  gpuSetupRunning = false;
+}
+
 export async function setupGpuEnvironment(): Promise<{ success: boolean; output: string }> {
   try {
     const kernelId = await getOrCreateKernel();
@@ -1002,7 +1067,7 @@ for pkg in ["torch", "torchaudio", "diffusers", "transformers", "accelerate", "s
 print("\\n".join(results))
 `;
 
-    const output = await executeCode(kernelId, setupScript);
+    const output = await executeCode(kernelId, setupScript, 300000);
     const isTimeout = output === "execution_timeout_submitted" || output === "timeout";
     if (isTimeout) {
       return { success: false, output: "Setup timed out. The installation may still be running on the GPU. Check status again in a few minutes." };

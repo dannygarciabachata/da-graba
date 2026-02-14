@@ -9,6 +9,7 @@ import {
 } from "../core/musicgpt_engine";
 import { generateCreativeLyrics, enrichPromptForMusicGen } from "../core/antigravity_engine";
 import { canUseRunPodMusic, submitRunPodMusicGeneration, submitHeartMuLaGeneration } from "../core/runpod_music_engine";
+import { ensureGpuReady } from "../core/runpod_client";
 import { generateImageBuffer } from "../replit_integrations/image/client";
 import * as fs from "fs";
 import * as path from "path";
@@ -121,6 +122,20 @@ export async function processMusicGeneration(
 
     const enrichedPrompt = await enrichPromptForMusicGen(safePrompt, style);
     console.log(`[Worker] Enriched prompt: "${enrichedPrompt.substring(0, 150)}"`);
+
+    // Auto-setup GPU if needed before attempting generation
+    if (canUseRunPodMusic()) {
+      try {
+        const gpuReady = await ensureGpuReady();
+        if (gpuReady) {
+          console.log(`[Worker] GPU confirmed ready for song ${songId}`);
+        } else {
+          console.log(`[Worker] GPU setup incomplete, will attempt generation anyway`);
+        }
+      } catch (err: any) {
+        console.log(`[Worker] GPU readiness check failed: ${err.message}`);
+      }
+    }
 
     // Priority 1: HeartMuLa — lyrics + vocals + Spanish support (unless instrumental-only)
     if (canUseRunPodMusic() && !instrumental) {
