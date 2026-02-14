@@ -61,17 +61,17 @@ export interface MusicPromptConfig {
 
 export const PROMPT_VERSIONS: Record<string, string> = {
   "bachata-romantic":
-    "romantic Dominican Bachata, nylon guitar, bongo, guira, emotional male vocals in Spanish, Latin dance, 128 BPM, A minor",
+    "romantic Dominican bachata, tight guitar-driven Latin groove, warm and intimate feel, smooth rhythm section locked together, professional studio quality, 128 BPM, A minor",
   "bachata-dance":
-    "upbeat Dominican Bachata, driving nylon guitar, fast bongo, guira, congas, male vocals in Spanish, Latin dance party, 140 BPM, C major",
+    "upbeat Dominican bachata, energetic Latin dance groove, driving rhythm with tight percussion, lively and fun feel, polished mix, 140 BPM, C major",
   "bachata-bolero":
-    "slow Bachata Bolero, arpeggiated nylon guitar, piano, soft bongo, emotional male vocals in Spanish, nostalgic Latin, 108 BPM, D minor",
+    "slow bachata bolero, gentle and emotional Latin ballad, soft guitar arpeggios with warm piano, dreamy intimate atmosphere, cohesive arrangement, 108 BPM, D minor",
   "trio-serenade":
-    "Latin Bolero Trio Serenade, requinto guitar, nylon guitars, male vocal harmony in Spanish, acoustic intimate, 105 BPM, E minor",
+    "Latin bolero trio serenade, intimate acoustic guitar ensemble with vocal harmony, warm romantic feel, tight acoustic arrangement, 105 BPM, E minor",
   "heart-mula":
-    "Dominican Bachata, passionate, nylon guitar, bongo drums, guira, emotional male vocals in Spanish, Latin dance rhythm, 130 BPM, D minor",
+    "passionate Dominican bachata, emotional Latin groove with warm guitar rhythm, tight band playing together, romantic and intense, 130 BPM, D minor",
   "bachata-urbana":
-    "modern Urban Bachata, electric guitar, bongo, trap hi-hats, 808 bass, R&B male vocals in Spanish, contemporary Latin, 138 BPM, G minor",
+    "modern urban bachata, contemporary Latin R&B fusion, polished production with electronic elements and guitar, tight modern groove, 138 BPM, G minor",
 };
 
 export function buildMusicGenPrompt(userPrompt: string, style: string = "bachata-romantic"): string {
@@ -148,13 +148,13 @@ export function buildStyleKitPrompt(
   genre: string,
   instruments: { name: string; type: string; description?: string | null }[]
 ): string {
-  const instrumentNames = instruments.map((i) => i.name).join(", ");
   const genreLabel = genre.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const instrumentCount = instruments.length;
 
-  let prompt = `${userPrompt}, ${genreLabel} style, ${kitName}: ${instrumentNames}, studio quality`;
+  let prompt = `${userPrompt}, ${genreLabel} style, ${kitName} ensemble with ${instrumentCount} instruments playing as a tight cohesive band, professional studio quality`;
 
   if (prompt.length > 290) {
-    prompt = `${userPrompt}, ${genreLabel}, ${kitName}, studio quality`;
+    prompt = `${userPrompt}, ${genreLabel}, ${kitName}, tight cohesive band, studio quality`;
   }
   if (prompt.length > 290) {
     prompt = `${userPrompt}, ${genreLabel}, studio quality`;

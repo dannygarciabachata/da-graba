@@ -57,16 +57,16 @@ export async function generateFullCreativePackage(
 }
 
 const GENRE_INSTRUMENT_MAP: Record<string, string> = {
-  "bachata": "requinto lead guitar melodic arpeggios, segunda rhythm guitar strumming, bongo drums syncopated pattern, güira metallic scraping percussion, electric bass groovy bassline, romantic Dominican bachata feel, warm tropical production, Latin rhythm guitar picking, 130 BPM, studio quality",
-  "bolero": "nylon string guitar, soft piano, gentle strings, romantic slow ballad, 80 BPM, emotional and intimate",
-  "salsa": "conga drums, timbales, brass section, piano montuno, energetic Latin dance rhythm, 180 BPM",
-  "merengue": "tambora drum, güira, accordion, fast-paced Dominican dance rhythm, 160 BPM, upbeat and festive",
-  "reggaeton": "dembow beat, 808 bass, hi-hats, synth pads, urban Latin rhythm, 90 BPM",
-  "latin pop": "acoustic guitar, light percussion, pop drums, piano, catchy melodic Latin pop, 120 BPM",
-  "cumbia": "accordion, cumbia drums, electric bass, guacharaca shaker, Colombian dance rhythm, 100 BPM",
-  "edm": "synthesizer pads, electronic drums, bass drops, buildups, energetic dance music, 128 BPM",
-  "r&b": "smooth electric piano, soft drums, bass guitar, soulful R&B groove, 85 BPM",
-  "pop": "acoustic guitar, pop drums, synthesizer, catchy melody, upbeat pop production, 120 BPM",
+  "bachata": "tight Dominican bachata band playing together in perfect sync, warm nylon guitar rhythm with melodic picking, smooth Latin groove, romantic and intimate feel, professional studio recording, cohesive ensemble, 130 BPM",
+  "bolero": "intimate romantic bolero ensemble, soft nylon guitar arpeggios with gentle piano chords, slow and emotional Latin ballad, warm and dreamy production, cohesive arrangement, 80 BPM",
+  "salsa": "tight salsa band with driving piano montuno and brass hits, energetic Latin dance groove, professional big band sound, all instruments locked in together, 180 BPM",
+  "merengue": "fast energetic merengue band, driving accordion melody with tight drum pattern, upbeat Caribbean dance music, cohesive festive sound, 160 BPM",
+  "reggaeton": "modern reggaeton beat with deep bass and crisp hi-hats, urban Latin groove, polished club production, tight rhythm section, 90 BPM",
+  "latin pop": "polished Latin pop production, acoustic guitar with light drums and melodic hooks, catchy and warm, radio-ready sound, 120 BPM",
+  "cumbia": "traditional Colombian cumbia groove, accordion-driven melody with rhythmic percussion, tropical dance feel, tight band arrangement, 100 BPM",
+  "edm": "electronic dance music with synthesizer pads and driving beats, professional club production with buildups and drops, 128 BPM",
+  "r&b": "smooth R&B groove with warm electric piano and soft drums, soulful and intimate, polished production, 85 BPM",
+  "pop": "catchy pop production with acoustic guitar and modern drums, bright and upbeat, radio-ready mix, 120 BPM",
 };
 
 export async function enrichPromptForMusicGen(
@@ -82,18 +82,21 @@ export async function enrichPromptForMusicGen(
       messages: [
         {
           role: "system",
-          content: `You are a music production prompt engineer specializing in Latin music. Convert user music requests into concise English descriptions optimized for AI music generation models like MusicGen and Replicate.
+          content: `You are a music prompt engineer for AI music generation models (MusicGen, Replicate).
 
-Rules:
-- Output ONLY the English music description, nothing else
-- Describe specific instruments, tempo, mood, rhythm pattern, genre characteristics
-- Keep under 250 characters
-- Never include lyrics or singing instructions
-- Focus on instrumental and production qualities: reverb, warmth, mixing style
-- If the input is in Spanish or another language, translate the intent to English
-- For Bachata: always emphasize requinto lead guitar picking, segunda rhythm guitar, bongo syncopation, güira percussion, and warm bass
+CRITICAL RULES:
+- Output ONLY a short English music description (under 200 chars)
+- NEVER list instruments one by one - describe the OVERALL SOUND as a cohesive band
+- Describe how the music FEELS: tight, polished, warm, groovy, professional
+- Use words like: "tight ensemble", "cohesive band", "locked-in groove", "professional mix"
+- Focus on the VIBE and ENERGY, not individual instrument names
+- Translate Spanish/other languages to English
+- NO lyrics, NO singing instructions, NO vocal descriptions
 
-Genre reference for this request: ${genreHints}`
+GOOD example: "romantic bachata groove, tight Latin guitar rhythm with smooth percussion, warm intimate feel, professional studio quality, 130 BPM"
+BAD example: "requinto guitar arpeggios, segunda guitar strumming, bongo drums, guira scraping, electric bass" (too many separate instruments = messy output)
+
+Genre reference: ${genreHints}`
         },
         {
           role: "user",
