@@ -13,7 +13,7 @@ import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engi
 import { processStemSeparation } from "./core/stems_engine";
 import { saveStemAudio, getStemsWebhookSecret } from "./core/runpod_stems_engine";
 import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong, processAudioCut } from "./workers/sample_tasks";
-import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider, seedReplicateProvider } from "./core/seed_providers";
+import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider, seedReplicateProvider, seedMurekaProvider } from "./core/seed_providers";
 import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfig, buildRunPodPayload, GENRE_STYLE_HINTS } from "./core/sao_training_engine";
 import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection } from "./core/runpod_client";
 import { isCloudConfigured, getActiveServer, checkCloudHealth, checkDgbCloudHealth, uploadInstrumentToCloud, saveMidiFile, verifyWebhookFromAnyServer } from "./core/dgb_runpod_api";
@@ -955,6 +955,10 @@ export async function registerRoutes(
 
   seedReplicateProvider().catch((err: any) =>
     console.log("[Seed] Replicate seed error:", err.message?.substring(0, 100))
+  );
+
+  seedMurekaProvider().catch((err: any) =>
+    console.log("[Seed] Mureka seed error:", err.message?.substring(0, 100))
   );
 
   app.get("/api/admin/check", async (req, res) => {

@@ -252,6 +252,71 @@ export async function seedDgbRunPodProvider(): Promise<void> {
   console.log(`[Seed] DGB Studio Cloud Engine seeded with ${dgbEndpoints.length} endpoints`);
 }
 
+export async function seedMurekaProvider(): Promise<void> {
+  const existing = await storage.getApiProviders();
+  const hasMureka = existing.some(p =>
+    p.name === "Mureka" || p.name === "Mureka AI"
+  );
+  if (hasMureka) {
+    console.log("[Seed] Mureka provider already exists, skipping");
+    return;
+  }
+
+  if (!process.env.MUREKA_API_KEY) {
+    console.log("[Seed] MUREKA_API_KEY not set, skipping Mureka seed");
+    return;
+  }
+
+  console.log("[Seed] Seeding Mureka AI provider...");
+
+  const provider = await storage.createApiProvider({
+    name: "Mureka AI",
+    baseUrl: "https://api.mureka.ai/v1",
+    authType: "bearer",
+    authHeaderName: "Authorization",
+    apiKeyEnvVar: "MUREKA_API_KEY",
+    category: "music",
+    isActive: true,
+    description: "Professional AI music generation with vocals, lyrics, and multi-language support. Produces studio-quality songs in Bachata, Bolero, Salsa, and 50+ genres.",
+  });
+
+  const murekaEndpoints = [
+    {
+      name: "Song Generation (Mureka)",
+      operationType: "music_generation",
+      path: "/song/generate",
+      method: "POST",
+      contentType: "json",
+      requestMapping: {
+        "prompt": "$prompt",
+        "lyrics": "$lyrics",
+        "model": "auto",
+      },
+      responseMapping: { taskId: "id", status: "status" },
+      pollPath: "/song/query/{taskId}",
+      pollMethod: "GET",
+      pollResponseMapping: {
+        status: "status",
+        audioUrl: "songs.0.mp3_url",
+        imageUrl: "songs.0.cover_url",
+      },
+      asyncPattern: "polling",
+      webhookSupported: false,
+      description: "Generate complete songs with vocals and lyrics using Mureka AI. Supports Spanish, English, and 10+ languages.",
+    },
+  ];
+
+  for (const ep of murekaEndpoints) {
+    await storage.createApiEndpoint({
+      providerId: provider.id,
+      ...ep,
+    } as any);
+    console.log(`[Seed] Created Mureka endpoint: ${ep.name}`);
+  }
+
+  console.log(`[Seed] Mureka AI provider seeded with ${murekaEndpoints.length} endpoint(s)`);
+}
+
 export async function seedReplicateProvider(): Promise<void> {
   const existing = await storage.getApiProviders();
   const hasReplicate = existing.some(p =>

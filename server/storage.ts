@@ -401,6 +401,7 @@ export class DatabaseStorage implements IStorage {
         withProviders.push({ ...result, provider });
       }
     }
+    withProviders.sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
     return withProviders;
   }
 

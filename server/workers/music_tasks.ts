@@ -24,7 +24,7 @@ async function generateSongCoverImage(songId: number, prompt: string, genre: str
     console.log(`[Worker] Generating cover image for song ${songId}...`);
     const imagePrompt = `Album cover art for a ${genre} song about "${prompt}". Vibrant, artistic, music-themed digital illustration with warm tropical colors, musical instruments, abstract shapes. No text or words. Professional album artwork style.`;
     
-    const imageBuffer = await generateImageBuffer(imagePrompt, "512x512");
+    const imageBuffer = await generateImageBuffer(imagePrompt, "1024x1024");
     
     const imagesDir = path.join(AUDIO_BASE_DIR, "images");
     if (!fs.existsSync(imagesDir)) {
