@@ -28,18 +28,27 @@ async function recoverStuckSongs() {
   try {
     const { db } = await import("./db");
     const { songs } = await import("@shared/schema");
-    const { eq, inArray } = await import("drizzle-orm");
+    const { eq, inArray, and, lt } = await import("drizzle-orm");
     const stuckStatuses = ["processing", "mastering", "denoising"];
-    const stuckSongs = await db.select({ id: songs.id, status: songs.status, audioUrl: songs.audioUrl })
+    const stuckSongs = await db.select({ id: songs.id, status: songs.status, audioUrl: songs.audioUrl, createdAt: songs.createdAt })
       .from(songs)
       .where(inArray(songs.status, stuckStatuses));
+
+    const now = Date.now();
+    const MAX_AGE_MS = 20 * 60 * 1000;
+
     for (const s of stuckSongs) {
       if (s.audioUrl) {
         await db.update(songs).set({ status: "completed", error: null }).where(eq(songs.id, s.id));
         console.log(`[Recovery] Restored song ${s.id} from "${s.status}" to "completed" (has audio)`);
       } else {
-        await db.update(songs).set({ status: "failed", error: "Generation interrupted - please try again" }).where(eq(songs.id, s.id));
-        console.log(`[Recovery] Marked song ${s.id} as failed (was "${s.status}", no audio)`);
+        const songAge = now - new Date(s.createdAt || now).getTime();
+        if (songAge > MAX_AGE_MS) {
+          await db.update(songs).set({ status: "failed", error: "Generation timed out - please try again" }).where(eq(songs.id, s.id));
+          console.log(`[Recovery] Marked song ${s.id} as failed (was "${s.status}", age ${Math.round(songAge/60000)}min, no audio)`);
+        } else {
+          console.log(`[Recovery] Keeping song ${s.id} as "${s.status}" (age ${Math.round(songAge/60000)}min, GPU may still be working)`);
+        }
       }
     }
     console.log(`[Recovery] Checked ${stuckSongs.length} stuck songs`);
