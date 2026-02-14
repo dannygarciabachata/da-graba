@@ -435,7 +435,7 @@ export default function CreatePage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium">Generando 2 versiones de tu track...</p>
-                    <p className="text-xs text-muted-foreground">Elige la que más te guste. ~30-60 segundos</p>
+                    <p className="text-xs text-muted-foreground">Elige la que más te guste. La primera vez puede tomar ~5-10 min</p>
                   </div>
                 </div>
               </Card>
@@ -477,7 +477,7 @@ export default function CreatePage() {
                     </div>
                     <div>
                       <p className="text-sm font-medium">{activeSong.title || activeSong.prompt || "Track"}</p>
-                      <p className="text-xs text-muted-foreground">Generando... el player aparecerá cuando esté listo</p>
+                      <p className="text-xs text-muted-foreground">Generando... puede tomar unos minutos. El player aparecerá cuando esté listo</p>
                     </div>
                   </div>
                 </Card>
