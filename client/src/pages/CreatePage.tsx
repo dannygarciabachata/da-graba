@@ -493,15 +493,25 @@ export default function CreatePage() {
                 exit={{ opacity: 0, y: -10 }}
                 className="mb-8"
               >
-                <Card className="p-4 border-yellow-500/20 bg-yellow-500/5">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-md bg-yellow-500/10 flex items-center justify-center">
-                      <Loader2 className="h-5 w-5 text-yellow-500 animate-spin" />
+                <Card className="p-4 border-primary/20 bg-primary/5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-10 w-10 rounded-md bg-primary/10 flex items-center justify-center">
+                      <Loader2 className="h-5 w-5 text-primary animate-spin" />
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">{activeSong.title || activeSong.prompt || "Track"}</p>
-                      <p className="text-xs text-muted-foreground">Generando... puede tomar unos minutos. El player aparecerá cuando esté listo</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{activeSong.title || activeSong.prompt || "Track"}</p>
+                      <p className="text-xs text-muted-foreground">Creando tu canción con IA en el GPU...</p>
                     </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-primary/40 rounded-full"
+                        animate={{ width: ["10%", "40%", "60%", "75%"] }}
+                        transition={{ duration: 240, times: [0, 0.3, 0.6, 1], ease: "easeOut" }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground text-right">Estimado ~3-5 min</p>
                   </div>
                 </Card>
               </motion.div>

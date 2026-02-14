@@ -147,7 +147,7 @@ export async function processMusicGeneration(
       if (heartResult.success) {
         await storage.updateSongTaskId(songId, heartResult.jobId);
         console.log(`[Worker] HeartMuLa job ${heartResult.jobId} submitted for song ${songId}`);
-        startRunPodTimeout(songId, 900000);
+        startRunPodTimeout(songId, 600000);
         generateSongCoverImage(songId, safePrompt, style).catch(() => {});
         return;
       } else {
