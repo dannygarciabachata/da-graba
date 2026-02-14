@@ -120,10 +120,13 @@ function applyRequestMapping(
     }
   }
 
-  for (const [key, value] of Object.entries(inputParams)) {
-    if (!(key in result) && value !== undefined && value !== null) {
-      if (!Object.keys(mapping).some(k => k === key || k.startsWith(key + "."))) {
-        result[key] = value;
+  const hasDotNotation = Object.keys(mapping).some(k => k.includes("."));
+  if (!hasDotNotation) {
+    for (const [key, value] of Object.entries(inputParams)) {
+      if (!(key in result) && value !== undefined && value !== null) {
+        if (!Object.keys(mapping).some(k => k === key || k.startsWith(key + "."))) {
+          result[key] = value;
+        }
       }
     }
   }
