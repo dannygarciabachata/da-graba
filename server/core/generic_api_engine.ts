@@ -389,7 +389,7 @@ export async function pollGenericJob(
 }
 
 export function getWebhookUrl(): string {
-  const appDomain = process.env.APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN;
+  const appDomain = process.env.REPLIT_DEV_DOMAIN || process.env.APP_DOMAIN;
   const base = appDomain
     ? (appDomain.startsWith("http") ? appDomain : `https://${appDomain}`)
     : "http://localhost:5000";
@@ -425,7 +425,7 @@ export async function downloadFile(
 
 export function resolveFullAudioUrl(localUrl: string): string {
   if (localUrl.startsWith("http")) return localUrl;
-  const appDomain = process.env.APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN;
+  const appDomain = process.env.REPLIT_DEV_DOMAIN || process.env.APP_DOMAIN;
   const base = appDomain
     ? (appDomain.startsWith("http") ? appDomain : `https://${appDomain}`)
     : "http://localhost:5000";

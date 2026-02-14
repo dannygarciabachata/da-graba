@@ -15,9 +15,11 @@ interface RunPodMusicResult {
 export type MusicEngine = "heartmula" | "sao";
 
 export function getRunPodMusicWebhookUrl(): string {
-  const appDomain = process.env.APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN;
-  const base = appDomain
-    ? (appDomain.startsWith("http") ? appDomain : `https://${appDomain}`)
+  const replitDomain = process.env.REPLIT_DEV_DOMAIN;
+  const appDomain = process.env.APP_DOMAIN;
+  const domain = replitDomain || appDomain;
+  const base = domain
+    ? (domain.startsWith("http") ? domain : `https://${domain}`)
     : "http://localhost:5000";
   return `${base.replace(/\/$/, "")}/api/webhooks/runpod-music`;
 }

@@ -193,7 +193,7 @@ except Exception as e:
 }
 
 export function getVoiceTrainingWebhookUrl(): string {
-  const appDomain = process.env.APP_DOMAIN || process.env.REPLIT_DEV_DOMAIN;
+  const appDomain = process.env.REPLIT_DEV_DOMAIN || process.env.APP_DOMAIN;
   const base = appDomain
     ? (appDomain.startsWith("http") ? appDomain : `https://${appDomain}`)
     : "http://localhost:5000";
