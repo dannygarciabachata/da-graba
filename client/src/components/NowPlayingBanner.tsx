@@ -46,7 +46,7 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
-  const [showLyrics, setShowLyrics] = useState(false);
+  const [showLyrics, setShowLyrics] = useState(true);
   const [isReady, setIsReady] = useState(false);
   const lyricsRef = useRef<HTMLDivElement>(null);
 
@@ -293,48 +293,51 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
         </div>
       </div>
 
-      <AnimatePresence>
-        {showLyrics && hasLyrics && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="flex-1 overflow-hidden border-t border-white/5"
-          >
-            <div
-              ref={lyricsRef}
-              className="p-4 overflow-y-auto max-h-[300px] space-y-2"
-              data-testid="lyrics-sync-container"
+      {hasLyrics && (
+        <AnimatePresence>
+          {showLyrics && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="flex-1 overflow-hidden border-t border-white/5"
             >
-              {lyricsLines.map((line, idx) => {
-                const isSection = line.startsWith("[") && line.endsWith("]");
-                const isActive = idx === currentLineIndex;
+              <div
+                ref={lyricsRef}
+                className="p-4 overflow-y-auto flex-1 space-y-2"
+                style={{ maxHeight: "calc(100vh - 560px)" }}
+                data-testid="lyrics-sync-container"
+              >
+                {lyricsLines.map((line, idx) => {
+                  const isSection = line.startsWith("[") && line.endsWith("]");
+                  const isActive = idx === currentLineIndex;
 
-                return (
-                  <motion.p
-                    key={idx}
-                    animate={{
-                      opacity: isActive ? 1 : 0.4,
-                      scale: isActive ? 1.02 : 1,
-                    }}
-                    transition={{ duration: 0.3 }}
-                    className={`text-sm leading-relaxed transition-colors ${
-                      isSection
-                        ? "text-primary/60 font-semibold text-xs uppercase mt-3"
-                        : isActive
-                          ? "text-white font-medium"
-                          : "text-white/40"
-                    }`}
-                    data-testid={`lyrics-line-${idx}`}
-                  >
-                    {line}
-                  </motion.p>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                  return (
+                    <motion.p
+                      key={idx}
+                      animate={{
+                        opacity: isActive ? 1 : 0.4,
+                        scale: isActive ? 1.02 : 1,
+                      }}
+                      transition={{ duration: 0.3 }}
+                      className={`text-sm leading-relaxed transition-colors ${
+                        isSection
+                          ? "text-primary/60 font-semibold text-xs uppercase mt-3"
+                          : isActive
+                            ? "text-white font-medium"
+                            : "text-white/40"
+                      }`}
+                      data-testid={`lyrics-line-${idx}`}
+                    >
+                      {line}
+                    </motion.p>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
 
       {!hasLyrics && (
         <div className="flex-1 flex items-center justify-center p-4">
