@@ -95,6 +95,7 @@ export default function CreatePage() {
   const [promptIntensity, setPromptIntensity] = useState([85]);
   const [lyricsIntensity, setLyricsIntensity] = useState([70]);
   const [isInstrumental, setIsInstrumental] = useState(false);
+  const [songDuration, setSongDuration] = useState(180);
   const [lyrics, setLyrics] = useState("");
   const [activeCreationMode, setActiveCreationMode] = useState("song");
   const [selectedStyleKit, setSelectedStyleKit] = useState<number | undefined>(undefined);
@@ -162,6 +163,8 @@ export default function CreatePage() {
       style: selectedGenre,
       genre: selectedGenre,
       mode: title ? "aggregate" : "standard",
+      duration: songDuration,
+      make_instrumental: isInstrumental,
       ...(lyrics.trim() && !isInstrumental ? { lyrics: lyrics.trim() } : {}),
       ...(selectedStyleKit ? { styleKitId: selectedStyleKit } : {}),
     } as any);
@@ -330,6 +333,37 @@ export default function CreatePage() {
                       </select>
                     </div>
                   )}
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" />
+                      Song duration
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3 w-3" />
+                        </TooltipTrigger>
+                        <TooltipContent>Length of the generated song in seconds</TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      {[60, 120, 180, 240, 300].map((d) => (
+                        <Badge
+                          key={d}
+                          variant={songDuration === d ? "default" : "outline"}
+                          className={cn(
+                            "cursor-pointer text-xs py-1 px-2.5",
+                            songDuration === d
+                              ? "bg-primary/15 text-primary border-primary/30"
+                              : "text-muted-foreground border-white/10"
+                          )}
+                          onClick={() => setSongDuration(d)}
+                          data-testid={`badge-duration-${d}`}
+                        >
+                          {d >= 60 ? `${Math.floor(d / 60)}:${String(d % 60).padStart(2, "0")}` : `${d}s`}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
 
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground flex items-center gap-1.5">

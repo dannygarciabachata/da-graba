@@ -13,15 +13,17 @@ export interface CreativeOutput {
 
 export async function generateCreativeLyrics(
   theme: string,
-  style: "romantic" | "dance" | "heartbreak" = "romantic"
+  style: "romantic" | "dance" | "heartbreak" = "romantic",
+  genre?: string
 ): Promise<string> {
   const systemPrompt = buildLyricsSystemPrompt(style);
+  const genreName = genre || "Bachata";
 
   const completion = await openai.chat.completions.create({
     model: "gpt-5.1",
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Write a short Bachata song (2 verses and 2 choruses only, 4 lines each section) about: ${theme}` },
+      { role: "user", content: `Write a short ${genreName} song (2 verses and 2 choruses only, 4 lines each section) about: ${theme}` },
     ],
     max_completion_tokens: 800,
   });
@@ -66,6 +68,7 @@ const GENRE_INSTRUMENT_MAP: Record<string, string> = {
   "cumbia": "traditional Colombian cumbia groove, accordion-driven melody with rhythmic percussion, tropical dance feel, tight band arrangement, 100 BPM",
   "edm": "electronic dance music with synthesizer pads and driving beats, professional club production with buildups and drops, 128 BPM",
   "r&b": "smooth R&B groove with warm electric piano and soft drums, soulful and intimate, polished production, 85 BPM",
+  "hip hop": "hip hop beat with boom bap drums and 808 bass, sampled melodies, urban groove, crisp production, 90 BPM",
   "pop": "catchy pop production with acoustic guitar and modern drums, bright and upbeat, radio-ready mix, 120 BPM",
 };
 
@@ -82,18 +85,22 @@ export async function enrichPromptForMusicGen(
       messages: [
         {
           role: "system",
-          content: `You are a music prompt engineer for AI music generation models (MusicGen, Replicate).
+          content: `You are a music prompt engineer for AI music generation models.
 
 CRITICAL RULES:
 - Output ONLY a short English music description (under 200 chars)
-- NEVER list instruments one by one - describe the OVERALL SOUND as a cohesive band
-- Describe how the music FEELS: tight, polished, warm, groovy, professional
-- Use words like: "tight ensemble", "cohesive band", "locked-in groove", "professional mix"
-- Focus on the VIBE and ENERGY, not individual instrument names
+- ALWAYS START with the genre name and its signature rhythm feel (e.g. "bachata groove", "bolero ballad", "salsa dance")
+- Describe the OVERALL SOUND as a cohesive band, NOT individual instruments
+- Include the BPM and time signature from the genre reference
+- Focus on FEEL (tight, warm, groovy, intimate, energetic) and RHYTHM PATTERN
 - Translate Spanish/other languages to English
 - NO lyrics, NO singing instructions, NO vocal descriptions
 
-GOOD example: "romantic bachata groove, tight Latin guitar rhythm with smooth percussion, warm intimate feel, professional studio quality, 130 BPM"
+GOOD examples:
+- "romantic bachata groove, tight Latin guitar rhythm with smooth percussion, warm intimate Dominican feel, syncopated rhythm, 130 BPM, studio quality"
+- "slow bolero ballad, soft guitar arpeggios with gentle rhythmic accompaniment, intimate and emotional, 80 BPM, professional recording"
+- "energetic salsa dance groove, tight horn section with driving piano rhythm, clave pattern, 180 BPM, professional big band sound"
+
 BAD example: "requinto guitar arpeggios, segunda guitar strumming, bongo drums, guira scraping, electric bass" (too many separate instruments = messy output)
 
 Genre reference: ${genreHints}`

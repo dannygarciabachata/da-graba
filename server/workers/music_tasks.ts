@@ -77,25 +77,39 @@ async function generateSmartPrompt(
 
 function buildHeartMuLaTags(prompt: string, style: string): string {
   const genreTagMap: Record<string, string[]> = {
-    bachata: ["bachata", "latin", "romantic", "guitar", "bongo", "guira", "tropical"],
-    bolero: ["bolero", "latin", "romantic", "ballad", "nylon guitar", "soft", "intimate"],
-    salsa: ["salsa", "latin", "energetic", "brass", "piano", "congas", "timbales"],
-    merengue: ["merengue", "latin", "energetic", "accordion", "tambora", "dance"],
-    cumbia: ["cumbia", "latin", "tropical", "accordion", "rhythmic", "dance"],
-    reggaeton: ["reggaeton", "latin", "urban", "dembow", "808", "trap"],
-    son: ["son cubano", "latin", "tres cubano", "bongo", "claves", "traditional"],
-    latin_pop: ["latin pop", "pop", "modern", "piano", "acoustic guitar", "ballad"],
-    vallenato: ["vallenato", "latin", "romantic", "accordion", "colombian"],
+    bachata: ["bachata", "latin", "romantic", "nylon guitar", "bongo", "guira", "bass guitar", "Dominican rhythm", "130 BPM", "4/4 time", "syncopated", "studio quality"],
+    bolero: ["bolero", "latin", "romantic ballad", "nylon guitar arpeggios", "soft percussion", "intimate", "slow tempo", "80 BPM", "4/4 time", "emotional", "studio quality"],
+    salsa: ["salsa", "latin", "energetic", "brass section", "piano montuno", "congas", "timbales", "clave rhythm", "180 BPM", "dance", "tight arrangement", "studio quality"],
+    merengue: ["merengue", "latin", "energetic", "accordion", "tambora", "guira", "fast tempo", "160 BPM", "2/4 time", "Caribbean dance", "studio quality"],
+    cumbia: ["cumbia", "latin", "tropical", "accordion", "rhythmic percussion", "dance groove", "100 BPM", "4/4 time", "Colombian", "studio quality"],
+    reggaeton: ["reggaeton", "latin urban", "dembow beat", "deep 808 bass", "hi-hats", "trap influence", "90 BPM", "4/4 time", "club", "polished production"],
+    son: ["son cubano", "latin", "tres cubano", "bongo", "claves", "maracas", "traditional Cuban", "moderate tempo", "studio quality"],
+    latin_pop: ["latin pop", "pop", "modern production", "acoustic guitar", "piano", "melodic hooks", "radio-ready", "120 BPM", "catchy", "studio quality"],
+    vallenato: ["vallenato", "latin", "romantic", "accordion melody", "caja vallenata", "guacharaca", "Colombian", "moderate tempo", "studio quality"],
+    r_b: ["r&b", "smooth groove", "electric piano", "soft drums", "soulful", "intimate", "85 BPM", "4/4 time", "warm production"],
+    hip_hop: ["hip hop", "boom bap", "808 bass", "crisp snares", "sampled melody", "90 BPM", "4/4 time", "urban"],
+    pop: ["pop", "catchy melody", "modern drums", "acoustic guitar", "bright production", "120 BPM", "radio-ready", "upbeat"],
+    edm: ["edm", "electronic", "synthesizer", "driving beat", "build-up", "drop", "128 BPM", "4/4 time", "club production"],
   };
 
-  const normalizedStyle = style.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z_]/g, "");
+  const normalizedStyle = style.toLowerCase().replace(/[&]/g, "_").replace(/\s+/g, "_").replace(/[^a-z_]/g, "");
   let tags = genreTagMap[normalizedStyle] || genreTagMap[normalizedStyle.replace(/_/g, "")] || genreTagMap["bachata"] || [];
 
-  if (prompt.toLowerCase().includes("romantic") || prompt.toLowerCase().includes("amor")) {
-    tags = [...tags, "romantic", "love song"];
+  const lowerPrompt = prompt.toLowerCase();
+  if (lowerPrompt.includes("romantic") || lowerPrompt.includes("amor") || lowerPrompt.includes("love")) {
+    tags = [...tags, "romantic", "love song", "passionate"];
   }
-  if (prompt.toLowerCase().includes("dance") || prompt.toLowerCase().includes("bailar")) {
-    tags = [...tags, "dance", "upbeat"];
+  if (lowerPrompt.includes("dance") || lowerPrompt.includes("bailar") || lowerPrompt.includes("fiesta")) {
+    tags = [...tags, "dance", "upbeat", "energetic"];
+  }
+  if (lowerPrompt.includes("sad") || lowerPrompt.includes("triste") || lowerPrompt.includes("heartbreak")) {
+    tags = [...tags, "melancholic", "emotional", "minor key"];
+  }
+  if (lowerPrompt.includes("fast") || lowerPrompt.includes("rapido") || lowerPrompt.includes("upbeat")) {
+    tags = [...tags, "fast tempo", "high energy"];
+  }
+  if (lowerPrompt.includes("slow") || lowerPrompt.includes("lento") || lowerPrompt.includes("chill")) {
+    tags = [...tags, "slow tempo", "relaxed", "laid-back"];
   }
 
   return Array.from(new Set(tags)).join(", ");
@@ -111,7 +125,7 @@ export async function processMusicGeneration(
     instrumental?: boolean;
   } = {}
 ): Promise<void> {
-  const { duration = 30, style = "Bachata", lyrics, instrumental = false } = options;
+  const { duration = 180, style = "Bachata", lyrics, instrumental = false } = options;
 
   try {
     console.log(`[Worker] Starting music generation for song ${songId}`);
@@ -146,7 +160,7 @@ export async function processMusicGeneration(
       if (!songLyrics) {
         try {
           const lyricsStyle = mapStyleToLyricsStyle(style);
-          songLyrics = await generateCreativeLyrics(safePrompt, lyricsStyle);
+          songLyrics = await generateCreativeLyrics(safePrompt, lyricsStyle, style);
           console.log(`[Worker] Generated ${songLyrics.length} chars of lyrics for HeartMuLa`);
         } catch (err: any) {
           console.log(`[Worker] Lyrics generation failed: ${err.message}, will generate without lyrics`);

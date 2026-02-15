@@ -130,7 +130,8 @@ export async function registerRoutes(
       }
 
       const input = api.songs.generate.input.parse(req.body);
-      const duration = (req.body.duration as number) || 15;
+      const rawDuration = Number(req.body.duration) || 180;
+      const duration = Math.max(30, Math.min(rawDuration, 300));
       const lyrics = (req.body.lyrics as string) || undefined;
       const mode = input.mode || "standard";
       const style = input.style || "Bachata";
