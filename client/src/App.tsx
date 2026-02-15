@@ -19,6 +19,7 @@ import StyleKitsPage from "@/pages/StyleKitsPage";
 import ProducerStorePage from "@/pages/ProducerStorePage";
 import AudioToolsPage from "@/pages/AudioToolsPage";
 import BlogPage from "@/pages/BlogPage";
+import CoverDesignerPage from "@/pages/CoverDesignerPage";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
 
@@ -51,6 +52,7 @@ function AuthenticatedLayout() {
               <Route path="/pricing" component={PricingPage} />
               <Route path="/blog/:slug" component={BlogPage} />
               <Route path="/blog" component={BlogPage} />
+              <Route path="/cover-designer" component={CoverDesignerPage} />
               <Route path="/admin" component={AdminPage} />
               <Route component={NotFound} />
             </Switch>

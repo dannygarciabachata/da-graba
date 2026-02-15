@@ -758,6 +758,41 @@ export type InsertBlogStar = z.infer<typeof insertBlogStarSchema>;
 export type BlogShare = typeof blogShares.$inferSelect;
 export type InsertBlogShare = z.infer<typeof insertBlogShareSchema>;
 
+// === COVER DESIGNS ===
+
+export const coverDesigns = pgTable("cover_designs", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  songId: integer("song_id").references(() => songs.id, { onDelete: "set null" }),
+  name: text("name").notNull().default("Untitled Design"),
+  backgroundImageUrl: text("background_image_url"),
+  overlayElements: jsonb("overlay_elements").default([]),
+  filterSettings: jsonb("filter_settings").default({}),
+  templateId: text("template_id"),
+  fontId: text("font_id"),
+  titleText: text("title_text"),
+  artistText: text("artist_text"),
+  titleSize: integer("title_size").default(48),
+  artistSize: integer("artist_size").default(24),
+  titlePosition: jsonb("title_position").default({ x: 400, y: 600 }),
+  artistPosition: jsonb("artist_position").default({ x: 400, y: 680 }),
+  aiPrompt: text("ai_prompt"),
+  aiEffects: text("ai_effects"),
+  renderedImageUrl: text("rendered_image_url"),
+  thumbnailUrl: text("thumbnail_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCoverDesignSchema = createInsertSchema(coverDesigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type CoverDesign = typeof coverDesigns.$inferSelect;
+export type InsertCoverDesign = z.infer<typeof insertCoverDesignSchema>;
+
 // === PRICING PLANS ===
 
 export const pricingPlans = pgTable("pricing_plans", {

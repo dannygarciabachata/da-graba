@@ -3382,6 +3382,152 @@ export async function registerRoutes(
     }
   });
 
+  // ========== COVER DESIGNS ==========
+
+  app.get("/api/cover-designs", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const designs = await storage.getCoverDesigns(userId);
+      res.json(designs);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/cover-designs/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const design = await storage.getCoverDesign(parseInt(req.params.id));
+      if (!design) return res.status(404).json({ message: "Design not found" });
+      res.json(design);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/cover-designs", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const design = await storage.createCoverDesign({ ...req.body, userId });
+      res.json(design);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/cover-designs/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const design = await storage.updateCoverDesign(parseInt(req.params.id), req.body);
+      res.json(design);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/cover-designs/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      await storage.deleteCoverDesign(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/cover-designs/upload-background", blogImageUpload.single("image"), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const url = `/blog/images/${req.file.filename}`;
+      res.json({ url });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/cover-designs/save-render", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { imageData, designId } = req.body;
+      if (!imageData) return res.status(400).json({ message: "No image data" });
+      const base64 = imageData.replace(/^data:image\/\w+;base64,/, "");
+      const buffer = Buffer.from(base64, "base64");
+      const dir = path.join(process.cwd(), "public", "audio", "covers");
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const filename = `cover_design_${designId || Date.now()}_${Date.now()}.png`;
+      const filePath = path.join(dir, filename);
+      fs.writeFileSync(filePath, buffer);
+      const url = `/audio/covers/${filename}`;
+      if (designId) {
+        await storage.updateCoverDesign(parseInt(designId), { renderedImageUrl: url, thumbnailUrl: url });
+      }
+      res.json({ url });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/cover-designs/:id/apply-to-song", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const designId = parseInt(req.params.id);
+      const { songId } = req.body;
+      if (!songId) return res.status(400).json({ message: "songId required" });
+      const design = await storage.getCoverDesign(designId);
+      if (!design || !design.renderedImageUrl) return res.status(400).json({ message: "Design has no rendered image" });
+      await storage.updateSongImage(songId, design.renderedImageUrl);
+      await storage.updateCoverDesign(designId, { songId });
+      res.json({ success: true, imageUrl: design.renderedImageUrl });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/ai/suggest-effects", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { prompt, currentFilters } = req.body;
+      if (!prompt) return res.status(400).json({ message: "Prompt required" });
+      const openai = (await import("./replit_integrations/ai/index")).default;
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a professional album cover art designer. Given a user's description of desired effects, return a JSON object with these CSS filter values and overlay effects:
+            {
+              "brightness": number (50-150, default 100),
+              "contrast": number (50-150, default 100),
+              "saturation": number (0-200, default 100),
+              "blur": number (0-5, default 0),
+              "sepia": number (0-100, default 0),
+              "grayscale": number (0-100, default 0),
+              "hueRotate": number (-180 to 180, default 0),
+              "glamour": boolean (add golden glow overlay),
+              "vignette": boolean (dark edges),
+              "grain": boolean (film grain texture),
+              "neonGlow": boolean (neon edge glow),
+              "duotone": string|null (color like "#FF00FF" for duotone effect),
+              "suggestion": string (brief description of what these settings achieve)
+            }
+            Only return the JSON, no markdown.`
+          },
+          { role: "user", content: `Current filters: ${JSON.stringify(currentFilters || {})}. User wants: ${prompt}` }
+        ],
+        max_tokens: 300,
+      });
+      const text = response.choices[0]?.message?.content || "{}";
+      let parsed;
+      try { parsed = JSON.parse(text.replace(/```json?\n?/g, "").replace(/```/g, "").trim()); } catch { parsed = {}; }
+      res.json(parsed);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // ========== PRICING PLANS: PUBLIC & ADMIN ROUTES ==========
 
   app.get("/api/pricing/plans", async (_req, res) => {

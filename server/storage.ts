@@ -6,7 +6,7 @@ import {
   styleKits, styleKitInstruments,
   platformSettings, supportTickets, supportMessages,
   cloudServers, voiceModels, voiceSamples, styleReferences,
-  blogPosts, blogCategories, blogComments, blogLikes, blogStars, blogShares, pricingPlans,
+  blogPosts, blogCategories, blogComments, blogLikes, blogStars, blogShares, pricingPlans, coverDesigns,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
@@ -30,6 +30,7 @@ import {
   type BlogStar, type InsertBlogStar,
   type BlogShare, type InsertBlogShare,
   type PricingPlan, type InsertPricingPlan,
+  type CoverDesign, type InsertCoverDesign,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -182,6 +183,12 @@ export interface IStorage {
   createPricingPlan(plan: InsertPricingPlan): Promise<PricingPlan>;
   updatePricingPlan(id: number, data: Partial<PricingPlan>): Promise<PricingPlan>;
   deletePricingPlan(id: number): Promise<void>;
+
+  getCoverDesigns(userId: string): Promise<CoverDesign[]>;
+  getCoverDesign(id: number): Promise<CoverDesign | undefined>;
+  createCoverDesign(design: InsertCoverDesign): Promise<CoverDesign>;
+  updateCoverDesign(id: number, data: Partial<CoverDesign>): Promise<CoverDesign>;
+  deleteCoverDesign(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1054,6 +1061,29 @@ export class DatabaseStorage implements IStorage {
 
   async deletePricingPlan(id: number): Promise<void> {
     await db.delete(pricingPlans).where(eq(pricingPlans.id, id));
+  }
+
+  async getCoverDesigns(userId: string): Promise<CoverDesign[]> {
+    return await db.select().from(coverDesigns).where(eq(coverDesigns.userId, userId)).orderBy(desc(coverDesigns.updatedAt));
+  }
+
+  async getCoverDesign(id: number): Promise<CoverDesign | undefined> {
+    const [design] = await db.select().from(coverDesigns).where(eq(coverDesigns.id, id));
+    return design;
+  }
+
+  async createCoverDesign(design: InsertCoverDesign): Promise<CoverDesign> {
+    const [created] = await db.insert(coverDesigns).values(design).returning();
+    return created;
+  }
+
+  async updateCoverDesign(id: number, data: Partial<CoverDesign>): Promise<CoverDesign> {
+    const [updated] = await db.update(coverDesigns).set({ ...data, updatedAt: new Date() }).where(eq(coverDesigns.id, id)).returning();
+    return updated;
+  }
+
+  async deleteCoverDesign(id: number): Promise<void> {
+    await db.delete(coverDesigns).where(eq(coverDesigns.id, id));
   }
 }
 
