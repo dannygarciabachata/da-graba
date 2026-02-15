@@ -67,7 +67,7 @@ export interface KieStemResult {
 }
 
 function getApiKey(): string {
-  const key = process.env.KIE_API_KEY;
+  const key = process.env.KIE_API_KEY?.trim();
   if (!key) {
     throw new Error("KIE_API_KEY not set. Get your API key from kie.ai/api-key");
   }
@@ -175,9 +175,10 @@ export async function submitKieMusicGeneration(
     }
   }
 
+  const callBackUrl = options.callbackUrl || "https://dgb-studio.replit.app/api/kie/callback";
   const body: Record<string, any> = {
     model: "V5",
-    callBackUrl: options.callbackUrl || undefined,
+    callBackUrl,
   };
 
   if (options.lyrics || boostedStyle) {
@@ -220,30 +221,32 @@ export async function pollKieTask(
   const startTime = Date.now();
 
   while (Date.now() - startTime < maxWaitMs) {
-    const result = await kieFetch(`/task/${taskId}`);
-    const status = result?.data?.status?.toLowerCase() || "";
+    const result = await kieFetch(`/generate/record-info?taskId=${taskId}`, { method: "GET" });
+    const status = (result?.data?.status || "").toUpperCase();
 
     console.log(`[Kie.ai] Task ${taskId} status: ${status}`);
 
-    if (status === "complete" || status === "completed" || status === "success") {
-      const responseData = result?.data?.response?.data || result?.data?.response?.sunoData || [];
-      if (responseData.length > 0) {
-        const track = responseData[0];
+    if (status === "SUCCESS" || status === "FIRST_SUCCESS") {
+      const responseData = result?.data?.response?.sunoData || result?.data?.response?.data || [];
+      const tracksWithAudio = responseData.filter((t: any) => t.audioUrl || t.audio_url);
+      if (tracksWithAudio.length > 0) {
+        const track = tracksWithAudio[0];
         const audioUrl = track.audioUrl || track.audio_url;
-        if (!audioUrl) {
-          throw new Error("Kie.ai task completed but no audio URL found");
-        }
         return {
           audioUrl,
           imageUrl: track.imageUrl || track.image_url,
           title: track.title,
         };
       }
+      if (status === "FIRST_SUCCESS" && responseData.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+        continue;
+      }
       throw new Error("Kie.ai task completed but no audio data returned");
     }
 
-    if (status === "failed" || status === "error") {
-      const errorMsg = result?.data?.failReason || result?.data?.error || "Unknown error";
+    if (status === "FAILED" || status === "ERROR") {
+      const errorMsg = result?.data?.errorMessage || result?.data?.failReason || "Unknown error";
       throw new Error(`Kie.ai generation failed: ${errorMsg}`);
     }
 
