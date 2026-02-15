@@ -3123,6 +3123,8 @@ export async function registerRoutes(
     if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
     try {
       const user = (req as any).user;
+      const userId = user?.claims?.sub || user?.id;
+      const userName = user?.claims?.first_name || user?.username || user?.firstName || "Admin";
       const { title, content, excerpt, featuredImageUrl, categoryId, status, tags, seoTitle, seoDescription } = req.body;
       const slug = (req.body.slug || title || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || `post-${Date.now()}`;
       const post = await storage.createBlogPost({
@@ -3132,8 +3134,8 @@ export async function registerRoutes(
         excerpt,
         featuredImageUrl,
         categoryId: categoryId ? parseInt(categoryId) : null,
-        authorId: user.id,
-        authorName: user.username || user.firstName || "Admin",
+        authorId: userId,
+        authorName: userName,
         status: status || "draft",
         tags,
         seoTitle,
