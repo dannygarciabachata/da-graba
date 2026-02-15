@@ -647,7 +647,7 @@ export async function registerRoutes(
       await storage.deleteTracksBySongId(songId);
     }
 
-    processStemSeparation(songId, song.audioUrl, userId);
+    processStemSeparation(songId, song.audioUrl, userId, song.taskId);
     res.status(202).json({ message: "Stem separation started", songId });
   });
 

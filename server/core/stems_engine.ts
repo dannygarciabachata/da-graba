@@ -12,6 +12,9 @@ import {
 import {
   canUseReplicate, separateStemsWithReplicate,
 } from "./replicate_stems_engine";
+import {
+  canUseKie, submitKieStemSeparation, pollKieStemTask,
+} from "./kie_engine";
 
 const STEM_TYPES = [
   { type: "vocals", name: "Vocals", icon: "mic" },
@@ -23,7 +26,8 @@ const STEM_TYPES = [
 export async function processStemSeparation(
   songId: number,
   audioUrl: string,
-  userId: string
+  userId: string,
+  kieTaskId?: string | null
 ): Promise<void> {
   console.log(`[Stems] Starting stem separation for song ${songId}`);
 
@@ -49,7 +53,42 @@ export async function processStemSeparation(
       await storage.updateTrackStatus(track.id, "processing");
     }
 
-    // Priority 1: Private Cloud GPU (RunPod/DigitalOcean) - webhook-based
+    // Priority 1: Kie.ai stem separation (for Kie.ai-generated songs)
+    if (canUseKie() && kieTaskId) {
+      console.log(`[Stems] Using Kie.ai for stem separation (taskId: ${kieTaskId})`);
+      try {
+        const kieStemResult = await submitKieStemSeparation(kieTaskId, kieTaskId, "separate_vocal");
+        const kieStems = await pollKieStemTask(kieStemResult.taskId, 300000, 10000);
+
+        if (Object.keys(kieStems.stems).length > 0) {
+          for (const trackRecord of trackRecords) {
+            const stemDef = STEM_TYPES.find(s => s.type === trackRecord.type);
+            const apiKey = (stemDef as any)?.apiKey || trackRecord.type;
+            const remoteUrl = kieStems.stems[apiKey] || kieStems.stems[trackRecord.type];
+            if (remoteUrl) {
+              try {
+                const localUrl = await downloadFile(remoteUrl, "stems", `${songId}_${trackRecord.type}`);
+                await storage.updateTrackStatus(trackRecord.id, "completed", localUrl);
+                console.log(`[Stems] ${trackRecord.type} stem completed via Kie.ai: ${localUrl}`);
+              } catch (dlErr: any) {
+                console.error(`[Stems] Failed to download ${trackRecord.type} from Kie.ai:`, dlErr.message);
+                await storage.updateTrackStatus(trackRecord.id, "failed", undefined, dlErr.message);
+              }
+            } else {
+              await storage.updateTrackStatus(trackRecord.id, "completed", undefined);
+              console.log(`[Stems] ${trackRecord.type} stem: no separate URL from Kie.ai`);
+            }
+          }
+          console.log(`[Stems] Kie.ai stem separation completed for song ${songId}`);
+          return;
+        }
+        console.log(`[Stems] Kie.ai returned no stems, falling back`);
+      } catch (kieErr: any) {
+        console.log(`[Stems] Kie.ai stem error: ${kieErr.message}, falling back`);
+      }
+    }
+
+    // Priority 2: Private Cloud GPU (RunPod/DigitalOcean) - webhook-based
     if (canUseRunPodStems()) {
       console.log(`[Stems] Using cloud GPU (Demucs) for stem separation`);
       try {
@@ -65,7 +104,7 @@ export async function processStemSeparation(
       }
     }
 
-    // Priority 2: Replicate serverless GPU (Demucs) - synchronous
+    // Priority 3: Replicate serverless GPU (Demucs) - synchronous
     if (canUseReplicate()) {
       console.log(`[Stems] Using Replicate (Demucs) for stem separation`);
       try {
@@ -210,23 +249,17 @@ function startStemTimeout(songId: number, fullAudioUrl: string, trackRecords: an
         const replicateToken = process.env.REPLICATE_API_TOKEN;
         if (replicateToken) {
           console.log(`[Stems] Timeout fallback: Trying Replicate (Demucs)`);
-          const { separateWithReplicate } = await import("./replicate_stems_engine");
-          const repResult = await separateWithReplicate(fullAudioUrl);
-          if (repResult && typeof repResult === "object") {
+          const { separateStemsWithReplicate: separateWithReplicateFn } = await import("./replicate_stems_engine");
+          const repResult = await separateWithReplicateFn(fullAudioUrl, songId);
+          if (repResult && repResult.success && Object.keys(repResult.stems).length > 0) {
             let allResolved = true;
             for (const track of tracks) {
               if (track.status !== "processing" && track.status !== "pending") continue;
               const stemDef = STEM_TYPES.find(s => s.type === track.type);
               const apiKey = (stemDef as any)?.apiKey || track.type;
-              const remoteUrl = repResult[apiKey] || repResult[track.type];
-              if (remoteUrl) {
-                try {
-                  const localUrl = await downloadFile(String(remoteUrl), "stems", `${songId}_${track.type}`);
-                  await storage.updateTrackStatus(track.id, "completed", localUrl);
-                } catch (dlErr: any) {
-                  allResolved = false;
-                  await storage.updateTrackStatus(track.id, "failed", undefined, dlErr.message);
-                }
+              const localUrl = repResult.stems[apiKey] || repResult.stems[track.type];
+              if (localUrl) {
+                await storage.updateTrackStatus(track.id, "completed", localUrl);
               } else {
                 allResolved = false;
               }
