@@ -9,6 +9,9 @@ import {
 import {
   canUseRunPodStems, submitRunPodStemSeparation,
 } from "./runpod_stems_engine";
+import {
+  canUseReplicate, separateStemsWithReplicate,
+} from "./replicate_stems_engine";
 
 const STEM_TYPES = [
   { type: "vocals", name: "Vocals", icon: "mic" },
@@ -62,7 +65,34 @@ export async function processStemSeparation(
       }
     }
 
-    // Priority 2+: Generic API providers (Replicate, custom servers, etc.) configured in Admin panel
+    // Priority 2: Replicate serverless GPU (Demucs) - synchronous
+    if (canUseReplicate()) {
+      console.log(`[Stems] Using Replicate (Demucs) for stem separation`);
+      try {
+        const replicateResult = await separateStemsWithReplicate(fullAudioUrl, songId);
+        if (replicateResult.success && Object.keys(replicateResult.stems).length > 0) {
+          for (const trackRecord of trackRecords) {
+            const stemDef = STEM_TYPES.find(s => s.type === trackRecord.type);
+            const apiKey = (stemDef as any)?.apiKey || trackRecord.type;
+            const localUrl = replicateResult.stems[apiKey] || replicateResult.stems[trackRecord.type];
+            if (localUrl) {
+              await storage.updateTrackStatus(trackRecord.id, "completed", localUrl);
+              console.log(`[Stems] ${trackRecord.type} stem completed via Replicate: ${localUrl}`);
+            } else {
+              await storage.updateTrackStatus(trackRecord.id, "completed", undefined);
+              console.log(`[Stems] ${trackRecord.type} stem: no separate URL from Replicate`);
+            }
+          }
+          console.log(`[Stems] Replicate stem separation completed for song ${songId}`);
+          return;
+        }
+        console.log(`[Stems] Replicate returned no stems: ${replicateResult.error}, falling back`);
+      } catch (repErr: any) {
+        console.log(`[Stems] Replicate error: ${repErr.message}, falling back to API providers`);
+      }
+    }
+
+    // Priority 3+: Generic API providers configured in Admin panel
     const stemsList = ["vocals", "drums", "bass", "instrumental"];
     const useGeneric = await hasProviderForOperation("stem_separation");
 
@@ -173,7 +203,44 @@ function startStemTimeout(songId: number, fullAudioUrl: string, trackRecords: an
         return;
       }
 
-      console.log(`[Stems] Cloud GPU timed out for song ${songId} after ${timeoutMs / 1000}s, falling back to API providers`);
+      console.log(`[Stems] Cloud GPU timed out for song ${songId} after ${timeoutMs / 1000}s, falling back`);
+
+      // Priority 2: Try Replicate (Demucs) first
+      try {
+        const replicateToken = process.env.REPLICATE_API_TOKEN;
+        if (replicateToken) {
+          console.log(`[Stems] Timeout fallback: Trying Replicate (Demucs)`);
+          const { separateWithReplicate } = await import("./replicate_stems_engine");
+          const repResult = await separateWithReplicate(fullAudioUrl);
+          if (repResult && typeof repResult === "object") {
+            let allResolved = true;
+            for (const track of tracks) {
+              if (track.status !== "processing" && track.status !== "pending") continue;
+              const stemDef = STEM_TYPES.find(s => s.type === track.type);
+              const apiKey = (stemDef as any)?.apiKey || track.type;
+              const remoteUrl = repResult[apiKey] || repResult[track.type];
+              if (remoteUrl) {
+                try {
+                  const localUrl = await downloadFile(String(remoteUrl), "stems", `${songId}_${track.type}`);
+                  await storage.updateTrackStatus(track.id, "completed", localUrl);
+                } catch (dlErr: any) {
+                  allResolved = false;
+                  await storage.updateTrackStatus(track.id, "failed", undefined, dlErr.message);
+                }
+              } else {
+                allResolved = false;
+              }
+            }
+            if (allResolved) {
+              console.log(`[Stems] Timeout fallback via Replicate completed for song ${songId}`);
+              pendingStemTimeouts.delete(songId);
+              return;
+            }
+          }
+        }
+      } catch (repErr: any) {
+        console.warn(`[Stems] Replicate timeout fallback failed: ${repErr.message}, trying next provider`);
+      }
 
       const stemsList = ["vocals", "drums", "bass", "instrumental"];
       const useGeneric = await hasProviderForOperation("stem_separation");

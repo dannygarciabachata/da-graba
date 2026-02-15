@@ -66,6 +66,11 @@ export interface KieStemResult {
   };
 }
 
+function getDefaultCallbackUrl(): string {
+  const domain = process.env.REPLIT_DOMAINS?.split(",")[0] || process.env.REPLIT_DEV_DOMAIN || "dgb-studio.replit.app";
+  return `https://${domain}/api/kie/callback`;
+}
+
 function getApiKey(): string {
   const key = process.env.KIE_API_KEY?.trim();
   if (!key) {
@@ -175,7 +180,7 @@ export async function submitKieMusicGeneration(
     }
   }
 
-  const callBackUrl = options.callbackUrl || "https://dgb-studio.replit.app/api/kie/callback";
+  const callBackUrl = options.callbackUrl || getDefaultCallbackUrl();
   const body: Record<string, any> = {
     model: "V5",
     callBackUrl,
@@ -339,13 +344,14 @@ export async function submitKieExtend(
 ): Promise<{ taskId: string }> {
   console.log(`[Kie.ai] Submitting extend music`);
 
+  const callBackUrl = options.callbackUrl || getDefaultCallbackUrl();
   const result = await kieFetch("/upload-extend", {
     method: "POST",
     body: JSON.stringify({
       uploadUrl: audioUrl,
       prompt,
       model: options.model || "V5",
-      callBackUrl: options.callbackUrl,
+      callBackUrl,
     }),
   });
 
@@ -368,13 +374,14 @@ export async function submitKieCover(
 ): Promise<{ taskId: string }> {
   console.log(`[Kie.ai] Submitting cover generation`);
 
+  const callBackUrl = options.callbackUrl || getDefaultCallbackUrl();
   const result = await kieFetch("/cover", {
     method: "POST",
     body: JSON.stringify({
       uploadUrl: audioUrl,
       style,
       model: options.model || "V5",
-      callBackUrl: options.callbackUrl,
+      callBackUrl,
     }),
   });
 

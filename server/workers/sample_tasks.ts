@@ -12,6 +12,9 @@ import {
   submitSoundGenerator, submitTranscription,
   submitAudioSpeedChanger, submitVoiceChanger,
 } from "../core/musicgpt_engine";
+import {
+  canUseKie, submitKieExtend, pollKieTask,
+} from "../core/kie_engine";
 
 function friendlyError(msg: string, fallback: string): string {
   if (msg.includes("QUOTA_EXCEEDED")) return "AI service credits exhausted. Please contact admin to restore service.";
@@ -35,17 +38,39 @@ export async function processHummingToMusic(
     const cleanPrompt = prompt.replace(/high fidelity|masterpiece|studio quality/gi, "").replace(/\s+/g, " ").trim().substring(0, 280);
 
     const useGeneric = await hasProviderForOperation("remix");
+    let completed = false;
 
     if (useGeneric) {
-      const submitResult = await submitGenericJob("remix", {
-        audio_url: fullAudioUrl,
-        prompt: cleanPrompt,
-      });
-      const pollResult = await pollGenericJob("remix", submitResult.taskId!, 600000, 8000, submitResult.endpointId);
-      if (!pollResult.audioUrl) throw new Error("Remix completed but no audio URL returned");
-      const localUrl = await downloadFile(pollResult.audioUrl, "samples", "remix");
-      await storage.updateSample(sampleId, { status: "ready", audioUrl: localUrl, sourceType: "ai-transform" });
-    } else {
+      try {
+        const submitResult = await submitGenericJob("remix", {
+          audio_url: fullAudioUrl,
+          prompt: cleanPrompt,
+        });
+        const pollResult = await pollGenericJob("remix", submitResult.taskId!, 600000, 8000, submitResult.endpointId);
+        if (!pollResult.audioUrl) throw new Error("Remix completed but no audio URL returned");
+        const localUrl = await downloadFile(pollResult.audioUrl, "samples", "remix");
+        await storage.updateSample(sampleId, { status: "ready", audioUrl: localUrl, sourceType: "ai-transform" });
+        completed = true;
+      } catch (genErr: any) {
+        console.log(`[SampleWorker] Generic API remix failed: ${genErr.message}, trying fallbacks`);
+      }
+    }
+
+    if (!completed && canUseKie()) {
+      try {
+        console.log(`[SampleWorker] Using Kie.ai extend for remix`);
+        const kieResult = await submitKieExtend(fullAudioUrl, cleanPrompt);
+        const pollResult = await pollKieTask(kieResult.taskId, 300000, 10000);
+        if (!pollResult.audioUrl) throw new Error("Kie.ai extend completed but no audio URL returned");
+        const localUrl = await downloadFile(pollResult.audioUrl, "samples", "remix");
+        await storage.updateSample(sampleId, { status: "ready", audioUrl: localUrl, sourceType: "ai-transform" });
+        completed = true;
+      } catch (kieErr: any) {
+        console.log(`[SampleWorker] Kie.ai remix failed: ${kieErr.message}, trying MusicGPT`);
+      }
+    }
+
+    if (!completed) {
       const submitResult = await submitRemix(fullAudioUrl, cleanPrompt);
       const pollResult = await pollMusicGPTJob(submitResult.task_id, 600000, 8000, "REMIX");
       if (!pollResult.audioUrl) throw new Error("Remix completed but no audio URL returned");
