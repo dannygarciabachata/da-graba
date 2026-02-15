@@ -1079,16 +1079,35 @@ r = subprocess.run([sys.executable, "-c", "import stable_audio_tools"], capture_
 if r.returncode == 0:
     results.append("stable-audio-tools: already installed")
 else:
-    results.append("Installing stable-audio-tools (with --no-cache-dir)...")
-    r = subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "--quiet", "stable-audio-tools"],
-                      capture_output=True, text=True, timeout=300)
+    results.append("Installing stable-audio-tools...")
+    # Clean pip cache first to free disk space
+    subprocess.run([sys.executable, "-m", "pip", "cache", "purge"], capture_output=True, text=True, timeout=30)
+    # Clear temp dirs that may be full
+    subprocess.run(["rm", "-rf", "/tmp/pip-*", "/root/.cache/pip"], capture_output=True, text=True, timeout=10)
+    os.environ["TMPDIR"] = "/workspace/tmp"
+    os.makedirs("/workspace/tmp", exist_ok=True)
+    # Try installing with --no-build-isolation to reduce disk usage
+    r = subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "--no-build-isolation", "--quiet",
+                       "stable-audio-tools"], capture_output=True, text=True, timeout=600)
     if r.returncode != 0:
-        results.append(f"  stable-audio-tools pip: FAILED - {r.stderr[:300]}")
-        results.append("  Trying from git...")
-        r2 = subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "--quiet",
+        results.append(f"  pip install: FAILED - {r.stderr[:200]}")
+        # Try from git with --no-build-isolation
+        r2 = subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "--no-build-isolation", "--quiet",
                             "git+https://github.com/Stability-AI/stable-audio-tools.git"],
-                           capture_output=True, text=True, timeout=300)
-        results.append(f"  stable-audio-tools git: {'OK' if r2.returncode == 0 else r2.stderr[:300]}")
+                           capture_output=True, text=True, timeout=600)
+        if r2.returncode != 0:
+            results.append(f"  git install: FAILED - {r2.stderr[:200]}")
+            # Last resort: install deps separately then stable-audio-tools with --no-deps
+            deps = ["einops", "wandb", "pytorch-lightning", "alias-free-torch", "descript-audio-codec",
+                    "laion-clap", "prefigure", "aeiou", "pedalboard", "ema-pytorch"]
+            for dep in deps:
+                subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "--quiet", dep],
+                              capture_output=True, text=True, timeout=120)
+            r3 = subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "--no-deps", "--quiet",
+                                "stable-audio-tools"], capture_output=True, text=True, timeout=300)
+            results.append(f"  no-deps install: {'OK' if r3.returncode == 0 else r3.stderr[:200]}")
+        else:
+            results.append("  stable-audio-tools: OK (from git)")
     else:
         results.append("  stable-audio-tools: OK")
 
