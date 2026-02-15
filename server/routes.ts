@@ -3077,6 +3077,97 @@ export async function registerRoutes(
     }
   });
 
+  // ========== ADMIN: STRIPE PRODUCT MANAGEMENT ==========
+
+  app.post("/api/admin/stripe/products", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const stripe = await getUncachableStripeClient();
+      const { name, description } = req.body;
+      if (!name) return res.status(400).json({ message: "Name is required" });
+      const product = await stripe.products.create({
+        name,
+        description: description || undefined,
+      });
+      res.json({ id: product.id, name: product.name, description: product.description, active: product.active });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/stripe/products/:productId", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const stripe = await getUncachableStripeClient();
+      const { name, description, active } = req.body;
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name;
+      if (description !== undefined) updateData.description = description;
+      if (active !== undefined) updateData.active = active;
+      const product = await stripe.products.update(req.params.productId, updateData);
+      res.json({ id: product.id, name: product.name, description: product.description, active: product.active });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/stripe/products/:productId", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const stripe = await getUncachableStripeClient();
+      await stripe.products.update(req.params.productId, { active: false });
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/stripe/prices", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const stripe = await getUncachableStripeClient();
+      const { productId, unitAmount, currency, interval } = req.body;
+      if (!productId || unitAmount == null) return res.status(400).json({ message: "productId and unitAmount are required" });
+      const priceData: any = {
+        product: productId,
+        unit_amount: Math.round(Number(unitAmount)),
+        currency: currency || "usd",
+      };
+      if (interval) {
+        priceData.recurring = { interval };
+      }
+      const price = await stripe.prices.create(priceData);
+      res.json({ id: price.id, unitAmount: price.unit_amount, currency: price.currency, recurring: price.recurring, active: price.active });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/stripe/prices/:priceId", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const stripe = await getUncachableStripeClient();
+      const { active } = req.body;
+      const price = await stripe.prices.update(req.params.priceId, { active: active !== false });
+      res.json({ id: price.id, active: price.active });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/stripe/subscriptions/:subId/cancel", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const stripe = await getUncachableStripeClient();
+      const subscription = await stripe.subscriptions.update(req.params.subId, {
+        cancel_at_period_end: true,
+      });
+      res.json({ id: subscription.id, status: subscription.status, cancel_at_period_end: subscription.cancel_at_period_end });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // ========== STRIPE: PUBLIC ROUTES ==========
 
   app.get("/api/stripe/publishable-key", async (_req, res) => {

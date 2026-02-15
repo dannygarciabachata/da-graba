@@ -296,65 +296,202 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
 function SubscriptionsTab() {
   const { data: subs, isLoading: subsLoading } = useAdminSubscriptions();
   const { data: products, isLoading: prodsLoading } = useAdminProducts();
+  const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  const [showCreateProduct, setShowCreateProduct] = useState(false);
+  const [showAddPrice, setShowAddPrice] = useState<string | null>(null);
+  const [productForm, setProductForm] = useState({ name: "", description: "" });
+  const [priceForm, setPriceForm] = useState({ unitAmount: "", currency: "usd", interval: "month" });
+  const { toast } = useToast();
+
+  const createProduct = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", "/api/admin/stripe/products", data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] }); setShowCreateProduct(false); setProductForm({ name: "", description: "" }); toast({ title: "Producto creado en Stripe" }); },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const updateProduct = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("PATCH", `/api/admin/stripe/products/${id}`, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] }); setEditingProduct(null); toast({ title: "Producto actualizado" }); },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const archiveProduct = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/stripe/products/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] }); toast({ title: "Producto archivado" }); },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const createPrice = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", "/api/admin/stripe/prices", data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] }); setShowAddPrice(null); setPriceForm({ unitAmount: "", currency: "usd", interval: "month" }); toast({ title: "Precio creado" }); },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deactivatePrice = useMutation({
+    mutationFn: (priceId: string) => apiRequest("PATCH", `/api/admin/stripe/prices/${priceId}`, { active: false }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] }); toast({ title: "Precio desactivado" }); },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const cancelSubscription = useMutation({
+    mutationFn: (subId: string) => apiRequest("POST", `/api/admin/stripe/subscriptions/${subId}/cancel`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/subscriptions"] }); toast({ title: "Suscripción marcada para cancelación" }); },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  function startEditProduct(p: any) {
+    setEditingProduct(p);
+    setProductForm({ name: p.name || p.product_name || "", description: p.description || p.product_description || "" });
+  }
 
   if (subsLoading || prodsLoading) return <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>;
 
   return (
     <div className="space-y-6" data-testid="admin-subscriptions-tab">
       <div>
-        <h2 className="text-lg font-semibold mb-3">Products & Prices</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold">Products & Prices (Stripe)</h2>
+          <Button size="sm" onClick={() => { setShowCreateProduct(!showCreateProduct); setProductForm({ name: "", description: "" }); }} data-testid="button-create-stripe-product">
+            <Plus className="h-4 w-4 mr-1" /> {showCreateProduct ? "Cancelar" : "Nuevo Producto"}
+          </Button>
+        </div>
+
+        {showCreateProduct && (
+          <Card className="bg-card/50 border-primary/20 mb-4">
+            <CardContent className="p-4 space-y-3">
+              <h3 className="text-sm font-semibold">Crear Producto en Stripe</h3>
+              <Input placeholder="Nombre del producto (ej: DGB Studio Pro)" value={productForm.name} onChange={e => setProductForm(f => ({ ...f, name: e.target.value }))} data-testid="input-new-product-name" />
+              <Input placeholder="Descripción" value={productForm.description} onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))} data-testid="input-new-product-desc" />
+              <Button size="sm" onClick={() => createProduct.mutate(productForm)} disabled={createProduct.isPending || !productForm.name} data-testid="button-submit-create-product">
+                {createProduct.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Plus className="h-4 w-4 mr-1" />} Crear en Stripe
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {products && products.length > 0 ? (
           <div className="grid gap-3">
-            {products.map((p: any) => (
-              <Card key={p.id || p.product_id} data-testid={`card-product-${p.id || p.product_id}`}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">{p.name || p.product_name}</p>
-                      <p className="text-xs text-muted-foreground">{p.description || p.product_description || ""}</p>
-                    </div>
-                    <div className="text-right">
-                      {p.unit_amount != null && (
-                        <p className="text-sm font-bold text-primary">
-                          ${(Number(p.unit_amount) / 100).toFixed(2)}/{(p.recurring as any)?.interval || "mo"}
-                        </p>
-                      )}
-                      <Badge variant={p.active || p.product_active ? "default" : "secondary"} className="text-[10px]">
-                        {p.active || p.product_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {products.map((p: any) => {
+              const pid = p.id || p.product_id;
+              const isEditing = editingProduct && (editingProduct.id || editingProduct.product_id) === pid;
+              const isAddingPrice = showAddPrice === pid;
+
+              return (
+                <Card key={pid} className="bg-card/50 border-white/10" data-testid={`card-product-${pid}`}>
+                  <CardContent className="p-4">
+                    {isEditing ? (
+                      <div className="space-y-3">
+                        <Input value={productForm.name} onChange={e => setProductForm(f => ({ ...f, name: e.target.value }))} placeholder="Nombre" data-testid="input-edit-product-name" />
+                        <Input value={productForm.description} onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))} placeholder="Descripción" data-testid="input-edit-product-desc" />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => updateProduct.mutate({ id: pid, data: productForm })} disabled={updateProduct.isPending} data-testid="button-save-product">
+                            {updateProduct.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />} Guardar
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingProduct(null)} data-testid="button-cancel-edit-product">Cancelar</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-sm font-semibold">{p.name || p.product_name}</p>
+                              <Badge variant={p.active !== false && p.product_active !== false ? "default" : "secondary"} className="text-[10px]">
+                                {p.active !== false && p.product_active !== false ? "Active" : "Inactive"}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{p.description || p.product_description || "Sin descripción"}</p>
+                            <p className="text-[10px] text-muted-foreground/60 font-mono mt-1">{pid}</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button size="sm" variant="ghost" onClick={() => setShowAddPrice(isAddingPrice ? null : pid)} title="Agregar precio" data-testid={`button-add-price-${pid}`}>
+                              <Plus className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => startEditProduct(p)} title="Editar" data-testid={`button-edit-product-${pid}`}>
+                              <Edit className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => { if (confirm("¿Archivar este producto en Stripe?")) archiveProduct.mutate(pid); }} title="Archivar" data-testid={`button-archive-product-${pid}`}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {p.unit_amount != null && (
+                          <div className="mt-2 flex items-center justify-between bg-background/50 rounded-md p-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-primary">${(Number(p.unit_amount) / 100).toFixed(2)}</span>
+                              <span className="text-xs text-muted-foreground">/{(p.recurring as any)?.interval || "month"}</span>
+                              <span className="text-[10px] font-mono text-muted-foreground/60">{p.price_id}</span>
+                            </div>
+                            {p.price_id && (
+                              <Button size="sm" variant="ghost" className="text-destructive h-6 px-2" onClick={() => { if (confirm("¿Desactivar este precio?")) deactivatePrice.mutate(p.price_id); }} title="Desactivar precio" data-testid={`button-deactivate-price-${p.price_id}`}>
+                                <XCircle className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
+
+                        {!p.unit_amount && (
+                          <p className="text-xs text-muted-foreground mt-2 italic">Sin precio configurado (plan gratuito)</p>
+                        )}
+
+                        {isAddingPrice && (
+                          <div className="mt-3 p-3 bg-background/50 rounded-md space-y-2 border border-white/10">
+                            <p className="text-xs font-semibold">Agregar nuevo precio</p>
+                            <div className="flex gap-2">
+                              <Input placeholder="Monto (en centavos, ej: 2999)" type="number" value={priceForm.unitAmount} onChange={e => setPriceForm(f => ({ ...f, unitAmount: e.target.value }))} className="flex-1" data-testid="input-price-amount" />
+                              <select className="bg-background border border-white/10 rounded-md px-2 text-sm" value={priceForm.interval} onChange={e => setPriceForm(f => ({ ...f, interval: e.target.value }))} data-testid="select-price-interval">
+                                <option value="month">Mensual</option>
+                                <option value="year">Anual</option>
+                              </select>
+                              <Button size="sm" onClick={() => createPrice.mutate({ productId: pid, unitAmount: priceForm.unitAmount, currency: priceForm.currency, interval: priceForm.interval })} disabled={createPrice.isPending || !priceForm.unitAmount} data-testid="button-submit-price">
+                                {createPrice.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             <CreditCard className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No products configured in Stripe yet.</p>
-            <p className="text-xs">Run the seed script to create subscription plans.</p>
+            <p className="text-sm">No hay productos en Stripe.</p>
+            <p className="text-xs">Crea un producto para comenzar a vender suscripciones.</p>
           </div>
         )}
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold mb-3">Subscriptions ({subs?.length || 0})</h2>
+        <h2 className="text-lg font-semibold mb-3">Suscripciones Activas ({subs?.length || 0})</h2>
         {subs && subs.length > 0 ? (
           <div className="space-y-2">
             {subs.map((s: any) => (
-              <Card key={s.id} data-testid={`card-sub-${s.id}`}>
+              <Card key={s.id} className="bg-card/50 border-white/10" data-testid={`card-sub-${s.id}`}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-mono">{s.id?.substring(0, 20)}...</p>
-                      <p className="text-xs text-muted-foreground">Customer: {s.customer?.substring(0, 20)}...</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-mono truncate">{s.id}</p>
+                      <p className="text-xs text-muted-foreground">Customer: {s.customer}</p>
+                      {s.current_period_end && (
+                        <p className="text-xs text-muted-foreground">Vence: {new Date(s.current_period_end * 1000).toLocaleDateString()}</p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant={s.status === "active" ? "default" : "secondary"} className="text-[10px]">
                         {s.status}
                       </Badge>
                       {s.cancel_at_period_end && (
-                        <Badge variant="destructive" className="text-[10px]">Canceling</Badge>
+                        <Badge variant="destructive" className="text-[10px]">Cancelando</Badge>
+                      )}
+                      {!s.cancel_at_period_end && s.status === "active" && (
+                        <Button size="sm" variant="ghost" className="text-destructive h-7 px-2" onClick={() => { if (confirm("¿Cancelar esta suscripción al final del periodo?")) cancelSubscription.mutate(s.id); }} data-testid={`button-cancel-sub-${s.id}`}>
+                          <XCircle className="h-3.5 w-3.5 mr-1" /> Cancelar
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -364,7 +501,7 @@ function SubscriptionsTab() {
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
-            <p className="text-sm">No subscriptions yet.</p>
+            <p className="text-sm">No hay suscripciones activas.</p>
           </div>
         )}
       </div>
