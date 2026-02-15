@@ -6,7 +6,7 @@ import {
   styleKits, styleKitInstruments,
   platformSettings, supportTickets, supportMessages,
   cloudServers, voiceModels, voiceSamples, styleReferences,
-  blogPosts, blogCategories, pricingPlans,
+  blogPosts, blogCategories, blogComments, blogLikes, blogStars, blogShares, pricingPlans,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
@@ -25,6 +25,10 @@ import {
   type StyleReference, type InsertStyleReference,
   type BlogPost, type InsertBlogPost,
   type BlogCategory, type InsertBlogCategory,
+  type BlogComment, type InsertBlogComment,
+  type BlogLike, type InsertBlogLike,
+  type BlogStar, type InsertBlogStar,
+  type BlogShare, type InsertBlogShare,
   type PricingPlan, type InsertPricingPlan,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
@@ -158,6 +162,20 @@ export interface IStorage {
   createBlogCategory(cat: InsertBlogCategory): Promise<BlogCategory>;
   updateBlogCategory(id: number, data: Partial<BlogCategory>): Promise<BlogCategory>;
   deleteBlogCategory(id: number): Promise<void>;
+
+  getPostComments(postId: number): Promise<BlogComment[]>;
+  createComment(comment: InsertBlogComment): Promise<BlogComment>;
+  deleteComment(id: number): Promise<void>;
+
+  getPostLikes(postId: number): Promise<BlogLike[]>;
+  toggleLike(postId: number, userId: string): Promise<{ liked: boolean; count: number }>;
+  isPostLikedByUser(postId: number, userId: string): Promise<boolean>;
+
+  getPostStars(postId: number): Promise<{ average: number; count: number }>;
+  setStarRating(postId: number, userId: string, rating: number): Promise<BlogStar>;
+
+  getPostShares(postId: number): Promise<number>;
+  recordShare(share: InsertBlogShare): Promise<BlogShare>;
 
   getPricingPlans(activeOnly?: boolean): Promise<PricingPlan[]>;
   getPricingPlan(id: number): Promise<PricingPlan | undefined>;
@@ -944,6 +962,72 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBlogCategory(id: number): Promise<void> {
     await db.delete(blogCategories).where(eq(blogCategories.id, id));
+  }
+
+  async getPostComments(postId: number): Promise<BlogComment[]> {
+    return await db.select().from(blogComments)
+      .where(and(eq(blogComments.postId, postId), eq(blogComments.isApproved, true)))
+      .orderBy(desc(blogComments.createdAt));
+  }
+
+  async createComment(comment: InsertBlogComment): Promise<BlogComment> {
+    const [created] = await db.insert(blogComments).values(comment).returning();
+    return created;
+  }
+
+  async deleteComment(id: number): Promise<void> {
+    await db.delete(blogComments).where(eq(blogComments.id, id));
+  }
+
+  async getPostLikes(postId: number): Promise<BlogLike[]> {
+    return await db.select().from(blogLikes).where(eq(blogLikes.postId, postId));
+  }
+
+  async toggleLike(postId: number, userId: string): Promise<{ liked: boolean; count: number }> {
+    const [existing] = await db.select().from(blogLikes)
+      .where(and(eq(blogLikes.postId, postId), eq(blogLikes.userId, userId)));
+    if (existing) {
+      await db.delete(blogLikes).where(eq(blogLikes.id, existing.id));
+    } else {
+      await db.insert(blogLikes).values({ postId, userId });
+    }
+    const [result] = await db.select({ count: count() }).from(blogLikes).where(eq(blogLikes.postId, postId));
+    return { liked: !existing, count: result.count };
+  }
+
+  async isPostLikedByUser(postId: number, userId: string): Promise<boolean> {
+    const [existing] = await db.select().from(blogLikes)
+      .where(and(eq(blogLikes.postId, postId), eq(blogLikes.userId, userId)));
+    return !!existing;
+  }
+
+  async getPostStars(postId: number): Promise<{ average: number; count: number }> {
+    const [result] = await db.select({
+      average: sql<number>`coalesce(avg(${blogStars.rating}), 0)`,
+      count: count(),
+    }).from(blogStars).where(eq(blogStars.postId, postId));
+    return { average: Number(result.average) || 0, count: result.count };
+  }
+
+  async setStarRating(postId: number, userId: string, rating: number): Promise<BlogStar> {
+    const [existing] = await db.select().from(blogStars)
+      .where(and(eq(blogStars.postId, postId), eq(blogStars.userId, userId)));
+    if (existing) {
+      const [updated] = await db.update(blogStars).set({ rating }).where(eq(blogStars.id, existing.id)).returning();
+      return updated;
+    }
+    const [created] = await db.insert(blogStars).values({ postId, userId, rating }).returning();
+    return created;
+  }
+
+  async getPostShares(postId: number): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(blogShares).where(eq(blogShares.postId, postId));
+    return result.count;
+  }
+
+  async recordShare(share: InsertBlogShare): Promise<BlogShare> {
+    const [created] = await db.insert(blogShares).values(share).returning();
+    return created;
   }
 
   async getPricingPlans(activeOnly?: boolean): Promise<PricingPlan[]> {

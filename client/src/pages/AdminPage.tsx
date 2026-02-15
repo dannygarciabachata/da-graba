@@ -2617,6 +2617,40 @@ function BlogAdminTab() {
                 </select>
                 <Input placeholder="Tags (separados por coma)" value={postForm.tags} onChange={e => setPostForm(p => ({ ...p, tags: e.target.value }))} data-testid="input-blog-tags" />
                 <Input placeholder="URL imagen destacada" value={postForm.featuredImageUrl} onChange={e => setPostForm(p => ({ ...p, featuredImageUrl: e.target.value }))} data-testid="input-blog-image" />
+                <div className="flex items-center gap-2">
+                  <label className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      data-testid="input-blog-image-upload"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const formData = new FormData();
+                        formData.append("image", file);
+                        try {
+                          const res = await fetch("/api/admin/blog/upload-image", {
+                            method: "POST",
+                            body: formData,
+                          });
+                          const data = await res.json();
+                          if (data.url) {
+                            setPostForm(p => ({ ...p, featuredImageUrl: data.url }));
+                          }
+                        } catch (err) {
+                          console.error("Upload failed", err);
+                        }
+                      }}
+                    />
+                    <Button type="button" variant="outline" size="sm" className="w-full" asChild>
+                      <span><Upload className="h-3 w-3 mr-1" /> Subir imagen</span>
+                    </Button>
+                  </label>
+                  {postForm.featuredImageUrl && (
+                    <img src={postForm.featuredImageUrl} alt="Preview" className="h-10 w-10 rounded object-cover" />
+                  )}
+                </div>
               </CardContent>
             </Card>
 

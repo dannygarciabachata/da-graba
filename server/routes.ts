@@ -3214,6 +3214,172 @@ export async function registerRoutes(
     }
   });
 
+  // ========== BLOG IMAGE UPLOAD ==========
+
+  const blogImagesDir = path.join(process.cwd(), "public", "blog", "images");
+  if (!fs.existsSync(blogImagesDir)) fs.mkdirSync(blogImagesDir, { recursive: true });
+
+  const blogImageUpload = multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, blogImagesDir),
+      filename: (_req, _file, cb) => {
+        const ext = path.extname(_file.originalname) || ".png";
+        cb(null, `${uuidv4()}${ext}`);
+      },
+    }),
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const allowed = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, allowed.includes(ext));
+    },
+  });
+
+  app.post("/api/admin/blog/upload-image", blogImageUpload.single("image"), async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      if (!req.file) return res.status(400).json({ message: "No image file uploaded" });
+      const url = `/blog/images/${req.file.filename}`;
+      res.json({ url });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ========== BLOG INTERACTION ROUTES ==========
+
+  app.get("/api/blog/posts/:postId/comments", async (req, res) => {
+    try {
+      const postId = parseInt(req.params.postId);
+      const comments = await storage.getPostComments(postId);
+      res.json(comments);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/blog/posts/:postId/comments", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const postId = parseInt(req.params.postId);
+      const { content, authorName } = req.body;
+      if (!content) return res.status(400).json({ message: "Content is required" });
+      const comment = await storage.createComment({
+        postId,
+        userId,
+        authorName: authorName || "Anonymous",
+        content,
+      });
+      res.json(comment);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/blog/comments/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const id = parseInt(req.params.id);
+      const { db } = await import("./db");
+      const { blogComments } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [comment] = await db.select().from(blogComments).where(eq(blogComments.id, id));
+      if (!comment) return res.status(404).json({ message: "Comment not found" });
+      if (comment.userId !== userId) return res.status(403).json({ message: "Forbidden" });
+      await storage.deleteComment(id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/blog/posts/:postId/like", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const postId = parseInt(req.params.postId);
+      const result = await storage.toggleLike(postId, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/blog/posts/:postId/like", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const postId = parseInt(req.params.postId);
+      const liked = await storage.isPostLikedByUser(postId, userId);
+      res.json({ liked });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/blog/posts/:postId/star", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const postId = parseInt(req.params.postId);
+      const { rating } = req.body;
+      if (!rating || rating < 1 || rating > 5) return res.status(400).json({ message: "Rating must be between 1 and 5" });
+      const star = await storage.setStarRating(postId, userId, rating);
+      res.json(star);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/blog/posts/:postId/stars", async (req, res) => {
+    try {
+      const postId = parseInt(req.params.postId);
+      const stars = await storage.getPostStars(postId);
+      res.json(stars);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/blog/posts/:postId/share", async (req, res) => {
+    try {
+      const postId = parseInt(req.params.postId);
+      const { platform } = req.body;
+      const userId = req.isAuthenticated() ? (req.user as any).claims.sub : null;
+      const share = await storage.recordShare({
+        postId,
+        userId,
+        platform: platform || "link",
+      });
+      res.json(share);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/blog/posts/:postId/stats", async (req, res) => {
+    try {
+      const postId = parseInt(req.params.postId);
+      const [likes, stars, shares, comments] = await Promise.all([
+        storage.getPostLikes(postId),
+        storage.getPostStars(postId),
+        storage.getPostShares(postId),
+        storage.getPostComments(postId),
+      ]);
+      res.json({
+        likesCount: likes.length,
+        starsAverage: stars.average,
+        starsCount: stars.count,
+        sharesCount: shares,
+        commentsCount: comments.length,
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // ========== PRICING PLANS: PUBLIC & ADMIN ROUTES ==========
 
   app.get("/api/pricing/plans", async (_req, res) => {

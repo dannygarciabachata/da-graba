@@ -18,6 +18,7 @@ import PricingPage from "@/pages/PricingPage";
 import StyleKitsPage from "@/pages/StyleKitsPage";
 import ProducerStorePage from "@/pages/ProducerStorePage";
 import AudioToolsPage from "@/pages/AudioToolsPage";
+import BlogPage from "@/pages/BlogPage";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
 
@@ -48,6 +49,8 @@ function AuthenticatedLayout() {
               <Route path="/style-kits" component={StyleKitsPage} />
               <Route path="/producer-store" component={ProducerStorePage} />
               <Route path="/pricing" component={PricingPage} />
+              <Route path="/blog/:slug" component={BlogPage} />
+              <Route path="/blog" component={BlogPage} />
               <Route path="/admin" component={AdminPage} />
               <Route component={NotFound} />
             </Switch>
@@ -74,6 +77,8 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/blog/:slug" component={BlogPage} />
+        <Route path="/blog" component={BlogPage} />
         <Route><Redirect to="/" /></Route>
       </Switch>
     );

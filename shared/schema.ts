@@ -693,6 +693,71 @@ export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
 export const BLOG_POST_STATUSES = ["draft", "published", "archived"] as const;
 export type BlogPostStatus = typeof BLOG_POST_STATUSES[number];
 
+// === BLOG INTERACTIONS ===
+
+export const blogComments = pgTable("blog_comments", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").notNull().references(() => blogPosts.id, { onDelete: "cascade" }),
+  userId: text("user_id"),
+  authorName: text("author_name").notNull(),
+  authorAvatar: text("author_avatar"),
+  content: text("content").notNull(),
+  isApproved: boolean("is_approved").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const blogLikes = pgTable("blog_likes", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").notNull().references(() => blogPosts.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const blogStars = pgTable("blog_stars", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").notNull().references(() => blogPosts.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
+  rating: integer("rating").notNull().default(5),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const blogShares = pgTable("blog_shares", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").notNull().references(() => blogPosts.id, { onDelete: "cascade" }),
+  userId: text("user_id"),
+  platform: text("platform").notNull().default("link"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBlogCommentSchema = createInsertSchema(blogComments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBlogLikeSchema = createInsertSchema(blogLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBlogStarSchema = createInsertSchema(blogStars).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBlogShareSchema = createInsertSchema(blogShares).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type BlogComment = typeof blogComments.$inferSelect;
+export type InsertBlogComment = z.infer<typeof insertBlogCommentSchema>;
+export type BlogLike = typeof blogLikes.$inferSelect;
+export type InsertBlogLike = z.infer<typeof insertBlogLikeSchema>;
+export type BlogStar = typeof blogStars.$inferSelect;
+export type InsertBlogStar = z.infer<typeof insertBlogStarSchema>;
+export type BlogShare = typeof blogShares.$inferSelect;
+export type InsertBlogShare = z.infer<typeof insertBlogShareSchema>;
+
 // === PRICING PLANS ===
 
 export const pricingPlans = pgTable("pricing_plans", {

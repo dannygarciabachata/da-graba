@@ -30,6 +30,7 @@ import {
   Zap,
   Infinity,
   Wrench,
+  BookOpen,
 } from "lucide-react";
 import { useAdminCheck } from "@/hooks/use-admin";
 import { useCredits } from "@/hooks/use-credits";
@@ -48,6 +49,7 @@ const TOOLS_ITEMS = [
   { title: "Audio Tools", url: "/audio-tools", icon: Wrench },
   { title: "Style Kits", url: "/style-kits", icon: Disc },
   { title: "Producer Store", url: "/producer-store", icon: Store },
+  { title: "Blog", url: "/blog", icon: BookOpen },
   { title: "Pricing", url: "/pricing", icon: CreditCard },
 ];
 
