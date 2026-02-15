@@ -415,6 +415,177 @@ export async function seedReplicateProvider(): Promise<void> {
   console.log(`[Seed] Replicate provider seeded with ${replicateEndpoints.length} endpoints`);
 }
 
+export async function seedKieProvider(): Promise<void> {
+  const existing = await storage.getApiProviders();
+  const hasKie = existing.some(p => p.name === "Kie.ai" || p.name === "Kie AI");
+  if (hasKie) {
+    console.log("[Seed] Kie.ai provider already exists, skipping");
+    return;
+  }
+
+  if (!process.env.KIE_API_KEY) {
+    console.log("[Seed] KIE_API_KEY not set, skipping Kie.ai seed");
+    return;
+  }
+
+  console.log("[Seed] Seeding Kie.ai provider...");
+
+  const provider = await storage.createApiProvider({
+    name: "Kie.ai",
+    baseUrl: "https://api.kie.ai/api/v1",
+    authType: "bearer",
+    authHeaderName: "Authorization",
+    apiKeyEnvVar: "KIE_API_KEY",
+    category: "music",
+    isActive: true,
+    description: "Suno V5 music generation via Kie.ai. ~$0.06/song. Supports vocals, custom lyrics, stem separation.",
+    priority: 10,
+    adapterKey: "kie_music",
+  });
+
+  const kieEndpoints = [
+    {
+      name: "Music Generation (Kie.ai Suno V5)",
+      operationType: "music_generation",
+      path: "/generate",
+      method: "POST",
+      contentType: "json",
+      requestMapping: {
+        prompt: "$prompt",
+        model: "V5",
+        customMode: true,
+        style: "$style",
+        title: "$title",
+        instrumental: "$instrumental",
+        vocalGender: "$vocalGender",
+      },
+      responseMapping: { taskId: "data.taskId" },
+      pollPath: "/generate/record-info?taskId={taskId}",
+      pollMethod: "GET",
+      pollResponseMapping: {
+        status: "data.status",
+        audioUrl: "data.response.sunoData.0.audio_url",
+      },
+      asyncPattern: "polling",
+      webhookSupported: true,
+      callbackUrlTemplate: "https://{domain}/api/kie/callback",
+      successStatuses: ["SUCCESS", "FIRST_SUCCESS"],
+      failStatuses: ["FAILED", "ERROR"],
+      description: "Generate songs with Suno V5 model. Supports lyrics, custom mode, vocal gender selection.",
+    },
+    {
+      name: "Stem Separation (Kie.ai)",
+      operationType: "stem_separation",
+      path: "/vocal-removal/generate",
+      method: "POST",
+      contentType: "json",
+      requestMapping: {
+        taskId: "$kieTaskId",
+        audioId: "$kieAudioId",
+        type: "split_stem",
+      },
+      responseMapping: { taskId: "data.taskId" },
+      pollPath: "/generate/record-info?taskId={taskId}",
+      pollMethod: "GET",
+      asyncPattern: "callback",
+      webhookSupported: true,
+      callbackUrlTemplate: "https://{domain}/api/kie/stems-callback",
+      successStatuses: ["SUCCESS", "COMPLETE", "COMPLETED"],
+      failStatuses: ["FAILED", "ERROR"],
+      description: "Split audio into vocals, drums, bass, and other stems via Kie.ai vocal removal API.",
+    },
+  ];
+
+  for (const ep of kieEndpoints) {
+    await storage.createApiEndpoint({
+      providerId: provider.id,
+      ...ep,
+    } as any);
+    console.log(`[Seed] Created Kie.ai endpoint: ${ep.name}`);
+  }
+
+  console.log(`[Seed] Kie.ai provider seeded with ${kieEndpoints.length} endpoints`);
+}
+
+export async function seedReplicateStemsProvider(): Promise<void> {
+  const existing = await storage.getApiProviders();
+  const hasReplicateStems = existing.some(p => p.name === "Replicate Stems" || p.adapterKey === "replicate_stems");
+  if (hasReplicateStems) {
+    console.log("[Seed] Replicate Stems provider already exists, skipping");
+    return;
+  }
+
+  if (!process.env.REPLICATE_API_TOKEN) {
+    console.log("[Seed] REPLICATE_API_TOKEN not set, skipping Replicate Stems seed");
+    return;
+  }
+
+  console.log("[Seed] Seeding Replicate Stems provider...");
+
+  const provider = await storage.createApiProvider({
+    name: "Replicate Stems",
+    baseUrl: "https://api.replicate.com/v1",
+    authType: "bearer",
+    authHeaderName: "Authorization",
+    apiKeyEnvVar: "REPLICATE_API_TOKEN",
+    category: "music",
+    isActive: true,
+    description: "Serverless GPU stem separation using Demucs model on Replicate.",
+    priority: 30,
+    adapterKey: "replicate_stems",
+  });
+
+  await storage.createApiEndpoint({
+    providerId: provider.id,
+    name: "Stem Separation (Demucs)",
+    operationType: "stem_separation",
+    path: "/predictions",
+    method: "POST",
+    contentType: "json",
+    requestMapping: {
+      "version": "07afda2a068a69bafe901cd1e6a41e5e6e1c8fe8b101c89eb06488e7e38e1d56",
+      "input.audio": "$audioUrl",
+    },
+    responseMapping: { taskId: "id" },
+    asyncPattern: "none",
+    webhookSupported: false,
+    successStatuses: ["succeeded"],
+    description: "Separate audio into vocals, drums, bass, other using Demucs on Replicate.",
+  } as any);
+
+  console.log("[Seed] Replicate Stems provider seeded");
+}
+
+export async function updateProviderPriorities(): Promise<void> {
+  const providers = await storage.getApiProviders();
+
+  const priorityMap: Record<string, { priority: number; adapterKey?: string }> = {
+    "Kie.ai": { priority: 10, adapterKey: "kie_music" },
+    "Kie AI": { priority: 10, adapterKey: "kie_music" },
+    "Replicate Stems": { priority: 30, adapterKey: "replicate_stems" },
+    "Replicate": { priority: 40 },
+    "Replicate AI": { priority: 40 },
+    "Mureka AI": { priority: 60 },
+    "DGB AUDIO Audio Engine": { priority: 80 },
+    "DGB AUDIO Cloud Engine": { priority: 50 },
+  };
+
+  for (const provider of providers) {
+    const config = priorityMap[provider.name];
+    if (config && (provider.priority !== config.priority || provider.adapterKey !== config.adapterKey)) {
+      try {
+        await storage.updateApiProvider(provider.id, {
+          priority: config.priority,
+          adapterKey: config.adapterKey || provider.adapterKey,
+        });
+        console.log(`[Seed] Updated ${provider.name}: priority=${config.priority}, adapter=${config.adapterKey || "none"}`);
+      } catch {
+        console.log(`[Seed] Could not update priority for ${provider.name}`);
+      }
+    }
+  }
+}
+
 export async function seedTrainingKits(): Promise<void> {
   const existingKits = await storage.getStyleKits();
 

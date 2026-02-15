@@ -18,7 +18,8 @@ import {
   processDeReverb, processTTS, processSoundGeneration, processTranscription,
   processRemix, processSpeedChange,
 } from "./workers/sample_tasks";
-import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider, seedReplicateProvider, seedMurekaProvider, seedTrainingKits } from "./core/seed_providers";
+import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider, seedReplicateProvider, seedMurekaProvider, seedKieProvider, seedReplicateStemsProvider, updateProviderPriorities, seedTrainingKits } from "./core/seed_providers";
+import { initializeAdapters } from "./core/adapters";
 import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfig, buildRunPodPayload, GENRE_STYLE_HINTS } from "./core/sao_training_engine";
 import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection, getGpuStatus, resumeGpuPod, stopGpuPod, setupGpuEnvironment } from "./core/runpod_client";
 import { isCloudConfigured, getActiveServer, checkCloudHealth, checkDgbCloudHealth, uploadInstrumentToCloud, saveMidiFile, verifyWebhookFromAnyServer } from "./core/dgb_runpod_api";
@@ -1330,6 +1331,8 @@ export async function registerRoutes(
     return true;
   }
 
+  initializeAdapters();
+
   seedDefaultMusicGPTProvider().catch((err: any) =>
     console.log("[Seed] Provider seed error:", err.message?.substring(0, 100))
   );
@@ -1344,6 +1347,18 @@ export async function registerRoutes(
 
   seedMurekaProvider().catch((err: any) =>
     console.log("[Seed] Mureka seed error:", err.message?.substring(0, 100))
+  );
+
+  seedKieProvider().catch((err: any) =>
+    console.log("[Seed] Kie.ai seed error:", err.message?.substring(0, 100))
+  );
+
+  seedReplicateStemsProvider().catch((err: any) =>
+    console.log("[Seed] Replicate Stems seed error:", err.message?.substring(0, 100))
+  );
+
+  updateProviderPriorities().catch((err: any) =>
+    console.log("[Seed] Priority update error:", err.message?.substring(0, 100))
   );
 
   seedTrainingKits().catch((err: any) =>

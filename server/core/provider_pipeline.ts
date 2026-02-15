@@ -75,6 +75,21 @@ export function listAdapters(): string[] {
   return Array.from(adapterRegistry.keys());
 }
 
+function resolveAdapterKey(provider: ApiProvider, operationType: string): string | undefined {
+  const baseKey = provider.adapterKey;
+  if (!baseKey) return undefined;
+
+  const opSuffix: Record<string, string> = {
+    music_generation: "_music",
+    stem_separation: "_stems",
+  };
+
+  const composedKey = baseKey.replace(/_music$|_stems$/, "") + (opSuffix[operationType] || "");
+  if (adapterRegistry.has(composedKey)) return composedKey;
+  if (adapterRegistry.has(baseKey)) return baseKey;
+  return undefined;
+}
+
 function getCallbackUrl(template?: string | null): string | undefined {
   if (!template) return undefined;
   const domain = process.env.REPLIT_DOMAINS?.split(",")[0] || process.env.REPLIT_DEV_DOMAIN || "dgb-studio.replit.app";
@@ -99,9 +114,9 @@ async function getProviderEndpoints(
   return withProvider.filter(ep => {
     if (!ep.isActive || !ep.provider.isActive) return false;
 
-    const adapterKey = ep.provider.adapterKey;
-    if (adapterKey) {
-      const adapter = adapterRegistry.get(adapterKey);
+    const resolvedKey = resolveAdapterKey(ep.provider, operationType);
+    if (resolvedKey) {
+      const adapter = adapterRegistry.get(resolvedKey);
       if (adapter && !adapter.canUse(ep.provider)) return false;
     }
 
@@ -125,17 +140,17 @@ export async function executeOperation(
 
   for (const endpoint of endpoints) {
     const provider = endpoint.provider;
-    const adapterKey = provider.adapterKey;
+    const resolvedAdapterKey = resolveAdapterKey(provider, operationType);
     const providerName = provider.name;
 
-    console.log(`[Pipeline:${operationType}] Trying "${providerName}" (priority: ${provider.priority}, adapter: ${adapterKey || "generic"})`);
+    console.log(`[Pipeline:${operationType}] Trying "${providerName}" (priority: ${provider.priority}, adapter: ${resolvedAdapterKey || "generic"})`);
 
     try {
-      if (adapterKey && adapterRegistry.has(adapterKey)) {
-        const adapter = adapterRegistry.get(adapterKey)!;
+      if (resolvedAdapterKey && adapterRegistry.has(resolvedAdapterKey)) {
+        const adapter = adapterRegistry.get(resolvedAdapterKey)!;
         const result = await adapter.submit(input, provider, endpoint);
         console.log(`[Pipeline:${operationType}] "${providerName}" submitted successfully`);
-        return { ...result, providerName, adapterKey, endpointId: endpoint.id };
+        return { ...result, providerName, adapterKey: resolvedAdapterKey, endpointId: endpoint.id };
       }
 
       const callbackUrl = getCallbackUrl(endpoint.callbackUrlTemplate);

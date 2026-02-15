@@ -1,7 +1,6 @@
 import { storage } from "../storage";
 import {
-  submitGenericJob, pollGenericJob, downloadFile,
-  resolveFullAudioUrl, hasProviderForOperation,
+  downloadFile, resolveFullAudioUrl, hasProviderForOperation,
 } from "./generic_api_engine";
 import {
   submitExtraction, pollMusicGPTJob, downloadMusicGPTFile,
@@ -9,12 +8,7 @@ import {
 import {
   canUseRunPodStems, submitRunPodStemSeparation,
 } from "./runpod_stems_engine";
-import {
-  canUseReplicate, separateStemsWithReplicate,
-} from "./replicate_stems_engine";
-import {
-  canUseKie, submitKieStemSeparation, pollKieStemTask,
-} from "./kie_engine";
+import { executeOperation, pollOperation } from "./provider_pipeline";
 
 const STEM_TYPES = [
   { type: "vocals", name: "Vocals", icon: "mic" },
@@ -54,56 +48,44 @@ export async function processStemSeparation(
       await storage.updateTrackStatus(track.id, "processing");
     }
 
-    // Priority 1: Kie.ai stem separation (for Kie.ai-generated songs)
-    let resolvedAudioId = kieAudioId;
-    if (canUseKie() && kieTaskId && !resolvedAudioId) {
-      try {
-        const { pollKieTask } = await import("./kie_engine");
-        console.log(`[Stems] No kieAudioId stored, re-polling task ${kieTaskId} to get audioId`);
-        const pollResult = await pollKieTask(kieTaskId, 5000, 5000);
-        if (pollResult.kieAudioId) {
-          resolvedAudioId = pollResult.kieAudioId;
-          console.log(`[Stems] Resolved kieAudioId: ${resolvedAudioId}`);
-        }
-      } catch (e: any) {
-        console.log(`[Stems] Could not resolve kieAudioId: ${e.message}`);
-      }
-    }
-    if (canUseKie() && kieTaskId && resolvedAudioId) {
-      console.log(`[Stems] Using Kie.ai for stem separation (taskId: ${kieTaskId}, audioId: ${resolvedAudioId})`);
-      try {
-        const kieStemResult = await submitKieStemSeparation(kieTaskId, resolvedAudioId!, "split_stem");
-        const kieStems = await pollKieStemTask(kieStemResult.taskId, 300000, 10000);
+    try {
+      const submitResult = await executeOperation("stem_separation", {
+        audioUrl: fullAudioUrl,
+        songId,
+        userId,
+        kieTaskId: kieTaskId || undefined,
+        kieAudioId: kieAudioId || undefined,
+      });
 
-        if (Object.keys(kieStems.stems).length > 0) {
-          for (const trackRecord of trackRecords) {
-            const stemDef = STEM_TYPES.find(s => s.type === trackRecord.type);
-            const apiKey = (stemDef as any)?.apiKey || trackRecord.type;
-            const remoteUrl = kieStems.stems[apiKey] || kieStems.stems[trackRecord.type];
-            if (remoteUrl) {
-              try {
-                const localUrl = await downloadFile(remoteUrl, "stems", `${songId}_${trackRecord.type}`);
-                await storage.updateTrackStatus(trackRecord.id, "completed", localUrl);
-                console.log(`[Stems] ${trackRecord.type} stem completed via Kie.ai: ${localUrl}`);
-              } catch (dlErr: any) {
-                console.error(`[Stems] Failed to download ${trackRecord.type} from Kie.ai:`, dlErr.message);
-                await storage.updateTrackStatus(trackRecord.id, "failed", undefined, dlErr.message);
-              }
-            } else {
-              await storage.updateTrackStatus(trackRecord.id, "completed", undefined);
-              console.log(`[Stems] ${trackRecord.type} stem: no separate URL from Kie.ai`);
-            }
-          }
-          console.log(`[Stems] Kie.ai stem separation completed for song ${songId}`);
+      if (submitResult.stems && Object.keys(submitResult.stems).length > 0) {
+        applyStemsToTracks(trackRecords, submitResult.stems, songId, submitResult.providerName);
+        console.log(`[Stems] Stem separation completed for song ${songId} via ${submitResult.providerName}`);
+        return;
+      }
+
+      if (submitResult.needsPolling && submitResult.pollConfig) {
+        console.log(`[Stems] Polling ${submitResult.providerName} for stem results...`);
+        const pollResult = await pollOperation("stem_separation", submitResult.pollConfig.taskId, {
+          endpointId: submitResult.pollConfig.endpointId,
+          adapterKey: submitResult.pollConfig.adapterKey,
+          providerName: submitResult.pollConfig.providerName,
+          maxWaitMs: 300000,
+          intervalMs: 10000,
+          input: { songId, audioUrl: fullAudioUrl },
+        });
+
+        if (pollResult.stems && Object.keys(pollResult.stems).length > 0) {
+          applyStemsToTracks(trackRecords, pollResult.stems, songId, pollResult.providerName);
+          console.log(`[Stems] Stem separation completed for song ${songId} via ${pollResult.providerName}`);
           return;
         }
-        console.log(`[Stems] Kie.ai returned no stems, falling back`);
-      } catch (kieErr: any) {
-        console.log(`[Stems] Kie.ai stem error: ${kieErr.message}, falling back`);
       }
+
+      console.log(`[Stems] Pipeline returned no stems, trying RunPod/MusicGPT fallback`);
+    } catch (pipelineErr: any) {
+      console.log(`[Stems] Pipeline failed: ${pipelineErr.message}, trying RunPod/MusicGPT fallback`);
     }
 
-    // Priority 2: Private Cloud GPU (RunPod/DigitalOcean) - webhook-based
     if (canUseRunPodStems()) {
       console.log(`[Stems] Using cloud GPU (Demucs) for stem separation`);
       try {
@@ -115,122 +97,31 @@ export async function processStemSeparation(
         }
         console.log(`[Stems] Cloud GPU submission failed: ${result.error}, falling back`);
       } catch (gpuErr: any) {
-        console.log(`[Stems] Cloud GPU error: ${gpuErr.message}, falling back to API providers`);
+        console.log(`[Stems] Cloud GPU error: ${gpuErr.message}, falling back`);
       }
     }
 
-    // Priority 3: Replicate serverless GPU (Demucs) - synchronous
-    if (canUseReplicate()) {
-      console.log(`[Stems] Using Replicate (Demucs) for stem separation`);
-      try {
-        const replicateResult = await separateStemsWithReplicate(fullAudioUrl, songId);
-        if (replicateResult.success && Object.keys(replicateResult.stems).length > 0) {
-          for (const trackRecord of trackRecords) {
-            const stemDef = STEM_TYPES.find(s => s.type === trackRecord.type);
-            const apiKey = (stemDef as any)?.apiKey || trackRecord.type;
-            const localUrl = replicateResult.stems[apiKey] || replicateResult.stems[trackRecord.type];
-            if (localUrl) {
-              await storage.updateTrackStatus(trackRecord.id, "completed", localUrl);
-              console.log(`[Stems] ${trackRecord.type} stem completed via Replicate: ${localUrl}`);
-            } else {
-              await storage.updateTrackStatus(trackRecord.id, "completed", undefined);
-              console.log(`[Stems] ${trackRecord.type} stem: no separate URL from Replicate`);
-            }
-          }
-          console.log(`[Stems] Replicate stem separation completed for song ${songId}`);
-          return;
-        }
-        console.log(`[Stems] Replicate returned no stems: ${replicateResult.error}, falling back`);
-      } catch (repErr: any) {
-        console.log(`[Stems] Replicate error: ${repErr.message}, falling back to API providers`);
-      }
-    }
-
-    // Priority 3+: Generic API providers configured in Admin panel
-    const stemsList = ["vocals", "drums", "bass", "instrumental"];
     const useGeneric = await hasProviderForOperation("stem_separation");
-
-    let rawResult: any;
-
     if (useGeneric) {
-      console.log(`[Stems] Using API provider for stem separation`);
+      console.log(`[Stems] Using legacy generic API for stem separation`);
+      const { submitGenericJob, pollGenericJob } = await import("./generic_api_engine");
+      const stemsList = ["vocals", "drums", "bass", "instrumental"];
       const submitResult = await submitGenericJob("stem_separation", {
         audio_url: fullAudioUrl,
         stems: JSON.stringify(stemsList),
       });
       const pollResult = await pollGenericJob("stem_separation", submitResult.taskId!, 600000, 8000, submitResult.endpointId);
-      rawResult = pollResult;
-    } else {
-      // Last resort: MusicGPT fallback
-      console.log(`[Stems] Using MusicGPT fallback engine for stem separation`);
-      const submitResult = await submitExtraction(fullAudioUrl, stemsList);
-      console.log(`[Stems] Extraction submitted, task_id: ${submitResult.task_id}`);
-      const pollResult = await pollMusicGPTJob(submitResult.task_id, 600000, 8000, "EXTRACTION");
-      rawResult = pollResult;
+      const stems = extractLegacyStems(pollResult);
+      applyStemsToTracks(trackRecords, stems, songId, "generic_api");
+      return;
     }
 
-    console.log(`[Stems] Extraction completed, raw result keys:`, Object.keys(rawResult.raw || {}).join(", "));
-
-    let stemUrls: Record<string, string> = {};
-
-    // Handle Replicate-style output: { output: { vocals: url, drums: url, bass: url, other: url } }
-    const replicateOutput = rawResult.raw?.output;
-    if (replicateOutput && typeof replicateOutput === "object" && !Array.isArray(replicateOutput)) {
-      if (replicateOutput.vocals) stemUrls.vocals = String(replicateOutput.vocals);
-      if (replicateOutput.drums) stemUrls.drums = String(replicateOutput.drums);
-      if (replicateOutput.bass) stemUrls.bass = String(replicateOutput.bass);
-      if (replicateOutput.other) stemUrls.instrumental = String(replicateOutput.other);
-      console.log(`[Stems] Extracted stems from output object: ${Object.keys(stemUrls).join(", ")}`);
-    }
-
-    // Handle MusicGPT/generic style: audio_url as JSON string
-    if (Object.keys(stemUrls).length === 0) {
-      const audioUrlField = rawResult.raw?.audio_url || rawResult.audioUrl;
-      if (audioUrlField && typeof audioUrlField === "string") {
-        try {
-          stemUrls = JSON.parse(audioUrlField);
-          console.log(`[Stems] Parsed stem URLs:`, Object.keys(stemUrls).join(", "));
-        } catch {
-          console.log(`[Stems] audio_url is not JSON, treating as single URL`);
-          stemUrls = { vocals: audioUrlField };
-        }
-      }
-    }
-
-    const rawAny = rawResult.raw as any;
-    if (rawAny?.audio_url_wav && typeof rawAny.audio_url_wav === "string") {
-      try {
-        const wavUrls = JSON.parse(rawAny.audio_url_wav);
-        for (const [key, url] of Object.entries(wavUrls)) {
-          if (!stemUrls[key]) stemUrls[key] = url as string;
-        }
-      } catch {}
-    }
-
-    if (rawResult.vocalsUrl) stemUrls.vocals = stemUrls.vocals || rawResult.vocalsUrl;
-    if (rawResult.accompanimentUrl) stemUrls.instrumental = stemUrls.instrumental || rawResult.accompanimentUrl;
-
-    console.log(`[Stems] Available stems: ${Object.keys(stemUrls).join(", ")}`);
-
-    for (const trackRecord of trackRecords) {
-      const stemDef = STEM_TYPES.find(s => s.type === trackRecord.type);
-      const apiKey = (stemDef as any)?.apiKey || trackRecord.type;
-      const remoteUrl = stemUrls[apiKey] || stemUrls[trackRecord.type];
-
-      if (remoteUrl) {
-        try {
-          const localUrl = await downloadFile(remoteUrl, "stems", `${songId}_${trackRecord.type}`);
-          await storage.updateTrackStatus(trackRecord.id, "completed", localUrl);
-          console.log(`[Stems] ${trackRecord.type} stem completed: ${localUrl}`);
-        } catch (dlErr: any) {
-          console.error(`[Stems] Failed to download ${trackRecord.type}:`, dlErr.message);
-          await storage.updateTrackStatus(trackRecord.id, "failed", undefined, dlErr.message);
-        }
-      } else {
-        await storage.updateTrackStatus(trackRecord.id, "completed", undefined);
-        console.log(`[Stems] ${trackRecord.type} stem: no separate URL available`);
-      }
-    }
+    console.log(`[Stems] Using MusicGPT fallback engine for stem separation`);
+    const stemsList = ["vocals", "drums", "bass", "instrumental"];
+    const submitResult = await submitExtraction(fullAudioUrl, stemsList);
+    const pollResult = await pollMusicGPTJob(submitResult.task_id, 600000, 8000, "EXTRACTION");
+    const stems = extractLegacyStems(pollResult);
+    applyStemsToTracks(trackRecords, stems, songId, "musicgpt");
 
     console.log(`[Stems] Stem separation completed for song ${songId}`);
   } catch (err: any) {
@@ -239,6 +130,72 @@ export async function processStemSeparation(
       await storage.updateTrackStatus(track.id, "failed", undefined, err.message);
     }
   }
+}
+
+async function applyStemsToTracks(
+  trackRecords: any[],
+  stems: Record<string, string>,
+  songId: number,
+  providerName: string
+): Promise<void> {
+  for (const trackRecord of trackRecords) {
+    const stemDef = STEM_TYPES.find(s => s.type === trackRecord.type);
+    const apiKey = (stemDef as any)?.apiKey || trackRecord.type;
+    const stemUrl = stems[apiKey] || stems[trackRecord.type];
+
+    if (stemUrl) {
+      try {
+        let localUrl = stemUrl;
+        if (stemUrl.startsWith("http")) {
+          localUrl = await downloadFile(stemUrl, "stems", `${songId}_${trackRecord.type}`);
+        }
+        await storage.updateTrackStatus(trackRecord.id, "completed", localUrl);
+        console.log(`[Stems] ${trackRecord.type} stem completed via ${providerName}: ${localUrl}`);
+      } catch (dlErr: any) {
+        console.error(`[Stems] Failed to download ${trackRecord.type}:`, dlErr.message);
+        await storage.updateTrackStatus(trackRecord.id, "failed", undefined, dlErr.message);
+      }
+    } else {
+      await storage.updateTrackStatus(trackRecord.id, "completed", undefined);
+      console.log(`[Stems] ${trackRecord.type} stem: no separate URL from ${providerName}`);
+    }
+  }
+}
+
+function extractLegacyStems(rawResult: any): Record<string, string> {
+  let stemUrls: Record<string, string> = {};
+
+  const replicateOutput = rawResult.raw?.output;
+  if (replicateOutput && typeof replicateOutput === "object" && !Array.isArray(replicateOutput)) {
+    if (replicateOutput.vocals) stemUrls.vocals = String(replicateOutput.vocals);
+    if (replicateOutput.drums) stemUrls.drums = String(replicateOutput.drums);
+    if (replicateOutput.bass) stemUrls.bass = String(replicateOutput.bass);
+    if (replicateOutput.other) stemUrls.instrumental = String(replicateOutput.other);
+  }
+
+  if (Object.keys(stemUrls).length === 0) {
+    const audioUrlField = rawResult.raw?.audio_url || rawResult.audioUrl;
+    if (audioUrlField && typeof audioUrlField === "string") {
+      try {
+        stemUrls = JSON.parse(audioUrlField);
+      } catch {}
+    }
+  }
+
+  const rawAny = rawResult.raw as any;
+  if (rawAny?.audio_url_wav && typeof rawAny.audio_url_wav === "string") {
+    try {
+      const wavUrls = JSON.parse(rawAny.audio_url_wav);
+      for (const [key, url] of Object.entries(wavUrls)) {
+        if (!stemUrls[key]) stemUrls[key] = url as string;
+      }
+    } catch {}
+  }
+
+  if (rawResult.vocalsUrl) stemUrls.vocals = stemUrls.vocals || rawResult.vocalsUrl;
+  if (rawResult.accompanimentUrl) stemUrls.instrumental = stemUrls.instrumental || rawResult.accompanimentUrl;
+
+  return stemUrls;
 }
 
 const pendingStemTimeouts = new Map<number, NodeJS.Timeout>();
@@ -257,96 +214,37 @@ function startStemTimeout(songId: number, fullAudioUrl: string, trackRecords: an
         return;
       }
 
-      console.log(`[Stems] Cloud GPU timed out for song ${songId} after ${timeoutMs / 1000}s, falling back`);
+      console.log(`[Stems] Cloud GPU timed out for song ${songId} after ${timeoutMs / 1000}s, falling back via pipeline`);
 
-      // Priority 2: Try Replicate (Demucs) first
       try {
-        const replicateToken = process.env.REPLICATE_API_TOKEN;
-        if (replicateToken) {
-          console.log(`[Stems] Timeout fallback: Trying Replicate (Demucs)`);
-          const { separateStemsWithReplicate: separateWithReplicateFn } = await import("./replicate_stems_engine");
-          const repResult = await separateWithReplicateFn(fullAudioUrl, songId);
-          if (repResult && repResult.success && Object.keys(repResult.stems).length > 0) {
-            let allResolved = true;
-            for (const track of tracks) {
-              if (track.status !== "processing" && track.status !== "pending") continue;
-              const stemDef = STEM_TYPES.find(s => s.type === track.type);
-              const apiKey = (stemDef as any)?.apiKey || track.type;
-              const localUrl = repResult.stems[apiKey] || repResult.stems[track.type];
-              if (localUrl) {
-                await storage.updateTrackStatus(track.id, "completed", localUrl);
-              } else {
-                allResolved = false;
-              }
-            }
-            if (allResolved) {
-              console.log(`[Stems] Timeout fallback via Replicate completed for song ${songId}`);
-              pendingStemTimeouts.delete(songId);
-              return;
-            }
-          }
-        }
-      } catch (repErr: any) {
-        console.warn(`[Stems] Replicate timeout fallback failed: ${repErr.message}, trying next provider`);
-      }
+        const submitResult = await executeOperation("stem_separation", {
+          audioUrl: fullAudioUrl,
+          songId,
+        });
 
-      const stemsList = ["vocals", "drums", "bass", "instrumental"];
-      const useGeneric = await hasProviderForOperation("stem_separation");
-
-      if (useGeneric) {
-        console.log(`[Stems] Timeout fallback: Using API provider for stem separation`);
-        try {
-          const submitResult = await submitGenericJob("stem_separation", {
-            audio_url: fullAudioUrl,
-            stems: JSON.stringify(stemsList),
-          });
-          const pollResult = await pollGenericJob("stem_separation", submitResult.taskId!, 600000, 8000, submitResult.endpointId);
-
-          let stemUrls: Record<string, string> = {};
-          const replicateOutput = pollResult.raw?.output;
-          if (replicateOutput && typeof replicateOutput === "object" && !Array.isArray(replicateOutput)) {
-            if (replicateOutput.vocals) stemUrls.vocals = String(replicateOutput.vocals);
-            if (replicateOutput.drums) stemUrls.drums = String(replicateOutput.drums);
-            if (replicateOutput.bass) stemUrls.bass = String(replicateOutput.bass);
-            if (replicateOutput.other) stemUrls.instrumental = String(replicateOutput.other);
-          }
-
-          if (Object.keys(stemUrls).length === 0) {
-            const audioUrlField = pollResult.raw?.audio_url || pollResult.audioUrl;
-            if (audioUrlField && typeof audioUrlField === "string") {
-              try { stemUrls = JSON.parse(audioUrlField); } catch {}
-            }
-          }
-
+        if (submitResult.stems && Object.keys(submitResult.stems).length > 0) {
           for (const track of tracks) {
+            if (track.status !== "processing" && track.status !== "pending") continue;
             const stemDef = STEM_TYPES.find(s => s.type === track.type);
             const apiKey = (stemDef as any)?.apiKey || track.type;
-            const remoteUrl = stemUrls[apiKey] || stemUrls[track.type];
-            if (remoteUrl) {
-              try {
-                const localUrl = await downloadFile(remoteUrl, "stems", `${songId}_${track.type}`);
-                await storage.updateTrackStatus(track.id, "completed", localUrl);
-              } catch (dlErr: any) {
-                await storage.updateTrackStatus(track.id, "failed", undefined, dlErr.message);
-              }
+            const localUrl = submitResult.stems[apiKey] || submitResult.stems[track.type];
+            if (localUrl) {
+              await storage.updateTrackStatus(track.id, "completed", localUrl);
             } else {
               await storage.updateTrackStatus(track.id, "failed", undefined, "No stem data available from fallback");
             }
           }
           console.log(`[Stems] Timeout fallback completed for song ${songId}`);
-        } catch (fallbackErr: any) {
-          console.error(`[Stems] Timeout fallback failed for song ${songId}:`, fallbackErr.message);
-          for (const track of tracks) {
-            if (track.status === "processing" || track.status === "pending") {
-              await storage.updateTrackStatus(track.id, "failed", undefined, fallbackErr.message);
-            }
-          }
+          pendingStemTimeouts.delete(songId);
+          return;
         }
-      } else {
-        for (const track of tracks) {
-          if (track.status === "processing" || track.status === "pending") {
-            await storage.updateTrackStatus(track.id, "failed", undefined, "Cloud GPU timed out and no fallback available");
-          }
+      } catch (fallbackErr: any) {
+        console.error(`[Stems] Timeout pipeline fallback failed: ${fallbackErr.message}`);
+      }
+
+      for (const track of tracks) {
+        if (track.status === "processing" || track.status === "pending") {
+          await storage.updateTrackStatus(track.id, "failed", undefined, "Cloud GPU timed out and no fallback available");
         }
       }
     } catch (err: any) {
