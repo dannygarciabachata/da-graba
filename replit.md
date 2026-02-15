@@ -46,7 +46,16 @@ The "DGB Studio" music engine employs a microservices-oriented architecture.
 - **Replit Auth:** User authentication.
 - **Wavesurfer.js:** Frontend library for audio waveform visualization.
 
+## GPU Infrastructure Notes
+- **RunPod Device Fix:** GPU is assigned as `/dev/nvidia4` not `/dev/nvidia0`. All generation scripts create a symlink `/dev/nvidia0 -> /dev/nvidia4` at startup.
+- **HeartMuse Integration:** HeartMuse (open-source HeartMuLa wrapper) installed at `/workspace/HeartMuse` with dedicated venv containing correct PyTorch 2.6.0+cu124.
+- **Model Variant:** Uses HeartMuLa 3B-RL (reinforcement-learned) variant when available, falls back to base 3B.
+- **Checkpoint Directories:** Scripts check `/workspace/HeartMuse/ckpt` first, then `/workspace/heartmula_ckpt` as fallback.
+- **HeartMuse venv path:** `/workspace/HeartMuse/venv/lib/python3.11/site-packages` - added to sys.path in all generation scripts for correct PyTorch.
+
 ## Recent Changes
+- **Feb 15, 2026:** Major GPU reliability overhaul - added RunPod device mapping fix (nvidia0 symlink), HeartMuse venv integration for correct PyTorch, 3B-RL model variant support, GPU memory cleanup in finally blocks, seed tracking for reproducibility.
+- **Feb 15, 2026:** Updated diagnostics to report device mapping status, HeartMuse installation, and CUDA architecture list.
 - **Feb 15, 2026:** Fixed song duration bug - default increased from 15s to 180s (3 min). Added duration selector in CreatePage Pro Controls (1:00, 2:00, 3:00, 4:00, 5:00). Backend clamps duration between 30-300s.
 - **Feb 15, 2026:** Improved genre/rhythm adherence - enhanced HeartMuLa tags with BPM, time signature, and genre-specific instrument descriptors. Improved prompt enrichment system prompt to prioritize genre name and rhythm feel. Made lyrics generation genre-aware (no longer hardcoded to "Bachata").
 - **Feb 15, 2026:** Added Hip Hop to GENRE_INSTRUMENT_MAP in antigravity_engine.ts. Expanded buildHeartMuLaTags to cover R&B, Hip Hop, Pop, EDM genres with proper tag normalization.

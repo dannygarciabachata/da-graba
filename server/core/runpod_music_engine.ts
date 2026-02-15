@@ -29,7 +29,7 @@ export function getRunPodMusicWebhookUrl(): string {
     ? (domain.startsWith("http") ? domain : `https://${domain}`)
     : "http://localhost:5000";
   const url = `${base.replace(/\/$/, "")}/api/webhooks/runpod-music`;
-  console.log(`[Webhook] URL resolved to: ${url}`);
+  console.log(`[Webhook] Music URL resolved to: ${url}`);
   return url;
 }
 
@@ -53,6 +53,26 @@ import sys
 import time
 import requests
 import subprocess
+
+# Fix GPU device mapping (RunPod may assign as /dev/nvidia4 instead of /dev/nvidia0)
+if not os.path.exists("/dev/nvidia0"):
+    for i in range(8):
+        dev = f"/dev/nvidia{i}"
+        if os.path.exists(dev) and i != 0:
+            try:
+                os.symlink(dev, "/dev/nvidia0")
+                print(f"[SAO Music] Created symlink /dev/nvidia0 -> {dev}")
+            except OSError:
+                pass
+            break
+
+# Add HeartMuse venv for correct PyTorch
+hm_site = "/workspace/HeartMuse/venv/lib/python3.11/site-packages"
+if os.path.exists(hm_site) and hm_site not in sys.path:
+    sys.path.insert(0, hm_site)
+
+os.environ["TMPDIR"] = "/workspace/tmp"
+os.makedirs("/workspace/tmp", exist_ok=True)
 
 song_id = ${songId}
 prompt = "${safePrompt}"
@@ -281,20 +301,52 @@ function buildHeartMuLaGenerationScript(
   const safeLyrics = lyrics.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '\\"');
   const safeTags = tags.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '\\"');
   const hfToken = process.env.HF_TOKEN || "";
-  const durationMs = Math.min(duration * 1000, 240000);
+  const durationMs = Math.min(duration * 1000, 300000);
 
   return `
+import gc
 import json
 import os
 import sys
 import time
 import subprocess
-import requests
+import logging
 
-# Ensure heartlib src is in path
-heartlib_src = "/workspace/heartlib/src"
+logging.getLogger("torchtune.modules.attention").setLevel(logging.ERROR)
+
+# === STEP 0: Fix GPU device mapping ===
+# RunPod may assign GPU as /dev/nvidia4 instead of /dev/nvidia0
+# Create symlink so CUDA can find the device
+def fix_gpu_device():
+    if os.path.exists("/dev/nvidia0"):
+        return True
+    for i in range(8):
+        dev = f"/dev/nvidia{i}"
+        if os.path.exists(dev) and i != 0:
+            try:
+                os.symlink(dev, "/dev/nvidia0")
+                print(f"[HeartMuLa] Created symlink /dev/nvidia0 -> {dev}")
+                return True
+            except OSError:
+                pass
+    return False
+
+fix_gpu_device()
+
+# Add HeartMuse venv packages to path for correct PyTorch
+hm_site = "/workspace/HeartMuse/venv/lib/python3.11/site-packages"
+if os.path.exists(hm_site) and hm_site not in sys.path:
+    sys.path.insert(0, hm_site)
+
+# Also add heartlib
+heartlib_src = "/workspace/HeartMuse/heartlib/src"
 if os.path.exists(heartlib_src) and heartlib_src not in sys.path:
     sys.path.insert(0, heartlib_src)
+heartlib_src2 = "/workspace/heartlib/src"
+if os.path.exists(heartlib_src2) and heartlib_src2 not in sys.path:
+    sys.path.insert(0, heartlib_src2)
+
+import requests
 
 song_id = ${songId}
 prompt = "${safePrompt}"
@@ -307,6 +359,9 @@ hf_token = "${hfToken}"
 if hf_token:
     os.environ["HF_TOKEN"] = hf_token
     os.environ["HUGGING_FACE_HUB_TOKEN"] = hf_token
+
+os.environ["TMPDIR"] = "/workspace/tmp"
+os.makedirs("/workspace/tmp", exist_ok=True)
 
 print(f"[HeartMuLa] Starting generation for song {song_id}")
 print(f"[HeartMuLa] Tags: {tags_text[:200]}")
@@ -344,7 +399,7 @@ def send_result(audio_file, gen_time, device):
         except Exception as e:
             print(f"[HeartMuLa] Webhook attempt {attempt+1} failed: {e}")
         if attempt < 2:
-            time.sleep(5)
+            time.sleep(5 * (attempt + 1))
     print("[HeartMuLa] WARNING: All webhook attempts failed, audio saved locally at: " + audio_file)
 
 def send_error(error_msg):
@@ -364,58 +419,72 @@ def send_error(error_msg):
             time.sleep(3)
     print(f"[HeartMuLa] WARNING: Could not report error to server: {error_msg}")
 
+pipe = None
 try:
-    # === STEP 1: Ensure heartlib is installed ===
+    # === STEP 1: Ensure heartlib is available ===
     try:
         from heartlib import HeartMuLaGenPipeline
-        print("[HeartMuLa] heartlib already installed")
+        print("[HeartMuLa] heartlib available")
     except ImportError:
         print("[HeartMuLa] Installing heartlib...")
         heartlib_dir = "/workspace/heartlib"
-        heartlib_src = os.path.join(heartlib_dir, "src")
         if not os.path.exists(heartlib_dir):
             subprocess.run(["git", "clone", "https://github.com/HeartMuLa/heartlib.git", heartlib_dir], check=True, timeout=120)
         subprocess.run([sys.executable, "-m", "pip", "install", "-e", heartlib_dir, "--quiet"], capture_output=True, text=True, timeout=300)
-        if os.path.exists(heartlib_src) and heartlib_src not in sys.path:
-            sys.path.insert(0, heartlib_src)
+        src = os.path.join(heartlib_dir, "src")
+        if os.path.exists(src) and src not in sys.path:
+            sys.path.insert(0, src)
         from heartlib import HeartMuLaGenPipeline
-        print("[HeartMuLa] heartlib installed successfully")
+        print("[HeartMuLa] heartlib installed")
 
-    # === STEP 2: Download model checkpoints if needed ===
-    ckpt_dir = "/workspace/heartmula_ckpt"
-    mula_dir = os.path.join(ckpt_dir, "HeartMuLa-oss-3B")
+    # === STEP 2: Resolve checkpoint directory ===
+    # Check HeartMuse ckpt dir first (if HeartMuse was installed), then fallback
+    ckpt_dir = None
+    for candidate in ["/workspace/HeartMuse/ckpt", "/workspace/heartmula_ckpt"]:
+        gen_cfg = os.path.join(candidate, "gen_config.json")
+        tok = os.path.join(candidate, "tokenizer.json")
+        if os.path.isfile(gen_cfg) and os.path.isfile(tok):
+            ckpt_dir = candidate
+            break
+
+    if ckpt_dir is None:
+        ckpt_dir = "/workspace/HeartMuse/ckpt"
+        os.makedirs(ckpt_dir, exist_ok=True)
+
+    # Use HeartMuLa 3B-RL variant (recommended by HeartMuse)
+    model_version = "3B-RL"
+    mula_dir = os.path.join(ckpt_dir, "HeartMuLa-oss-3B-RL")
+    # Also check legacy directory name
+    mula_dir_legacy = os.path.join(ckpt_dir, "HeartMuLa-oss-3B")
     codec_dir = os.path.join(ckpt_dir, "HeartCodec-oss")
     gen_config = os.path.join(ckpt_dir, "gen_config.json")
     tokenizer = os.path.join(ckpt_dir, "tokenizer.json")
 
     if not os.path.exists(gen_config) or not os.path.exists(tokenizer):
-        print("[HeartMuLa] Downloading base config files...")
-        subprocess.run([
-            sys.executable, "-m", "huggingface_hub", "download",
-            "--local-dir", ckpt_dir,
-            "HeartMuLa/HeartMuLaGen",
-            "--include", "gen_config.json", "tokenizer.json"
-        ], check=True, timeout=300)
+        print("[HeartMuLa] Downloading config files...")
+        from huggingface_hub import hf_hub_download
+        for fname in ["gen_config.json", "tokenizer.json"]:
+            hf_hub_download("HeartMuLa/HeartMuLaGen", fname, local_dir=ckpt_dir)
 
-    if not os.path.exists(mula_dir) or len(os.listdir(mula_dir)) < 2:
+    # Check if RL model exists (preferred), fallback to base
+    if os.path.isdir(mula_dir) and len(os.listdir(mula_dir)) >= 2:
+        print(f"[HeartMuLa] Using RL model from {mula_dir}")
+    elif os.path.isdir(mula_dir_legacy) and len(os.listdir(mula_dir_legacy)) >= 2:
+        print(f"[HeartMuLa] Using base model from {mula_dir_legacy}")
+        model_version = "3B"
+    else:
         print("[HeartMuLa] Downloading HeartMuLa-RL-oss-3B model...")
         os.makedirs(mula_dir, exist_ok=True)
-        subprocess.run([
-            sys.executable, "-m", "huggingface_hub", "download",
-            "--local-dir", mula_dir,
-            "HeartMuLa/HeartMuLa-RL-oss-3B-20260123"
-        ], check=True, timeout=600)
+        from huggingface_hub import snapshot_download
+        snapshot_download(repo_id="HeartMuLa/HeartMuLa-RL-oss-3B-20260123", local_dir=mula_dir)
 
-    if not os.path.exists(codec_dir) or len(os.listdir(codec_dir)) < 2:
+    if not os.path.isdir(codec_dir) or len(os.listdir(codec_dir)) < 2:
         print("[HeartMuLa] Downloading HeartCodec model...")
         os.makedirs(codec_dir, exist_ok=True)
-        subprocess.run([
-            sys.executable, "-m", "huggingface_hub", "download",
-            "--local-dir", codec_dir,
-            "HeartMuLa/HeartCodec-oss-20260123"
-        ], check=True, timeout=600)
+        from huggingface_hub import snapshot_download
+        snapshot_download(repo_id="HeartMuLa/HeartCodec-oss-20260123", local_dir=codec_dir)
 
-    print("[HeartMuLa] All checkpoints ready")
+    print(f"[HeartMuLa] Checkpoints ready (variant={model_version}, dir={ckpt_dir})")
 
     # === STEP 3: Write lyrics and tags to temp files ===
     lyrics_file = os.path.join(output_dir, f"lyrics_{song_id}.txt")
@@ -426,16 +495,20 @@ try:
     with open(tags_file, "w", encoding="utf-8") as f:
         f.write(tags_text)
 
-    print(f"[HeartMuLa] Lyrics file: {lyrics_file}")
-    print(f"[HeartMuLa] Tags file: {tags_file}")
-
     # === STEP 4: Load pipeline and generate ===
     import torch
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"[HeartMuLa] Device: {device} | GPU: {torch.cuda.get_device_name(0) if device == 'cuda' else 'N/A'}")
+    gpu_name = "N/A"
+    if device == "cuda":
+        gpu_name = torch.cuda.get_device_name(0)
+        props = torch.cuda.get_device_properties(0)
+        vram = round(props.total_memory / 1024**3, 1)
+        print(f"[HeartMuLa] GPU: {gpu_name} ({vram}GB VRAM)")
+    else:
+        print("[HeartMuLa] WARNING: CUDA not available, using CPU (very slow)")
 
-    print("[HeartMuLa] Loading HeartMuLa pipeline...")
+    print(f"[HeartMuLa] Loading pipeline (version={model_version}, lazy_load=True)...")
     pipe = HeartMuLaGenPipeline.from_pretrained(
         ckpt_dir,
         device={
@@ -446,12 +519,18 @@ try:
             "mula": torch.bfloat16 if device == "cuda" else torch.float32,
             "codec": torch.float32,
         },
-        version="3B",
+        version=model_version,
         lazy_load=True,
     )
-    print("[HeartMuLa] Pipeline loaded, starting generation...")
+    print("[HeartMuLa] Pipeline loaded, generating...")
 
     gen_start = time.time()
+
+    import random
+    seed = random.randint(0, 2**32 - 1)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
     with torch.no_grad():
         pipe(
@@ -469,22 +548,16 @@ try:
     gen_time = time.time() - gen_start
 
     if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-        print(f"[HeartMuLa] Generated audio in {gen_time:.1f}s ({os.path.getsize(output_path) / 1024 / 1024:.1f}MB)")
+        print(f"[HeartMuLa] Generated audio in {gen_time:.1f}s ({os.path.getsize(output_path) / 1024 / 1024:.1f}MB) seed={seed}")
         send_result(output_path, gen_time, device)
     else:
         send_error("HeartMuLa generated empty output")
 
-    # Cleanup temp files
     for f in [lyrics_file, tags_file]:
         try:
             os.remove(f)
         except:
             pass
-
-    # Free GPU memory
-    del pipe
-    if device == "cuda":
-        torch.cuda.empty_cache()
 
 except Exception as e:
     print(f"[HeartMuLa] Generation failed: {e}")
@@ -492,8 +565,61 @@ except Exception as e:
     traceback.print_exc()
     send_error(str(e))
 
+finally:
+    # Always free GPU memory
+    try:
+        if pipe is not None:
+            del pipe
+        gc.collect()
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except:
+        pass
+
 print(f"[HeartMuLa] Job complete for song {song_id}")
 `;
+}
+
+async function ensureIdleKernel(base: string, headers: Record<string, string>): Promise<string> {
+  const listRes = await fetchWithTimeout(`${base}/api/kernels`, { headers }, 15000);
+  if (!listRes.ok) throw new Error(`Cannot list kernels: ${listRes.status}`);
+
+  const kernels = await listRes.json();
+
+  if (Array.isArray(kernels) && kernels.length > 0) {
+    const kernel = kernels[0];
+    if (kernel.execution_state === "busy") {
+      console.log(`[GPU] Kernel ${kernel.id} is busy (stuck), restarting...`);
+      const restartRes = await fetchWithTimeout(
+        `${base}/api/kernels/${kernel.id}/restart`,
+        { method: "POST", headers },
+        20000
+      );
+      if (restartRes.ok) {
+        console.log(`[GPU] Kernel restarted successfully`);
+        await new Promise(r => setTimeout(r, 3000));
+      } else {
+        console.log(`[GPU] Kernel restart failed (${restartRes.status}), deleting and creating new...`);
+        await fetchWithTimeout(`${base}/api/kernels/${kernel.id}`, { method: "DELETE", headers }, 10000).catch(() => {});
+        const createRes = await fetchWithTimeout(`${base}/api/kernels`, {
+          method: "POST", headers, body: JSON.stringify({ name: "python3" }),
+        }, 15000);
+        if (!createRes.ok) throw new Error(`Failed to create kernel: ${createRes.status}`);
+        const newKernel = await createRes.json();
+        await new Promise(r => setTimeout(r, 2000));
+        return newKernel.id;
+      }
+    }
+    return kernel.id;
+  }
+
+  const createRes = await fetchWithTimeout(`${base}/api/kernels`, {
+    method: "POST", headers, body: JSON.stringify({ name: "python3" }),
+  }, 15000);
+  if (!createRes.ok) throw new Error(`Failed to create kernel: ${createRes.status}`);
+  const kernel = await createRes.json();
+  return kernel.id;
 }
 
 export async function submitHeartMuLaGeneration(
@@ -517,24 +643,7 @@ export async function submitHeartMuLaGeneration(
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `token ${token}`;
 
-    const listRes = await fetchWithTimeout(`${base}/api/kernels`, { headers }, 15000);
-    let kernelId: string;
-
-    if (listRes.ok) {
-      const kernels = await listRes.json();
-      if (Array.isArray(kernels) && kernels.length > 0) {
-        kernelId = kernels[0].id;
-      } else {
-        const createRes = await fetchWithTimeout(`${base}/api/kernels`, {
-          method: "POST", headers, body: JSON.stringify({ name: "python3" }),
-        }, 15000);
-        if (!createRes.ok) throw new Error(`Failed to create kernel: ${createRes.status}`);
-        const kernel = await createRes.json();
-        kernelId = kernel.id;
-      }
-    } else {
-      throw new Error(`Cannot list kernels: ${listRes.status}`);
-    }
+    const kernelId = await ensureIdleKernel(base, headers);
 
     console.log(`[HeartMuLa] Submitting generation for song ${songId}, kernel ${kernelId}`);
 
@@ -693,24 +802,7 @@ export async function submitRunPodMusicGeneration(
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `token ${token}`;
 
-    const listRes = await fetchWithTimeout(`${base}/api/kernels`, { headers }, 15000);
-    let kernelId: string;
-
-    if (listRes.ok) {
-      const kernels = await listRes.json();
-      if (Array.isArray(kernels) && kernels.length > 0) {
-        kernelId = kernels[0].id;
-      } else {
-        const createRes = await fetchWithTimeout(`${base}/api/kernels`, {
-          method: "POST", headers, body: JSON.stringify({ name: "python3" }),
-        }, 15000);
-        if (!createRes.ok) throw new Error(`Failed to create kernel: ${createRes.status}`);
-        const kernel = await createRes.json();
-        kernelId = kernel.id;
-      }
-    } else {
-      throw new Error(`Cannot list kernels: ${listRes.status}`);
-    }
+    const kernelId = await ensureIdleKernel(base, headers);
 
     console.log(`[RunPod Music] Submitting generation for song ${songId}, kernel ${kernelId}`);
 
@@ -823,7 +915,29 @@ export async function runGpuDiagnostics(): Promise<{output: string[], errors: st
   const diagLines = [
     "import json, os, sys, subprocess",
     "",
-    'result = {"packages": {}, "gpu": {}, "workspace": {}, "install_test": {}}',
+    "# Fix GPU device mapping (RunPod assigns /dev/nvidia4 instead of /dev/nvidia0)",
+    "if not os.path.exists('/dev/nvidia0'):",
+    "    for i in range(8):",
+    "        dev = f'/dev/nvidia{i}'",
+    "        if os.path.exists(dev) and i != 0:",
+    "            try:",
+    "                os.symlink(dev, '/dev/nvidia0')",
+    "            except OSError:",
+    "                pass",
+    "            break",
+    "",
+    "# Use HeartMuse venv for correct PyTorch",
+    "hm_site = '/workspace/HeartMuse/venv/lib/python3.11/site-packages'",
+    "if os.path.exists(hm_site) and hm_site not in sys.path:",
+    "    sys.path.insert(0, hm_site)",
+    "",
+    'result = {"packages": {}, "gpu": {}, "workspace": {}, "install_test": {}, "device_fix": {}}',
+    "",
+    "# Check GPU device mapping",
+    'result["device_fix"]["nvidia0_exists"] = os.path.exists("/dev/nvidia0")',
+    'result["device_fix"]["nvidia0_target"] = os.readlink("/dev/nvidia0") if os.path.islink("/dev/nvidia0") else "real_device"',
+    'nvidia_devs = [f for f in os.listdir("/dev") if f.startswith("nvidia")]',
+    'result["device_fix"]["all_nvidia_devs"] = sorted(nvidia_devs)',
     "",
     "try:",
     "    import torch",
@@ -831,7 +945,8 @@ export async function runGpuDiagnostics(): Promise<{output: string[], errors: st
     '    result["gpu"]["cuda_available"] = torch.cuda.is_available()',
     "    if torch.cuda.is_available():",
     '        result["gpu"]["device_name"] = torch.cuda.get_device_name(0)',
-    '        result["gpu"]["memory_gb"] = round(torch.cuda.get_device_properties(0).total_mem / 1024**3, 1)',
+    '        result["gpu"]["memory_gb"] = round(torch.cuda.get_device_properties(0).total_memory / 1024**3, 1)',
+    '        result["gpu"]["arch_list"] = torch.cuda.get_arch_list()',
     "except Exception as e:",
     '    result["gpu"]["error"] = str(e)',
     "",
@@ -845,15 +960,25 @@ export async function runGpuDiagnostics(): Promise<{output: string[], errors: st
     'workspace = "/workspace"',
     "if os.path.exists(workspace):",
     '    result["workspace"]["contents"] = sorted(os.listdir(workspace))',
-    '    ckpt_dir = os.path.join(workspace, "heartmula_ckpt")',
-    "    if os.path.exists(ckpt_dir):",
-    '        result["workspace"]["heartmula_ckpt"] = sorted(os.listdir(ckpt_dir))',
-    '        mula_dir = os.path.join(ckpt_dir, "HeartMuLa-oss-3B")',
-    "        if os.path.exists(mula_dir):",
-    '            result["workspace"]["mula_model_files"] = sorted(os.listdir(mula_dir))[:10]',
-    '        codec_dir = os.path.join(ckpt_dir, "HeartCodec-oss")',
-    "        if os.path.exists(codec_dir):",
-    '            result["workspace"]["codec_model_files"] = sorted(os.listdir(codec_dir))[:10]',
+    '    for ckpt_name in ["HeartMuse/ckpt", "heartmula_ckpt"]:',
+    '        ckpt_dir = os.path.join(workspace, ckpt_name)',
+    "        if os.path.exists(ckpt_dir):",
+    '            result["workspace"]["ckpt_dir"] = ckpt_dir',
+    '            result["workspace"]["ckpt_contents"] = sorted(os.listdir(ckpt_dir))',
+    '            for mula_name in ["HeartMuLa-oss-3B-RL", "HeartMuLa-oss-3B"]:',
+    '                mula_dir = os.path.join(ckpt_dir, mula_name)',
+    "                if os.path.exists(mula_dir):",
+    '                    result["workspace"]["mula_model"] = mula_name',
+    '                    result["workspace"]["mula_files"] = sorted(os.listdir(mula_dir))[:10]',
+    "                    break",
+    '            codec_dir = os.path.join(ckpt_dir, "HeartCodec-oss")',
+    "            if os.path.exists(codec_dir):",
+    '                result["workspace"]["codec_files"] = sorted(os.listdir(codec_dir))[:10]',
+    "            break",
+    '    hm_dir = os.path.join(workspace, "HeartMuse")',
+    "    if os.path.exists(hm_dir):",
+    '        result["workspace"]["heartmuse_installed"] = True',
+    '        result["workspace"]["heartmuse_venv"] = os.path.exists(os.path.join(hm_dir, "venv"))',
     '    heartlib_dir = os.path.join(workspace, "heartlib")',
     "    if os.path.exists(heartlib_dir):",
     '        result["workspace"]["heartlib_dir"] = sorted(os.listdir(heartlib_dir))[:10]',
@@ -869,6 +994,14 @@ export async function runGpuDiagnostics(): Promise<{output: string[], errors: st
     "result['python'] = sys.version",
     'result["pip_packages"] = subprocess.run([sys.executable, "-m", "pip", "list", "--format=columns"], capture_output=True, text=True, timeout=30).stdout[-2000:]',
     "",
+    `webhook_test_url = "${getRunPodMusicWebhookUrl().replace('/api/webhooks/runpod-music', '/api/health')}"`,
+    "try:",
+    "    import requests as req",
+    "    wr = req.get(webhook_test_url, timeout=10)",
+    '    result["webhook_connectivity"] = {"url": webhook_test_url, "status": wr.status_code, "reachable": True}',
+    "except Exception as we:",
+    '    result["webhook_connectivity"] = {"url": webhook_test_url, "status": str(we), "reachable": False}',
+    "",
     'print("DIAG_RESULT:" + json.dumps(result))',
   ];
   const diagScript = diagLines.join("\n");
@@ -876,19 +1009,11 @@ export async function runGpuDiagnostics(): Promise<{output: string[], errors: st
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = "token " + token;
 
-  const listRes = await fetchWithTimeout(base + "/api/kernels", { headers }, 15000);
-  if (!listRes.ok) return { output: [], errors: ["Cannot reach GPU kernels"], status: "error" };
-  const kernels = await listRes.json();
   let kernelId: string;
-  if (Array.isArray(kernels) && kernels.length > 0) {
-    kernelId = kernels[0].id;
-  } else {
-    const createRes = await fetchWithTimeout(base + "/api/kernels", {
-      method: "POST", headers, body: JSON.stringify({ name: "python3" }),
-    }, 15000);
-    if (!createRes.ok) return { output: [], errors: ["Failed to create kernel"], status: "error" };
-    const kernel = await createRes.json();
-    kernelId = kernel.id;
+  try {
+    kernelId = await ensureIdleKernel(base, headers);
+  } catch (err: any) {
+    return { output: [], errors: ["Cannot get idle kernel: " + err.message], status: "error" };
   }
 
   const wsProtocol = base.startsWith("https") ? "wss" : "ws";

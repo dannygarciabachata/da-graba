@@ -79,6 +79,10 @@ export async function registerRoutes(
   recoverStuckSongs();
   setInterval(() => recoverStuckSongs(), 5 * 60 * 1000);
 
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok", timestamp: Date.now() });
+  });
+
   // ========== MUSIC ROUTES ==========
 
   app.get(api.songs.list.path, async (req, res) => {
