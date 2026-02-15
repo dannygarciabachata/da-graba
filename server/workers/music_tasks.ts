@@ -249,8 +249,13 @@ export async function processMusicGeneration(
     console.log(`[Worker] MusicGPT task ${submitResult.task_id} submitted for song ${songId}`);
     startFallbackPoller(songId, submitResult.task_id, false);
   } catch (err: any) {
-    console.error(`[Worker] Music generation failed for song ${songId}:`, err);
-    await storage.updateSongStatus(songId, "failed", undefined, err.message || "Generation failed");
+    const msg = err.message || "";
+    console.error(`[Worker] Music generation failed for song ${songId}:`, msg);
+    let userMsg = "Music generation failed. Please try again.";
+    if (msg.includes("QUOTA_EXCEEDED")) userMsg = "AI service credits exhausted. Please contact admin to restore service.";
+    else if (msg.includes("AUTH_ERROR")) userMsg = "AI service authentication failed. Please contact admin.";
+    else if (msg.includes("No API key")) userMsg = "AI service not configured. Please contact admin.";
+    await storage.updateSongStatus(songId, "failed", undefined, userMsg);
   }
 }
 

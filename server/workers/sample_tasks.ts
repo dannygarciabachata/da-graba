@@ -13,6 +13,14 @@ import {
   submitAudioSpeedChanger, submitVoiceChanger,
 } from "../core/musicgpt_engine";
 
+function friendlyError(msg: string, fallback: string): string {
+  if (msg.includes("QUOTA_EXCEEDED")) return "AI service credits exhausted. Please contact admin to restore service.";
+  if (msg.includes("AUTH_ERROR")) return "AI service authentication failed. Please contact admin.";
+  if (msg.includes("No API key configured")) return "AI service not configured. Please contact admin.";
+  if (msg.includes("No active endpoint found")) return "This feature is temporarily unavailable. No AI provider is configured for this operation.";
+  return fallback;
+}
+
 export async function processHummingToMusic(
   sampleId: number,
   audioUrl: string,
@@ -47,8 +55,9 @@ export async function processHummingToMusic(
 
     console.log(`[SampleWorker] Remix complete for sample ${sampleId}`);
   } catch (err: any) {
-    console.error(`[SampleWorker] Error for sample ${sampleId}:`, err.message || err);
-    await storage.updateSample(sampleId, { status: "failed", error: err.message || "AI remix generation failed" });
+    const msg = err.message || "";
+    console.error(`[SampleWorker] Error for sample ${sampleId}:`, msg);
+    await storage.updateSample(sampleId, { status: "failed", error: friendlyError(msg, "AI remix generation failed") });
   }
 }
 
@@ -84,9 +93,10 @@ export async function processKeyBPMDetection(
     await storage.updateSample(sampleId, updates);
     console.log(`[SampleWorker] Key/BPM detection complete: key=${key}, bpm=${bpm}`);
   } catch (err: any) {
-    console.error(`[SampleWorker] Key/BPM error for sample ${sampleId}:`, err.message || err);
+    const msg = err.message || "";
+    console.error(`[SampleWorker] Key/BPM error for sample ${sampleId}:`, msg);
     const sample = await storage.getSample(sampleId);
-    await storage.updateSample(sampleId, { status: sample?.audioUrl ? "ready" : "failed", error: err.message || "Key/BPM detection failed" });
+    await storage.updateSample(sampleId, { status: sample?.audioUrl ? "ready" : "failed", error: friendlyError(msg, "Key/BPM detection failed") });
   }
 }
 
@@ -121,8 +131,9 @@ export async function processMastering(
     await storage.updateSongStatus(songId, "completed", localUrl);
     console.log(`[MasterWorker] Mastering complete for song ${songId}: ${localUrl}`);
   } catch (err: any) {
-    console.error(`[MasterWorker] Error for song ${songId}:`, err.message || err);
-    await storage.updateSongStatus(songId, "completed", undefined, err.message);
+    const msg = err.message || "";
+    console.error(`[MasterWorker] Error for song ${songId}:`, msg);
+    await storage.updateSongStatus(songId, "completed", undefined, friendlyError(msg, "Audio mastering failed"));
   }
 }
 
@@ -159,8 +170,9 @@ export async function processDenoise(
     await storage.updateSongStatus(newSong.id, "completed", localUrl);
     console.log(`[DenoiseWorker] Denoise complete for song ${songId}: ${localUrl}`);
   } catch (err: any) {
-    console.error(`[DenoiseWorker] Error for song ${songId}:`, err.message || err);
-    if (newSongId) await storage.updateSongStatus(newSongId, "failed", undefined, err.message);
+    const msg = err.message || "";
+    console.error(`[DenoiseWorker] Error for song ${songId}:`, msg);
+    if (newSongId) await storage.updateSongStatus(newSongId, "failed", undefined, friendlyError(msg, "Audio denoising failed"));
   }
 }
 
@@ -211,7 +223,8 @@ export async function processCoverSong(
     await storage.updateSongStatus(coverSong.id, "completed", localUrl);
     console.log(`[CoverWorker] Cover complete for song ${songId}, new song: ${coverSong.id}`);
   } catch (err: any) {
-    console.error(`[CoverWorker] Error for song ${songId}:`, err.message || err);
+    const msg = err.message || "";
+    console.error(`[CoverWorker] Error for song ${songId}:`, msg);
   }
 }
 
@@ -269,9 +282,10 @@ export async function processAudioCut(
     await storage.updateSongStatus(trimSong.id, "completed", localUrl);
     console.log(`[CutWorker] Trim complete for song ${songId}, new song: ${trimSong.id}`);
   } catch (err: any) {
-    console.error(`[CutWorker] Error for song ${songId}:`, err.message || err);
+    const msg = err.message || "";
+    console.error(`[CutWorker] Error for song ${songId}:`, msg);
     if (trimSongId) {
-      await storage.updateSongStatus(trimSongId, "failed", undefined, err.message || "Audio trimming failed");
+      await storage.updateSongStatus(trimSongId, "failed", undefined, friendlyError(msg, "Audio trimming failed"));
     }
   }
 }
@@ -304,8 +318,9 @@ export async function processVoiceConversion(
     await storage.updateSongStatus(newSong.id, "completed", localUrl);
     console.log(`[VoiceWorker] Voice conversion complete for song ${songId}`);
   } catch (err: any) {
-    console.error(`[VoiceWorker] Error for song ${songId}:`, err.message || err);
-    if (newSongId) await storage.updateSongStatus(newSongId, "failed", undefined, err.message);
+    const msg = err.message || "";
+    console.error(`[VoiceWorker] Error for song ${songId}:`, msg);
+    if (newSongId) await storage.updateSongStatus(newSongId, "failed", undefined, friendlyError(msg, "Voice conversion failed"));
   }
 }
 
@@ -335,8 +350,9 @@ export async function processDeEcho(songId: number, audioUrl: string): Promise<v
     await storage.updateSongStatus(newSong.id, "completed", localUrl);
     console.log(`[DeEchoWorker] De-echo complete for song ${songId}`);
   } catch (err: any) {
-    console.error(`[DeEchoWorker] Error for song ${songId}:`, err.message || err);
-    if (newSongId) await storage.updateSongStatus(newSongId, "failed", undefined, err.message);
+    const msg = err.message || "";
+    console.error(`[DeEchoWorker] Error for song ${songId}:`, msg);
+    if (newSongId) await storage.updateSongStatus(newSongId, "failed", undefined, friendlyError(msg, "De-echo processing failed"));
   }
 }
 
@@ -366,8 +382,9 @@ export async function processDeReverb(songId: number, audioUrl: string): Promise
     await storage.updateSongStatus(newSong.id, "completed", localUrl);
     console.log(`[DeReverbWorker] De-reverb complete for song ${songId}`);
   } catch (err: any) {
-    console.error(`[DeReverbWorker] Error for song ${songId}:`, err.message || err);
-    if (newSongId) await storage.updateSongStatus(newSongId, "failed", undefined, err.message);
+    const msg = err.message || "";
+    console.error(`[DeReverbWorker] Error for song ${songId}:`, msg);
+    if (newSongId) await storage.updateSongStatus(newSongId, "failed", undefined, friendlyError(msg, "De-reverb processing failed"));
   }
 }
 
@@ -396,8 +413,9 @@ export async function processTTS(
     await storage.updateSongStatus(song.id, "completed", localUrl);
     console.log(`[TTSWorker] TTS complete: ${song.id}`);
   } catch (err: any) {
-    console.error(`[TTSWorker] Error:`, err.message || err);
-    if (songId) await storage.updateSongStatus(songId, "failed", undefined, err.message);
+    const msg = err.message || "";
+    console.error(`[TTSWorker] Error:`, msg);
+    if (songId) await storage.updateSongStatus(songId, "failed", undefined, friendlyError(msg, "Text-to-speech failed"));
   }
 }
 
@@ -426,8 +444,9 @@ export async function processSoundGeneration(
     await storage.updateSongStatus(song.id, "completed", localUrl);
     console.log(`[SFXWorker] Sound generation complete: ${song.id}`);
   } catch (err: any) {
-    console.error(`[SFXWorker] Error:`, err.message || err);
-    if (songId) await storage.updateSongStatus(songId, "failed", undefined, err.message);
+    const msg = err.message || "";
+    console.error(`[SFXWorker] Error:`, msg);
+    if (songId) await storage.updateSongStatus(songId, "failed", undefined, friendlyError(msg, "Sound generation failed"));
   }
 }
 
@@ -453,8 +472,9 @@ export async function processTranscription(
     console.log(`[TranscribeWorker] Transcription complete for song ${songId}`);
     return { text };
   } catch (err: any) {
-    console.error(`[TranscribeWorker] Error for song ${songId}:`, err.message || err);
-    await storage.updateSongStatus(songId, "completed", undefined, err.message);
+    const msg = err.message || "";
+    console.error(`[TranscribeWorker] Error for song ${songId}:`, msg);
+    await storage.updateSongStatus(songId, "completed", undefined, friendlyError(msg, "Transcription failed"));
     return {};
   }
 }
@@ -487,8 +507,9 @@ export async function processRemix(
     await storage.updateSongStatus(newSong.id, "completed", localUrl);
     console.log(`[RemixWorker] Remix complete for song ${songId}, new song: ${newSong.id}`);
   } catch (err: any) {
-    console.error(`[RemixWorker] Error for song ${songId}:`, err.message || err);
-    if (newSongId) await storage.updateSongStatus(newSongId, "failed", undefined, err.message);
+    const msg = err.message || "";
+    console.error(`[RemixWorker] Error for song ${songId}:`, msg);
+    if (newSongId) await storage.updateSongStatus(newSongId, "failed", undefined, friendlyError(msg, "Remix failed"));
   }
 }
 
@@ -520,7 +541,8 @@ export async function processSpeedChange(
     await storage.updateSongStatus(newSong.id, "completed", localUrl);
     console.log(`[SpeedWorker] Speed change complete for song ${songId}, new song: ${newSong.id}`);
   } catch (err: any) {
-    console.error(`[SpeedWorker] Error for song ${songId}:`, err.message || err);
-    if (newSongId) await storage.updateSongStatus(newSongId, "failed", undefined, err.message);
+    const msg = err.message || "";
+    console.error(`[SpeedWorker] Error for song ${songId}:`, msg);
+    if (newSongId) await storage.updateSongStatus(newSongId, "failed", undefined, friendlyError(msg, "Speed change failed"));
   }
 }

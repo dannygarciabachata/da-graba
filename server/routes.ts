@@ -10,7 +10,7 @@ import { generateCreativeLyrics } from "./core/antigravity_engine";
 import { buildMusicGenPrompt, buildStyleKitPrompt, PROMPT_VERSIONS } from "./core/prompt_engine";
 import { downloadMusicGPTFile } from "./core/musicgpt_engine";
 import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engine";
-import { processStemSeparation } from "./core/stems_engine";
+import { processStemSeparation, cancelStemTimeout } from "./core/stems_engine";
 import { saveStemAudio, getStemsWebhookSecret } from "./core/runpod_stems_engine";
 import {
   processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise,
@@ -545,6 +545,8 @@ export async function registerRoutes(
         return res.sendStatus(200);
       }
 
+      cancelStemTimeout(songId);
+
       if (payload.status === "failed") {
         const errorMsg = payload.error || "Cloud GPU stem separation failed";
         console.log(`[Webhook] Stems failed for song ${songId}: ${errorMsg}`);
@@ -625,12 +627,24 @@ export async function registerRoutes(
 
     const existingTracks = await storage.getTracksBySongId(songId);
     if (existingTracks.length > 0) {
-      const allFailed = existingTracks.every(t => t.status === "failed");
-      if (allFailed) {
-        await storage.deleteTracksBySongId(songId);
-      } else {
+      const allStuck = existingTracks.every(t => t.status === "failed" || t.status === "pending");
+      const anyProcessing = existingTracks.some(t => t.status === "processing");
+      const anyCompleted = existingTracks.some(t => t.status === "completed" && t.audioUrl);
+
+      if (anyCompleted) {
         return res.status(400).json({ message: "Stems already exist for this song", tracks: existingTracks });
       }
+
+      if (anyProcessing) {
+        const oldestProcessing = existingTracks.filter(t => t.status === "processing")
+          .sort((a, b) => new Date(a.createdAt!).getTime() - new Date(b.createdAt!).getTime())[0];
+        const ageMs = Date.now() - new Date(oldestProcessing.createdAt!).getTime();
+        if (ageMs < 600000) {
+          return res.status(400).json({ message: "Stem separation is still in progress", tracks: existingTracks });
+        }
+      }
+
+      await storage.deleteTracksBySongId(songId);
     }
 
     processStemSeparation(songId, song.audioUrl, userId);
