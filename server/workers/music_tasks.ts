@@ -168,6 +168,10 @@ export async function processMusicGeneration(
       } catch (kieErr: any) {
         const msg = kieErr.message || "";
         console.log(`[Worker] Kie.ai failed: ${msg}`);
+        if (msg.includes("CREDITS_EXHAUSTED") || msg.includes("QUOTA_EXCEEDED")) {
+          await storage.updateSongStatus(songId, "failed", undefined, "Service credits exhausted. Contact admin to restore service.");
+          return;
+        }
       }
     }
 

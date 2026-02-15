@@ -414,7 +414,14 @@ export async function downloadFile(
 
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  const ext = remoteUrl.includes(".wav") ? ".wav" : remoteUrl.includes(".png") ? ".png" : remoteUrl.includes(".jpg") ? ".jpg" : ".mp3";
+  const contentType = response.headers.get("content-type") || "";
+  let ext = ".mp3";
+  if (contentType.includes("image/png") || remoteUrl.includes(".png")) ext = ".png";
+  else if (contentType.includes("image/jpeg") || contentType.includes("image/jpg") || remoteUrl.includes(".jpg") || remoteUrl.includes(".jpeg")) ext = ".jpg";
+  else if (contentType.includes("image/webp") || remoteUrl.includes(".webp")) ext = ".webp";
+  else if (contentType.includes("audio/wav") || remoteUrl.includes(".wav")) ext = ".wav";
+  else if (contentType.includes("image/") || subdir === "images" || label === "cover") ext = ".png";
+  else if (contentType.includes("audio/mpeg") || remoteUrl.includes(".mp3")) ext = ".mp3";
   const filename = `${crypto.randomUUID()}_${label}${ext}`;
   const filePath = path.join(dir, filename);
   fs.writeFileSync(filePath, buffer);

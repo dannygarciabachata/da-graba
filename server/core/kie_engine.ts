@@ -207,6 +207,11 @@ export async function submitKieMusicGeneration(
     body: JSON.stringify(body),
   });
 
+  if (result?.code === 402 || result?.msg?.toLowerCase().includes("credits insufficient")) {
+    console.error(`[Kie.ai] Credits insufficient:`, JSON.stringify(result).substring(0, 300));
+    throw new Error("KIE_CREDITS_EXHAUSTED: Kie.ai credits are depleted. Please top up at kie.ai");
+  }
+
   const taskId = result?.data?.taskId || result?.taskId;
   if (!taskId) {
     console.error(`[Kie.ai] No taskId in response:`, JSON.stringify(result).substring(0, 500));
@@ -275,6 +280,10 @@ export async function submitKieStemSeparation(
       type,
     }),
   });
+
+  if (result?.code === 402 || result?.msg?.toLowerCase().includes("credits insufficient")) {
+    throw new Error("KIE_CREDITS_EXHAUSTED: Kie.ai credits depleted for stem separation");
+  }
 
   const newTaskId = result?.data?.taskId || result?.taskId;
   if (!newTaskId) {

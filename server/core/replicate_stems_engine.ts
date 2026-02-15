@@ -24,16 +24,13 @@ export async function separateStemsWithReplicate(
 
   try {
     const output = await replicate.run(
-      "cjwbw/demucs:25a173108cff36ef9f80f854c162d01df9e6528be175794b81571f6e0feadce7",
+      "cjwbw/demucs" as `${string}/${string}`,
       {
         input: {
           audio: audioUrl,
           model: "htdemucs",
-          stem: "all",
-          mp3: true,
-          mp3_bitrate: 320,
-          shifts: 1,
-          overlap: 0.25,
+          output_format: "mp3",
+          clip_mode: "rescale",
         },
       }
     );

@@ -142,7 +142,9 @@ export default function LibraryPage() {
                           <span className="text-yellow-500 animate-pulse">{t('common.processing')}</span>
                         )}
                         {song.status === "failed" && (
-                          <span className="text-destructive">{t('common.failed')}</span>
+                          <span className="text-destructive" title={song.error || ""}>
+                            {t('common.failed')}{song.error ? ` — ${song.error.substring(0, 60)}` : ""}
+                          </span>
                         )}
                       </div>
                     </div>
