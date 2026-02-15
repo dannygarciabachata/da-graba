@@ -142,12 +142,12 @@ export function buildBachataLyrics(userPrompt: string, style: string): string {
 Bajo la luna de Santo Domingo
 Tu mirada me tiene cautivo
 Cada latido es un ritmo que sigo
-DGB Studio suena, el amor es mi abrigo
+DGB AUDIO suena, el amor es mi abrigo
 
 [Chorus]
 Bailamos bachata, corazon a corazon
 Tu cuerpo y el mio, una sola cancion
-DGB Studio late, con toda la pasion
+DGB AUDIO late, con toda la pasion
 Eres mi reina, mi unica razon`,
 
     "bachata-romantic": `[Verse]

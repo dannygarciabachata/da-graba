@@ -1,6 +1,10 @@
 {
   "common": {
-    "loading": "Loading DGB Studio...",
+    "loading": "Loading DGB AUDIO...",
+    "brandName": "DGB AUDIO",
+    "engineActivated": "DGB AUDIO Activated",
+    "engineSignature": "DGB AUDIO Signature",
+    "musicEngine": "DGB AUDIO Music Engine",
     "login": "Login",
     "logout": "Logout",
     "credits": "Credits",
@@ -30,6 +34,9 @@
     "success": "Success",
     "noResults": "No results",
     "poweredBy": "Powered by",
+    "engineName": "DGB AUDIO Engine",
+    "demoSongTitle": "Return to Eden",
+    "demoSongArtist": "DGB AUDIO AI",
     "aiGenerated": "AI-Generated",
     "beta": "BETA",
     "mostPopular": "Most Popular",
@@ -58,10 +65,15 @@
     "adminPanel": "Admin Panel"
   },
   "landing": {
-    "badge": "The DNA of Danny Garcia",
-    "heroTitle": "Create Bachata with the",
-    "heroTitleHighlight": "DNA of Danny Garcia",
-    "heroSubtitle": "Create Bachata, Boleros, and Latin music with the signature sound and DNA of Danny Garcia. AI-powered studio — no per-song API costs. Start with 12 free credits.",
+    "badge": "The Purebred of Bachata",
+    "heroTitle": "DGB AUDIO: The Purebred of Bachata with the",
+    "heroTitleHighlight": "DNA of Danny Garcia and the Great Dominican Musicians",
+    "heroSubtitle": "The first AI-powered ecosystem that integrates Danny Garcia's musical DNA alongside the virtuosity of the Dominican Republic's most iconic musicians. Create professional-quality productions with the heart of Dominican performance.",
+    "aboutTitle": "About Us",
+    "aboutText": "DGB AUDIO is the first AI-powered ecosystem that integrates Danny Garcia's musical DNA alongside the virtuosity of the Dominican Republic's most iconic musicians. We bring the soul of the requinto and the sentiment of the bolero into a new era, enabling artists worldwide to create professional-quality productions with the heart of Dominican performance, eliminating budget barriers.",
+    "comingSoonTitle": "Coming Soon",
+    "comingSoonGenreHistory": "Genre History",
+    "comingSoonGenreHistoryDesc": "A dedicated section on the evolution, details, and iconic figures that shaped Bachata and Bolero.",
     "startCreating": "Start Creating Free",
     "exploreFeatures": "Explore Features",
     "noCreditCard": "No credit card required",
@@ -73,7 +85,7 @@
       "apiCosts": "API Costs"
     },
     "featuresTitle": "Everything You Need to Create",
-    "featuresSubtitle": "From AI-powered music generation to professional mastering tools, DGB Studio gives you a complete music production suite.",
+    "featuresSubtitle": "From AI-powered music generation to professional mastering tools, DGB AUDIO gives you a complete music production suite.",
     "features": {
       "aiMusic": {
         "title": "AI Music Generation",
@@ -100,6 +112,7 @@
         "description": "Upload custom instrument kits, train AI with your sounds, and build a unique sonic library."
       }
     },
+    "howItWorksBadge": "How It Works",
     "howItWorksTitle": "From Idea to Finished Track",
     "howItWorksSubtitle": "Three simple steps to create professional music with AI.",
     "howItWorks": {
@@ -119,7 +132,7 @@
     "pricingTitle": "Plans for Every Creator",
     "pricingSubtitle": "Start free with 12 credits. Upgrade anytime for more power and features.",
     "ctaTitle": "Ready to Create Your First Track?",
-    "ctaSubtitle": "Join DGB Studio today and get 12 free credits to start making music with AI. No credit card needed.",
+    "ctaSubtitle": "Join DGB AUDIO today and get 12 free credits to start making music with AI. No credit card needed.",
     "ctaButton": "Create Your Free Account",
     "plans": {
       "free": {
@@ -140,7 +153,7 @@
       }
     },
     "footer": {
-      "copyright": "DGB Studio. All rights reserved.",
+      "copyright": "DGB AUDIO. All rights reserved.",
       "builtWith": "Built with AI for Latin music creators.",
       "product": "Product",
       "tools": "Tools",
@@ -333,7 +346,7 @@
       "noSamplesSubtitle": "Record or upload audio to get started"
     },
     "styles": {
-      "signature": "DGB Studio Signature",
+      "signature": "DGB AUDIO Signature",
       "romantic": "Romantic",
       "dance": "Dance",
       "bolero": "Bolero",
@@ -354,11 +367,12 @@
     "hideComparison": "Hide Full Feature Comparison"
   },
   "blog": {
-    "title": "DGB Studio Blog",
+    "title": "DGB AUDIO Blog",
     "subtitle": "News, tutorials and updates from the world of AI music",
     "searchPlaceholder": "Search articles...",
     "noArticles": "No articles found",
     "noArticlesYet": "No articles published yet",
+    "defaultAuthor": "DGB AUDIO",
     "readMore": "Read More",
     "comments": "Comments",
     "likes": "Likes",

@@ -12,6 +12,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 const TEMPLATES = [
   { id: "gradient-neon", name: "Neon Glow", gradient: ["#00F3FF", "#7B2FFF"], textColor: "#FFFFFF" },
@@ -97,6 +98,7 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
   const [designName, setDesignName] = useState("Untitled Design");
   const [currentDesignId, setCurrentDesignId] = useState<number | null>(null);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const { data: savedDesigns = [], refetch: refetchDesigns } = useQuery<any[]>({
     queryKey: ["/api/cover-designs"],
@@ -434,14 +436,14 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
 
-    const badgeText = "DGB Studio";
+    const badgeText = t('common.brandName');
     ctx.font = `10px ${font.family}`;
     ctx.globalAlpha = 0.3;
     ctx.fillStyle = textColor;
     ctx.textAlign = "right";
     ctx.fillText(badgeText, size - 20, size - 20);
     ctx.globalAlpha = 1;
-  }, [title, artist, template, font, titleSize, artistSize, showSubtitle, uploadedImage, getFilterString, glamourEffect, duotoneColor, titlePos, artistPos]);
+  }, [title, artist, template, font, titleSize, artistSize, showSubtitle, uploadedImage, getFilterString, glamourEffect, duotoneColor, titlePos, artistPos, t]);
 
   useEffect(() => { renderCanvas(); }, [renderCanvas]);
 

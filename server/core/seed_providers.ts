@@ -7,10 +7,10 @@ export async function seedDefaultMusicGPTProvider(): Promise<void> {
     return;
   }
 
-  console.log("[Seed] Seeding default DGB STUDIO Audio Engine configuration...");
+  console.log("[Seed] Seeding default DGB AUDIO Audio Engine configuration...");
 
   const provider = await storage.createApiProvider({
-    name: "DGB STUDIO Audio Engine",
+    name: "DGB AUDIO Audio Engine",
     baseUrl: "https://api.musicgpt.com/api/public/v1",
     authType: "raw",
     authHeaderName: "Authorization",
@@ -155,7 +155,7 @@ export async function seedDefaultMusicGPTProvider(): Promise<void> {
     console.log(`[Seed] Created endpoint: ${ep.name}`);
   }
 
-  console.log(`[Seed] DGB STUDIO Audio Engine seeded with ${endpoints.length} endpoints`);
+  console.log(`[Seed] DGB AUDIO Audio Engine seeded with ${endpoints.length} endpoints`);
 
   await seedDgbRunPodProvider();
 }
@@ -164,7 +164,7 @@ export async function seedDgbRunPodProvider(): Promise<void> {
   const existing = await storage.getApiProviders();
   const hasDgb = existing.some(p =>
     p.name === "DGB Cloud Engine" || p.name === "DGB Audio RunPod" ||
-    p.name === "Heart Mula Cloud Engine" || p.name === "DGB Studio Cloud Engine"
+    p.name === "Heart Mula Cloud Engine" || p.name === "DGB AUDIO Cloud Engine"
   );
   if (hasDgb) {
     console.log("[Seed] Cloud Engine provider already exists, skipping");
@@ -179,10 +179,10 @@ export async function seedDgbRunPodProvider(): Promise<void> {
   const gpuBase = (process.env.RUNPOD_BASE_URL || "").replace(/\/lab\/.*$/, "").replace(/\/$/, "");
   const apiBase = gpuBase.replace(/:8888$/, ":7860").replace(/-8888\./, "-7860.");
 
-  console.log("[Seed] Seeding DGB Studio Cloud Engine provider...");
+  console.log("[Seed] Seeding DGB AUDIO Cloud Engine provider...");
 
   const provider = await storage.createApiProvider({
-    name: "DGB Studio Cloud Engine",
+    name: "DGB AUDIO Cloud Engine",
     baseUrl: apiBase,
     authType: "header",
     authHeaderName: "X-DGB-API-Key",
@@ -249,7 +249,7 @@ export async function seedDgbRunPodProvider(): Promise<void> {
     console.log(`[Seed] Created Cloud endpoint: ${ep.name}`);
   }
 
-  console.log(`[Seed] DGB Studio Cloud Engine seeded with ${dgbEndpoints.length} endpoints`);
+  console.log(`[Seed] DGB AUDIO Cloud Engine seeded with ${dgbEndpoints.length} endpoints`);
 }
 
 export async function seedMurekaProvider(): Promise<void> {

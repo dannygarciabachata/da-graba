@@ -365,7 +365,7 @@ function SubscriptionsTab() {
           <Card className="bg-card/50 border-primary/20 mb-4">
             <CardContent className="p-4 space-y-3">
               <h3 className="text-sm font-semibold">Crear Producto en Stripe</h3>
-              <Input placeholder="Nombre del producto (ej: DGB Studio Pro)" value={productForm.name} onChange={e => setProductForm(f => ({ ...f, name: e.target.value }))} data-testid="input-new-product-name" />
+              <Input placeholder="Nombre del producto (ej: DGB AUDIO Pro)" value={productForm.name} onChange={e => setProductForm(f => ({ ...f, name: e.target.value }))} data-testid="input-new-product-name" />
               <Input placeholder="Descripción" value={productForm.description} onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))} data-testid="input-new-product-desc" />
               <Button size="sm" onClick={() => createProduct.mutate(productForm)} disabled={createProduct.isPending || !productForm.name} data-testid="button-submit-create-product">
                 {createProduct.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Plus className="h-4 w-4 mr-1" />} Crear en Stripe
@@ -1392,7 +1392,7 @@ function SettingsTab() {
   const { toast } = useToast();
 
   const generalSettings = [
-    { key: "site_name", label: "Site Name", defaultValue: "DGB Studio", category: "general", description: "Platform name" },
+    { key: "site_name", label: "Site Name", defaultValue: "DGB AUDIO", category: "general", description: "Platform name" },
     { key: "maintenance_mode", label: "Maintenance Mode", defaultValue: "false", category: "general", description: "Enable maintenance page" },
     { key: "signup_enabled", label: "Signup Enabled", defaultValue: "true", category: "general", description: "Allow new user registrations" },
     { key: "default_subscription_tier", label: "Default Tier", defaultValue: "free", category: "billing", description: "Default subscription for new users" },
@@ -1402,7 +1402,7 @@ function SettingsTab() {
     { key: "max_songs_premium", label: "Max Songs (Premium)", defaultValue: "unlimited", category: "limits", description: "Song limit for premium tier" },
     { key: "allowed_audio_types", label: "Allowed Audio Types", defaultValue: "wav,mp3,ogg,flac,m4a", category: "limits", description: "Accepted audio formats" },
     { key: "support_auto_reply", label: "Support Auto-Reply", defaultValue: "true", category: "support", description: "AI auto-responds to support chats" },
-    { key: "brand_tagline", label: "Brand Tagline", defaultValue: "DGB Studio Engine", category: "branding", description: "Platform tagline" },
+    { key: "brand_tagline", label: "Brand Tagline", defaultValue: "DGB AUDIO Engine", category: "branding", description: "Platform tagline" },
   ];
 
   const currentValues: Record<string, string> = {};
@@ -1496,7 +1496,7 @@ function EmailSettingsTab() {
 
   const emailFields = [
     { key: "email_provider", label: "Email Provider", defaultValue: "smtp", description: "SMTP, SendGrid, Mailgun, etc." },
-    { key: "email_from_name", label: "From Name", defaultValue: "DGB Studio", description: "Sender display name" },
+    { key: "email_from_name", label: "From Name", defaultValue: "DGB AUDIO", description: "Sender display name" },
     { key: "email_from_address", label: "From Address", defaultValue: "noreply@dgbaudio.com", description: "Sender email address" },
     { key: "email_smtp_host", label: "SMTP Host", defaultValue: "", description: "e.g. smtp.gmail.com" },
     { key: "email_smtp_port", label: "SMTP Port", defaultValue: "587", description: "Usually 587 (TLS) or 465 (SSL)" },
@@ -1505,7 +1505,7 @@ function EmailSettingsTab() {
   ];
 
   const templateFields = [
-    { key: "email_template_welcome", label: "Welcome Email", defaultValue: "Welcome to DGB Studio! Start creating music with the DGB Studio Engine.", description: "Sent to new users" },
+    { key: "email_template_welcome", label: "Welcome Email", defaultValue: "Welcome to DGB AUDIO! Start creating music with the DGB AUDIO Engine.", description: "Sent to new users" },
     { key: "email_template_subscription", label: "Subscription Confirmation", defaultValue: "Your {plan} subscription is now active. Enjoy unlimited music creation!", description: "Sent after subscription" },
     { key: "email_template_support_reply", label: "Support Reply Notification", defaultValue: "Your support ticket #{ticketId} has a new reply from our team.", description: "Sent when admin replies to ticket" },
     { key: "email_template_password_reset", label: "Password Reset", defaultValue: "Click the link below to reset your password.", description: "Password reset email" },
@@ -2308,7 +2308,7 @@ function CloudServersTab() {
           <CardContent className="text-xs space-y-3">
             <div>
               <p className="font-semibold mb-1">1. Prepare your GPU server</p>
-              <p className="text-muted-foreground">Set up a GPU server on any cloud provider (AWS, Google Cloud, DigitalOcean, RunPod, etc.). Install the DGB Studio Cloud Engine API on it.</p>
+              <p className="text-muted-foreground">Set up a GPU server on any cloud provider (AWS, Google Cloud, DigitalOcean, RunPod, etc.). Install the DGB AUDIO Cloud Engine API on it.</p>
             </div>
             <div>
               <p className="font-semibold mb-1">2. Deploy the Flask API</p>
@@ -2748,7 +2748,7 @@ function BlogAdminTab() {
           <div className="text-center py-12 text-muted-foreground">
             <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
             <p className="text-sm">No hay posts aún.</p>
-            <p className="text-xs">Crea tu primer post para el blog de DGB Studio.</p>
+            <p className="text-xs">Crea tu primer post para el blog de DGB AUDIO.</p>
           </div>
         )}
       </div>

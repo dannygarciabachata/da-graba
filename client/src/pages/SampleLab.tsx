@@ -19,7 +19,7 @@ import type { Sample } from "@shared/schema";
 import { useTranslation } from "react-i18next";
 
 const STYLE_OPTIONS = [
-  { value: "heart-mula", label: "DGB Studio Signature" },
+  { value: "heart-mula", labelKey: "sampleLab.styles.signature" },
   { value: "bachata-romantic", label: "Romantic" },
   { value: "bachata-dance", label: "Dance" },
   { value: "bachata-bolero", label: "Bolero" },
@@ -595,7 +595,7 @@ export default function SampleLab() {
                         </SelectTrigger>
                         <SelectContent>
                           {STYLE_OPTIONS.map((s) => (
-                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                            <SelectItem key={s.value} value={s.value}>{'labelKey' in s ? t(s.labelKey as string) : s.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -806,7 +806,7 @@ export default function SampleLab() {
                     </SelectTrigger>
                     <SelectContent>
                       {STYLE_OPTIONS.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        <SelectItem key={s.value} value={s.value}>{'labelKey' in s ? t(s.labelKey as string) : s.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

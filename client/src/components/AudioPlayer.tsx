@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 interface AudioPlayerProps {
   url: string | null;
@@ -32,6 +33,7 @@ export function AudioPlayer({ url, title, imageUrl, genre, duration: songDuratio
   const [duration, setDuration] = useState(0);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!url) return;
@@ -181,7 +183,7 @@ export function AudioPlayer({ url, title, imageUrl, genre, duration: songDuratio
     const shareUrl = window.location.href;
     if (navigator.share) {
       try {
-        await navigator.share({ title: `${title} - DGB Studio`, url: shareUrl });
+        await navigator.share({ title: `${title} - ${t('common.brandName')}`, url: shareUrl });
       } catch {}
     } else {
       await navigator.clipboard.writeText(shareUrl);

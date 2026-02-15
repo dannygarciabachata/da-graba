@@ -154,7 +154,7 @@ export async function processMusicGeneration(
         }
 
         const kieResult = await submitKieMusicGeneration(enrichedPrompt, style, {
-          title: `DGB Studio - ${style}`,
+          title: `DGB AUDIO - ${style}`,
           lyrics: songLyrics || undefined,
           instrumental,
         });

@@ -22,6 +22,7 @@ import BlogPage from "@/pages/BlogPage";
 import CoverDesignerPage from "@/pages/CoverDesignerPage";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
+import { useTranslation } from "react-i18next";
 
 function AuthenticatedLayout() {
   const style = {
@@ -66,11 +67,12 @@ function AuthenticatedLayout() {
 
 function Router() {
   const { user, isLoading } = useAuth();
+  const { t } = useTranslation();
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center text-primary">
-        Loading DGB Studio...
+        {t('common.loading')}
       </div>
     );
   }

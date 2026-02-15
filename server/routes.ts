@@ -175,7 +175,7 @@ export async function registerRoutes(
 
       const pairId = `pair_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
       const artistName = (req.body.artistName as string) || undefined;
-      const copyrightHolder = (req.body.copyrightHolder as string) || "DGB Studio";
+      const copyrightHolder = (req.body.copyrightHolder as string) || "DGB AUDIO";
       const lyricsText = lyrics || undefined;
 
       const song1 = await storage.createSong({
@@ -3974,10 +3974,10 @@ export async function registerRoutes(
         baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
       });
 
-      const systemPrompt = `You are the DGB Studio Support Assistant, a helpful and friendly AI support agent for the DGB Studio music production platform.
+      const systemPrompt = `You are the DGB AUDIO Support Assistant, a helpful and friendly AI support agent for the DGB AUDIO music production platform.
 
 PLATFORM FEATURES:
-- Music Generation: AI-powered music creation supporting 20+ genres. Users can create songs with custom prompts, select genres, and choose from 6 style presets (DGB Studio Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana).
+- Music Generation: AI-powered music creation supporting 20+ genres. Users can create songs with custom prompts, select genres, and choose from 6 style presets (DGB AUDIO Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana).
 - Multitrack Studio: AI stem separation splits songs into Vocals, Drums, Bass, and Melody tracks. Each track has individual volume, mute, and solo controls.
 - Studio AI Tools: Professional audio mastering, noise removal (denoise), AI cover songs with voice change, and audio trimming/cutting.
 - Sample Lab: Record audio from browser, upload audio files, AI remix transformation, and Key/BPM detection.

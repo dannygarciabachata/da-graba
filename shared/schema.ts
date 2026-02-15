@@ -25,7 +25,7 @@ export const songs = pgTable("songs", {
   pairId: text("pair_id"),
   variationLabel: text("variation_label"),
   artistName: text("artist_name"),
-  copyrightHolder: text("copyright_holder").default("DGB Studio"),
+  copyrightHolder: text("copyright_holder").default("DGB AUDIO"),
   lyricsText: text("lyrics_text"),
   createdAt: timestamp("created_at").defaultNow(),
 });

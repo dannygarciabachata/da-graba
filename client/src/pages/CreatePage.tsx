@@ -130,7 +130,7 @@ export default function CreatePage() {
   const [activeCreationMode, setActiveCreationMode] = useState<CreationMode>("song");
   const [selectedStyleKit, setSelectedStyleKit] = useState<number | undefined>(undefined);
   const [artistName, setArtistName] = useState("");
-  const [copyrightHolder, setCopyrightHolder] = useState("DGB Studio");
+  const [copyrightHolder, setCopyrightHolder] = useState("DGB AUDIO");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
 
   const [soundPrompt, setSoundPrompt] = useState("");
@@ -717,7 +717,7 @@ export default function CreatePage() {
                       </Tooltip>
                     </Label>
                     <Input
-                      placeholder="DGB Studio"
+                      placeholder="DGB AUDIO"
                       value={copyrightHolder}
                       onChange={(e) => setCopyrightHolder(e.target.value)}
                       className="bg-background border-white/10 focus:border-primary/50 text-sm"

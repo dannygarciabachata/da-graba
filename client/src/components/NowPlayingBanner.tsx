@@ -141,7 +141,7 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
   if (!song.audioUrl) return null;
 
   const artistDisplay = song.artistName || "Unknown Artist";
-  const copyrightDisplay = song.copyrightHolder || "DGB Studio";
+  const copyrightDisplay = song.copyrightHolder || "DGB AUDIO";
 
   return (
     <motion.div

@@ -7,7 +7,7 @@ import dgbLogo from "@assets/Dgb_1771188880013.png";
 import {
   Play, Pause, Mic2, Wand2, Music, Headphones, Sparkles, Scissors, Zap,
   Crown, Shield, Globe, Layers, ArrowRight, CheckCircle2, Star,
-  Radio, Volume2, SlidersHorizontal, Palette, Upload
+  Radio, Volume2, SlidersHorizontal, Palette, Upload, BookOpen, Clock, Heart
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -37,8 +37,6 @@ const fadeUp = {
 };
 
 const DEMO_SONG = {
-  title: "Regreso al Edén",
-  artist: "DGB Studio AI",
   genre: "Bachata",
   url: "/audio/songs/ac1a3408-dc10-4b06-a8d4-39f0aebdf587_song.mp3",
   image: "https://lalals.s3.amazonaws.com/GenImages/1f6ff91d-a91e-4abc-87cd-f155ce2ea1fe.jpg",
@@ -119,7 +117,7 @@ function DemoPlayer() {
         <div className="relative aspect-[4/3] sm:aspect-square w-full overflow-hidden">
           <img
             src={DEMO_SONG.image}
-            alt={DEMO_SONG.title}
+            alt={t('common.demoSongTitle')}
             className="w-full h-full object-cover"
             data-testid="img-demo-cover"
           />
@@ -143,8 +141,8 @@ function DemoPlayer() {
           </button>
 
           <div className="absolute bottom-4 left-4 right-4">
-            <p className="font-bold text-lg text-white drop-shadow-lg" data-testid="text-demo-title">{DEMO_SONG.title}</p>
-            <p className="text-xs text-white/70">{DEMO_SONG.artist} &middot; {DEMO_SONG.genre}</p>
+            <p className="font-bold text-lg text-white drop-shadow-lg" data-testid="text-demo-title">{t('common.demoSongTitle')}</p>
+            <p className="text-xs text-white/70">{t('common.demoSongArtist')} &middot; {DEMO_SONG.genre}</p>
           </div>
         </div>
 
@@ -197,7 +195,7 @@ function DemoPlayer() {
           </div>
           <div className="text-left">
             <p className="text-xs text-muted-foreground">{t('common.poweredBy')}</p>
-            <p className="text-sm font-bold">DGB Studio Engine</p>
+            <p className="text-sm font-bold">{t('common.engineName')}</p>
           </div>
         </div>
         <Wand2 className="w-5 h-5 text-white/20" />
@@ -224,7 +222,7 @@ export default function Landing() {
 
       <nav className="relative z-10 container mx-auto px-4 md:px-6 py-4 md:py-6 flex justify-between items-center" data-testid="nav-landing">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-          <img src={dgbLogo} alt="DGB Studio" className="h-9 md:h-10 w-auto" data-testid="img-landing-logo" />
+          <img src={dgbLogo} alt="DGB AUDIO" className="h-9 md:h-10 w-auto" data-testid="img-landing-logo" />
         </div>
         <div className="flex items-center gap-3">
           <Button variant="ghost" className="hidden sm:inline-flex text-sm" onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} data-testid="link-features">
@@ -332,6 +330,31 @@ export default function Landing() {
           </div>
         </section>
 
+        <section id="about" className="container mx-auto px-4 md:px-6 py-16 md:py-24">
+          <motion.div {...fadeUp}>
+            <div className="relative rounded-2xl overflow-hidden border border-white/10">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-primary/5 to-blue-600/5" />
+              <div className="relative p-6 sm:p-8 md:p-16">
+                <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+                  <div className="flex-shrink-0">
+                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-purple-500/20 border border-primary/20 flex items-center justify-center">
+                      <Heart className="w-10 h-10 md:w-12 md:h-12 text-primary" />
+                    </div>
+                  </div>
+                  <div className="text-center md:text-left space-y-4">
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-about-title">
+                      {t('landing.aboutTitle')}
+                    </h2>
+                    <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-3xl" data-testid="text-about-description">
+                      {t('landing.aboutText')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+
         <section id="features" className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp} className="text-center mb-12 md:mb-16">
             <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">{t('nav.features')}</Badge>
@@ -365,7 +388,7 @@ export default function Landing() {
 
         <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp} className="text-center mb-12 md:mb-16">
-            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">How It Works</Badge>
+            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">{t('landing.howItWorksBadge')}</Badge>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-how-title">
               {t('landing.howItWorksTitle')}
             </h2>
@@ -447,6 +470,39 @@ export default function Landing() {
         </section>
 
         <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
+          <motion.div {...fadeUp} className="text-center mb-12 md:mb-16">
+            <Badge className="mb-4 bg-purple-500/10 text-purple-400 border-purple-500/20">
+              <Clock className="h-3 w-3 mr-1" />
+              {t('landing.comingSoonTitle')}
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-coming-soon-title">
+              {t('landing.comingSoonTitle')}
+            </h2>
+          </motion.div>
+
+          <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.15 }}>
+            <Card className="bg-white/[0.02] border-white/5 hover:border-purple-500/20 transition-colors max-w-2xl mx-auto" data-testid="card-coming-soon-genre">
+              <CardContent className="p-6 md:p-8">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 shrink-0">
+                    <BookOpen className="h-6 w-6 text-purple-400" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-lg">{t('landing.comingSoonGenreHistory')}</h3>
+                      <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[10px]">{t('landing.comingSoonTitle')}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {t('landing.comingSoonGenreHistoryDesc')}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </section>
+
+        <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp}>
             <div className="relative rounded-2xl overflow-hidden border border-white/10">
               <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-blue-600/10 to-purple-500/10" />
@@ -477,7 +533,7 @@ export default function Landing() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <img src={dgbLogo} alt="DGB Studio" className="h-8 w-auto" />
+                <img src={dgbLogo} alt="DGB AUDIO" className="h-8 w-auto" />
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {t('landing.footer.footerDescription')}
@@ -513,7 +569,7 @@ export default function Landing() {
           </div>
           <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} {t('landing.footer.copyright')}</p>
-            <p className="text-xs text-muted-foreground">{t('common.poweredBy')} DGB Studio Engine</p>
+            <p className="text-xs text-muted-foreground">{t('common.poweredBy')} {t('common.engineName')}</p>
           </div>
         </div>
       </footer>

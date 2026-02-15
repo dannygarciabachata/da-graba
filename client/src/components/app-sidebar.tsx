@@ -78,7 +78,7 @@ export function AppSidebar() {
           onClick={() => setLocation("/create")}
           data-testid="link-sidebar-logo"
         >
-          <img src={dgbLogo} alt="DGB Studio" className="h-10 w-auto" />
+          <img src={dgbLogo} alt="DGB AUDIO" className="h-10 w-auto" />
         </div>
       </SidebarHeader>
 

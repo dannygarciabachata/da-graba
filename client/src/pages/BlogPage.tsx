@@ -191,7 +191,7 @@ function BlogList() {
                           <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-white/5">
                             <span className="flex items-center gap-1">
                               <User className="h-3 w-3" />
-                              {post.authorName || "DGB Studio"}
+                              {post.authorName || t('blog.defaultAuthor')}
                             </span>
                             <div className="flex items-center gap-3">
                               <span className="flex items-center gap-1">
@@ -525,7 +525,7 @@ function BlogPostView() {
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
             <User className="h-4 w-4" />
-            <span>Por {post.authorName || "DGB Studio"}</span>
+            <span>Por {post.authorName || t('blog.defaultAuthor')}</span>
           </div>
 
           {post.tags && (

@@ -14,7 +14,7 @@ import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 
 const STYLE_OPTIONS = [
-  { value: "heart-mula", label: "DGB Studio Signature" },
+  { value: "heart-mula", labelKey: "common.engineSignature" },
   { value: "bachata-romantic", label: "Romantic Bachata" },
   { value: "bachata-dance", label: "Dance Bachata" },
   { value: "bachata-bolero", label: "Bachata Bolero" },
@@ -94,8 +94,8 @@ export function MusicGenerator() {
           <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg md:text-xl font-bold font-display" data-testid="text-engine-title">DGB Studio</h2>
-          <p className="text-xs md:text-sm text-muted-foreground">DGB Studio Music Engine</p>
+          <h2 className="text-lg md:text-xl font-bold font-display" data-testid="text-engine-title">{t('common.brandName')}</h2>
+          <p className="text-xs md:text-sm text-muted-foreground">{t('common.musicEngine')}</p>
         </div>
         {creditsData && (
           <Badge
@@ -185,7 +185,7 @@ export function MusicGenerator() {
               <SelectContent>
                 {STYLE_OPTIONS.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value} data-testid={`option-agg-style-${opt.value}`}>
-                    {opt.label}
+                    {'labelKey' in opt ? t(opt.labelKey as string) : opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -272,7 +272,7 @@ export function MusicGenerator() {
               <SelectContent>
                 {STYLE_OPTIONS.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value} data-testid={`option-style-${opt.value}`}>
-                    {opt.label}
+                    {'labelKey' in opt ? t(opt.labelKey as string) : opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -188,7 +188,7 @@ export async function submitKieMusicGeneration(
     }
     body.customMode = true;
     body.style = boostedStyle;
-    body.title = (options.title || "DGB Studio Track").substring(0, 80);
+    body.title = (options.title || "DGB AUDIO Track").substring(0, 80);
     body.prompt = options.lyrics.substring(0, 3000);
   } else {
     body.prompt = prompt.substring(0, 3000);

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 import type { GenerateSongRequest, SongResponse } from "@shared/schema";
 
 export function useSongs() {
@@ -39,6 +40,7 @@ export function useSong(id: number | null) {
 export function useGenerateSong() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   return useMutation({
     mutationFn: async (data: GenerateSongRequest) => {
@@ -61,7 +63,7 @@ export function useGenerateSong() {
       queryClient.invalidateQueries({ queryKey: [api.songs.list.path] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/credits"] });
       toast({
-        title: "DGB Studio Activated",
+        title: t('common.engineActivated'),
         description: "Generando 2 versiones de tu track. Elige la mejor.",
       });
     },
