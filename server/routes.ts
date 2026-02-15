@@ -2850,6 +2850,233 @@ export async function registerRoutes(
     }
   });
 
+  // ========== BLOG: PUBLIC ROUTES ==========
+
+  app.get("/api/blog/posts", async (_req, res) => {
+    try {
+      const posts = await storage.getBlogPosts("published");
+      const categories = await storage.getBlogCategories();
+      const catMap = new Map(categories.map(c => [c.id, c]));
+      const enriched = posts.map(p => ({
+        ...p,
+        category: p.categoryId ? catMap.get(p.categoryId) : null,
+      }));
+      res.json(enriched);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/blog/posts/:slug", async (req, res) => {
+    try {
+      const post = await storage.getBlogPostBySlug(req.params.slug);
+      if (!post || post.status !== "published") return res.status(404).json({ message: "Post not found" });
+      const category = post.categoryId ? await storage.getBlogCategory(post.categoryId) : null;
+      await storage.updateBlogPost(post.id, { viewCount: (post.viewCount || 0) + 1 });
+      res.json({ ...post, category });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/blog/categories", async (_req, res) => {
+    try {
+      const categories = await storage.getBlogCategories();
+      res.json(categories.filter(c => c.isActive));
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ========== BLOG: ADMIN ROUTES ==========
+
+  app.get("/api/admin/blog/posts", async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const posts = await storage.getBlogPosts();
+      res.json(posts);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/admin/blog/posts/:id", async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const post = await storage.getBlogPost(parseInt(req.params.id));
+      if (!post) return res.status(404).json({ message: "Post not found" });
+      res.json(post);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/blog/posts", async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const user = (req as any).user;
+      const { title, content, excerpt, featuredImageUrl, categoryId, status, tags, seoTitle, seoDescription } = req.body;
+      const slug = (req.body.slug || title || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || `post-${Date.now()}`;
+      const post = await storage.createBlogPost({
+        title: title || "Untitled",
+        slug,
+        content: content || "",
+        excerpt,
+        featuredImageUrl,
+        categoryId: categoryId ? parseInt(categoryId) : null,
+        authorId: user.id,
+        authorName: user.username || user.firstName || "Admin",
+        status: status || "draft",
+        tags,
+        seoTitle,
+        seoDescription,
+        publishedAt: status === "published" ? new Date() : null,
+      });
+      res.json(post);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/blog/posts/:id", async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const data: any = { ...req.body };
+      if (data.categoryId) data.categoryId = parseInt(data.categoryId);
+      if (data.status === "published") {
+        const existing = await storage.getBlogPost(parseInt(req.params.id));
+        if (existing && !existing.publishedAt) data.publishedAt = new Date();
+      }
+      const post = await storage.updateBlogPost(parseInt(req.params.id), data);
+      res.json(post);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/blog/posts/:id", async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      await storage.deleteBlogPost(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/admin/blog/categories", async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const categories = await storage.getBlogCategories();
+      res.json(categories);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/blog/categories", async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { name, description, color, order } = req.body;
+      const slug = (name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      const cat = await storage.createBlogCategory({ name, slug, description, color, order, isActive: true });
+      res.json(cat);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/blog/categories/:id", async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const cat = await storage.updateBlogCategory(parseInt(req.params.id), req.body);
+      res.json(cat);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/blog/categories/:id", async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      await storage.deleteBlogCategory(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ========== PRICING PLANS: PUBLIC & ADMIN ROUTES ==========
+
+  app.get("/api/pricing/plans", async (_req, res) => {
+    try {
+      const plans = await storage.getPricingPlans(true);
+      res.json(plans);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/admin/pricing/plans", async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const plans = await storage.getPricingPlans();
+      res.json(plans);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/pricing/plans", async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const plan = await storage.createPricingPlan(req.body);
+      res.json(plan);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/pricing/plans/:id", async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const plan = await storage.updatePricingPlan(parseInt(req.params.id), req.body);
+      res.json(plan);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/pricing/plans/:id", async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      await storage.deletePricingPlan(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/admin/stripe/transactions", async (req, res) => {
+    if (!(req as any).user) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const stripe = await getUncachableStripeClient();
+      const charges = await stripe.charges.list({ limit: 50 });
+      const transactions = charges.data.map(c => ({
+        id: c.id,
+        amount: c.amount,
+        currency: c.currency,
+        status: c.status,
+        description: c.description,
+        customerEmail: (c as any).billing_details?.email || (c as any).receipt_email,
+        created: c.created,
+      }));
+      res.json(transactions);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // ========== STRIPE: PUBLIC ROUTES ==========
 
   app.get("/api/stripe/publishable-key", async (_req, res) => {

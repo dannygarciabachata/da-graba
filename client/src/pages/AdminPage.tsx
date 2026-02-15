@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   useAdminCheck, useAdminMeta, useProviders, useEndpoints,
   useCreateProvider, useUpdateProvider, useDeleteProvider,
@@ -34,7 +36,7 @@ import {
 } from "lucide-react";
 import type { ApiProvider, ApiEndpoint, CloudServer } from "@shared/schema";
 
-type Tab = "dashboard" | "analytics" | "users" | "subscriptions" | "support" | "settings" | "email" | "style-kits" | "providers" | "endpoints" | "cloud-servers" | "gpu";
+type Tab = "dashboard" | "analytics" | "users" | "subscriptions" | "support" | "settings" | "email" | "style-kits" | "providers" | "endpoints" | "cloud-servers" | "gpu" | "blog" | "billing";
 
 export default function AdminPage() {
   const [, setLocation] = useLocation();
@@ -66,8 +68,8 @@ export default function AdminPage() {
 }
 
 const TAB_ROLE_ACCESS: Record<string, Tab[]> = {
-  super_admin: ["dashboard", "analytics", "users", "subscriptions", "support", "settings", "email", "style-kits", "gpu", "cloud-servers", "providers", "endpoints"],
-  admin: ["dashboard", "analytics", "users", "subscriptions", "support", "style-kits", "gpu"],
+  super_admin: ["dashboard", "analytics", "users", "subscriptions", "blog", "billing", "support", "settings", "email", "style-kits", "gpu", "cloud-servers", "providers", "endpoints"],
+  admin: ["dashboard", "analytics", "users", "subscriptions", "blog", "support", "style-kits", "gpu"],
   moderator: ["support"],
 };
 
@@ -89,6 +91,8 @@ function AdminDashboard({ role }: { role: string }) {
     { id: "settings" as Tab, label: "Settings", icon: Sliders },
     { id: "email" as Tab, label: "Email", icon: Mail },
     { id: "style-kits" as Tab, label: "Style Kits", icon: Disc },
+    { id: "blog" as Tab, label: "Blog", icon: FileText },
+    { id: "billing" as Tab, label: "Billing", icon: CreditCard },
     { id: "gpu" as Tab, label: "GPU", icon: Cpu },
     { id: "cloud-servers" as Tab, label: "Cloud Servers", icon: Cloud },
     { id: "providers" as Tab, label: "API Providers", icon: Server },
@@ -137,6 +141,8 @@ function AdminDashboard({ role }: { role: string }) {
       {activeTab === "settings" && <SettingsTab />}
       {activeTab === "email" && <EmailSettingsTab />}
       {activeTab === "style-kits" && <StyleKitsAdminTab />}
+      {activeTab === "blog" && <BlogAdminTab />}
+      {activeTab === "billing" && <BillingAdminTab />}
       {activeTab === "gpu" && <GpuTab role={role} />}
       {activeTab === "cloud-servers" && <CloudServersTab />}
 
@@ -2371,6 +2377,393 @@ function CloudServersTab() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function BlogAdminTab() {
+  const { data: posts, isLoading } = useQuery<any[]>({ queryKey: ["/api/admin/blog/posts"] });
+  const { data: categories } = useQuery<any[]>({ queryKey: ["/api/admin/blog/categories"] });
+  const [showEditor, setShowEditor] = useState(false);
+  const [editingPost, setEditingPost] = useState<any | null>(null);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [postForm, setPostForm] = useState({ title: "", slug: "", content: "", excerpt: "", featuredImageUrl: "", categoryId: "", status: "draft", tags: "", seoTitle: "", seoDescription: "" });
+  const [catForm, setCatForm] = useState({ name: "", description: "", color: "#00F3FF" });
+  const { toast } = useToast();
+
+  const createPost = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", "/api/admin/blog/posts", data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/blog/posts"] }); setShowEditor(false); resetPostForm(); toast({ title: "Post creado" }); },
+  });
+
+  const updatePost = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest("PATCH", `/api/admin/blog/posts/${id}`, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/blog/posts"] }); setShowEditor(false); setEditingPost(null); resetPostForm(); toast({ title: "Post actualizado" }); },
+  });
+
+  const deletePost = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/blog/posts/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/blog/posts"] }); toast({ title: "Post eliminado" }); },
+  });
+
+  const createCategory = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", "/api/admin/blog/categories", data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/blog/categories"] }); setShowCategoryForm(false); setCatForm({ name: "", description: "", color: "#00F3FF" }); toast({ title: "Categoría creada" }); },
+  });
+
+  const deleteCategory = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/blog/categories/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/blog/categories"] }); toast({ title: "Categoría eliminada" }); },
+  });
+
+  function resetPostForm() {
+    setPostForm({ title: "", slug: "", content: "", excerpt: "", featuredImageUrl: "", categoryId: "", status: "draft", tags: "", seoTitle: "", seoDescription: "" });
+  }
+
+  function startEdit(post: any) {
+    setEditingPost(post);
+    setPostForm({
+      title: post.title || "",
+      slug: post.slug || "",
+      content: post.content || "",
+      excerpt: post.excerpt || "",
+      featuredImageUrl: post.featuredImageUrl || "",
+      categoryId: post.categoryId ? String(post.categoryId) : "",
+      status: post.status || "draft",
+      tags: post.tags || "",
+      seoTitle: post.seoTitle || "",
+      seoDescription: post.seoDescription || "",
+    });
+    setShowEditor(true);
+  }
+
+  function handleSave() {
+    if (editingPost) {
+      updatePost.mutate({ id: editingPost.id, data: postForm });
+    } else {
+      createPost.mutate(postForm);
+    }
+  }
+
+  if (isLoading) return <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+
+  if (showEditor) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => { setShowEditor(false); setEditingPost(null); resetPostForm(); }} data-testid="button-back-blog-list">
+            <ArrowLeft className="h-4 w-4 mr-1" /> Volver
+          </Button>
+          <h2 className="text-lg font-semibold">{editingPost ? "Editar Post" : "Nuevo Post"}</h2>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 space-y-4">
+            <Input placeholder="Título del post" value={postForm.title} onChange={e => setPostForm(p => ({ ...p, title: e.target.value }))} data-testid="input-blog-title" />
+            <Input placeholder="slug-del-post (auto-generado si está vacío)" value={postForm.slug} onChange={e => setPostForm(p => ({ ...p, slug: e.target.value }))} data-testid="input-blog-slug" />
+            <Textarea placeholder="Contenido del post (HTML soportado)" value={postForm.content} onChange={e => setPostForm(p => ({ ...p, content: e.target.value }))} className="min-h-[300px] font-mono text-sm" data-testid="input-blog-content" />
+            <Textarea placeholder="Extracto / resumen corto" value={postForm.excerpt} onChange={e => setPostForm(p => ({ ...p, excerpt: e.target.value }))} rows={3} data-testid="input-blog-excerpt" />
+          </div>
+
+          <div className="space-y-4">
+            <Card className="bg-card/50 border-white/10">
+              <CardContent className="p-4 space-y-3">
+                <h3 className="text-sm font-semibold">Publicación</h3>
+                <select className="w-full bg-background border border-white/10 rounded-md p-2 text-sm" value={postForm.status} onChange={e => setPostForm(p => ({ ...p, status: e.target.value }))} data-testid="select-blog-status">
+                  <option value="draft">Borrador</option>
+                  <option value="published">Publicado</option>
+                  <option value="archived">Archivado</option>
+                </select>
+                <select className="w-full bg-background border border-white/10 rounded-md p-2 text-sm" value={postForm.categoryId} onChange={e => setPostForm(p => ({ ...p, categoryId: e.target.value }))} data-testid="select-blog-category">
+                  <option value="">Sin categoría</option>
+                  {categories?.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <Input placeholder="Tags (separados por coma)" value={postForm.tags} onChange={e => setPostForm(p => ({ ...p, tags: e.target.value }))} data-testid="input-blog-tags" />
+                <Input placeholder="URL imagen destacada" value={postForm.featuredImageUrl} onChange={e => setPostForm(p => ({ ...p, featuredImageUrl: e.target.value }))} data-testid="input-blog-image" />
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card/50 border-white/10">
+              <CardContent className="p-4 space-y-3">
+                <h3 className="text-sm font-semibold">SEO</h3>
+                <Input placeholder="SEO Title" value={postForm.seoTitle} onChange={e => setPostForm(p => ({ ...p, seoTitle: e.target.value }))} data-testid="input-blog-seo-title" />
+                <Textarea placeholder="SEO Description" value={postForm.seoDescription} onChange={e => setPostForm(p => ({ ...p, seoDescription: e.target.value }))} rows={2} data-testid="input-blog-seo-desc" />
+              </CardContent>
+            </Card>
+
+            <Button className="w-full" onClick={handleSave} disabled={createPost.isPending || updatePost.isPending} data-testid="button-save-blog-post">
+              {(createPost.isPending || updatePost.isPending) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              {editingPost ? "Actualizar Post" : "Crear Post"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold flex items-center gap-2"><FileText className="h-5 w-5" /> Blog Management</h2>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowCategoryForm(!showCategoryForm)} data-testid="button-manage-categories">
+            Categorías
+          </Button>
+          <Button size="sm" onClick={() => { resetPostForm(); setEditingPost(null); setShowEditor(true); }} data-testid="button-new-blog-post">
+            <Plus className="h-4 w-4 mr-1" /> Nuevo Post
+          </Button>
+        </div>
+      </div>
+
+      {showCategoryForm && (
+        <Card className="bg-card/50 border-white/10">
+          <CardContent className="p-4 space-y-3">
+            <h3 className="text-sm font-semibold">Categorías</h3>
+            <div className="flex gap-2">
+              <Input placeholder="Nombre" value={catForm.name} onChange={e => setCatForm(c => ({ ...c, name: e.target.value }))} data-testid="input-category-name" />
+              <Input placeholder="Color (#hex)" value={catForm.color} onChange={e => setCatForm(c => ({ ...c, color: e.target.value }))} className="w-32" data-testid="input-category-color" />
+              <Button size="sm" onClick={() => createCategory.mutate(catForm)} disabled={createCategory.isPending || !catForm.name} data-testid="button-create-category">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {categories?.map((cat: any) => (
+                <Badge key={cat.id} variant="outline" className="flex items-center gap-1 py-1" style={{ borderColor: cat.color }}>
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
+                  {cat.name}
+                  <button onClick={() => deleteCategory.mutate(cat.id)} className="ml-1 hover:text-destructive" data-testid={`button-delete-category-${cat.id}`}>
+                    <XCircle className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-3">
+        {posts?.map((post: any) => (
+          <Card key={post.id} className="bg-card/50 border-white/10" data-testid={`card-admin-blog-post-${post.id}`}>
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-sm truncate">{post.title}</h3>
+                    <Badge variant={post.status === "published" ? "default" : "secondary"} className="text-xs">
+                      {post.status === "published" ? "Publicado" : post.status === "draft" ? "Borrador" : "Archivado"}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">/{post.slug} • {post.viewCount || 0} vistas • {new Date(post.createdAt).toLocaleDateString()}</p>
+                </div>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" onClick={() => startEdit(post)} data-testid={`button-edit-post-${post.id}`}>
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => deletePost.mutate(post.id)} data-testid={`button-delete-post-${post.id}`}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {(!posts || posts.length === 0) && (
+          <div className="text-center py-12 text-muted-foreground">
+            <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p className="text-sm">No hay posts aún.</p>
+            <p className="text-xs">Crea tu primer post para el blog de DGB Audio.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BillingAdminTab() {
+  const { data: plans, isLoading } = useQuery<any[]>({ queryKey: ["/api/admin/pricing/plans"] });
+  const { data: transactions } = useQuery<any[]>({ queryKey: ["/api/admin/stripe/transactions"] });
+  const [showForm, setShowForm] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<any | null>(null);
+  const [form, setForm] = useState({
+    name: "", tier: "pro", description: "", features: "",
+    priceMonthly: 0, priceAnnual: 0,
+    stripePriceIdMonthly: "", stripePriceIdAnnual: "", stripeProductId: "",
+    credits: 0, creditsLabel: "", iconName: "Zap", color: "text-blue-400",
+    isActive: true, isPopular: false, order: 0,
+  });
+  const { toast } = useToast();
+
+  const createPlan = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", "/api/admin/pricing/plans", { ...data, features: data.features.split("\n").filter((f: string) => f.trim()), priceMonthly: parseInt(data.priceMonthly) || 0, priceAnnual: parseInt(data.priceAnnual) || 0, credits: parseInt(data.credits) || 0, order: parseInt(data.order) || 0 }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/pricing/plans"] }); setShowForm(false); toast({ title: "Plan creado" }); },
+  });
+
+  const updatePlan = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest("PATCH", `/api/admin/pricing/plans/${id}`, { ...data, features: data.features.split("\n").filter((f: string) => f.trim()), priceMonthly: parseInt(data.priceMonthly) || 0, priceAnnual: parseInt(data.priceAnnual) || 0, credits: parseInt(data.credits) || 0, order: parseInt(data.order) || 0 }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/pricing/plans"] }); setShowForm(false); setEditingPlan(null); toast({ title: "Plan actualizado" }); },
+  });
+
+  const deletePlan = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/pricing/plans/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/pricing/plans"] }); toast({ title: "Plan eliminado" }); },
+  });
+
+  function resetForm() {
+    setForm({ name: "", tier: "pro", description: "", features: "", priceMonthly: 0, priceAnnual: 0, stripePriceIdMonthly: "", stripePriceIdAnnual: "", stripeProductId: "", credits: 0, creditsLabel: "", iconName: "Zap", color: "text-blue-400", isActive: true, isPopular: false, order: 0 });
+  }
+
+  function startEdit(plan: any) {
+    setEditingPlan(plan);
+    setForm({
+      name: plan.name || "", tier: plan.tier || "pro", description: plan.description || "",
+      features: (plan.features || []).join("\n"),
+      priceMonthly: plan.priceMonthly || 0, priceAnnual: plan.priceAnnual || 0,
+      stripePriceIdMonthly: plan.stripePriceIdMonthly || "", stripePriceIdAnnual: plan.stripePriceIdAnnual || "",
+      stripeProductId: plan.stripeProductId || "",
+      credits: plan.credits || 0, creditsLabel: plan.creditsLabel || "",
+      iconName: plan.iconName || "Zap", color: plan.color || "text-blue-400",
+      isActive: plan.isActive !== false, isPopular: plan.isPopular || false, order: plan.order || 0,
+    });
+    setShowForm(true);
+  }
+
+  function handleSave() {
+    if (editingPlan) {
+      updatePlan.mutate({ id: editingPlan.id, data: form });
+    } else {
+      createPlan.mutate(form);
+    }
+  }
+
+  if (isLoading) return <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold flex items-center gap-2"><CreditCard className="h-5 w-5" /> Billing & Pricing</h2>
+        <Button size="sm" onClick={() => { resetForm(); setEditingPlan(null); setShowForm(!showForm); }} data-testid="button-new-pricing-plan">
+          <Plus className="h-4 w-4 mr-1" /> {showForm ? "Cancelar" : "Nuevo Plan"}
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card className="bg-card/50 border-white/10">
+          <CardContent className="p-4 space-y-4">
+            <h3 className="font-semibold text-sm">{editingPlan ? "Editar Plan" : "Nuevo Plan de Precio"}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input placeholder="Nombre del plan" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} data-testid="input-plan-name" />
+              <select className="bg-background border border-white/10 rounded-md p-2 text-sm" value={form.tier} onChange={e => setForm(f => ({ ...f, tier: e.target.value }))} data-testid="select-plan-tier">
+                <option value="free">Free</option>
+                <option value="pro">Pro</option>
+                <option value="producer">Producer</option>
+                <option value="premium">Premium</option>
+              </select>
+              <Input placeholder="Precio mensual (en centavos)" type="number" value={form.priceMonthly} onChange={e => setForm(f => ({ ...f, priceMonthly: parseInt(e.target.value) || 0 }))} data-testid="input-plan-price-monthly" />
+              <Input placeholder="Precio anual (en centavos)" type="number" value={form.priceAnnual} onChange={e => setForm(f => ({ ...f, priceAnnual: parseInt(e.target.value) || 0 }))} data-testid="input-plan-price-annual" />
+              <Input placeholder="Créditos incluidos" type="number" value={form.credits} onChange={e => setForm(f => ({ ...f, credits: parseInt(e.target.value) || 0 }))} data-testid="input-plan-credits" />
+              <Input placeholder="Label créditos (ej: 100/mes)" value={form.creditsLabel} onChange={e => setForm(f => ({ ...f, creditsLabel: e.target.value }))} data-testid="input-plan-credits-label" />
+              <Input placeholder="Orden (0, 1, 2...)" type="number" value={form.order} onChange={e => setForm(f => ({ ...f, order: parseInt(e.target.value) || 0 }))} data-testid="input-plan-order" />
+              <Input placeholder="Color (text-blue-400)" value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} data-testid="input-plan-color" />
+            </div>
+            <Textarea placeholder="Descripción del plan" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} data-testid="input-plan-description" />
+            <Textarea placeholder="Features (una por línea)" value={form.features} onChange={e => setForm(f => ({ ...f, features: e.target.value }))} rows={5} data-testid="input-plan-features" />
+
+            <div className="border-t border-white/10 pt-3">
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">Stripe IDs (vincular con productos de Stripe)</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Input placeholder="Stripe Product ID" value={form.stripeProductId} onChange={e => setForm(f => ({ ...f, stripeProductId: e.target.value }))} data-testid="input-plan-stripe-product" />
+                <Input placeholder="Stripe Price ID (mensual)" value={form.stripePriceIdMonthly} onChange={e => setForm(f => ({ ...f, stripePriceIdMonthly: e.target.value }))} data-testid="input-plan-stripe-price-monthly" />
+                <Input placeholder="Stripe Price ID (anual)" value={form.stripePriceIdAnnual} onChange={e => setForm(f => ({ ...f, stripePriceIdAnnual: e.target.value }))} data-testid="input-plan-stripe-price-annual" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} />
+                Activo
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={form.isPopular} onChange={e => setForm(f => ({ ...f, isPopular: e.target.checked }))} />
+                Popular (destacado)
+              </label>
+            </div>
+
+            <Button onClick={handleSave} disabled={createPlan.isPending || updatePlan.isPending} data-testid="button-save-pricing-plan">
+              {(createPlan.isPending || updatePlan.isPending) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              {editingPlan ? "Actualizar Plan" : "Crear Plan"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-muted-foreground">Planes de Precio</h3>
+        {plans?.map((plan: any) => (
+          <Card key={plan.id} className="bg-card/50 border-white/10" data-testid={`card-pricing-plan-${plan.id}`}>
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-sm">{plan.name}</h3>
+                    <Badge variant="outline" className="text-xs capitalize">{plan.tier}</Badge>
+                    {plan.isPopular && <Badge className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Popular</Badge>}
+                    {!plan.isActive && <Badge variant="secondary" className="text-xs">Inactivo</Badge>}
+                  </div>
+                  <p className="text-xs text-muted-foreground">${(plan.priceMonthly / 100).toFixed(2)}/mes • {plan.credits} créditos • Orden: {plan.order}</p>
+                  {plan.stripeProductId && <p className="text-xs text-muted-foreground mt-1">Stripe: {plan.stripeProductId}</p>}
+                </div>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" onClick={() => startEdit(plan)} data-testid={`button-edit-plan-${plan.id}`}>
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => deletePlan.mutate(plan.id)} data-testid={`button-delete-plan-${plan.id}`}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {(!plans || plans.length === 0) && (
+          <div className="text-center py-8 text-muted-foreground">
+            <CreditCard className="h-10 w-10 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">No hay planes configurados.</p>
+            <p className="text-xs">Crea planes de precio para mostrar en la página de precios.</p>
+          </div>
+        )}
+      </div>
+
+      {transactions && transactions.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-muted-foreground">Transacciones Recientes (Stripe)</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left py-2 px-2 text-xs text-muted-foreground">Fecha</th>
+                  <th className="text-left py-2 px-2 text-xs text-muted-foreground">Monto</th>
+                  <th className="text-left py-2 px-2 text-xs text-muted-foreground">Estado</th>
+                  <th className="text-left py-2 px-2 text-xs text-muted-foreground">Email</th>
+                  <th className="text-left py-2 px-2 text-xs text-muted-foreground">Descripción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.map((tx: any) => (
+                  <tr key={tx.id} className="border-b border-white/5" data-testid={`row-transaction-${tx.id}`}>
+                    <td className="py-2 px-2 text-xs">{new Date(tx.created * 1000).toLocaleDateString()}</td>
+                    <td className="py-2 px-2 text-xs font-semibold">${(tx.amount / 100).toFixed(2)} {tx.currency?.toUpperCase()}</td>
+                    <td className="py-2 px-2"><Badge variant={tx.status === "succeeded" ? "default" : "secondary"} className="text-xs">{tx.status}</Badge></td>
+                    <td className="py-2 px-2 text-xs text-muted-foreground">{tx.customerEmail || "—"}</td>
+                    <td className="py-2 px-2 text-xs text-muted-foreground truncate max-w-[200px]">{tx.description || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

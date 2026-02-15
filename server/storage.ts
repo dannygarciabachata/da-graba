@@ -6,6 +6,7 @@ import {
   styleKits, styleKitInstruments,
   platformSettings, supportTickets, supportMessages,
   cloudServers, voiceModels, voiceSamples, styleReferences,
+  blogPosts, blogCategories, pricingPlans,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
@@ -22,6 +23,9 @@ import {
   type VoiceModel, type InsertVoiceModel,
   type VoiceSample, type InsertVoiceSample,
   type StyleReference, type InsertStyleReference,
+  type BlogPost, type InsertBlogPost,
+  type BlogCategory, type InsertBlogCategory,
+  type PricingPlan, type InsertPricingPlan,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -140,6 +144,25 @@ export interface IStorage {
   getUserCredits(userId: string): Promise<number>;
   deductCredit(userId: string): Promise<number>;
   addCredits(userId: string, amount: number): Promise<number>;
+
+  getBlogPosts(status?: string): Promise<BlogPost[]>;
+  getBlogPost(id: number): Promise<BlogPost | undefined>;
+  getBlogPostBySlug(slug: string): Promise<BlogPost | undefined>;
+  createBlogPost(post: InsertBlogPost): Promise<BlogPost>;
+  updateBlogPost(id: number, data: Partial<BlogPost>): Promise<BlogPost>;
+  deleteBlogPost(id: number): Promise<void>;
+
+  getBlogCategories(): Promise<BlogCategory[]>;
+  getBlogCategory(id: number): Promise<BlogCategory | undefined>;
+  createBlogCategory(cat: InsertBlogCategory): Promise<BlogCategory>;
+  updateBlogCategory(id: number, data: Partial<BlogCategory>): Promise<BlogCategory>;
+  deleteBlogCategory(id: number): Promise<void>;
+
+  getPricingPlans(activeOnly?: boolean): Promise<PricingPlan[]>;
+  getPricingPlan(id: number): Promise<PricingPlan | undefined>;
+  createPricingPlan(plan: InsertPricingPlan): Promise<PricingPlan>;
+  updatePricingPlan(id: number, data: Partial<PricingPlan>): Promise<PricingPlan>;
+  deletePricingPlan(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -852,6 +875,86 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStyleReference(id: number): Promise<void> {
     await db.delete(styleReferences).where(eq(styleReferences.id, id));
+  }
+
+  async getBlogPosts(status?: string): Promise<BlogPost[]> {
+    if (status) {
+      return await db.select().from(blogPosts).where(eq(blogPosts.status, status)).orderBy(desc(blogPosts.publishedAt));
+    }
+    return await db.select().from(blogPosts).orderBy(desc(blogPosts.createdAt));
+  }
+
+  async getBlogPost(id: number): Promise<BlogPost | undefined> {
+    const [post] = await db.select().from(blogPosts).where(eq(blogPosts.id, id));
+    return post;
+  }
+
+  async getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
+    const [post] = await db.select().from(blogPosts).where(eq(blogPosts.slug, slug));
+    return post;
+  }
+
+  async createBlogPost(post: InsertBlogPost): Promise<BlogPost> {
+    const [created] = await db.insert(blogPosts).values(post).returning();
+    return created;
+  }
+
+  async updateBlogPost(id: number, data: Partial<BlogPost>): Promise<BlogPost> {
+    const [updated] = await db.update(blogPosts).set({ ...data, updatedAt: new Date() }).where(eq(blogPosts.id, id)).returning();
+    return updated;
+  }
+
+  async deleteBlogPost(id: number): Promise<void> {
+    await db.delete(blogPosts).where(eq(blogPosts.id, id));
+  }
+
+  async getBlogCategories(): Promise<BlogCategory[]> {
+    return await db.select().from(blogCategories).orderBy(blogCategories.order);
+  }
+
+  async getBlogCategory(id: number): Promise<BlogCategory | undefined> {
+    const [cat] = await db.select().from(blogCategories).where(eq(blogCategories.id, id));
+    return cat;
+  }
+
+  async createBlogCategory(cat: InsertBlogCategory): Promise<BlogCategory> {
+    const [created] = await db.insert(blogCategories).values(cat).returning();
+    return created;
+  }
+
+  async updateBlogCategory(id: number, data: Partial<BlogCategory>): Promise<BlogCategory> {
+    const [updated] = await db.update(blogCategories).set(data).where(eq(blogCategories.id, id)).returning();
+    return updated;
+  }
+
+  async deleteBlogCategory(id: number): Promise<void> {
+    await db.delete(blogCategories).where(eq(blogCategories.id, id));
+  }
+
+  async getPricingPlans(activeOnly?: boolean): Promise<PricingPlan[]> {
+    if (activeOnly) {
+      return await db.select().from(pricingPlans).where(eq(pricingPlans.isActive, true)).orderBy(pricingPlans.order);
+    }
+    return await db.select().from(pricingPlans).orderBy(pricingPlans.order);
+  }
+
+  async getPricingPlan(id: number): Promise<PricingPlan | undefined> {
+    const [plan] = await db.select().from(pricingPlans).where(eq(pricingPlans.id, id));
+    return plan;
+  }
+
+  async createPricingPlan(plan: InsertPricingPlan): Promise<PricingPlan> {
+    const [created] = await db.insert(pricingPlans).values(plan).returning();
+    return created;
+  }
+
+  async updatePricingPlan(id: number, data: Partial<PricingPlan>): Promise<PricingPlan> {
+    const [updated] = await db.update(pricingPlans).set({ ...data, updatedAt: new Date() }).where(eq(pricingPlans.id, id)).returning();
+    return updated;
+  }
+
+  async deletePricingPlan(id: number): Promise<void> {
+    await db.delete(pricingPlans).where(eq(pricingPlans.id, id));
   }
 }
 

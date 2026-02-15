@@ -614,3 +614,103 @@ export const CLOUD_CAPABILITIES = [
 ] as const;
 
 export type CloudCapability = typeof CLOUD_CAPABILITIES[number];
+
+// === BLOG SYSTEM ===
+
+export const blogCategories = pgTable("blog_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  color: text("color").default("#00F3FF"),
+  order: integer("order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const blogPosts = pgTable("blog_posts", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  content: text("content").notNull().default(""),
+  excerpt: text("excerpt"),
+  featuredImageUrl: text("featured_image_url"),
+  categoryId: integer("category_id").references(() => blogCategories.id),
+  authorId: text("author_id").notNull(),
+  authorName: text("author_name"),
+  status: text("status").notNull().default("draft"),
+  tags: text("tags"),
+  seoTitle: text("seo_title"),
+  seoDescription: text("seo_description"),
+  viewCount: integer("view_count").default(0),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const blogPostsRelations = relations(blogPosts, ({ one }) => ({
+  category: one(blogCategories, {
+    fields: [blogPosts.categoryId],
+    references: [blogCategories.id],
+  }),
+}));
+
+export const blogCategoriesRelations = relations(blogCategories, ({ many }) => ({
+  posts: many(blogPosts),
+}));
+
+export const insertBlogCategorySchema = createInsertSchema(blogCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  viewCount: true,
+});
+
+export type BlogCategory = typeof blogCategories.$inferSelect;
+export type InsertBlogCategory = z.infer<typeof insertBlogCategorySchema>;
+export type BlogPost = typeof blogPosts.$inferSelect;
+export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
+
+export const BLOG_POST_STATUSES = ["draft", "published", "archived"] as const;
+export type BlogPostStatus = typeof BLOG_POST_STATUSES[number];
+
+// === PRICING PLANS ===
+
+export const pricingPlans = pgTable("pricing_plans", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  tier: text("tier").notNull(),
+  description: text("description"),
+  features: text("features").array().notNull().default([]),
+  priceMonthly: integer("price_monthly").notNull().default(0),
+  priceAnnual: integer("price_annual"),
+  stripePriceIdMonthly: text("stripe_price_id_monthly"),
+  stripePriceIdAnnual: text("stripe_price_id_annual"),
+  stripeProductId: text("stripe_product_id"),
+  credits: integer("credits").default(0),
+  creditsLabel: text("credits_label"),
+  iconName: text("icon_name").default("Zap"),
+  color: text("color").default("text-blue-400"),
+  isActive: boolean("is_active").default(true),
+  isPopular: boolean("is_popular").default(false),
+  order: integer("order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPricingPlanSchema = createInsertSchema(pricingPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type PricingPlan = typeof pricingPlans.$inferSelect;
+export type InsertPricingPlan = z.infer<typeof insertPricingPlanSchema>;
+
+export const PLAN_TIERS = ["free", "pro", "producer", "premium"] as const;
+export type PlanTier = typeof PLAN_TIERS[number];
