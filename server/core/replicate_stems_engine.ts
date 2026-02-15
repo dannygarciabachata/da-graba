@@ -24,13 +24,13 @@ export async function separateStemsWithReplicate(
 
   try {
     const output = await replicate.run(
-      "cjwbw/demucs" as `${string}/${string}`,
+      "cjwbw/demucs:07afda2a068a69bafe901cd1e6a41e5e6e1c8fe8b101c89eb06488e7e38e1d56" as `${string}/${string}:${string}`,
       {
         input: {
           audio: audioUrl,
           model: "htdemucs",
-          output_format: "mp3",
-          clip_mode: "rescale",
+          mp3: true,
+          mp3_bitrate: 320,
         },
       }
     );

@@ -612,6 +612,73 @@ export async function registerRoutes(
     }
   });
 
+  // ========== KIE.AI STEMS CALLBACK ==========
+
+  app.post("/api/kie/stems-callback", async (req, res) => {
+    try {
+      const payload = req.body;
+      console.log(`[Kie.ai Stems Callback] Received:`, JSON.stringify(payload).substring(0, 500));
+
+      const taskId = payload?.data?.task_id || payload?.task_id;
+      if (!taskId) {
+        console.log("[Kie.ai Stems Callback] No task_id in payload, ignoring");
+        return res.sendStatus(200);
+      }
+
+      const song = await storage.getSongByTaskId(taskId);
+      if (!song) {
+        console.log(`[Kie.ai Stems Callback] No song found for task_id ${taskId}`);
+        return res.sendStatus(200);
+      }
+
+      const tracks = await storage.getTracksBySongId(song.id);
+      if (tracks.length === 0) {
+        console.log(`[Kie.ai Stems Callback] No tracks found for song ${song.id}`);
+        return res.sendStatus(200);
+      }
+
+      const { parseKieStemCallbackData } = await import("./core/kie_engine");
+      const { downloadFile } = await import("./core/generic_api_engine");
+      const stemUrls = parseKieStemCallbackData(payload?.data || payload);
+
+      console.log(`[Kie.ai Stems Callback] Parsed stems: ${Object.keys(stemUrls).join(", ")}`);
+
+      const STEM_MAP: Record<string, string> = {
+        vocals: "vocals",
+        drums: "drums",
+        bass: "bass",
+        other: "other",
+        instrumental: "other",
+      };
+
+      for (const track of tracks) {
+        const stemKey = track.type;
+        const apiKey = stemKey === "other" ? "instrumental" : stemKey;
+        const remoteUrl = stemUrls[stemKey] || stemUrls[apiKey];
+
+        if (remoteUrl) {
+          try {
+            const localUrl = await downloadFile(remoteUrl, "stems", `${song.id}_${track.type}`);
+            await storage.updateTrackStatus(track.id, "completed", localUrl);
+            console.log(`[Kie.ai Stems Callback] ${track.type} stem saved: ${localUrl}`);
+          } catch (dlErr: any) {
+            console.error(`[Kie.ai Stems Callback] Failed to download ${track.type}:`, dlErr.message);
+            await storage.updateTrackStatus(track.id, "failed", undefined, dlErr.message);
+          }
+        } else {
+          await storage.updateTrackStatus(track.id, "completed", undefined);
+          console.log(`[Kie.ai Stems Callback] ${track.type}: no URL available`);
+        }
+      }
+
+      console.log(`[Kie.ai Stems Callback] Stem separation completed for song ${song.id}`);
+      res.sendStatus(200);
+    } catch (err: any) {
+      console.error("[Kie.ai Stems Callback] Error:", err.message);
+      res.sendStatus(200);
+    }
+  });
+
   // ========== TRACKS / STEMS ROUTES ==========
 
   app.post("/api/songs/:id/stems", async (req, res) => {
@@ -647,7 +714,7 @@ export async function registerRoutes(
       await storage.deleteTracksBySongId(songId);
     }
 
-    processStemSeparation(songId, song.audioUrl, userId, song.taskId);
+    processStemSeparation(songId, song.audioUrl, userId, song.taskId, song.kieAudioId);
     res.status(202).json({ message: "Stem separation started", songId });
   });
 

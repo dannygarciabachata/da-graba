@@ -44,6 +44,7 @@ export interface IStorage {
   getUserSongs(userId: string): Promise<Song[]>;
   updateSongStatus(id: number, status: string, audioUrl?: string, error?: string): Promise<Song>;
   updateSongTaskId(id: number, taskId: string): Promise<Song>;
+  updateSongKieAudioId(id: number, kieAudioId: string): Promise<Song>;
   updateSongImage(id: number, imageUrl: string): Promise<Song>;
   updateSongMetadata(id: number, data: { artistName?: string; copyrightHolder?: string; lyricsText?: string; title?: string }): Promise<Song>;
   deleteSong(id: number): Promise<void>;
@@ -228,6 +229,15 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db
       .update(songs)
       .set({ taskId })
+      .where(eq(songs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateSongKieAudioId(id: number, kieAudioId: string): Promise<Song> {
+    const [updated] = await db
+      .update(songs)
+      .set({ kieAudioId })
       .where(eq(songs.id, id))
       .returning();
     return updated;

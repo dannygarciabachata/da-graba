@@ -356,6 +356,14 @@ function startKiePoller(songId: number, taskId: string, imageContext?: { prompt:
         if (result.audioUrl) {
           const localUrl = await downloadFile(result.audioUrl, "songs", "song");
           await storage.updateSongStatus(songId, "completed", localUrl);
+          if (result.kieAudioId) {
+            try {
+              await storage.updateSongKieAudioId(songId, result.kieAudioId);
+              console.log(`[Kie.ai] Saved kieAudioId ${result.kieAudioId} for song ${songId}`);
+            } catch (err: any) {
+              console.log(`[Kie.ai] Failed to save kieAudioId: ${err.message}`);
+            }
+          }
           if (result.imageUrl) {
             try {
               const localImageUrl = await downloadFile(result.imageUrl, "images", "cover");

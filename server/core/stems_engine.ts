@@ -27,7 +27,8 @@ export async function processStemSeparation(
   songId: number,
   audioUrl: string,
   userId: string,
-  kieTaskId?: string | null
+  kieTaskId?: string | null,
+  kieAudioId?: string | null
 ): Promise<void> {
   console.log(`[Stems] Starting stem separation for song ${songId}`);
 
@@ -54,10 +55,24 @@ export async function processStemSeparation(
     }
 
     // Priority 1: Kie.ai stem separation (for Kie.ai-generated songs)
-    if (canUseKie() && kieTaskId) {
-      console.log(`[Stems] Using Kie.ai for stem separation (taskId: ${kieTaskId})`);
+    let resolvedAudioId = kieAudioId;
+    if (canUseKie() && kieTaskId && !resolvedAudioId) {
       try {
-        const kieStemResult = await submitKieStemSeparation(kieTaskId, kieTaskId, "separate_vocal");
+        const { pollKieTask } = await import("./kie_engine");
+        console.log(`[Stems] No kieAudioId stored, re-polling task ${kieTaskId} to get audioId`);
+        const pollResult = await pollKieTask(kieTaskId, 5000, 5000);
+        if (pollResult.kieAudioId) {
+          resolvedAudioId = pollResult.kieAudioId;
+          console.log(`[Stems] Resolved kieAudioId: ${resolvedAudioId}`);
+        }
+      } catch (e: any) {
+        console.log(`[Stems] Could not resolve kieAudioId: ${e.message}`);
+      }
+    }
+    if (canUseKie() && kieTaskId && resolvedAudioId) {
+      console.log(`[Stems] Using Kie.ai for stem separation (taskId: ${kieTaskId}, audioId: ${resolvedAudioId})`);
+      try {
+        const kieStemResult = await submitKieStemSeparation(kieTaskId, resolvedAudioId!, "split_stem");
         const kieStems = await pollKieStemTask(kieStemResult.taskId, 300000, 10000);
 
         if (Object.keys(kieStems.stems).length > 0) {

@@ -226,7 +226,7 @@ export async function pollKieTask(
   taskId: string,
   maxWaitMs: number = 300000,
   pollIntervalMs: number = 10000
-): Promise<{ audioUrl: string; imageUrl?: string; title?: string }> {
+): Promise<{ audioUrl: string; imageUrl?: string; title?: string; kieAudioId?: string }> {
   const startTime = Date.now();
 
   while (Date.now() - startTime < maxWaitMs) {
@@ -241,10 +241,13 @@ export async function pollKieTask(
       if (tracksWithAudio.length > 0) {
         const track = tracksWithAudio[0];
         const audioUrl = track.audioUrl || track.audio_url;
+        const kieAudioId = track.id || undefined;
+        console.log(`[Kie.ai] Found kieAudioId: ${kieAudioId || "none"}`);
         return {
           audioUrl,
           imageUrl: track.imageUrl || track.image_url,
           title: track.title,
+          kieAudioId,
         };
       }
       if (status === "FIRST_SUCCESS" && responseData.length > 0) {
@@ -265,18 +268,25 @@ export async function pollKieTask(
   throw new Error("Kie.ai generation timed out after 5 minutes");
 }
 
+export function getStemCallbackUrl(): string {
+  const domain = process.env.REPLIT_DOMAINS?.split(",")[0] || process.env.REPLIT_DEV_DOMAIN || "dgb-studio.replit.app";
+  return `https://${domain}/api/kie/stems-callback`;
+}
+
 export async function submitKieStemSeparation(
   taskId: string,
   audioId: string,
-  type: "separate_vocal" | "split_stem" = "separate_vocal"
+  type: "separate_vocal" | "split_stem" = "split_stem"
 ): Promise<{ taskId: string }> {
-  console.log(`[Kie.ai] Submitting stem separation for task ${taskId}, audio ${audioId}`);
+  console.log(`[Kie.ai] Submitting stem separation for task ${taskId}, audio ${audioId}, type ${type}`);
 
+  const callBackUrl = getStemCallbackUrl();
   const result = await kieFetch("/vocal-removal/generate", {
     method: "POST",
     body: JSON.stringify({
       taskId,
       audioId,
+      callBackUrl,
       type,
     }),
   });
@@ -294,6 +304,27 @@ export async function submitKieStemSeparation(
   return { taskId: newTaskId };
 }
 
+export function parseKieStemCallbackData(data: any): Record<string, string> {
+  const stems: Record<string, string> = {};
+  const info = data?.vocal_separation_info || data?.data?.vocal_separation_info || data;
+
+  if (info.vocal_url) stems.vocals = info.vocal_url;
+  if (info.drums_url) stems.drums = info.drums_url;
+  if (info.bass_url) stems.bass = info.bass_url;
+  if (info.guitar_url) stems.other = info.guitar_url;
+  if (info.instrumental_url) {
+    if (!stems.other) stems.other = info.instrumental_url;
+    stems.instrumental = info.instrumental_url;
+  }
+  if (info.keyboard_url && !stems.other) stems.other = info.keyboard_url;
+  if (info.backing_vocals_url) stems.backing_vocals = info.backing_vocals_url;
+  if (info.percussion_url) stems.percussion = info.percussion_url;
+  if (info.strings_url) stems.strings = info.strings_url;
+  if (info.synth_url) stems.synth = info.synth_url;
+
+  return stems;
+}
+
 export async function pollKieStemTask(
   taskId: string,
   maxWaitMs: number = 300000,
@@ -302,25 +333,35 @@ export async function pollKieStemTask(
   const startTime = Date.now();
 
   while (Date.now() - startTime < maxWaitMs) {
-    const result = await kieFetch(`/task/${taskId}`);
-    const status = result?.data?.status?.toLowerCase() || "";
+    const result = await kieFetch(`/generate/record-info?taskId=${taskId}`, { method: "GET" });
+    const status = (result?.data?.status || "").toUpperCase();
 
     console.log(`[Kie.ai] Stem task ${taskId} status: ${status}`);
 
-    if (status === "complete" || status === "completed" || status === "success") {
-      const responseData = result?.data?.response?.data || [];
+    if (status === "SUCCESS" || status === "COMPLETE" || status === "COMPLETED") {
       const stems: Record<string, string> = {};
 
-      for (const item of responseData) {
-        if (item.vocalsUrl) stems.vocals = item.vocalsUrl;
-        if (item.instrumentalUrl) stems.instrumental = item.instrumentalUrl;
-        if (item.stemsUrl) {
-          Object.assign(stems, item.stemsUrl);
-        }
-        if (item.audioUrl || item.audio_url) {
-          const url = item.audioUrl || item.audio_url;
-          const type = item.type || item.name || "vocals";
-          stems[type.toLowerCase()] = url;
+      const vocalSepInfo = result?.data?.response?.vocal_separation_info ||
+                           result?.data?.vocal_separation_info;
+      if (vocalSepInfo) {
+        Object.assign(stems, parseKieStemCallbackData({ vocal_separation_info: vocalSepInfo }));
+      }
+
+      if (Object.keys(stems).length === 0) {
+        const responseData = result?.data?.response?.data || result?.data?.response?.sunoData || [];
+        for (const item of responseData) {
+          if (item.vocalsUrl || item.vocal_url) stems.vocals = item.vocalsUrl || item.vocal_url;
+          if (item.instrumentalUrl || item.instrumental_url) stems.instrumental = item.instrumentalUrl || item.instrumental_url;
+          if (item.drumsUrl || item.drums_url) stems.drums = item.drumsUrl || item.drums_url;
+          if (item.bassUrl || item.bass_url) stems.bass = item.bassUrl || item.bass_url;
+          if (item.stemsUrl) {
+            Object.assign(stems, item.stemsUrl);
+          }
+          if (item.audioUrl || item.audio_url) {
+            const url = item.audioUrl || item.audio_url;
+            const type = item.type || item.name || "vocals";
+            stems[type.toLowerCase()] = url;
+          }
         }
       }
 
@@ -331,8 +372,8 @@ export async function pollKieStemTask(
       };
     }
 
-    if (status === "failed" || status === "error") {
-      const errorMsg = result?.data?.failReason || result?.data?.error || "Unknown error";
+    if (status === "FAILED" || status === "ERROR") {
+      const errorMsg = result?.data?.failReason || result?.data?.errorMessage || result?.data?.error || "Unknown error";
       throw new Error(`Kie.ai stem separation failed: ${errorMsg}`);
     }
 
