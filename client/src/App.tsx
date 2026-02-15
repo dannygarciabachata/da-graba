@@ -17,6 +17,7 @@ import AdminPage from "@/pages/AdminPage";
 import PricingPage from "@/pages/PricingPage";
 import StyleKitsPage from "@/pages/StyleKitsPage";
 import ProducerStorePage from "@/pages/ProducerStorePage";
+import AudioToolsPage from "@/pages/AudioToolsPage";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
 
@@ -43,6 +44,7 @@ function AuthenticatedLayout() {
               <Route path="/quiz" component={QuizPage} />
               <Route path="/studio" component={StudioPage} />
               <Route path="/sample-lab" component={SampleLab} />
+              <Route path="/audio-tools" component={AudioToolsPage} />
               <Route path="/style-kits" component={StyleKitsPage} />
               <Route path="/producer-store" component={ProducerStorePage} />
               <Route path="/pricing" component={PricingPage} />

@@ -66,7 +66,13 @@ export type MusicGPTEndpoint =
   | "extract_key_bpm"
   | "Cover"
   | "VoiceChanger"
-  | "audio_cutter";
+  | "audio_cutter"
+  | "tts"
+  | "de_echo"
+  | "de_reverb"
+  | "sound_generator"
+  | "transcription"
+  | "audio_speed_changer";
 
 const ENDPOINT_CONVERSION_TYPES: Record<string, string> = {
   MusicAI: "MUSIC_AI",
@@ -78,6 +84,12 @@ const ENDPOINT_CONVERSION_TYPES: Record<string, string> = {
   Cover: "COVER",
   VoiceChanger: "VOICE_CONVERSION",
   audio_cutter: "AUDIO_CUTTER",
+  tts: "TTS",
+  de_echo: "DE_ECHO",
+  de_reverb: "DE_REVERB",
+  sound_generator: "SOUND_GENERATOR",
+  transcription: "TRANSCRIPTION",
+  audio_speed_changer: "AUDIO_SPEED_CHANGER",
 };
 
 export function buildMusicGPTPrompt(userPrompt: string, style: string): { prompt: string; music_style: string } {
@@ -377,6 +389,79 @@ export async function submitAudioCutter(
   console.log(`[MusicGPT:audio_cutter] Submitting trim: ${startTimeMs}ms - ${endTimeMs}ms`);
 
   return submitMusicGPTJob("audio_cutter", body);
+}
+
+export async function submitTTS(
+  text: string,
+  voiceId?: string,
+  options: { language?: string; webhookUrl?: string } = {}
+): Promise<MusicGPTSubmitResponse> {
+  const body: Record<string, any> = { text };
+  if (voiceId) body.voice_id = voiceId;
+  if (options.language) body.language = options.language;
+  if (options.webhookUrl) body.webhook_url = options.webhookUrl;
+  return submitMusicGPTJob("tts", body);
+}
+
+export async function submitDeEcho(
+  audioUrl: string,
+  options: { webhookUrl?: string } = {}
+): Promise<MusicGPTSubmitResponse> {
+  const body: Record<string, any> = { audio_url: audioUrl };
+  if (options.webhookUrl) body.webhook_url = options.webhookUrl;
+  return submitMusicGPTJob("de_echo", body);
+}
+
+export async function submitDeReverb(
+  audioUrl: string,
+  options: { webhookUrl?: string } = {}
+): Promise<MusicGPTSubmitResponse> {
+  const body: Record<string, any> = { audio_url: audioUrl };
+  if (options.webhookUrl) body.webhook_url = options.webhookUrl;
+  return submitMusicGPTJob("de_reverb", body);
+}
+
+export async function submitSoundGenerator(
+  prompt: string,
+  duration?: number,
+  options: { webhookUrl?: string } = {}
+): Promise<MusicGPTSubmitResponse> {
+  const body: Record<string, any> = { prompt };
+  if (duration) body.duration = duration;
+  if (options.webhookUrl) body.webhook_url = options.webhookUrl;
+  return submitMusicGPTJob("sound_generator", body);
+}
+
+export async function submitTranscription(
+  audioUrl: string,
+  options: { language?: string; webhookUrl?: string } = {}
+): Promise<MusicGPTSubmitResponse> {
+  const body: Record<string, any> = { audio_url: audioUrl };
+  if (options.language) body.language = options.language;
+  if (options.webhookUrl) body.webhook_url = options.webhookUrl;
+  return submitMusicGPTJob("transcription", body);
+}
+
+export async function submitAudioSpeedChanger(
+  audioUrl: string,
+  speed: number,
+  options: { pitch?: number; webhookUrl?: string } = {}
+): Promise<MusicGPTSubmitResponse> {
+  const body: Record<string, any> = { audio_url: audioUrl, speed };
+  if (options.pitch !== undefined) body.pitch = options.pitch;
+  if (options.webhookUrl) body.webhook_url = options.webhookUrl;
+  return submitMusicGPTJob("audio_speed_changer", body);
+}
+
+export async function submitVoiceChanger(
+  audioUrl: string,
+  voiceId: string,
+  options: { pitch?: number; webhookUrl?: string } = {}
+): Promise<MusicGPTSubmitResponse> {
+  const body: Record<string, any> = { audio_url: audioUrl, voice_id: voiceId };
+  if (options.pitch !== undefined) body.pitch = options.pitch;
+  if (options.webhookUrl) body.webhook_url = options.webhookUrl;
+  return submitMusicGPTJob("VoiceChanger", body);
 }
 
 import fs from "fs";

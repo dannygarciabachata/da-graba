@@ -214,9 +214,16 @@ export const OPERATION_TYPES = [
   "key_bpm",
   "cover",
   "voice_change",
+  "voice_conversion",
   "audio_cut",
   "lyrics_generation",
   "image_generation",
+  "tts",
+  "de_echo",
+  "de_reverb",
+  "sound_generation",
+  "transcription",
+  "audio_speed",
 ] as const;
 
 export type OperationType = typeof OPERATION_TYPES[number];

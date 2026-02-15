@@ -29,6 +29,7 @@ import {
   Store,
   Zap,
   Infinity,
+  Wrench,
 } from "lucide-react";
 import { useAdminCheck } from "@/hooks/use-admin";
 import { useCredits } from "@/hooks/use-credits";
@@ -44,6 +45,7 @@ const NAV_ITEMS = [
 const TOOLS_ITEMS = [
   { title: "Multitrack Studio", url: "/studio", icon: Scissors },
   { title: "Sample Lab", url: "/sample-lab", icon: Music },
+  { title: "Audio Tools", url: "/audio-tools", icon: Wrench },
   { title: "Style Kits", url: "/style-kits", icon: Disc },
   { title: "Producer Store", url: "/producer-store", icon: Store },
   { title: "Pricing", url: "/pricing", icon: CreditCard },

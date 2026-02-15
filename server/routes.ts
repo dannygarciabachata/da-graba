@@ -12,7 +12,12 @@ import { downloadMusicGPTFile } from "./core/musicgpt_engine";
 import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engine";
 import { processStemSeparation } from "./core/stems_engine";
 import { saveStemAudio, getStemsWebhookSecret } from "./core/runpod_stems_engine";
-import { processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise, processCoverSong, processAudioCut } from "./workers/sample_tasks";
+import {
+  processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise,
+  processCoverSong, processAudioCut, processVoiceConversion, processDeEcho,
+  processDeReverb, processTTS, processSoundGeneration, processTranscription,
+  processRemix, processSpeedChange,
+} from "./workers/sample_tasks";
 import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider, seedReplicateProvider, seedMurekaProvider, seedTrainingKits } from "./core/seed_providers";
 import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfig, buildRunPodPayload, GENRE_STYLE_HINTS } from "./core/sao_training_engine";
 import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection, getGpuStatus, resumeGpuPod, stopGpuPod, setupGpuEnvironment } from "./core/runpod_client";
@@ -971,6 +976,125 @@ export async function registerRoutes(
       }
       res.status(500).json({ message: "Failed to start audio trimming" });
     }
+  });
+
+  // ========== AUDIO TOOLS: VOICE CONVERSION ==========
+  app.post("/api/songs/:id/voice-convert", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const songId = Number(req.params.id);
+    const song = await storage.getSong(songId);
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    if (song.status !== "completed" || !song.audioUrl) {
+      return res.status(400).json({ message: "Song must be completed with audio" });
+    }
+    const { voiceId, pitch } = req.body;
+    if (!voiceId) return res.status(400).json({ message: "voiceId is required" });
+    processVoiceConversion(songId, song.audioUrl, voiceId, userId, pitch);
+    res.status(202).json({ message: "Voice conversion started", songId });
+  });
+
+  // ========== AUDIO TOOLS: DE-ECHO ==========
+  app.post("/api/songs/:id/de-echo", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const songId = Number(req.params.id);
+    const song = await storage.getSong(songId);
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    if (song.status !== "completed" || !song.audioUrl) {
+      return res.status(400).json({ message: "Song must be completed with audio" });
+    }
+    processDeEcho(songId, song.audioUrl);
+    res.status(202).json({ message: "De-echo processing started", songId });
+  });
+
+  // ========== AUDIO TOOLS: DE-REVERB ==========
+  app.post("/api/songs/:id/de-reverb", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const songId = Number(req.params.id);
+    const song = await storage.getSong(songId);
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    if (song.status !== "completed" || !song.audioUrl) {
+      return res.status(400).json({ message: "Song must be completed with audio" });
+    }
+    processDeReverb(songId, song.audioUrl);
+    res.status(202).json({ message: "De-reverb processing started", songId });
+  });
+
+  // ========== AUDIO TOOLS: TEXT TO SPEECH ==========
+  app.post("/api/audio/tts", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const { text, voiceId, language } = req.body;
+    if (!text || text.trim().length === 0) return res.status(400).json({ message: "Text is required" });
+    processTTS(userId, text.trim(), voiceId, language);
+    res.status(202).json({ message: "Text to speech started" });
+  });
+
+  // ========== AUDIO TOOLS: SOUND GENERATOR ==========
+  app.post("/api/audio/sound-generator", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const { prompt, duration } = req.body;
+    if (!prompt || prompt.trim().length === 0) return res.status(400).json({ message: "Prompt is required" });
+    processSoundGeneration(userId, prompt.trim(), duration);
+    res.status(202).json({ message: "Sound generation started" });
+  });
+
+  // ========== AUDIO TOOLS: TRANSCRIPTION ==========
+  app.post("/api/songs/:id/transcribe", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const songId = Number(req.params.id);
+    const song = await storage.getSong(songId);
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    if (song.status !== "completed" || !song.audioUrl) {
+      return res.status(400).json({ message: "Song must be completed with audio" });
+    }
+    const { language } = req.body;
+    const result = await processTranscription(songId, song.audioUrl, language);
+    res.json({ message: "Transcription complete", text: result.text || "" });
+  });
+
+  // ========== AUDIO TOOLS: REMIX ==========
+  app.post("/api/songs/:id/remix", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const songId = Number(req.params.id);
+    const song = await storage.getSong(songId);
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    if (song.status !== "completed" || !song.audioUrl) {
+      return res.status(400).json({ message: "Song must be completed with audio" });
+    }
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ message: "Remix prompt is required" });
+    processRemix(songId, song.audioUrl, prompt, userId);
+    res.status(202).json({ message: "Remix started", songId });
+  });
+
+  // ========== AUDIO TOOLS: SPEED CHANGER ==========
+  app.post("/api/songs/:id/speed", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const songId = Number(req.params.id);
+    const song = await storage.getSong(songId);
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    if (song.status !== "completed" || !song.audioUrl) {
+      return res.status(400).json({ message: "Song must be completed with audio" });
+    }
+    const { speed, pitch } = req.body;
+    if (!speed || speed < 0.25 || speed > 4.0) {
+      return res.status(400).json({ message: "Speed must be between 0.25 and 4.0" });
+    }
+    processSpeedChange(songId, song.audioUrl, speed, userId, pitch);
+    res.status(202).json({ message: "Speed change started", songId });
   });
 
   app.post("/api/samples/:id/key-bpm", async (req, res) => {
