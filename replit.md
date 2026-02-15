@@ -45,3 +45,8 @@ The "DGB Studio" music engine employs a microservices-oriented architecture.
 - **Generic Cloud Server System:** Database-driven management of multiple GPU servers from various providers, allowing dynamic configuration and auto-selection.
 - **Replit Auth:** User authentication.
 - **Wavesurfer.js:** Frontend library for audio waveform visualization.
+
+## Recent Changes
+- **Feb 15, 2026:** Fixed song duration bug - default increased from 15s to 180s (3 min). Added duration selector in CreatePage Pro Controls (1:00, 2:00, 3:00, 4:00, 5:00). Backend clamps duration between 30-300s.
+- **Feb 15, 2026:** Improved genre/rhythm adherence - enhanced HeartMuLa tags with BPM, time signature, and genre-specific instrument descriptors. Improved prompt enrichment system prompt to prioritize genre name and rhythm feel. Made lyrics generation genre-aware (no longer hardcoded to "Bachata").
+- **Feb 15, 2026:** Added Hip Hop to GENRE_INSTRUMENT_MAP in antigravity_engine.ts. Expanded buildHeartMuLaTags to cover R&B, Hip Hop, Pop, EDM genres with proper tag normalization.
