@@ -11,7 +11,7 @@ The "DGB Studio" music engine employs a microservices-oriented architecture.
 
 **Frontend:**
 - **Technology Stack:** React, Vite, TailwindCSS, Shadcn UI.
-- **UI/UX Design:** Dark mode theme with navy background (`#0A0E1A` / hsl 228 50% 6%), neon cyan primary (`#00C8FF` / hsl 190 100% 50%), purple/magenta accents (`#A855F7` / hsl 270 90% 60%). Blue-to-purple gradients throughout. Uses Inter and JetBrains Mono fonts. Mobile-first, responsive design.
+- **UI/UX Design:** Dark mode theme with navy background matching logo (`hsl 225 48% 9%`), neon cyan primary (`#00C8FF` / hsl 190 100% 50%), purple/magenta accents (`#A855F7` / hsl 270 90% 60%). Blue-to-purple gradients throughout. Uses Inter and JetBrains Mono fonts. Mobile-first, responsive design.
 - **Layout:** Left sidebar for navigation and controls, dynamic full-width main content area.
 - **Key UI Components:** CreatePage (Suno-style music creation), LibraryPage (user songs, audio player), Studio (multitrack editor with AI stem separation, track controls, AI tools), Sample Lab (audio recording, upload, AI Remix, Key/BPM detection), AdminPage (owner-only management), Producer Store/Style Kits (user-browsable/uploadable instrument kits).
 

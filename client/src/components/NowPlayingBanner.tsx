@@ -146,7 +146,7 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      className="fixed right-0 top-0 bottom-0 w-[340px] bg-[#0d0d0d] border-l border-white/5 flex flex-col z-40 shadow-2xl shadow-black/50"
+      className="fixed right-0 top-0 bottom-0 w-[340px] bg-background border-l border-white/5 flex flex-col z-40 shadow-2xl shadow-black/50"
       data-testid="now-playing-banner"
     >
       <div className="relative">
@@ -162,7 +162,7 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
               <Music className="h-20 w-20 text-primary/30" />
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d0d] via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
         </div>
 
         <Button
