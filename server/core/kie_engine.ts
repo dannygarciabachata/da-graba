@@ -114,13 +114,16 @@ async function kieFetch(endpoint: string, options: RequestInit = {}): Promise<an
 
   if (!response.ok) {
     const errorMsg = data?.msg || data?.message || `Kie.ai API error: ${response.status}`;
-    console.error(`[Kie.ai] API error ${response.status}:`, errorMsg);
+    console.error(`[Kie.ai] API error ${response.status}:`, errorMsg, JSON.stringify(data).substring(0, 500));
 
     if (response.status === 429 || response.status === 402 || response.status === 403) {
       throw new Error("KIE_QUOTA_EXCEEDED: Add credits at kie.ai/billing");
     }
     if (response.status === 401) {
       throw new Error("KIE_AUTH_ERROR: Invalid API key. Check your key at kie.ai/api-key");
+    }
+    if (response.status === 422) {
+      throw new Error(`KIE_VALIDATION_ERROR: ${errorMsg}`);
     }
     throw new Error(errorMsg);
   }
@@ -168,17 +171,7 @@ export async function submitKieMusicGeneration(
   } = {}
 ): Promise<{ taskId: string }> {
   console.log(`[Kie.ai] Submitting music generation`);
-  console.log(`[Kie.ai] Style: ${style}, Instrumental: ${options.instrumental || false}`);
-
-  let boostedStyle = style;
-  if (style) {
-    try {
-      boostedStyle = await boostMusicStyle(style);
-    } catch (err: any) {
-      console.warn(`[Kie.ai] Style boost error, using original: ${err.message}`);
-      boostedStyle = style;
-    }
-  }
+  console.log(`[Kie.ai] Style: ${style}, Instrumental: ${options.instrumental || false}, HasLyrics: ${!!options.lyrics}`);
 
   const callBackUrl = options.callbackUrl || getDefaultCallbackUrl();
   const body: Record<string, any> = {
@@ -186,22 +179,28 @@ export async function submitKieMusicGeneration(
     callBackUrl,
   };
 
-  if (options.lyrics || boostedStyle) {
+  if (options.lyrics) {
+    let boostedStyle = style || "Pop";
+    try {
+      boostedStyle = await boostMusicStyle(style || "Pop");
+    } catch (err: any) {
+      console.warn(`[Kie.ai] Style boost error, using original: ${err.message}`);
+    }
     body.customMode = true;
-    body.style = boostedStyle || "Pop";
-    body.title = options.title || "DGB Studio Track";
-    body.prompt = options.lyrics || prompt;
+    body.style = boostedStyle;
+    body.title = (options.title || "DGB Studio Track").substring(0, 80);
+    body.prompt = options.lyrics.substring(0, 3000);
   } else {
-    body.prompt = prompt;
+    body.prompt = prompt.substring(0, 3000);
   }
 
-  if (options.instrumental) {
-    body.instrumental = true;
-  }
+  body.instrumental = options.instrumental === true;
 
   if (options.vocalGender) {
     body.vocalGender = options.vocalGender;
   }
+
+  console.log(`[Kie.ai] Request body: customMode=${body.customMode || false}, style=${(body.style || 'N/A').substring(0, 60)}, prompt=${body.prompt.substring(0, 80)}...`);
 
   const result = await kieFetch("/generate", {
     method: "POST",
@@ -210,7 +209,7 @@ export async function submitKieMusicGeneration(
 
   const taskId = result?.data?.taskId || result?.taskId;
   if (!taskId) {
-    console.error(`[Kie.ai] No taskId in response:`, JSON.stringify(result).substring(0, 300));
+    console.error(`[Kie.ai] No taskId in response:`, JSON.stringify(result).substring(0, 500));
     throw new Error("Kie.ai returned no task ID");
   }
 
