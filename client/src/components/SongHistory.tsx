@@ -1,4 +1,5 @@
 import { useSongs, useDeleteSong } from "@/hooks/use-songs";
+import { useTranslation } from "react-i18next";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Loader2, Play, Trash2, Clock, AlertCircle, Scissors } from "lucide-react";
@@ -12,6 +13,7 @@ interface SongHistoryProps {
 }
 
 export function SongHistory({ currentSongId, onSelectSong }: SongHistoryProps) {
+  const { t } = useTranslation();
   const { data: songs, isLoading } = useSongs();
   const { mutate: deleteSong } = useDeleteSong();
   const [, setLocation] = useLocation();
@@ -83,21 +85,21 @@ export function SongHistory({ currentSongId, onSelectSong }: SongHistoryProps) {
               {song.status === 'completed' && (
                 <div className="flex items-center text-primary gap-1">
                   <Play className="w-3 h-3 fill-current" />
-                  Ready
+                  {t('common.ready')}
                 </div>
               )}
               
               {song.status === 'processing' && (
                 <div className="flex items-center text-yellow-500 gap-1 animate-pulse">
                   <Clock className="w-3 h-3" />
-                  Processing
+                  {t('common.processing')}
                 </div>
               )}
               
               {song.status === 'failed' && (
                 <div className="flex items-center text-destructive gap-1">
                   <AlertCircle className="w-3 h-3" />
-                  Failed
+                  {t('common.failed')}
                 </div>
               )}
             </div>

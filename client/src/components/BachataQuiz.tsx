@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ interface QuizResult {
 }
 
 export function BachataQuiz() {
+  const { t } = useTranslation();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [showResults, setShowResults] = useState(false);
@@ -77,7 +79,7 @@ export function BachataQuiz() {
       <Card className="glass-panel border-white/5 h-full flex items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
           <Music className="h-8 w-8 animate-pulse text-primary" />
-          <span className="text-sm">Loading quiz...</span>
+          <span className="text-sm">{t('quiz.loading')}</span>
         </div>
       </Card>
     );
@@ -86,7 +88,7 @@ export function BachataQuiz() {
   if (questions.length === 0) {
     return (
       <Card className="glass-panel border-white/5 h-full flex items-center justify-center">
-        <div className="text-muted-foreground text-sm">No quiz questions available.</div>
+        <div className="text-muted-foreground text-sm">{t('quiz.noQuestions')}</div>
       </Card>
     );
   }
@@ -98,7 +100,7 @@ export function BachataQuiz() {
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
-            Quiz Results
+            {t('quiz.results')}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col items-center justify-center gap-6">
@@ -114,15 +116,15 @@ export function BachataQuiz() {
           </motion.div>
           <div className="text-center space-y-2">
             <p className="text-lg font-semibold" data-testid="text-quiz-summary">
-              {result?.score ?? 0} / {result?.total ?? questions.length} correct
+              {result?.score ?? 0} / {result?.total ?? questions.length} {t('quiz.correctCount')}
             </p>
             <p className="text-sm text-muted-foreground max-w-xs" data-testid="text-quiz-feedback">
-              {result?.feedback || "Great effort!"}
+              {result?.feedback || t('quiz.greatEffort')}
             </p>
           </div>
           <Button onClick={handleRestart} className="gap-2" data-testid="button-quiz-restart">
             <RotateCcw className="h-4 w-4" />
-            Try Again
+            {t('quiz.tryAgain')}
           </Button>
         </CardContent>
       </Card>
@@ -138,10 +140,10 @@ export function BachataQuiz() {
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <CardTitle className="text-lg flex items-center gap-2">
             <Music className="h-5 w-5 text-primary" />
-            Bachata Quiz
+            {t('quiz.title')}
           </CardTitle>
           <Badge variant="secondary" className="text-xs" data-testid="badge-quiz-progress">
-            {currentQuestion + 1} / {questions.length}
+            {currentQuestion + 1} {t('quiz.of')} {questions.length}
           </Badge>
         </div>
         <div className="w-full bg-white/5 rounded-full h-1.5 mt-3">
@@ -213,9 +215,9 @@ export function BachataQuiz() {
           {showExplanation && (
             <Button onClick={handleNext} className="w-full gap-2" data-testid="button-quiz-next">
               {currentQuestion < questions.length - 1 ? (
-                <>Next <ChevronRight className="h-4 w-4" /></>
+                <>{t('common.next')} <ChevronRight className="h-4 w-4" /></>
               ) : (
-                <>See Results <Trophy className="h-4 w-4" /></>
+                <>{t('quiz.seeResults')} <Trophy className="h-4 w-4" /></>
               )}
             </Button>
           )}

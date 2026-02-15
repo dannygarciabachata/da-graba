@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "react-i18next";
 import dgbLogo from "@assets/Dgb_1771188880013.png";
 import { MusicGenerator } from "@/components/MusicGenerator";
 import { LyricsGenerator } from "@/components/LyricsGenerator";
@@ -18,6 +19,7 @@ type RightPanelTab = "lyrics" | "quiz";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const [currentSong, setCurrentSong] = useState<any>(null);
   const [rightTab, setRightTab] = useState<RightPanelTab>("lyrics");
@@ -26,10 +28,10 @@ export default function Dashboard() {
   if (!user) return null;
 
   const mobileNavItems = [
-    { id: "studio" as MobileTab, label: "Studio", icon: Sparkles },
-    { id: "player" as MobileTab, label: "Player", icon: Headphones },
-    { id: "lyrics" as MobileTab, label: "Lyrics", icon: PenLine },
-    { id: "quiz" as MobileTab, label: "Quiz", icon: HelpCircle },
+    { id: "studio" as MobileTab, label: t('dashboard.studio'), icon: Sparkles },
+    { id: "player" as MobileTab, label: t('dashboard.player'), icon: Headphones },
+    { id: "lyrics" as MobileTab, label: t('nav.lyrics'), icon: PenLine },
+    { id: "quiz" as MobileTab, label: t('nav.quiz'), icon: HelpCircle },
   ];
 
   const handleOpenMultitrackStudio = () => setLocation("/studio");
@@ -50,7 +52,7 @@ export default function Dashboard() {
             data-testid="button-open-samplelab"
           >
             <Music className="h-3.5 w-3.5" />
-            Sample Lab
+            {t('nav.sampleLab')}
           </Button>
           <Button
             variant="outline"
@@ -60,7 +62,7 @@ export default function Dashboard() {
             data-testid="button-open-studio"
           >
             <Scissors className="h-3.5 w-3.5" />
-            Multitrack Studio
+            {t('nav.studio')}
           </Button>
           <div className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-full bg-white/5 border border-white/5">
             <Avatar className="h-6 w-6">
@@ -84,7 +86,7 @@ export default function Dashboard() {
             <MusicGenerator />
           </div>
           <div className="flex-1 min-h-0 glass-panel rounded-2xl p-4 flex flex-col">
-            <h3 className="font-bold text-sm text-muted-foreground uppercase tracking-wider mb-4 px-2">Recent Tracks</h3>
+            <h3 className="font-bold text-sm text-muted-foreground uppercase tracking-wider mb-4 px-2">{t('dashboard.recentTracks')}</h3>
             <SongHistory currentSongId={currentSong?.id} onSelectSong={setCurrentSong} />
           </div>
         </div>
@@ -111,7 +113,7 @@ export default function Dashboard() {
           </motion.div>
           <AudioPlayer
             url={currentSong?.audioUrl}
-            title={currentSong?.title || "Untitled Track"}
+            title={currentSong?.title || t('create.untitledTrack')}
           />
         </div>
 
@@ -125,7 +127,7 @@ export default function Dashboard() {
               data-testid="button-tab-lyrics"
             >
               <PenLine className="h-3.5 w-3.5" />
-              Lyrics
+              {t('nav.lyrics')}
             </Button>
             <Button
               variant={rightTab === "quiz" ? "default" : "ghost"}
@@ -135,7 +137,7 @@ export default function Dashboard() {
               data-testid="button-tab-quiz"
             >
               <HelpCircle className="h-3.5 w-3.5" />
-              Quiz
+              {t('nav.quiz')}
             </Button>
           </div>
           <div className="flex-1 min-h-0 overflow-auto">
@@ -156,7 +158,7 @@ export default function Dashboard() {
             >
               <MusicGenerator />
               <div className="glass-panel rounded-2xl p-4">
-                <h3 className="font-bold text-sm text-muted-foreground uppercase tracking-wider mb-4 px-2">Recent Tracks</h3>
+                <h3 className="font-bold text-sm text-muted-foreground uppercase tracking-wider mb-4 px-2">{t('dashboard.recentTracks')}</h3>
                 <SongHistory currentSongId={currentSong?.id} onSelectSong={(song) => { setCurrentSong(song); setMobileTab("player"); }} />
               </div>
             </motion.div>
@@ -183,10 +185,10 @@ export default function Dashboard() {
               </div>
               <AudioPlayer
                 url={currentSong?.audioUrl}
-                title={currentSong?.title || "Untitled Track"}
+                title={currentSong?.title || t('create.untitledTrack')}
               />
               <div className="glass-panel rounded-2xl p-4">
-                <h3 className="font-bold text-sm text-muted-foreground uppercase tracking-wider mb-4 px-2">Recent Tracks</h3>
+                <h3 className="font-bold text-sm text-muted-foreground uppercase tracking-wider mb-4 px-2">{t('dashboard.recentTracks')}</h3>
                 <SongHistory currentSongId={currentSong?.id} onSelectSong={setCurrentSong} />
               </div>
             </motion.div>

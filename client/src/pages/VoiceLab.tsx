@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
 import {
   useVoiceModels,
@@ -42,6 +43,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function VoiceLab() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { data: voiceModels, isLoading } = useVoiceModels();
   const { data: styleRefs, isLoading: refsLoading } = useStyleReferences();
@@ -146,9 +148,9 @@ export default function VoiceLab() {
     <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-voicelab-title">Voice Lab</h1>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-voicelab-title">{t('voiceLab.title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage your voice models, upload trained voices, and add style references
+            {t('voiceLab.subtitle')}
           </p>
         </div>
       </div>
@@ -156,17 +158,17 @@ export default function VoiceLab() {
       <Tabs defaultValue="voices" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="voices" data-testid="tab-voices">
-            <Mic className="h-4 w-4 mr-1.5" /> Voice Models
+            <Mic className="h-4 w-4 mr-1.5" /> {t('voiceLab.voiceModels')}
           </TabsTrigger>
           <TabsTrigger value="references" data-testid="tab-references">
-            <Music className="h-4 w-4 mr-1.5" /> Style References
+            <Music className="h-4 w-4 mr-1.5" /> {t('voiceLab.styleReferences')}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="voices" className="space-y-4 mt-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Upload pre-trained voice models or train new ones from audio samples
+              {t('voiceLab.voiceModelsDesc')}
             </p>
             <Button
               size="sm"
@@ -174,7 +176,7 @@ export default function VoiceLab() {
               data-testid="button-add-voice"
             >
               <Plus className="h-4 w-4 mr-1" />
-              Add Voice
+              {t('voiceLab.addVoice')}
             </Button>
           </div>
 
@@ -189,7 +191,7 @@ export default function VoiceLab() {
                 <Card className="p-4 space-y-3 border-primary/20">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Voice Name *</Label>
+                      <Label className="text-xs">{t('voiceLab.voiceName')} *</Label>
                       <Input
                         placeholder="e.g. Mi Voz Bachata"
                         value={newModel.name}
@@ -198,20 +200,20 @@ export default function VoiceLab() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Type</Label>
+                      <Label className="text-xs">{t('voiceLab.type')}</Label>
                       <Select value={newModel.type} onValueChange={(v) => setNewModel({ ...newModel, type: v })}>
                         <SelectTrigger data-testid="select-voice-type">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="uploaded">Pre-trained (Upload)</SelectItem>
-                          <SelectItem value="trained">Train from Samples</SelectItem>
-                          <SelectItem value="cloned">Voice Clone</SelectItem>
+                          <SelectItem value="uploaded">{t('voiceLab.pretrained')}</SelectItem>
+                          <SelectItem value="trained">{t('voiceLab.trainFromSamples')}</SelectItem>
+                          <SelectItem value="cloned">{t('voiceLab.voiceClone')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Provider</Label>
+                      <Label className="text-xs">{t('voiceLab.provider')}</Label>
                       <Select value={newModel.provider} onValueChange={(v) => setNewModel({ ...newModel, provider: v })}>
                         <SelectTrigger data-testid="select-voice-provider">
                           <SelectValue />
@@ -227,15 +229,15 @@ export default function VoiceLab() {
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Gender</Label>
+                      <Label className="text-xs">{t('voiceLab.gender')}</Label>
                       <Select value={newModel.gender} onValueChange={(v) => setNewModel({ ...newModel, gender: v })}>
                         <SelectTrigger data-testid="select-voice-gender">
                           <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="neutral">Neutral</SelectItem>
+                          <SelectItem value="male">{t('voiceLab.male')}</SelectItem>
+                          <SelectItem value="female">{t('voiceLab.female')}</SelectItem>
+                          <SelectItem value="neutral">{t('voiceLab.neutral')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -254,9 +256,9 @@ export default function VoiceLab() {
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs">External Voice ID</Label>
+                      <Label className="text-xs">{t('voiceLab.externalVoiceId')}</Label>
                       <Input
-                        placeholder="Optional: ElevenLabs/RVC voice ID"
+                        placeholder={t('voiceLab.externalVoiceIdPlaceholder')}
                         value={newModel.externalVoiceId}
                         onChange={(e) => setNewModel({ ...newModel, externalVoiceId: e.target.value })}
                         data-testid="input-voice-external-id"
@@ -264,9 +266,9 @@ export default function VoiceLab() {
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Description</Label>
+                    <Label className="text-xs">{t('voiceLab.description')}</Label>
                     <Textarea
-                      placeholder="Describe the voice characteristics..."
+                      placeholder={t('voiceLab.descriptionPlaceholder')}
                       value={newModel.description}
                       onChange={(e) => setNewModel({ ...newModel, description: e.target.value })}
                       className="h-16 resize-none"
@@ -274,9 +276,9 @@ export default function VoiceLab() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Tags (comma separated)</Label>
+                    <Label className="text-xs">{t('voiceLab.tags')}</Label>
                     <Input
-                      placeholder="e.g. bachata, romantic, deep"
+                      placeholder={t('voiceLab.tagsPlaceholder')}
                       value={newModel.tags}
                       onChange={(e) => setNewModel({ ...newModel, tags: e.target.value })}
                       data-testid="input-voice-tags"
@@ -284,7 +286,7 @@ export default function VoiceLab() {
                   </div>
                   <div className="flex gap-2 justify-end">
                     <Button variant="ghost" size="sm" onClick={() => setShowCreateForm(false)} data-testid="button-cancel-voice">
-                      Cancel
+                      {t('common.cancel')}
                     </Button>
                     <Button
                       size="sm"
@@ -293,7 +295,7 @@ export default function VoiceLab() {
                       data-testid="button-save-voice"
                     >
                       {createModel.isPending && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-                      Create Voice Model
+                      {t('voiceLab.createVoiceModel')}
                     </Button>
                   </div>
                 </Card>
@@ -308,12 +310,12 @@ export default function VoiceLab() {
           ) : !voiceModels || voiceModels.length === 0 ? (
             <Card className="p-8 text-center">
               <Mic className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <h3 className="font-semibold mb-1">No voice models yet</h3>
+              <h3 className="font-semibold mb-1">{t('voiceLab.noVoiceModels')}</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Upload a trained voice or create one from audio samples
+                {t('voiceLab.noVoiceModelsDesc')}
               </p>
               <Button size="sm" onClick={() => setShowCreateForm(true)} data-testid="button-first-voice">
-                <Plus className="h-4 w-4 mr-1" /> Add Your First Voice
+                <Plus className="h-4 w-4 mr-1" /> {t('voiceLab.addFirstVoice')}
               </Button>
             </Card>
           ) : (
@@ -357,7 +359,7 @@ export default function VoiceLab() {
         <TabsContent value="references" className="space-y-4 mt-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Upload a reference song to imitate its style when creating music
+              {t('voiceLab.styleRefsDesc')}
             </p>
             <Button
               size="sm"
@@ -366,7 +368,7 @@ export default function VoiceLab() {
               data-testid="button-add-reference"
             >
               {uploadRef.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Upload className="h-4 w-4 mr-1" />}
-              Upload Reference
+              {t('voiceLab.uploadReference')}
             </Button>
             <input
               ref={refInputRef}
@@ -384,12 +386,12 @@ export default function VoiceLab() {
           ) : !styleRefs || styleRefs.length === 0 ? (
             <Card className="p-8 text-center">
               <Music className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <h3 className="font-semibold mb-1">No style references yet</h3>
+              <h3 className="font-semibold mb-1">{t('voiceLab.noStyleRefs')}</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Upload a song to use as a style reference when generating music
+                {t('voiceLab.noStyleRefsDesc')}
               </p>
               <Button size="sm" onClick={() => refInputRef.current?.click()} data-testid="button-first-reference">
-                <Upload className="h-4 w-4 mr-1" /> Upload Your First Reference
+                <Upload className="h-4 w-4 mr-1" /> {t('voiceLab.uploadFirstRef')}
               </Button>
             </Card>
           ) : (

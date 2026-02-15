@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "react-i18next";
 import dgbLogo from "@assets/Dgb_1771188880013.png";
 import {
   Sidebar,
@@ -33,27 +34,28 @@ import {
   Wrench,
   BookOpen,
   Palette,
+  Globe,
 } from "lucide-react";
 import { useAdminCheck } from "@/hooks/use-admin";
 import { useCredits } from "@/hooks/use-credits";
 import { Badge } from "@/components/ui/badge";
 
 const NAV_ITEMS = [
-  { title: "Create", url: "/create", icon: Sparkles },
-  { title: "Library", url: "/library", icon: Library },
-  { title: "Lyrics", url: "/lyrics", icon: PenLine },
-  { title: "Quiz", url: "/quiz", icon: HelpCircle },
+  { titleKey: "nav.create", url: "/create", icon: Sparkles },
+  { titleKey: "nav.library", url: "/library", icon: Library },
+  { titleKey: "nav.lyrics", url: "/lyrics", icon: PenLine },
+  { titleKey: "nav.quiz", url: "/quiz", icon: HelpCircle },
 ];
 
 const TOOLS_ITEMS = [
-  { title: "Multitrack Studio", url: "/studio", icon: Scissors },
-  { title: "Sample Lab", url: "/sample-lab", icon: Music },
-  { title: "Audio Tools", url: "/audio-tools", icon: Wrench },
-  { title: "Cover Designer", url: "/cover-designer", icon: Palette },
-  { title: "Style Kits", url: "/style-kits", icon: Disc },
-  { title: "Producer Store", url: "/producer-store", icon: Store },
-  { title: "Blog", url: "/blog", icon: BookOpen },
-  { title: "Pricing", url: "/pricing", icon: CreditCard },
+  { titleKey: "nav.studio", url: "/studio", icon: Scissors },
+  { titleKey: "nav.sampleLab", url: "/sample-lab", icon: Music },
+  { titleKey: "nav.audioTools", url: "/audio-tools", icon: Wrench },
+  { titleKey: "nav.coverDesigner", url: "/cover-designer", icon: Palette },
+  { titleKey: "nav.styleKits", url: "/style-kits", icon: Disc },
+  { titleKey: "nav.producerStore", url: "/producer-store", icon: Store },
+  { titleKey: "nav.blog", url: "/blog", icon: BookOpen },
+  { titleKey: "nav.pricing", url: "/pricing", icon: CreditCard },
 ];
 
 export function AppSidebar() {
@@ -61,6 +63,12 @@ export function AppSidebar() {
   const { user, logout } = useAuth();
   const { data: adminCheck } = useAdminCheck();
   const { data: creditsData } = useCredits();
+  const { t, i18n } = useTranslation();
+
+  const toggleLanguage = () => {
+    const newLang = i18n.language === "es" ? "en" : "es";
+    i18n.changeLanguage(newLang);
+  };
 
   return (
     <Sidebar>
@@ -76,17 +84,17 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Music</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("nav.music")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {NAV_ITEMS.map((item) => {
                 const isActive = location === item.url || (item.url === "/create" && location === "/dashboard");
                 return (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.titleKey}>
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      data-testid={`link-sidebar-${item.title.toLowerCase()}`}
+                      data-testid={`link-sidebar-${item.titleKey.split(".").pop()?.toLowerCase()}`}
                     >
                       <a
                         href={item.url}
@@ -96,7 +104,7 @@ export function AppSidebar() {
                         }}
                       >
                         <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
+                        <span>{t(item.titleKey)}</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -109,17 +117,17 @@ export function AppSidebar() {
         <SidebarSeparator />
 
         <SidebarGroup>
-          <SidebarGroupLabel>Tools</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("nav.tools")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {TOOLS_ITEMS.map((item) => {
                 const isActive = location === item.url;
                 return (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.titleKey}>
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      data-testid={`link-sidebar-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
+                      data-testid={`link-sidebar-${item.titleKey.split(".").pop()?.toLowerCase()}`}
                     >
                       <a
                         href={item.url}
@@ -129,7 +137,7 @@ export function AppSidebar() {
                         }}
                       >
                         <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
+                        <span>{t(item.titleKey)}</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -142,7 +150,7 @@ export function AppSidebar() {
           <>
             <SidebarSeparator />
             <SidebarGroup>
-              <SidebarGroupLabel>Admin</SidebarGroupLabel>
+              <SidebarGroupLabel>{t("nav.admin")}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
@@ -159,7 +167,7 @@ export function AppSidebar() {
                         }}
                       >
                         <Settings className="h-4 w-4" />
-                        <span>Admin Panel</span>
+                        <span>{t("nav.adminPanel")}</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -172,6 +180,16 @@ export function AppSidebar() {
 
       {user && (
         <SidebarFooter className="p-3 space-y-2">
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer hover-elevate"
+            onClick={toggleLanguage}
+            data-testid="button-language-toggle"
+          >
+            <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-xs text-muted-foreground">
+              {t("language.label")}: {i18n.language === "es" ? t("language.es") : t("language.en")}
+            </span>
+          </div>
           {creditsData && (
             <div
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10 cursor-pointer hover:bg-primary/10 transition-colors"
@@ -180,20 +198,20 @@ export function AppSidebar() {
             >
               <Zap className="h-4 w-4 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-muted-foreground">Credits</p>
+                <p className="text-[10px] text-muted-foreground">{t("common.credits")}</p>
                 <p className="text-sm font-bold" data-testid="text-credits-balance">
                   {creditsData.isUnlimited ? (
-                    <span className="flex items-center gap-1"><Infinity className="h-4 w-4" /> Unlimited</span>
+                    <span className="flex items-center gap-1"><Infinity className="h-4 w-4" /> {t("common.unlimited")}</span>
                   ) : (
-                    <span>{creditsData.credits} remaining</span>
+                    <span>{creditsData.credits} {t("common.remaining")}</span>
                   )}
                 </p>
               </div>
               {!creditsData.isUnlimited && creditsData.credits <= 3 && creditsData.credits > 0 && (
-                <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px]">Low</Badge>
+                <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px]">{t("common.low")}</Badge>
               )}
               {!creditsData.isUnlimited && creditsData.credits === 0 && (
-                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">Upgrade</Badge>
+                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">{t("common.upgrade")}</Badge>
               )}
             </div>
           )}

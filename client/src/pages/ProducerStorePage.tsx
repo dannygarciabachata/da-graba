@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import {
   useProducerKits,
@@ -225,6 +226,7 @@ function InstrumentRow({
 
 function CreateKitDialog({ onCreated }: { onCreated?: () => void }) {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const createKit = useCreateProducerKit();
   const { data: meta } = useStyleKitMeta();
   const [name, setName] = useState("");
@@ -236,14 +238,14 @@ function CreateKitDialog({ onCreated }: { onCreated?: () => void }) {
 
   const handleSubmit = () => {
     if (!name.trim() || !genre) {
-      toast({ title: "Missing fields", description: "Name and genre are required.", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('producerStore.missingFields'), variant: "destructive" });
       return;
     }
     createKit.mutate(
       { name: name.trim(), genre, description: description.trim() || undefined },
       {
         onSuccess: () => {
-          toast({ title: "Kit created!" });
+          toast({ title: t('producerStore.kitCreated') });
           setName("");
           setGenre("");
           setDescription("");
@@ -262,23 +264,23 @@ function CreateKitDialog({ onCreated }: { onCreated?: () => void }) {
       <DialogTrigger asChild>
         <Button data-testid="button-create-kit">
           <Plus className="h-4 w-4 mr-1.5" />
-          New Kit
+          {t('producerStore.newKit')}
         </Button>
       </DialogTrigger>
       <DialogContent data-testid="dialog-create-kit">
         <DialogHeader>
-          <DialogTitle>Create Instrument Kit</DialogTitle>
+          <DialogTitle>{t('producerStore.createInstrumentKit')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2">
           <Input
-            placeholder="Kit name"
+            placeholder={t('producerStore.kitName')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             data-testid="input-kit-name"
           />
           <Select value={genre} onValueChange={setGenre}>
             <SelectTrigger data-testid="select-kit-genre">
-              <SelectValue placeholder="Select genre" />
+              <SelectValue placeholder={t('producerStore.selectGenre')} />
             </SelectTrigger>
             <SelectContent>
               {genres.map((g) => (
@@ -289,7 +291,7 @@ function CreateKitDialog({ onCreated }: { onCreated?: () => void }) {
             </SelectContent>
           </Select>
           <Textarea
-            placeholder="Description (optional)"
+            placeholder={t('producerStore.descriptionOptional')}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
@@ -298,11 +300,11 @@ function CreateKitDialog({ onCreated }: { onCreated?: () => void }) {
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline">{t('common.cancel')}</Button>
           </DialogClose>
           <Button onClick={handleSubmit} disabled={createKit.isPending} data-testid="button-submit-create-kit">
             {createKit.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-            Create
+            {t('producerStore.create')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -312,6 +314,7 @@ function CreateKitDialog({ onCreated }: { onCreated?: () => void }) {
 
 export default function ProducerStorePage() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { data: subscription } = useStripeSubscription();
   const { data: kits, isLoading } = useProducerKits();
@@ -333,11 +336,9 @@ export default function ProducerStorePage() {
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
               <Store className="h-8 w-8 text-primary" />
             </div>
-            <h2 className="text-xl font-bold">Producer Store</h2>
+            <h2 className="text-xl font-bold">{t('producerStore.lockedTitle')}</h2>
             <p className="text-muted-foreground text-sm max-w-md">
-              Upload your own instrument kits and train our AI to understand your unique sounds.
-              Powered by Stable Audio Open fine-tuning pipeline.
-              Available on the Producer plan and above.
+              {t('producerStore.lockedDesc')}
             </p>
             <div className="flex items-center gap-4 py-2">
               {PIPELINE_STEPS.map((step, idx) => {
@@ -359,7 +360,7 @@ export default function ProducerStorePage() {
             </div>
             <Button onClick={() => setLocation("/pricing")} data-testid="button-upgrade-producer">
               <CreditCard className="h-4 w-4 mr-1.5" />
-              Upgrade to Producer - $29/mo
+              {t('producerStore.upgradeProducer')}
             </Button>
           </CardContent>
         </Card>
@@ -377,7 +378,7 @@ export default function ProducerStorePage() {
     const file = files[0];
     const allowedTypes = ["audio/wav", "audio/mpeg", "audio/mp3", "audio/x-wav"];
     if (!allowedTypes.includes(file.type) && !file.name.match(/\.(wav|mp3)$/i)) {
-      toast({ title: "Invalid file", description: "Please upload a WAV or MP3 file.", variant: "destructive" });
+      toast({ title: t('producerStore.invalidFile'), description: t('producerStore.invalidFileDesc'), variant: "destructive" });
       return;
     }
     const formData = new FormData();
@@ -429,10 +430,10 @@ export default function ProducerStorePage() {
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="text-page-title">
             <Store className="h-6 w-6 text-primary" />
-            Producer Store
+            {t('producerStore.title')}
           </h1>
           <p className="text-muted-foreground text-sm">
-            Upload instruments, analyze audio, generate AI prompts, and fine-tune your own model.
+            {t('producerStore.subtitle')}
           </p>
         </div>
         <CreateKitDialog />
@@ -443,11 +444,9 @@ export default function ProducerStorePage() {
           <div className="flex items-center gap-3">
             <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
             <div>
-              <p className="text-sm font-medium">SAO Training Pipeline</p>
+              <p className="text-sm font-medium">{t('producerStore.saoPipeline')}</p>
               <p className="text-xs text-muted-foreground">
-                Based on Stable Audio Open fine-tuning. Upload your WAV/MP3 instruments, 
-                AI analyzes the audio characteristics, generates descriptive training prompts, 
-                then fine-tunes the model to understand your unique sounds.
+                {t('producerStore.saoPipelineDesc')}
               </p>
             </div>
           </div>
@@ -464,9 +463,9 @@ export default function ProducerStorePage() {
         <Card className="bg-white/5 border-white/10">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-3">
             <Disc className="h-16 w-16 text-muted-foreground/30" />
-            <h3 className="text-lg font-semibold">No kits yet</h3>
+            <h3 className="text-lg font-semibold">{t('producerStore.noKitsYet')}</h3>
             <p className="text-sm text-muted-foreground max-w-sm">
-              Create your first instrument kit to start the AI training pipeline.
+              {t('producerStore.noKitsDesc')}
             </p>
           </CardContent>
         </Card>

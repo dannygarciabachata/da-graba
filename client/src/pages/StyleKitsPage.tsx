@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useStyleKits, useStyleKitMeta } from "@/hooks/use-style-kits";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -92,6 +93,7 @@ function InstrumentPlayer({ instrument }: { instrument: StyleKitInstrument }) {
 }
 
 export default function StyleKitsPage() {
+  const { t } = useTranslation();
   const [selectedGenre, setSelectedGenre] = useState<string | undefined>(undefined);
   const [expandedKit, setExpandedKit] = useState<number | null>(null);
   const { data: meta } = useStyleKitMeta();
@@ -104,10 +106,10 @@ export default function StyleKitsPage() {
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="text-page-title">
           <Disc className="h-6 w-6 text-primary" />
-          Style Kits
+          {t('styleKits.title')}
         </h1>
         <p className="text-muted-foreground text-sm">
-          Bibliotecas de instrumentos organizadas por género. Escucha cada instrumento y usa estos estilos en tus creaciones.
+          {t('styleKits.subtitle')}
         </p>
       </div>
 
@@ -118,7 +120,7 @@ export default function StyleKitsPage() {
           onClick={() => setSelectedGenre(undefined)}
           data-testid="button-filter-all"
         >
-          <Filter className="h-3.5 w-3.5 mr-1" /> Todos
+          <Filter className="h-3.5 w-3.5 mr-1" /> {t('styleKits.all')}
         </Button>
         {genres.map((g) => (
           <Button
@@ -143,9 +145,9 @@ export default function StyleKitsPage() {
         <Card className="bg-white/5 border-white/10">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Disc className="h-16 w-16 text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-semibold mb-1">No hay Style Kits todavía</h3>
+            <h3 className="text-lg font-semibold mb-1">{t('styleKits.noKitsYet')}</h3>
             <p className="text-sm text-muted-foreground max-w-sm">
-              Los Style Kits se agregan desde el panel de administración. Cada kit contiene instrumentos WAV que definen un estilo musical.
+              {t('styleKits.noKitsDesc')}
             </p>
           </CardContent>
         </Card>
@@ -165,7 +167,7 @@ export default function StyleKitsPage() {
                   <div>
                     <CardTitle className="text-base">{kit.name}</CardTitle>
                     <CardDescription className="text-xs mt-0.5">
-                      {kit.description || "Kit de instrumentos"}
+                      {kit.description || t('styleKits.instrumentKit')}
                     </CardDescription>
                   </div>
                   <Badge variant="secondary" className="text-xs">
@@ -176,7 +178,7 @@ export default function StyleKitsPage() {
               <CardContent className="space-y-2">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                   <Music className="h-3.5 w-3.5" />
-                  <span>{kit.instruments.length} instrumento{kit.instruments.length !== 1 ? "s" : ""}</span>
+                  <span>{t('styleKits.instrumentCount', { count: kit.instruments.length })}{kit.instruments.length !== 1 ? 's' : ''}</span>
                 </div>
 
                 {kit.instruments.length > 0 && (
@@ -195,7 +197,7 @@ export default function StyleKitsPage() {
                         data-testid={`button-expand-kit-${kit.id}`}
                       >
                         <ChevronDown className={`h-3.5 w-3.5 mr-1 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                        {isExpanded ? "Ver menos" : `Ver ${kit.instruments.length - 3} más`}
+                        {isExpanded ? t('styleKits.showLess') : t('styleKits.showMore', { count: kit.instruments.length - 3 })}
                       </Button>
                     )}
                   </>
@@ -203,7 +205,7 @@ export default function StyleKitsPage() {
 
                 {kit.instruments.length === 0 && (
                   <p className="text-xs text-muted-foreground/50 text-center py-4">
-                    Sin instrumentos todavía
+                    {t('styleKits.noInstruments')}
                   </p>
                 )}
               </CardContent>

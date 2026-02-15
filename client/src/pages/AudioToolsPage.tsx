@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
 import { useSongs } from "@/hooks/use-songs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -25,26 +26,26 @@ type ToolId =
 
 interface ToolDef {
   id: ToolId;
-  title: string;
-  description: string;
+  titleKey: string;
+  descKey: string;
   icon: typeof MicVocal;
   needsSong: boolean;
 }
 
 const TOOLS: ToolDef[] = [
-  { id: "voice-convert", title: "Voice Conversion", description: "Convert voice in audio", icon: MicVocal, needsSong: true },
-  { id: "extraction", title: "Extraction", description: "Stem separation (vocals, drums, bass, melody)", icon: Layers, needsSong: true },
-  { id: "cover", title: "Cover", description: "AI cover with different voice", icon: Music, needsSong: true },
-  { id: "tts", title: "Text to Speech", description: "Generate speech audio from text", icon: MessageSquare, needsSong: false },
-  { id: "denoise", title: "Denoising", description: "Remove background noise", icon: Shield, needsSong: true },
-  { id: "de-echo", title: "De-echo", description: "Remove echo", icon: Volume2, needsSong: true },
-  { id: "de-reverb", title: "De-reverb", description: "Remove reverb", icon: Waves, needsSong: true },
-  { id: "sound-generator", title: "Sound Generator", description: "Generate sound effects from text prompt", icon: Sparkles, needsSong: false },
-  { id: "transcription", title: "Audio Transcription", description: "Speech to text", icon: FileText, needsSong: true },
-  { id: "mastering", title: "Audio Mastering", description: "Professional mastering", icon: Disc, needsSong: true },
-  { id: "remix", title: "Remix", description: "Remix a song with AI", icon: Shuffle, needsSong: true },
-  { id: "trim", title: "Audio Cutter", description: "Trim audio", icon: Scissors, needsSong: true },
-  { id: "speed", title: "Audio Speed Changer", description: "Change playback speed", icon: Clock, needsSong: true },
+  { id: "voice-convert", titleKey: "audioTools.voiceConversion", descKey: "audioTools.voiceConversionDesc", icon: MicVocal, needsSong: true },
+  { id: "extraction", titleKey: "audioTools.extraction", descKey: "audioTools.extractionDesc", icon: Layers, needsSong: true },
+  { id: "cover", titleKey: "audioTools.cover", descKey: "audioTools.coverDesc", icon: Music, needsSong: true },
+  { id: "tts", titleKey: "audioTools.tts", descKey: "audioTools.ttsDesc", icon: MessageSquare, needsSong: false },
+  { id: "denoise", titleKey: "audioTools.denoise", descKey: "audioTools.denoiseDesc", icon: Shield, needsSong: true },
+  { id: "de-echo", titleKey: "audioTools.deEcho", descKey: "audioTools.deEchoDesc", icon: Volume2, needsSong: true },
+  { id: "de-reverb", titleKey: "audioTools.deReverb", descKey: "audioTools.deReverbDesc", icon: Waves, needsSong: true },
+  { id: "sound-generator", titleKey: "audioTools.soundGenerator", descKey: "audioTools.soundGeneratorDesc", icon: Sparkles, needsSong: false },
+  { id: "transcription", titleKey: "audioTools.transcription", descKey: "audioTools.transcriptionDesc", icon: FileText, needsSong: true },
+  { id: "mastering", titleKey: "audioTools.mastering", descKey: "audioTools.masteringDesc", icon: Disc, needsSong: true },
+  { id: "remix", titleKey: "audioTools.remix", descKey: "audioTools.remixDesc", icon: Shuffle, needsSong: true },
+  { id: "trim", titleKey: "audioTools.trim", descKey: "audioTools.trimDesc", icon: Scissors, needsSong: true },
+  { id: "speed", titleKey: "audioTools.speed", descKey: "audioTools.speedDesc", icon: Clock, needsSong: true },
 ];
 
 function SongSelector({
@@ -62,25 +63,27 @@ function SongSelector({
 }) {
   const selected = songs.find((s: any) => s.id === songId);
 
+  const { t } = useTranslation();
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="w-4 h-4 animate-spin" />
-        Loading songs...
+        {t('audioTools.loadingSongs')}
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Source Song</label>
+      <label className="text-sm font-medium text-muted-foreground">{t('audioTools.sourceSong')}</label>
       <select
         value={songId ?? ""}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
         className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
         data-testid={`select-song-${toolId}`}
       >
-        <option value="">Select a song...</option>
+        <option value="">{t('audioTools.selectSong')}</option>
         {songs.map((s: any) => (
           <option key={s.id} value={s.id}>{s.title}</option>
         ))}
@@ -105,6 +108,7 @@ function ToolPanel({
   songsLoading: boolean;
 }) {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [songId, setSongId] = useState<number | null>(null);
   const [voiceId, setVoiceId] = useState("");
@@ -174,14 +178,15 @@ function ToolPanel({
       if (tool.id === "transcription" && data?.text) {
         setTranscriptionResult(data.text);
       }
+      const toolTitle = t(tool.titleKey);
       toast({
-        title: `${tool.title} Started`,
-        description: `Processing your audio with ${tool.title}. Results will appear in your Library.`,
+        title: t('audioTools.toolStarted', { tool: toolTitle }),
+        description: t('audioTools.toolStartedDesc', { tool: toolTitle }),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: `${tool.title} Failed`,
+        title: t('audioTools.toolFailed', { tool: t(tool.titleKey) }),
         description: error.message,
         variant: "destructive",
       });
@@ -219,17 +224,17 @@ function ToolPanel({
       {(tool.id === "voice-convert" || tool.id === "cover") && (
         <>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Voice ID</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('audioTools.voiceIdLabel')}</label>
             <Input
               value={voiceId}
               onChange={(e) => setVoiceId(e.target.value)}
-              placeholder="Enter voice model ID..."
+              placeholder={t('audioTools.voiceIdPlaceholder')}
               className="bg-black/30 border-white/10"
               data-testid={`input-${tool.id}-voiceId`}
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Pitch: {pitch}</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('audioTools.pitchLabel')}: {pitch}</label>
             <Slider
               value={[pitch]}
               min={-12}
@@ -250,27 +255,27 @@ function ToolPanel({
       {tool.id === "tts" && (
         <>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Text</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('audioTools.textLabel')}</label>
             <Textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Enter text to convert to speech..."
+              placeholder={t('audioTools.textPlaceholder')}
               className="bg-black/30 border-white/10 min-h-[100px]"
               data-testid={`input-${tool.id}-text`}
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Voice ID (optional)</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('audioTools.voiceIdOptional')}</label>
             <Input
               value={voiceId}
               onChange={(e) => setVoiceId(e.target.value)}
-              placeholder="Optional voice model ID..."
+              placeholder={t('audioTools.voiceIdOptionalPlaceholder')}
               className="bg-black/30 border-white/10"
               data-testid={`input-${tool.id}-voiceId`}
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Language</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('audioTools.languageLabel')}</label>
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
@@ -294,17 +299,17 @@ function ToolPanel({
       {tool.id === "sound-generator" && (
         <>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Prompt</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('audioTools.promptLabel')}</label>
             <Textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe the sound effect you want..."
+              placeholder={t('audioTools.promptPlaceholder')}
               className="bg-black/30 border-white/10 min-h-[80px]"
               data-testid={`input-${tool.id}-prompt`}
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Duration: {duration}s</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('audioTools.durationLabel')}: {duration}s</label>
             <Slider
               value={[duration]}
               min={1}
@@ -319,7 +324,7 @@ function ToolPanel({
 
       {tool.id === "transcription" && (
         <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Language (optional)</label>
+          <label className="text-sm font-medium text-muted-foreground">{t('audioTools.languageOptional')}</label>
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
@@ -331,18 +336,18 @@ function ToolPanel({
             <option value="fr">French</option>
             <option value="de">German</option>
             <option value="pt">Portuguese</option>
-            <option value="auto">Auto-detect</option>
+            <option value="auto">{t('audioTools.autoDetect')}</option>
           </select>
         </div>
       )}
 
       {tool.id === "remix" && (
         <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Remix Prompt</label>
+          <label className="text-sm font-medium text-muted-foreground">{t('audioTools.remixPromptLabel')}</label>
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe how you want to remix this song..."
+            placeholder={t('audioTools.remixPromptPlaceholder')}
             className="bg-black/30 border-white/10 min-h-[80px]"
             data-testid={`input-${tool.id}-prompt`}
           />
@@ -352,7 +357,7 @@ function ToolPanel({
       {tool.id === "trim" && (
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Start (ms)</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('audioTools.startMs')}</label>
             <Input
               type="number"
               value={startTimeMs}
@@ -363,7 +368,7 @@ function ToolPanel({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">End (ms)</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('audioTools.endMs')}</label>
             <Input
               type="number"
               value={endTimeMs}
@@ -379,7 +384,7 @@ function ToolPanel({
       {tool.id === "speed" && (
         <>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Speed: {speed.toFixed(2)}x</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('audioTools.speedLabel')}: {speed.toFixed(2)}x</label>
             <Slider
               value={[speed]}
               min={0.25}
@@ -395,7 +400,7 @@ function ToolPanel({
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Pitch Adjust: {pitch}</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('audioTools.pitchAdjust')}: {pitch}</label>
             <Slider
               value={[pitch]}
               min={-12}
@@ -417,19 +422,19 @@ function ToolPanel({
         {mutation.isPending ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            Processing...
+            {t('common.processing')}
           </>
         ) : (
           <>
             <tool.icon className="w-4 h-4" />
-            Process {tool.title}
+            {t('audioTools.processButton', { tool: t(tool.titleKey) })}
           </>
         )}
       </Button>
 
       {transcriptionResult && tool.id === "transcription" && (
         <Card className="p-4 bg-white/[0.03] border-white/5">
-          <p className="text-xs font-medium text-muted-foreground mb-2">Transcription Result</p>
+          <p className="text-xs font-medium text-muted-foreground mb-2">{t('audioTools.transcriptionResult')}</p>
           <p className="text-sm whitespace-pre-wrap" data-testid="text-transcription-result">{transcriptionResult}</p>
         </Card>
       )}
@@ -439,11 +444,12 @@ function ToolPanel({
 
 export default function AudioToolsPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const { data: songs, isLoading: songsLoading } = useSongs();
   const [activeTool, setActiveTool] = useState<ToolId | null>(null);
 
   const completedSongs = songs?.filter((s: any) => s.status === "completed" && s.audioUrl) ?? [];
-  const activeToolDef = TOOLS.find((t) => t.id === activeTool);
+  const activeToolDef = TOOLS.find((td) => td.id === activeTool);
 
   if (!user) return null;
 
@@ -453,8 +459,8 @@ export default function AudioToolsPage() {
         <div className="flex items-center gap-3">
           <Headphones className="h-5 w-5 text-primary" />
           <div>
-            <h1 className="text-lg font-bold" data-testid="text-audiotools-title">Audio Tools</h1>
-            <p className="text-xs text-muted-foreground">Professional audio processing suite</p>
+            <h1 className="text-lg font-bold" data-testid="text-audiotools-title">{t('audioTools.title')}</h1>
+            <p className="text-xs text-muted-foreground">{t('audioTools.subtitle')}</p>
           </div>
         </div>
       </div>
@@ -477,7 +483,7 @@ export default function AudioToolsPage() {
                 data-testid="button-back-to-tools"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back to Tools
+                {t('audioTools.backToTools')}
               </Button>
 
               <Card className="p-5 md:p-6 bg-white/[0.03] border-white/5">
@@ -486,8 +492,8 @@ export default function AudioToolsPage() {
                     <activeToolDef.icon className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold">{activeToolDef.title}</h2>
-                    <p className="text-xs text-muted-foreground">{activeToolDef.description}</p>
+                    <h2 className="text-lg font-bold">{t(activeToolDef.titleKey)}</h2>
+                    <p className="text-xs text-muted-foreground">{t(activeToolDef.descKey)}</p>
                   </div>
                 </div>
 
@@ -521,8 +527,8 @@ export default function AudioToolsPage() {
                       <tool.icon className="w-5 h-5 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold mb-0.5">{tool.title}</h3>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{tool.description}</p>
+                      <h3 className="text-sm font-semibold mb-0.5">{t(tool.titleKey)}</h3>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{t(tool.descKey)}</p>
                     </div>
                   </div>
                 </Card>

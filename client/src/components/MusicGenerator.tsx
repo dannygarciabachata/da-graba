@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useGenerateSong } from "@/hooks/use-songs";
 import { useCredits } from "@/hooks/use-credits";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ const GENRE_OPTIONS = [
 type GeneratorMode = "standard" | "aggregate";
 
 export function MusicGenerator() {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<GeneratorMode>("aggregate");
   const [, setLocation] = useLocation();
 
@@ -110,11 +112,11 @@ export function MusicGenerator() {
         <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2" data-testid="alert-no-credits">
           <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-red-400 font-medium">No credits remaining</p>
-            <p className="text-[10px] text-red-400/70">Upgrade your plan to keep creating music</p>
+            <p className="text-xs text-red-400 font-medium">{t('musicGenerator.noCreditsTitle')}</p>
+            <p className="text-[10px] text-red-400/70">{t('musicGenerator.noCreditsSubtitle')}</p>
           </div>
           <Button size="sm" variant="outline" className="shrink-0 text-xs border-red-500/30 text-red-400" onClick={() => setLocation("/pricing")} data-testid="button-upgrade-from-generator">
-            Upgrade
+            {t('common.upgrade')}
           </Button>
         </div>
       )}
@@ -128,7 +130,7 @@ export function MusicGenerator() {
           data-testid="button-mode-aggregate"
         >
           <Layers className="h-3.5 w-3.5" />
-          Aggregate
+          {t('musicGenerator.modes.aggregate')}
         </Button>
         <Button
           variant={mode === "standard" ? "default" : "ghost"}
@@ -138,7 +140,7 @@ export function MusicGenerator() {
           data-testid="button-mode-standard"
         >
           <Sliders className="h-3.5 w-3.5" />
-          Standard
+          {t('musicGenerator.modes.standard')}
         </Button>
       </div>
 
@@ -146,7 +148,7 @@ export function MusicGenerator() {
         <div className="flex-1 space-y-3 md:space-y-4">
           <div className="space-y-2">
             <Label htmlFor="agg-title" className="text-sm font-medium text-foreground/80">
-              Song Title
+              {t('musicGenerator.songTitle')}
             </Label>
             <Input
               id="agg-title"
@@ -159,7 +161,7 @@ export function MusicGenerator() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-foreground/80">Genre</Label>
+            <Label className="text-sm font-medium text-foreground/80">{t('musicGenerator.genre')}</Label>
             <Select value={aggGenre} onValueChange={setAggGenre}>
               <SelectTrigger className="bg-black/20 border-white/10" data-testid="select-aggregate-genre">
                 <SelectValue />
@@ -175,7 +177,7 @@ export function MusicGenerator() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-foreground/80">Music Style</Label>
+            <Label className="text-sm font-medium text-foreground/80">{t('musicGenerator.musicStyle')}</Label>
             <Select value={aggStyle} onValueChange={setAggStyle}>
               <SelectTrigger className="bg-black/20 border-white/10" data-testid="select-aggregate-style">
                 <SelectValue />
@@ -200,12 +202,12 @@ export function MusicGenerator() {
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Composing...
+                  {t('musicGenerator.composing')}
                 </>
               ) : (
                 <>
                   <Sparkles className="mr-2 h-5 w-5" />
-                  Generate Song
+                  {t('musicGenerator.generateSong')}
                 </>
               )}
             </Button>
@@ -215,7 +217,7 @@ export function MusicGenerator() {
         <div className="flex-1 space-y-3 md:space-y-4">
           <div className="space-y-2">
             <Label htmlFor="prompt" className="text-sm font-medium text-foreground/80">
-              Describe your track
+              {t('musicGenerator.describeTrack')}
             </Label>
             <Textarea
               id="prompt"
@@ -229,7 +231,7 @@ export function MusicGenerator() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-1">
-              <Label className="text-sm font-medium text-foreground/80">Custom Lyrics</Label>
+              <Label className="text-sm font-medium text-foreground/80">{t('musicGenerator.customLyrics')}</Label>
               <Button
                 variant="ghost"
                 size="sm"
@@ -238,7 +240,7 @@ export function MusicGenerator() {
                 data-testid="button-toggle-lyrics"
               >
                 <Music className="w-3 h-3 mr-1" />
-                {showLyrics ? "Hide" : "Add Lyrics"}
+                {showLyrics ? t('musicGenerator.hideLyrics') : t('musicGenerator.addLyrics')}
               </Button>
             </div>
             {showLyrics && (
@@ -262,7 +264,7 @@ export function MusicGenerator() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-foreground/80">Style Preset</Label>
+            <Label className="text-sm font-medium text-foreground/80">{t('musicGenerator.stylePreset')}</Label>
             <Select value={style} onValueChange={setStyle}>
               <SelectTrigger className="bg-black/20 border-white/10" data-testid="select-music-style">
                 <SelectValue />
@@ -279,8 +281,8 @@ export function MusicGenerator() {
 
           <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
             <div className="space-y-0.5">
-              <Label className="text-sm font-medium">Bachata Mode</Label>
-              <p className="text-xs text-muted-foreground">Force Dominican instruments</p>
+              <Label className="text-sm font-medium">{t('musicGenerator.bachataMode')}</Label>
+              <p className="text-xs text-muted-foreground">{t('musicGenerator.forceDominican')}</p>
             </div>
             <Switch
               checked={isBachata}
@@ -300,12 +302,12 @@ export function MusicGenerator() {
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Composing...
+                  {t('musicGenerator.composing')}
                 </>
               ) : (
                 <>
                   <Sparkles className="mr-2 h-5 w-5" />
-                  Generate Rhythm
+                  {t('musicGenerator.generateButton')}
                 </>
               )}
             </Button>

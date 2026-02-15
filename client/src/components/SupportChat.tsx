@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ interface ChatMessage {
 }
 
 export default function SupportChat() {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -37,7 +39,7 @@ export default function SupportChat() {
     onError: () => {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Sorry, something went wrong. Please try again." },
+        { role: "assistant", content: t('support.errorMessage') },
       ]);
     },
   });
@@ -99,14 +101,14 @@ export default function SupportChat() {
             <CardHeader className="flex flex-row items-center justify-between gap-2 py-3 px-4 border-b space-y-0">
               <CardTitle className="text-sm flex items-center gap-2">
                 <MessageCircle className="h-4 w-4 text-primary" />
-                DGB Support
+                {t('support.title')}
               </CardTitle>
               <div className="flex gap-1">
                 <Button
                   size="icon"
                   variant="ghost"
                   onClick={() => { setMessages([]); setTicketId(null); localStorage.removeItem("dgb_support_ticket_id"); }}
-                  title="New conversation"
+                  title={t('support.newConversation')}
                   data-testid="button-new-chat"
                 >
                   <RotateCcw className="h-4 w-4" />
@@ -126,8 +128,8 @@ export default function SupportChat() {
               {messages.length === 0 && (
                 <div className="text-center text-muted-foreground text-sm py-12" data-testid="text-chat-empty">
                   <MessageCircle className="h-8 w-8 mx-auto mb-3 opacity-30" />
-                  <p>How can we help you today?</p>
-                  <p className="text-xs mt-1">Ask about features, plans, or technical support.</p>
+                  <p>{t('support.greeting')}</p>
+                  <p className="text-xs mt-1">{t('support.greetingSubtitle')}</p>
                 </div>
               )}
 
@@ -169,7 +171,7 @@ export default function SupportChat() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type a message..."
+                placeholder={t('support.placeholder')}
                 disabled={sendMessage.isPending}
                 data-testid="input-chat-message"
               />

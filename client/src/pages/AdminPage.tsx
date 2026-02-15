@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -40,6 +41,7 @@ type Tab = "dashboard" | "analytics" | "users" | "subscriptions" | "support" | "
 
 export default function AdminPage() {
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
   const { data: adminCheck, isLoading: checkLoading } = useAdminCheck();
   const { toast } = useToast();
 
@@ -55,10 +57,10 @@ export default function AdminPage() {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4" data-testid="admin-denied">
         <Shield className="h-16 w-16 text-muted-foreground" />
-        <h2 className="text-xl font-semibold">Access Denied</h2>
-        <p className="text-muted-foreground text-sm">You need admin privileges to access this page.</p>
+        <h2 className="text-xl font-semibold">{t('admin.accessDenied')}</h2>
+        <p className="text-muted-foreground text-sm">{t('admin.accessDeniedDesc')}</p>
         <Button variant="outline" onClick={() => setLocation("/create")} data-testid="button-back-create">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Create
+          <ArrowLeft className="h-4 w-4 mr-2" /> {t('admin.backToCreate')}
         </Button>
       </div>
     );
@@ -74,6 +76,7 @@ const TAB_ROLE_ACCESS: Record<string, Tab[]> = {
 };
 
 function AdminDashboard({ role }: { role: string }) {
+  const { t } = useTranslation();
   const defaultTab = TAB_ROLE_ACCESS[role]?.[0] || "support";
   const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
   const [selectedProviderId, setSelectedProviderId] = useState<number | null>(null);
@@ -83,20 +86,20 @@ function AdminDashboard({ role }: { role: string }) {
   const allowedTabs = TAB_ROLE_ACCESS[role] || [];
 
   const allTabs = [
-    { id: "dashboard" as Tab, label: "Dashboard", icon: BarChart3 },
-    { id: "analytics" as Tab, label: "Analytics", icon: TrendingUp },
-    { id: "users" as Tab, label: "Users", icon: Users },
-    { id: "subscriptions" as Tab, label: "Subscriptions", icon: CreditCard },
-    { id: "support" as Tab, label: "Support", icon: MessageSquare },
-    { id: "settings" as Tab, label: "Settings", icon: Sliders },
-    { id: "email" as Tab, label: "Email", icon: Mail },
-    { id: "style-kits" as Tab, label: "Style Kits", icon: Disc },
-    { id: "blog" as Tab, label: "Blog", icon: FileText },
-    { id: "billing" as Tab, label: "Billing", icon: CreditCard },
-    { id: "gpu" as Tab, label: "GPU", icon: Cpu },
-    { id: "cloud-servers" as Tab, label: "Cloud Servers", icon: Cloud },
-    { id: "providers" as Tab, label: "API Providers", icon: Server },
-    { id: "endpoints" as Tab, label: "Endpoints", icon: Zap },
+    { id: "dashboard" as Tab, label: t('admin.tabs.dashboard'), icon: BarChart3 },
+    { id: "analytics" as Tab, label: t('admin.tabs.analytics'), icon: TrendingUp },
+    { id: "users" as Tab, label: t('admin.tabs.users'), icon: Users },
+    { id: "subscriptions" as Tab, label: t('admin.tabs.subscriptions'), icon: CreditCard },
+    { id: "support" as Tab, label: t('admin.tabs.support'), icon: MessageSquare },
+    { id: "settings" as Tab, label: t('admin.tabs.settings'), icon: Sliders },
+    { id: "email" as Tab, label: t('admin.tabs.email'), icon: Mail },
+    { id: "style-kits" as Tab, label: t('admin.tabs.styleKits'), icon: Disc },
+    { id: "blog" as Tab, label: t('admin.tabs.blog'), icon: FileText },
+    { id: "billing" as Tab, label: t('admin.tabs.billing'), icon: CreditCard },
+    { id: "gpu" as Tab, label: t('admin.tabs.gpu'), icon: Cpu },
+    { id: "cloud-servers" as Tab, label: t('admin.tabs.cloudServers'), icon: Cloud },
+    { id: "providers" as Tab, label: t('admin.tabs.providers'), icon: Server },
+    { id: "endpoints" as Tab, label: t('admin.tabs.endpoints'), icon: Zap },
   ];
 
   const tabs = allTabs.filter(tab => allowedTabs.includes(tab.id));
@@ -109,10 +112,10 @@ function AdminDashboard({ role }: { role: string }) {
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold">Admin Panel</h1>
+            <h1 className="text-xl font-bold">{t('admin.title')}</h1>
             <Badge variant="outline" className="text-xs capitalize" data-testid="badge-admin-role">{role.replace("_", " ")}</Badge>
           </div>
-          <p className="text-xs text-muted-foreground">Manage users, subscriptions, API providers, and platform settings</p>
+          <p className="text-xs text-muted-foreground">{t('admin.subtitle')}</p>
         </div>
       </div>
 
@@ -173,18 +176,20 @@ function DashboardTab() {
 
   if (isLoading) return <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>;
 
+  const { t } = useTranslation();
+
   const statCards = [
-    { label: "Total Users", value: stats?.totalUsers || 0, icon: Users, color: "text-blue-400" },
-    { label: "Total Songs", value: stats?.totalSongs || 0, icon: Music, color: "text-green-400" },
-    { label: "Total Samples", value: stats?.totalSamples || 0, icon: Mic, color: "text-purple-400" },
-    { label: "Total Lyrics", value: stats?.totalLyrics || 0, icon: FileText, color: "text-yellow-400" },
-    { label: "Active Subscriptions", value: stats?.activeSubscriptions || 0, icon: CreditCard, color: "text-primary" },
-    { label: "Total Subscriptions", value: stats?.totalSubscriptions || 0, icon: BarChart3, color: "text-orange-400" },
+    { label: t('admin.stats.totalUsers'), value: stats?.totalUsers || 0, icon: Users, color: "text-blue-400" },
+    { label: t('admin.stats.totalSongs'), value: stats?.totalSongs || 0, icon: Music, color: "text-green-400" },
+    { label: t('admin.stats.totalSamples'), value: stats?.totalSamples || 0, icon: Mic, color: "text-purple-400" },
+    { label: t('admin.stats.totalLyrics'), value: stats?.totalLyrics || 0, icon: FileText, color: "text-yellow-400" },
+    { label: t('admin.stats.activeSubscriptions'), value: stats?.activeSubscriptions || 0, icon: CreditCard, color: "text-primary" },
+    { label: t('admin.stats.totalSubscriptions'), value: stats?.totalSubscriptions || 0, icon: BarChart3, color: "text-orange-400" },
   ];
 
   return (
     <div className="space-y-4" data-testid="admin-dashboard-stats">
-      <h2 className="text-lg font-semibold">Platform Overview</h2>
+      <h2 className="text-lg font-semibold">{t('admin.platformOverview')}</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {statCards.map(stat => (
           <Card key={stat.label} data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, "-")}`}>

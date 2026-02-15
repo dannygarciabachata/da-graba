@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ function parseLyricsLines(text: string): string[] {
 }
 
 export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
+  const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -282,7 +284,7 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
               data-testid="button-toggle-lyrics"
             >
               <FileText className="h-3 w-3" />
-              Lyrics
+              {t('player.lyrics')}
               {showLyrics ? (
                 <ChevronDown className="h-3 w-3" />
               ) : (
@@ -342,7 +344,7 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
       {!hasLyrics && (
         <div className="flex-1 flex items-center justify-center p-4">
           <p className="text-sm text-muted-foreground/50 text-center italic">
-            No lyrics available for this track
+            {t('player.noLyrics')}
           </p>
         </div>
       )}

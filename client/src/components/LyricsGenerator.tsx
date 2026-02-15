@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useGenerateLyrics } from "@/hooks/use-lyrics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ const STYLE_OPTIONS = [
 ];
 
 export function LyricsGenerator() {
+  const { t } = useTranslation();
   const [theme, setTheme] = useState("");
   const [description, setDescription] = useState("");
   const [style, setStyle] = useState("romantic");
@@ -111,25 +113,25 @@ export function LyricsGenerator() {
           <Mic2 className="w-6 h-6 text-purple-400" />
         </div>
         <div>
-          <h2 className="text-xl font-bold font-display">Smart Lyrics</h2>
-          <p className="text-sm text-muted-foreground">AI-Powered Songwriter</p>
+          <h2 className="text-xl font-bold font-display">{t('lyricsGenerator.title')}</h2>
+          <p className="text-sm text-muted-foreground">{t('lyricsGenerator.subtitle')}</p>
         </div>
       </div>
 
       <div className="space-y-4 mb-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label>Theme / Mood</Label>
+            <Label>{t('lyricsGenerator.theme')}</Label>
             <Input
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
-              placeholder="Lost love under the moonlight..."
+              placeholder={t('lyricsGenerator.themePlaceholder')}
               className="bg-black/20 border-white/10"
               data-testid="input-lyrics-theme"
             />
           </div>
           <div className="space-y-2">
-            <Label>Style</Label>
+            <Label>{t('lyricsGenerator.style')}</Label>
             <Select value={style} onValueChange={setStyle}>
               <SelectTrigger className="bg-black/20 border-white/10" data-testid="select-lyrics-style">
                 <SelectValue />
@@ -148,12 +150,12 @@ export function LyricsGenerator() {
         <div className="space-y-2">
           <Label className="flex items-center gap-1.5">
             <Lightbulb className="h-3.5 w-3.5 text-yellow-400" />
-            Detailed Description
+            {t('lyricsGenerator.detailedDescription')}
           </Label>
           <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe the story, emotions, setting in detail... e.g., 'A man remembering his first dance with the woman he loved, on a warm summer night in Santo Domingo. He can still feel her perfume...'"
+            placeholder={t('lyricsGenerator.descriptionPlaceholder')}
             className="bg-black/20 border-white/10 min-h-[80px] resize-none text-sm"
             data-testid="input-lyrics-description"
           />
@@ -169,12 +171,12 @@ export function LyricsGenerator() {
         {isPending ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Writing...
+            {t('lyricsGenerator.generating')}
           </>
         ) : (
           <>
             <Sparkles className="mr-2 h-4 w-4" />
-            Write Lyrics
+            {t('lyricsGenerator.generate')}
           </>
         )}
       </Button>
@@ -187,7 +189,7 @@ export function LyricsGenerator() {
             </pre>
           ) : (
             <div className="h-full flex items-center justify-center text-muted-foreground text-sm italic">
-              Generated lyrics will appear here...
+              {t('lyricsGenerator.lyricsPlaceholder')}
             </div>
           )}
         </ScrollArea>
@@ -229,7 +231,7 @@ export function LyricsGenerator() {
                 ) : (
                   <Lightbulb className="h-3 w-3" />
                 )}
-                Suggest Titles
+                {t('lyricsGenerator.suggestTitles')}
               </Button>
               {selectedTitle && (
                 <Badge className="bg-primary/15 text-primary border-primary/30 text-xs gap-1">
@@ -245,19 +247,19 @@ export function LyricsGenerator() {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-wrap gap-2"
               >
-                {suggestedTitles.map((t, i) => (
+                {suggestedTitles.map((title, i) => (
                   <Badge
                     key={i}
-                    variant={selectedTitle === t ? "default" : "outline"}
+                    variant={selectedTitle === title ? "default" : "outline"}
                     className={`cursor-pointer text-xs py-1 px-2.5 transition-all ${
-                      selectedTitle === t
+                      selectedTitle === title
                         ? "bg-primary/15 text-primary border-primary/30"
                         : "border-white/10 hover:border-primary/30"
                     }`}
-                    onClick={() => setSelectedTitle(t)}
+                    onClick={() => setSelectedTitle(title)}
                     data-testid={`badge-title-suggestion-${i}`}
                   >
-                    {t}
+                    {title}
                   </Badge>
                 ))}
               </motion.div>
@@ -269,7 +271,7 @@ export function LyricsGenerator() {
               data-testid="button-create-song-from-lyrics"
             >
               <Sparkles className="h-4 w-4" />
-              Create Song with These Lyrics
+              {t('lyricsGenerator.use')}
               <ChevronRight className="h-4 w-4" />
             </Button>
           </motion.div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useSongs, useDeleteSong, useTogglePublish } from "@/hooks/use-songs";
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function LibraryPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { data: songs, isLoading } = useSongs();
   const { mutate: deleteSong } = useDeleteSong();
@@ -49,10 +51,10 @@ export default function LibraryPage() {
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-3 mb-1">
             <Library className="h-5 w-5 text-primary" />
-            <h1 className="text-xl font-bold" data-testid="text-library-title">Your Library</h1>
+            <h1 className="text-xl font-bold" data-testid="text-library-title">{t('library.title')}</h1>
           </div>
           <p className="text-sm text-muted-foreground pl-8">
-            All your generated tracks in one place
+            {t('library.subtitle')}
           </p>
         </div>
       </div>
@@ -88,12 +90,12 @@ export default function LibraryPage() {
               <div className="p-4 bg-white/5 rounded-full inline-block mb-4">
                 <Music className="h-8 w-8 text-muted-foreground" />
               </div>
-              <p className="text-muted-foreground mb-4">No tracks generated yet</p>
+              <p className="text-muted-foreground mb-4">{t('library.empty')}</p>
               <Button
                 onClick={() => setLocation("/create")}
                 data-testid="button-go-create"
               >
-                Create your first track
+                {t('library.createFirst')}
               </Button>
             </div>
           ) : (
@@ -137,10 +139,10 @@ export default function LibraryPage() {
                         {song.genre && <span>{song.genre}</span>}
                         {song.duration && <span>{Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}</span>}
                         {song.status === "processing" && (
-                          <span className="text-yellow-500 animate-pulse">Processing</span>
+                          <span className="text-yellow-500 animate-pulse">{t('common.processing')}</span>
                         )}
                         {song.status === "failed" && (
-                          <span className="text-destructive">Failed</span>
+                          <span className="text-destructive">{t('common.failed')}</span>
                         )}
                       </div>
                     </div>
@@ -169,7 +171,7 @@ export default function LibraryPage() {
                               }}
                               data-testid={`button-download-mp3-${song.id}`}
                             >
-                              Download MP3
+                              {t('library.downloadMp3')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
@@ -180,7 +182,7 @@ export default function LibraryPage() {
                               }}
                               data-testid={`button-download-wav-${song.id}`}
                             >
-                              Download WAV
+                              {t('library.downloadWav')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -194,7 +196,7 @@ export default function LibraryPage() {
                             e.stopPropagation();
                             setDesignCoverFor(designCoverFor?.id === song.id ? null : song);
                           }}
-                          title="Design Cover Art"
+                          title={t('library.designCover')}
                           data-testid={`button-cover-lib-${song.id}`}
                         >
                           <Palette className="h-4 w-4" />

@@ -1,9 +1,11 @@
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "react-i18next";
 import { BachataQuiz } from "@/components/BachataQuiz";
 import { HelpCircle } from "lucide-react";
 
 export default function QuizPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   if (!user) return null;
 
   return (
@@ -12,10 +14,10 @@ export default function QuizPage() {
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center gap-3 mb-1">
             <HelpCircle className="h-5 w-5 text-primary" />
-            <h1 className="text-xl font-bold" data-testid="text-quiz-title">Bachata Quiz</h1>
+            <h1 className="text-xl font-bold" data-testid="text-quiz-title">{t('quiz.title')}</h1>
           </div>
           <p className="text-sm text-muted-foreground pl-8">
-            Test your knowledge of Bachata history, artists, and culture
+            {t('quiz.subtitle')}
           </p>
         </div>
       </div>

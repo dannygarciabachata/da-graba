@@ -18,6 +18,7 @@ import { useLocation } from "wouter";
 import type { Track } from "@shared/schema";
 import WaveSurfer from "wavesurfer.js";
 import JSZip from "jszip";
+import { useTranslation } from "react-i18next";
 
 const STEM_ICONS: Record<string, typeof Mic> = {
   vocals: Mic,
@@ -227,6 +228,7 @@ function TrackStrip({
 }
 
 export default function StudioPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { data: songs, isLoading: songsLoading } = useSongs();
@@ -408,8 +410,8 @@ export default function StudioPage() {
         <div className="flex items-center gap-3">
           <Scissors className="h-5 w-5 text-primary" />
           <div>
-            <h1 className="text-lg font-bold" data-testid="text-studio-title">Multitrack Studio</h1>
-            <p className="text-xs text-muted-foreground">AI-powered stem separation & mixing</p>
+            <h1 className="text-lg font-bold" data-testid="text-studio-title">{t('studio.title')}</h1>
+            <p className="text-xs text-muted-foreground">{t('studio.subtitle')}</p>
           </div>
         </div>
       </div>
@@ -482,9 +484,9 @@ export default function StudioPage() {
                 <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
                   <Scissors className="w-10 h-10 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-bold mb-2">Multitrack Studio</h3>
+                <h3 className="text-lg font-bold mb-2">{t('studio.title')}</h3>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Select a completed song to separate it into individual tracks: Vocals, Drums, Bass, and Melody.
+                  {t('studio.selectSong')}
                 </p>
               </div>
             </div>
@@ -573,10 +575,10 @@ export default function StudioPage() {
                   >
                     <div className="grid grid-cols-2 gap-3 mb-6 max-w-xs">
                       {[
-                        { icon: Mic, label: "Vocals", color: "#FF6B9D" },
-                        { icon: Drum, label: "Drums", color: "#FFB347" },
-                        { icon: Guitar, label: "Bass", color: "#4ECDC4" },
-                        { icon: Music, label: "Melody", color: "#A78BFA" },
+                        { icon: Mic, label: t('studio.tracks.vocals'), color: "#FF6B9D" },
+                        { icon: Drum, label: t('studio.tracks.drums'), color: "#FFB347" },
+                        { icon: Guitar, label: t('studio.tracks.bass'), color: "#4ECDC4" },
+                        { icon: Music, label: t('studio.tracks.other'), color: "#A78BFA" },
                       ].map((s) => (
                         <div
                           key={s.label}
@@ -642,7 +644,7 @@ export default function StudioPage() {
                       <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
                         <div className="flex items-center gap-2">
                           <Sparkles className="w-4 h-4 text-primary" />
-                          <h3 className="text-sm font-bold" data-testid="text-ai-tools-title">AI Audio Tools</h3>
+                          <h3 className="text-sm font-bold" data-testid="text-ai-tools-title">{t('studio.aiTools')}</h3>
                         </div>
                         <Button
                           variant="ghost"
@@ -651,7 +653,7 @@ export default function StudioPage() {
                           onClick={() => setShowTools(!showTools)}
                           data-testid="button-toggle-tools"
                         >
-                          {showTools ? "Hide" : "Show Tools"}
+                          {showTools ? t('studio.hideTools') : t('studio.showTools')}
                         </Button>
                       </div>
 
@@ -676,7 +678,7 @@ export default function StudioPage() {
                                 data-testid="button-master-song"
                               >
                                 {isMastering ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                                {isMastering ? "Mastering..." : "Master Track"}
+                                {isMastering ? t('common.processing') : t('studio.masterTrack')}
                               </Button>
                             </Card>
 
@@ -698,7 +700,7 @@ export default function StudioPage() {
                                 data-testid="button-denoise-song"
                               >
                                 {isDenoising ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
-                                {isDenoising ? "Cleaning..." : "Denoise Track"}
+                                {isDenoising ? t('common.processing') : t('studio.denoiseTrack')}
                               </Button>
                             </Card>
                           </div>
@@ -734,7 +736,7 @@ export default function StudioPage() {
                                 data-testid="button-cover-song"
                               >
                                 {isCovering ? <Loader2 className="w-3 h-3 animate-spin" /> : <MicVocal className="w-3 h-3" />}
-                                {isCovering ? "Creating..." : "Create Cover"}
+                                {isCovering ? t('common.processing') : t('studio.createCover')}
                               </Button>
                             </div>
                           </Card>
@@ -792,7 +794,7 @@ export default function StudioPage() {
                                 data-testid="button-trim-song"
                               >
                                 {isTrimming ? <Loader2 className="w-3 h-3 animate-spin" /> : <Scissors className="w-3 h-3" />}
-                                {isTrimming ? "Trimming..." : "Trim Audio"}
+                                {isTrimming ? t('common.processing') : t('studio.trimAudio')}
                               </Button>
                             </div>
                           </Card>

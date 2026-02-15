@@ -11,79 +11,23 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
-const FEATURES = [
-  {
-    icon: Sparkles,
-    title: "AI Music Generation",
-    description: "Create studio-quality tracks from text prompts. Powered by our private cloud GPU — no per-song API costs.",
-  },
-  {
-    icon: Scissors,
-    title: "Multitrack Studio",
-    description: "Separate any song into Vocals, Drums, Bass & Melody stems with AI-powered Demucs technology.",
-  },
-  {
-    icon: Mic2,
-    title: "AI Lyrics Writer",
-    description: "Generate romantic, dance, or heartbreak lyrics in seconds. Influenced by Frank Reyes & Romeo Santos.",
-  },
-  {
-    icon: SlidersHorizontal,
-    title: "AI Mastering & Denoise",
-    description: "Professional-grade mastering and noise reduction. Make every track sound polished and radio-ready.",
-  },
-  {
-    icon: Volume2,
-    title: "Sample Lab",
-    description: "Record, upload, remix, and analyze audio samples. Detect Key & BPM instantly with AI.",
-  },
-  {
-    icon: Upload,
-    title: "Producer Store",
-    description: "Upload custom instrument kits, train AI with your sounds, and build a unique sonic library.",
-  },
+const FEATURES_KEYS = ["aiMusic", "multitrack", "lyrics", "mastering", "sampleLab", "producerStore"];
+const FEATURES_ICONS = [Sparkles, Scissors, Mic2, SlidersHorizontal, Volume2, Upload];
+
+const HOW_IT_WORKS_KEYS = ["step1", "step2", "step3"];
+
+const PLANS_KEYS = ["free", "pro", "producer", "premium"];
+const PLANS_META = [
+  { price: "$0", highlight: false },
+  { price: "$14.99", highlight: false },
+  { price: "$29.00", highlight: true },
+  { price: "$29.99", highlight: false },
 ];
 
-const HOW_IT_WORKS = [
-  { step: "1", title: "Describe Your Track", description: "Type a prompt describing the music you want — genre, mood, instruments, and style." },
-  { step: "2", title: "AI Creates Your Song", description: "Our cloud GPU engine generates a full track in seconds using Stable Audio Open technology." },
-  { step: "3", title: "Refine & Export", description: "Use stems, mastering, and mixing tools to polish your track. Download in high quality." },
-];
-
-const PLANS_PREVIEW = [
-  {
-    name: "Free",
-    price: "$0",
-    highlight: false,
-    features: ["12 credits to start", "AI music generation", "Basic stem separation", "AI lyrics generator"],
-  },
-  {
-    name: "Pro",
-    price: "$14.99",
-    highlight: false,
-    features: ["100 credits/month", "Priority processing", "AI mastering & denoise", "Advanced stem separation", "Sample Lab access"],
-  },
-  {
-    name: "Producer",
-    price: "$29.00",
-    highlight: true,
-    features: ["500 credits/month", "Everything in Pro", "Custom instrument kits", "AI training for your sounds", "Cloud GPU training", "Producer Store access"],
-  },
-  {
-    name: "Premium",
-    price: "$29.99",
-    highlight: false,
-    features: ["Unlimited credits", "All AI tools", "Priority support", "Custom voice models", "Commercial license"],
-  },
-];
-
-const STATS = [
-  { value: "20+", label: "Music Genres" },
-  { value: "4", label: "AI Stems" },
-  { value: "12", label: "Free Credits" },
-  { value: "0", label: "API Costs" },
-];
+const STATS_KEYS = ["genres", "stems", "credits", "apiCosts"];
+const STATS_VALUES = ["20+", "4", "12", "0"];
 
 const fadeUp = {
   initial: { opacity: 0, y: 30 },
@@ -107,7 +51,10 @@ const STEM_HEIGHTS = [
   [90, 70, 60, 80],
 ];
 
+const STEM_KEYS = ["vocals", "drums", "bass", "melody"] as const;
+
 function DemoPlayer() {
+  const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -180,7 +127,7 @@ function DemoPlayer() {
 
           <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/10">
             <Sparkles className="w-3 h-3 text-primary" />
-            <span className="text-[10px] text-primary font-medium">AI-Generated</span>
+            <span className="text-[10px] text-primary font-medium">{t('common.aiGenerated')}</span>
           </div>
 
           <button
@@ -225,7 +172,7 @@ function DemoPlayer() {
           </div>
 
           <div className="flex items-center gap-2 w-full">
-            {["Vocals", "Drums", "Bass", "Melody"].map((stem, i) => (
+            {STEM_KEYS.map((stem, i) => (
               <div key={stem} className="flex-1 text-center p-1.5 rounded-lg bg-white/5 border border-white/5">
                 <div className="h-5 flex items-end justify-center gap-[2px]">
                   {STEM_HEIGHTS[i].map((h, j) => (
@@ -236,7 +183,7 @@ function DemoPlayer() {
                     />
                   ))}
                 </div>
-                <p className="text-[9px] text-muted-foreground mt-1">{stem}</p>
+                <p className="text-[9px] text-muted-foreground mt-1">{t(`landing.demoStems.${stem}`)}</p>
               </div>
             ))}
           </div>
@@ -249,7 +196,7 @@ function DemoPlayer() {
             <Mic2 className="w-5 h-5 text-purple-400" />
           </div>
           <div className="text-left">
-            <p className="text-xs text-muted-foreground">Powered by</p>
+            <p className="text-xs text-muted-foreground">{t('common.poweredBy')}</p>
             <p className="text-sm font-bold">DGB Studio Engine</p>
           </div>
         </div>
@@ -261,8 +208,9 @@ function DemoPlayer() {
 
 export default function Landing() {
   const { user, isLoading } = useAuth();
+  const { t, i18n } = useTranslation();
 
-  if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center text-primary" data-testid="loading-landing">Loading DGB Studio...</div>;
+  if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center text-primary" data-testid="loading-landing">{t('common.loading')}</div>;
   if (user) return <Redirect to="/dashboard" />;
 
   const handleLogin = () => {
@@ -280,13 +228,23 @@ export default function Landing() {
         </div>
         <div className="flex items-center gap-3">
           <Button variant="ghost" className="hidden sm:inline-flex text-sm" onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} data-testid="link-features">
-            Features
+            {t('nav.features')}
           </Button>
           <Button variant="ghost" className="hidden sm:inline-flex text-sm" onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} data-testid="link-pricing">
-            Pricing
+            {t('nav.pricing')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs gap-1"
+            onClick={() => i18n.changeLanguage(i18n.language === 'es' ? 'en' : 'es')}
+            data-testid="button-lang-toggle"
+          >
+            <Globe className="h-3.5 w-3.5" />
+            {i18n.language === 'es' ? 'EN' : 'ES'}
           </Button>
           <Button variant="outline" className="border-white/10 text-xs sm:text-sm px-3 sm:px-4" onClick={handleLogin} data-testid="button-member-login">
-            Login
+            {t('common.login')}
           </Button>
         </div>
       </nav>
@@ -301,18 +259,18 @@ export default function Landing() {
               className="space-y-6 md:space-y-8 text-center lg:text-left"
             >
               <div className="inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs md:text-sm font-medium mb-2 md:mb-4">
-                The DNA of Danny Garcia
+                {t('landing.badge')}
               </div>
 
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight leading-tight" data-testid="text-hero-title">
-                Create Bachata with the{" "}
+                {t('landing.heroTitle')}{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-400 to-purple-500">
-                  DNA of Danny Garcia
+                  {t('landing.heroTitleHighlight')}
                 </span>
               </h1>
 
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed mx-auto lg:mx-0" data-testid="text-hero-subtitle">
-                Create Bachata, Boleros, and Latin music with the signature sound and DNA of Danny Garcia. AI-powered studio — no per-song API costs. Start with 12 free credits.
+                {t('landing.heroSubtitle')}
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center lg:justify-start pt-2 md:pt-4">
@@ -322,7 +280,7 @@ export default function Landing() {
                   onClick={handleLogin}
                   data-testid="button-start-creating"
                 >
-                  Start Creating Free
+                  {t('landing.startCreating')}
                   <ArrowRight className="h-5 w-5" />
                 </Button>
                 <Button
@@ -332,18 +290,18 @@ export default function Landing() {
                   onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
                   data-testid="button-explore-features"
                 >
-                  Explore Features
+                  {t('landing.exploreFeatures')}
                 </Button>
               </div>
 
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2 justify-center lg:justify-start pt-2 text-xs sm:text-sm text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-400 shrink-0" />
-                  <span>No credit card required</span>
+                  <span>{t('landing.noCreditCard')}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-400 shrink-0" />
-                  <span>12 free credits</span>
+                  <span>{t('landing.freeCredits')}</span>
                 </div>
               </div>
 
@@ -363,11 +321,11 @@ export default function Landing() {
 
         <section className="container mx-auto px-4 md:px-6 py-12 md:py-16">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
-            {STATS.map((stat, i) => (
+            {STATS_KEYS.map((key, i) => (
               <motion.div key={i} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.1 }}>
                 <div className="text-center p-4 md:p-6 rounded-2xl bg-white/[0.02] border border-white/5">
-                  <p className="text-3xl md:text-4xl font-bold text-primary" data-testid={`text-stat-${i}`}>{stat.value}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground mt-1">{stat.label}</p>
+                  <p className="text-3xl md:text-4xl font-bold text-primary" data-testid={`text-stat-${i}`}>{STATS_VALUES[i]}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground mt-1">{t(`landing.stats.${key}`)}</p>
                 </div>
               </motion.div>
             ))}
@@ -376,29 +334,32 @@ export default function Landing() {
 
         <section id="features" className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp} className="text-center mb-12 md:mb-16">
-            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">Features</Badge>
+            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">{t('nav.features')}</Badge>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-features-title">
-              Everything You Need to Create
+              {t('landing.featuresTitle')}
             </h2>
             <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">
-              From AI-powered music generation to professional mastering tools, DGB Studio gives you a complete music production suite.
+              {t('landing.featuresSubtitle')}
             </p>
           </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-            {FEATURES.map((feature, i) => (
-              <motion.div key={i} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.08 }}>
-                <Card className="bg-white/[0.02] border-white/5 hover:border-primary/20 transition-colors h-full" data-testid={`card-feature-${i}`}>
-                  <CardContent className="p-5 md:p-6">
-                    <div className="p-2.5 rounded-lg bg-primary/10 w-fit mb-4">
-                      <feature.icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <h3 className="font-bold text-base mb-2">{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+            {FEATURES_KEYS.map((key, i) => {
+              const Icon = FEATURES_ICONS[i];
+              return (
+                <motion.div key={i} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.08 }}>
+                  <Card className="bg-white/[0.02] border-white/5 hover:border-primary/20 transition-colors h-full" data-testid={`card-feature-${i}`}>
+                    <CardContent className="p-5 md:p-6">
+                      <div className="p-2.5 rounded-lg bg-primary/10 w-fit mb-4">
+                        <Icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <h3 className="font-bold text-base mb-2">{t(`landing.features.${key}.title`)}</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{t(`landing.features.${key}.description`)}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
           </div>
         </section>
 
@@ -406,22 +367,22 @@ export default function Landing() {
           <motion.div {...fadeUp} className="text-center mb-12 md:mb-16">
             <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">How It Works</Badge>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-how-title">
-              From Idea to Finished Track
+              {t('landing.howItWorksTitle')}
             </h2>
             <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">
-              Three simple steps to create professional music with AI.
+              {t('landing.howItWorksSubtitle')}
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-6 md:gap-8">
-            {HOW_IT_WORKS.map((item, i) => (
+            {HOW_IT_WORKS_KEYS.map((key, i) => (
               <motion.div key={i} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.15 }}>
-                <div className="text-center space-y-4 p-6" data-testid={`step-${item.step}`}>
+                <div className="text-center space-y-4 p-6" data-testid={`step-${i + 1}`}>
                   <div className="w-14 h-14 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto">
-                    <span className="text-2xl font-bold text-primary">{item.step}</span>
+                    <span className="text-2xl font-bold text-primary">{i + 1}</span>
                   </div>
-                  <h3 className="text-lg font-bold">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
+                  <h3 className="text-lg font-bold">{t(`landing.howItWorks.${key}.title`)}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{t(`landing.howItWorks.${key}.description`)}</p>
                 </div>
               </motion.div>
             ))}
@@ -430,53 +391,58 @@ export default function Landing() {
 
         <section id="pricing" className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp} className="text-center mb-12 md:mb-16">
-            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">Pricing</Badge>
+            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">{t('nav.pricing')}</Badge>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-pricing-title">
-              Plans for Every Creator
+              {t('landing.pricingTitle')}
             </h2>
             <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">
-              Start free with 12 credits. Upgrade anytime for more power and features.
+              {t('landing.pricingSubtitle')}
             </p>
           </motion.div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
-            {PLANS_PREVIEW.map((plan, i) => (
-              <motion.div key={i} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.1 }}>
-                <Card
-                  className={`relative h-full ${plan.highlight ? "border-primary/50 shadow-lg shadow-primary/10" : "bg-white/[0.02] border-white/5"}`}
-                  data-testid={`card-plan-preview-${plan.name.toLowerCase()}`}
-                >
-                  {plan.highlight && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-primary text-black font-semibold">Most Popular</Badge>
-                    </div>
-                  )}
-                  <CardContent className="p-3 sm:p-5 md:p-6 flex flex-col h-full">
-                    <h3 className="font-bold text-sm sm:text-lg">{plan.name}</h3>
-                    <div className="mt-1.5 sm:mt-2 mb-3 sm:mb-4">
-                      <span className="text-2xl sm:text-3xl font-bold">{plan.price}</span>
-                      {plan.price !== "$0" && <span className="text-muted-foreground text-xs sm:text-sm">/mo</span>}
-                    </div>
-                    <ul className="space-y-1.5 sm:space-y-2 flex-1">
-                      {plan.features.map((f, j) => (
-                        <li key={j} className="flex items-start gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                          <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0 mt-0.5" />
-                          <span className="text-muted-foreground">{f}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      className={`w-full mt-4 sm:mt-6 text-xs sm:text-sm ${plan.highlight ? "bg-primary text-black" : ""}`}
-                      variant={plan.highlight ? "default" : "outline"}
-                      onClick={handleLogin}
-                      data-testid={`button-plan-${plan.name.toLowerCase()}`}
-                    >
-                      {plan.price === "$0" ? "Get Started" : "Start Trial"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+            {PLANS_KEYS.map((key, i) => {
+              const meta = PLANS_META[i];
+              const planFeatures = t(`landing.plans.${key}.features`, { returnObjects: true }) as string[];
+              const planName = t(`landing.plans.${key}.name`);
+              return (
+                <motion.div key={i} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.1 }}>
+                  <Card
+                    className={`relative h-full ${meta.highlight ? "border-primary/50 shadow-lg shadow-primary/10" : "bg-white/[0.02] border-white/5"}`}
+                    data-testid={`card-plan-preview-${key}`}
+                  >
+                    {meta.highlight && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <Badge className="bg-primary text-black font-semibold">{t('common.mostPopular')}</Badge>
+                      </div>
+                    )}
+                    <CardContent className="p-3 sm:p-5 md:p-6 flex flex-col h-full">
+                      <h3 className="font-bold text-sm sm:text-lg">{planName}</h3>
+                      <div className="mt-1.5 sm:mt-2 mb-3 sm:mb-4">
+                        <span className="text-2xl sm:text-3xl font-bold">{meta.price}</span>
+                        {meta.price !== "$0" && <span className="text-muted-foreground text-xs sm:text-sm">{t('common.perMonth')}</span>}
+                      </div>
+                      <ul className="space-y-1.5 sm:space-y-2 flex-1">
+                        {planFeatures.map((f, j) => (
+                          <li key={j} className="flex items-start gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0 mt-0.5" />
+                            <span className="text-muted-foreground">{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        className={`w-full mt-4 sm:mt-6 text-xs sm:text-sm ${meta.highlight ? "bg-primary text-black" : ""}`}
+                        variant={meta.highlight ? "default" : "outline"}
+                        onClick={handleLogin}
+                        data-testid={`button-plan-${key}`}
+                      >
+                        {meta.price === "$0" ? t('common.getStarted') : t('common.startTrial')}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
           </div>
         </section>
 
@@ -486,10 +452,10 @@ export default function Landing() {
               <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-blue-600/10 to-purple-500/10" />
               <div className="relative p-6 sm:p-8 md:p-16 text-center space-y-4 sm:space-y-6">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-cta-title">
-                  Ready to Create Your First Track?
+                  {t('landing.ctaTitle')}
                 </h2>
                 <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-lg">
-                  Join DGB Studio today and get 12 free credits to start making music with AI. No credit card needed.
+                  {t('landing.ctaSubtitle')}
                 </p>
                 <Button
                   size="lg"
@@ -497,7 +463,7 @@ export default function Landing() {
                   onClick={handleLogin}
                   data-testid="button-cta-signup"
                 >
-                  Create Your Free Account
+                  {t('landing.ctaButton')}
                   <ArrowRight className="h-5 w-5" />
                 </Button>
               </div>
@@ -514,40 +480,40 @@ export default function Landing() {
                 <img src={dgbLogo} alt="DGB Studio" className="h-8 w-auto" />
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                AI-powered music creation platform. Generate, mix, master, and publish your music from one place.
+                {t('landing.footer.footerDescription')}
               </p>
             </div>
             <div>
-              <h4 className="font-semibold text-sm mb-3">Product</h4>
+              <h4 className="font-semibold text-sm mb-3">{t('landing.footer.product')}</h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
-                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}>Features</li>
-                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })}>Pricing</li>
-                <li className="hover:text-foreground cursor-pointer transition-colors">Producer Store</li>
-                <li className="hover:text-foreground cursor-pointer transition-colors">Style Kits</li>
+                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}>{t('nav.features')}</li>
+                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })}>{t('nav.pricing')}</li>
+                <li className="hover:text-foreground cursor-pointer transition-colors">{t('landing.footer.producerStore')}</li>
+                <li className="hover:text-foreground cursor-pointer transition-colors">{t('landing.footer.styleKits')}</li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-sm mb-3">Tools</h4>
+              <h4 className="font-semibold text-sm mb-3">{t('landing.footer.tools')}</h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
-                <li className="hover:text-foreground cursor-pointer transition-colors">AI Music Generator</li>
-                <li className="hover:text-foreground cursor-pointer transition-colors">Stem Separator</li>
-                <li className="hover:text-foreground cursor-pointer transition-colors">AI Lyrics Writer</li>
-                <li className="hover:text-foreground cursor-pointer transition-colors">Sample Lab</li>
+                <li className="hover:text-foreground cursor-pointer transition-colors">{t('landing.footer.aiMusicGenerator')}</li>
+                <li className="hover:text-foreground cursor-pointer transition-colors">{t('landing.footer.stemSeparator')}</li>
+                <li className="hover:text-foreground cursor-pointer transition-colors">{t('landing.footer.aiLyricsWriter')}</li>
+                <li className="hover:text-foreground cursor-pointer transition-colors">{t('landing.footer.sampleLab')}</li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-sm mb-3">Genres</h4>
+              <h4 className="font-semibold text-sm mb-3">{t('landing.footer.genres')}</h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
-                <li>Bachata</li>
-                <li>Latin Pop</li>
-                <li>Reggaeton</li>
-                <li>Bolero & Salsa</li>
+                <li>{t('create.genres.bachata')}</li>
+                <li>{t('create.genres.latinPop')}</li>
+                <li>{t('create.genres.reggaeton')}</li>
+                <li>{t('create.genres.bolero')} & {t('create.genres.salsa')}</li>
               </ul>
             </div>
           </div>
           <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} DGB Studio. All rights reserved.</p>
-            <p className="text-xs text-muted-foreground">Powered by DGB Studio Engine</p>
+            <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} {t('landing.footer.copyright')}</p>
+            <p className="text-xs text-muted-foreground">{t('common.poweredBy')} DGB Studio Engine</p>
           </div>
         </div>
       </footer>

@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 import {
   Loader2,
   Calendar,
@@ -42,6 +43,7 @@ function formatDate(d: string | null) {
 }
 
 function BlogList() {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
 
@@ -72,11 +74,11 @@ function BlogList() {
               className="text-xl font-bold"
               data-testid="text-blog-title"
             >
-              DGB Studio Blog
+              {t('blog.title')}
             </h1>
           </div>
           <p className="text-sm text-muted-foreground pl-8">
-            Noticias, tutoriales y actualizaciones del mundo de la música AI
+            {t('blog.subtitle')}
           </p>
         </div>
       </div>
@@ -87,7 +89,7 @@ function BlogList() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar artículos..."
+                placeholder={t('blog.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 bg-white/5 border-white/10"
@@ -131,8 +133,8 @@ function BlogList() {
               </div>
               <p className="text-muted-foreground">
                 {searchQuery
-                  ? "No se encontraron artículos"
-                  : "No hay artículos publicados todavía"}
+                  ? t('blog.noArticles')
+                  : t('blog.noArticlesYet')}
               </p>
             </div>
           ) : (
@@ -262,6 +264,7 @@ function StarRating({
 }
 
 function BlogPostView() {
+  const { t } = useTranslation();
   const [, params] = useRoute("/blog/:slug");
   const slug = params?.slug || "";
   const { user } = useAuth();
@@ -458,7 +461,7 @@ function BlogPostView() {
           </p>
           <Link href="/blog">
             <Button variant="outline" data-testid="button-back-to-blog">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Volver al blog
+              <ArrowLeft className="h-4 w-4 mr-2" /> {t('common.back')}
             </Button>
           </Link>
         </Card>
@@ -475,7 +478,7 @@ function BlogPostView() {
             className="mb-4 text-muted-foreground"
             data-testid="button-back-to-blog"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" /> Volver al blog
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('common.back')}
           </Button>
         </Link>
 
@@ -509,7 +512,7 @@ function BlogPostView() {
             </span>
             <span className="text-sm text-muted-foreground flex items-center gap-1">
               <Eye className="h-3.5 w-3.5" />
-              {post.viewCount || 0} vistas
+              {post.viewCount || 0} {t('blog.views')}
             </span>
           </div>
 
@@ -658,7 +661,7 @@ function BlogPostView() {
               data-testid="button-scroll-comments"
             >
               <MessageCircle className="h-4 w-4" />
-              <span>{stats?.comments || 0} comentarios</span>
+              <span>{stats?.comments || 0} {t('blog.comments')}</span>
             </Button>
           </div>
         </div>
@@ -666,7 +669,7 @@ function BlogPostView() {
         <div ref={commentsRef} className="border-t border-white/5 pt-6">
           <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
             <MessageCircle className="h-5 w-5 text-primary" />
-            Comentarios ({comments?.length || 0})
+            {t('blog.comments')} ({comments?.length || 0})
           </h3>
 
           {user ? (
@@ -706,7 +709,7 @@ function BlogPostView() {
                     ) : (
                       <Send className="h-4 w-4" />
                     )}
-                    Publicar
+                    {t('blog.publish')}
                   </Button>
                 </div>
               </div>
@@ -775,7 +778,7 @@ function BlogPostView() {
 
             {comments && comments.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">
-                Sé el primero en comentar
+                {t('blog.beFirstToComment')}
               </p>
             )}
           </div>

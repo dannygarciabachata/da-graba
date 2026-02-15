@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useGenerateSong, useSongs } from "@/hooks/use-songs";
 import { useStyleKits } from "@/hooks/use-style-kits";
 import { Button } from "@/components/ui/button";
@@ -110,6 +111,7 @@ const TTS_LANGUAGES = [
 type CreationMode = "song" | "sound" | "speak";
 
 export default function CreatePage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [currentSong, setCurrentSong] = useState<any>(null);
@@ -158,11 +160,11 @@ export default function CreatePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/samples"] });
-      toast({ title: "File Uploaded", description: "Your audio file has been uploaded to Sample Lab." });
+      toast({ title: t('create.toast.fileUploaded'), description: t('create.toast.fileUploadedDesc') });
       setAttachedFile(null);
     },
     onError: (error: Error) => {
-      toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+      toast({ title: t('create.toast.uploadFailed'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -173,11 +175,11 @@ export default function CreatePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/songs"] });
-      toast({ title: "Sound Effect Created", description: "Your sound effect is being generated." });
+      toast({ title: t('create.toast.soundCreated'), description: t('create.toast.soundCreatedDesc') });
       setSoundPrompt("");
     },
     onError: (error: Error) => {
-      toast({ title: "Sound Generation Failed", description: error.message, variant: "destructive" });
+      toast({ title: t('create.toast.soundFailed'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -188,11 +190,11 @@ export default function CreatePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/songs"] });
-      toast({ title: "Speech Generated", description: "Your text-to-speech audio is being created." });
+      toast({ title: t('create.toast.speechGenerated'), description: t('create.toast.speechGeneratedDesc') });
       setTtsText("");
     },
     onError: (error: Error) => {
-      toast({ title: "TTS Failed", description: error.message, variant: "destructive" });
+      toast({ title: t('create.toast.ttsFailed'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -291,7 +293,7 @@ export default function CreatePage() {
     const file = e.target.files?.[0];
     if (file) {
       setAttachedFile(file);
-      toast({ title: "File Attached", description: `${file.name} ready to upload.` });
+      toast({ title: t('create.toast.fileAttached'), description: t('create.toast.fileReadyToUpload', { name: file.name }) });
     }
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -319,9 +321,9 @@ export default function CreatePage() {
   };
 
   const modeLabels: Record<CreationMode, string> = {
-    song: "Create song",
-    sound: "Create Sound",
-    speak: "Speak text",
+    song: t('create.modes.song'),
+    sound: t('create.modes.sound'),
+    speak: t('create.modes.speak'),
   };
 
   const modeIcons: Record<CreationMode, typeof Music> = {
@@ -345,10 +347,10 @@ export default function CreatePage() {
             className="text-center mb-8"
           >
             <h1 className="text-2xl md:text-3xl font-bold mb-1" data-testid="text-create-title">
-              Create something new today
+              {t('create.pageTitle')}
             </h1>
             <p className="text-sm text-muted-foreground">
-              12 credits per song
+              {t('create.creditsPerSong')}
             </p>
           </motion.div>
 
@@ -362,7 +364,7 @@ export default function CreatePage() {
                 {activeCreationMode === "song" && (
                   <div className="relative">
                     <Textarea
-                      placeholder={`Describe your ${selectedGenre} track...`}
+                      placeholder={t('create.prompt.describeGenre', { genre: selectedGenre })}
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
                       className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[100px] resize-none text-base p-0 placeholder:text-muted-foreground/50"
@@ -384,7 +386,7 @@ export default function CreatePage() {
                   <div className="space-y-3">
                     <div className="relative">
                       <Textarea
-                        placeholder="Describe your sound effect... (e.g., thunderclap followed by rain on a tin roof)"
+                        placeholder={t('create.soundPrompt.placeholder')}
                         value={soundPrompt}
                         onChange={(e) => setSoundPrompt(e.target.value)}
                         className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[100px] resize-none text-base p-0 placeholder:text-muted-foreground/50"
@@ -398,7 +400,7 @@ export default function CreatePage() {
                     <div className="flex items-center gap-3">
                       <Label className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        Duration: {soundDuration[0]}s
+                        {t('create.options.duration')}: {soundDuration[0]}s
                       </Label>
                       <Slider
                         value={soundDuration}
@@ -417,7 +419,7 @@ export default function CreatePage() {
                   <div className="space-y-3">
                     <div className="relative">
                       <Textarea
-                        placeholder="Enter text to convert to speech..."
+                        placeholder={t('create.ttsPrompt.placeholder')}
                         value={ttsText}
                         onChange={(e) => setTtsText(e.target.value)}
                         className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[100px] resize-none text-base p-0 placeholder:text-muted-foreground/50"
@@ -430,9 +432,9 @@ export default function CreatePage() {
                     </div>
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex items-center gap-2">
-                        <Label className="text-xs text-muted-foreground">Voice ID</Label>
+                        <Label className="text-xs text-muted-foreground">{t('create.voiceId')}</Label>
                         <Input
-                          placeholder="Default"
+                          placeholder={t('create.voiceDefault')}
                           value={ttsVoiceId}
                           onChange={(e) => setTtsVoiceId(e.target.value)}
                           className="bg-background/50 border-white/10 text-xs w-[120px]"
@@ -440,7 +442,7 @@ export default function CreatePage() {
                         />
                       </div>
                       <div className="flex items-center gap-2">
-                        <Label className="text-xs text-muted-foreground">Language</Label>
+                        <Label className="text-xs text-muted-foreground">{t('create.language')}</Label>
                         <select
                           className="rounded-md border border-white/10 bg-background/50 px-2 py-1 text-xs"
                           value={ttsLanguage}
@@ -497,7 +499,7 @@ export default function CreatePage() {
                       <Paperclip className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Attach audio file</TooltipContent>
+                  <TooltipContent>{t('create.attachAudio')}</TooltipContent>
                 </Tooltip>
 
                 <Tooltip>
@@ -513,10 +515,10 @@ export default function CreatePage() {
                       data-testid="button-pro-controls"
                     >
                       <SlidersHorizontal className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Pro controls</span>
+                      <span className="hidden sm:inline">{t('create.options.proControls')}</span>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Advanced settings</TooltipContent>
+                  <TooltipContent>{t('create.options.advancedSettings')}</TooltipContent>
                 </Tooltip>
 
                 {activeCreationMode === "song" && (
@@ -534,10 +536,10 @@ export default function CreatePage() {
                           data-testid="button-instrumental"
                         >
                           <Music className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">Instrumental</span>
+                          <span className="hidden sm:inline">{t('create.options.instrumental')}</span>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Instrumental only (no vocals)</TooltipContent>
+                      <TooltipContent>{t('create.options.instrumentalTooltip')}</TooltipContent>
                     </Tooltip>
 
                     <Tooltip>
@@ -553,10 +555,10 @@ export default function CreatePage() {
                           data-testid="button-lyrics-mode"
                         >
                           <Mic className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">Lyrics</span>
+                          <span className="hidden sm:inline">{t('create.lyrics.label')}</span>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Song with lyrics & vocals</TooltipContent>
+                      <TooltipContent>{t('create.options.lyricsTooltip')}</TooltipContent>
                     </Tooltip>
                   </>
                 )}
@@ -572,7 +574,7 @@ export default function CreatePage() {
                       data-testid="button-tools-dropdown"
                     >
                       <Wrench className="h-3.5 w-3.5" />
-                      Tools
+                      {t('create.tools')}
                       <ChevronDown className="h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -583,7 +585,7 @@ export default function CreatePage() {
                       data-testid="menu-create-song"
                     >
                       <Music className="h-4 w-4 mr-2" />
-                      Create song
+                      {t('create.modes.song')}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => setActiveCreationMode("sound")}
@@ -591,7 +593,7 @@ export default function CreatePage() {
                       data-testid="menu-create-sound"
                     >
                       <FileAudio className="h-4 w-4 mr-2" />
-                      Create Sound
+                      {t('create.modes.sound')}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => setActiveCreationMode("speak")}
@@ -599,7 +601,7 @@ export default function CreatePage() {
                       data-testid="menu-speak-text"
                     >
                       <Mic className="h-4 w-4 mr-2" />
-                      Speak text
+                      {t('create.modes.speak')}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -607,14 +609,14 @@ export default function CreatePage() {
                       data-testid="menu-change-file"
                     >
                       <Paperclip className="h-4 w-4 mr-2" />
-                      Change file
+                      {t('create.changeFile')}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={handleRandomPrompt}
                       data-testid="menu-random"
                     >
                       <Dices className="h-4 w-4 mr-2" />
-                      Random
+                      {t('create.random')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -634,7 +636,7 @@ export default function CreatePage() {
                   ) : (
                     <>
                       <Send className="h-3.5 w-3.5" />
-                      <span className="text-xs font-semibold">Submit</span>
+                      <span className="text-xs font-semibold">{t('create.submit')}</span>
                     </>
                   )}
                 </Button>
@@ -647,7 +649,7 @@ export default function CreatePage() {
               {activeCreationMode === "song" && (
                 <>
                   <span className="mx-1">•</span>
-                  <span>{isInstrumental ? "Instrumental" : "With lyrics"}</span>
+                  <span>{isInstrumental ? t('create.options.instrumental') : t('create.options.withLyrics')}</span>
                   <span className="mx-1">•</span>
                   <span>{selectedGenre}</span>
                 </>
@@ -666,16 +668,16 @@ export default function CreatePage() {
                 <Card className="p-4 space-y-4 border-white/5">
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      Title
+                      {t('create.title_field.label')}
                       <Tooltip>
                         <TooltipTrigger>
                           <Info className="h-3 w-3" />
                         </TooltipTrigger>
-                        <TooltipContent>Optional song title</TooltipContent>
+                        <TooltipContent>{t('create.title_field.tooltip')}</TooltipContent>
                       </Tooltip>
                     </Label>
                     <Input
-                      placeholder="Enter song title (optional)"
+                      placeholder={t('create.title_field.inputPlaceholder')}
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       className="bg-background border-white/10 focus:border-primary/50 text-sm"
@@ -686,16 +688,16 @@ export default function CreatePage() {
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
                       <User className="h-3 w-3" />
-                      Artist Name
+                      {t('create.artistName')}
                       <Tooltip>
                         <TooltipTrigger>
                           <Info className="h-3 w-3" />
                         </TooltipTrigger>
-                        <TooltipContent>Your artist or stage name for credits</TooltipContent>
+                        <TooltipContent>{t('create.artistNameTooltip')}</TooltipContent>
                       </Tooltip>
                     </Label>
                     <Input
-                      placeholder="Your artist/stage name"
+                      placeholder={t('create.artistNamePlaceholder')}
                       value={artistName}
                       onChange={(e) => setArtistName(e.target.value)}
                       className="bg-background border-white/10 focus:border-primary/50 text-sm"
@@ -706,12 +708,12 @@ export default function CreatePage() {
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
                       <Copyright className="h-3 w-3" />
-                      Copyright Holder
+                      {t('create.copyrightHolder')}
                       <Tooltip>
                         <TooltipTrigger>
                           <Info className="h-3 w-3" />
                         </TooltipTrigger>
-                        <TooltipContent>Entity or person who owns the copyright</TooltipContent>
+                        <TooltipContent>{t('create.copyrightHolderTooltip')}</TooltipContent>
                       </Tooltip>
                     </Label>
                     <Input
@@ -726,12 +728,12 @@ export default function CreatePage() {
                   {styleKits && styleKits.length > 0 && (
                     <div className="space-y-1.5">
                       <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                        Style Kit
+                        {t('create.styleKit')}
                         <Tooltip>
                           <TooltipTrigger>
                             <Info className="h-3 w-3" />
                           </TooltipTrigger>
-                          <TooltipContent>Use a custom instrument kit to define your song's style</TooltipContent>
+                          <TooltipContent>{t('create.styleKitTooltip')}</TooltipContent>
                         </Tooltip>
                       </Label>
                       <select
@@ -740,10 +742,10 @@ export default function CreatePage() {
                         onChange={(e) => setSelectedStyleKit(e.target.value ? Number(e.target.value) : undefined)}
                         data-testid="select-style-kit"
                       >
-                        <option value="">None (default)</option>
+                        <option value="">{t('create.noneDefault')}</option>
                         {styleKits.map((kit) => (
                           <option key={kit.id} value={kit.id}>
-                            {kit.name} ({kit.genre.replace(/_/g, " ")}) — {kit.instruments.length} instruments
+                            {kit.name} ({kit.genre.replace(/_/g, " ")}) — {kit.instruments.length} {t('create.instruments')}
                           </option>
                         ))}
                       </select>
@@ -753,12 +755,12 @@ export default function CreatePage() {
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
                       <Clock className="h-3 w-3" />
-                      Song duration
+                      {t('create.songDuration')}
                       <Tooltip>
                         <TooltipTrigger>
                           <Info className="h-3 w-3" />
                         </TooltipTrigger>
-                        <TooltipContent>Length of the generated song</TooltipContent>
+                        <TooltipContent>{t('create.songDurationTooltip')}</TooltipContent>
                       </Tooltip>
                     </Label>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -783,12 +785,12 @@ export default function CreatePage() {
 
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      Prompt intensity
+                      {t('create.promptIntensity')}
                       <Tooltip>
                         <TooltipTrigger>
                           <Info className="h-3 w-3" />
                         </TooltipTrigger>
-                        <TooltipContent>How closely the AI follows your prompt</TooltipContent>
+                        <TooltipContent>{t('create.promptIntensityTooltip')}</TooltipContent>
                       </Tooltip>
                     </Label>
                     <div className="flex items-center gap-3">
@@ -807,12 +809,12 @@ export default function CreatePage() {
 
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      Lyrics intensity
+                      {t('create.lyricsIntensity')}
                       <Tooltip>
                         <TooltipTrigger>
                           <Info className="h-3 w-3" />
                         </TooltipTrigger>
-                        <TooltipContent>Controls creativity vs. precision in lyrics</TooltipContent>
+                        <TooltipContent>{t('create.lyricsIntensityTooltip')}</TooltipContent>
                       </Tooltip>
                     </Label>
                     <div className="flex items-center gap-3">
@@ -831,10 +833,10 @@ export default function CreatePage() {
 
                   {!isInstrumental && activeCreationMode === "song" && (
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Custom lyrics</Label>
+                      <Label className="text-xs text-muted-foreground">{t('create.lyrics.customLyrics')}</Label>
                       <div className="relative">
                         <Textarea
-                          placeholder={"[Verse]\nWrite your lyrics here...\n\n[Chorus]\nYour chorus..."}
+                          placeholder={t('create.lyrics.lyricsPlaceholder')}
                           value={lyrics}
                           onChange={(e) => setLyrics(e.target.value)}
                           className="bg-background border-white/10 focus:border-primary/50 min-h-[80px] resize-none text-sm font-mono"
@@ -871,7 +873,7 @@ export default function CreatePage() {
                       <div className="text-sm font-medium mb-1 line-clamp-1">{genre.value}</div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <ThumbsUp className="h-3 w-3" />
-                        {genre.likes} Likes
+                        {genre.likes} {t('create.likes')}
                       </div>
                     </Card>
                   ))}
@@ -893,8 +895,8 @@ export default function CreatePage() {
                     <Loader2 className="h-5 w-5 text-primary animate-spin" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Generando 2 versiones de tu track...</p>
-                    <p className="text-xs text-muted-foreground">Elige la que más te guste. La primera vez puede tomar ~5-10 min</p>
+                    <p className="text-sm font-medium">{t('create.generating2Versions')}</p>
+                    <p className="text-xs text-muted-foreground">{t('create.firstTimeTip')}</p>
                   </div>
                 </div>
               </Card>
@@ -912,7 +914,7 @@ export default function CreatePage() {
               >
                 <AudioPlayer
                   url={activeSong.audioUrl}
-                  title={activeSong.title || activeSong.prompt || "Untitled Track"}
+                  title={activeSong.title || activeSong.prompt || t('create.untitledTrack')}
                   imageUrl={activeSong.imageUrl}
                   genre={activeSong.genre}
                   duration={activeSong.duration}
@@ -936,7 +938,7 @@ export default function CreatePage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{activeSong.title || activeSong.prompt || "Track"}</p>
-                      <p className="text-xs text-muted-foreground">Creando tu canción con IA en el GPU...</p>
+                      <p className="text-xs text-muted-foreground">{t('create.creatingWithAI')}</p>
                     </div>
                   </div>
                   <div className="space-y-1.5">
@@ -947,7 +949,7 @@ export default function CreatePage() {
                         transition={{ duration: 240, times: [0, 0.3, 0.6, 1], ease: "easeOut" }}
                       />
                     </div>
-                    <p className="text-[10px] text-muted-foreground text-right">Estimado ~3-5 min</p>
+                    <p className="text-[10px] text-muted-foreground text-right">{t('create.estimatedTime')}</p>
                   </div>
                 </Card>
               </motion.div>
@@ -958,7 +960,7 @@ export default function CreatePage() {
             <div className="mb-8">
               <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                  Recent Creations
+                  {t('create.recentCreations')}
                 </h2>
                 <Button
                   variant="ghost"
@@ -967,7 +969,7 @@ export default function CreatePage() {
                   onClick={() => setLocation("/library")}
                   data-testid="button-view-all"
                 >
-                  View All
+                  {t('create.viewAll')}
                   <ChevronRight className="h-3 w-3 ml-1" />
                 </Button>
               </div>
@@ -980,7 +982,7 @@ export default function CreatePage() {
                         <div className="flex items-center gap-2 mb-1.5">
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">
                             <Zap className="h-2.5 w-2.5 mr-1" />
-                            2 versiones
+                            {t('create.twoVersions')}
                           </Badge>
                           <span className="text-[10px] text-muted-foreground line-clamp-1">
                             {group.songs[0]?.title || group.songs[0]?.prompt}
@@ -1023,7 +1025,7 @@ export default function CreatePage() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <h4 className="text-sm font-medium line-clamp-1">
-                                  {song.variationLabel ? `Version ${song.variationLabel}` : (song.title || song.prompt)}
+                                  {song.variationLabel ? `${t('create.version')} ${song.variationLabel}` : (song.title || song.prompt)}
                                 </h4>
                                 <div className="flex items-center gap-2 mt-1">
                                   {song.genre && (
@@ -1032,7 +1034,7 @@ export default function CreatePage() {
                                     </Badge>
                                   )}
                                   {song.status === "processing" || song.status === "pending" ? (
-                                    <span className="text-[10px] text-primary">Generando...</span>
+                                    <span className="text-[10px] text-primary">{t('create.generating')}</span>
                                   ) : (
                                     <span className="text-[10px] text-muted-foreground">
                                       {song.createdAt && formatDistanceToNow(new Date(song.createdAt), { addSuffix: true })}

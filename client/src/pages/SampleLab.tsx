@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import type { Sample } from "@shared/schema";
+import { useTranslation } from "react-i18next";
 
 const STYLE_OPTIONS = [
   { value: "heart-mula", label: "DGB Studio Signature" },
@@ -33,7 +34,8 @@ function formatDuration(seconds: number | null | undefined): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-function AudioRecorder({ onSave }: { onSave: (audioData: string, duration: number) => void }) {
+function AudioRecorder({ onSave }: { onSave: (audioData: string, duration: number) => void; }) {
+  const { t } = useTranslation();
   const [isRecording, setIsRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [audioLevel, setAudioLevel] = useState(0);
@@ -160,7 +162,7 @@ function AudioRecorder({ onSave }: { onSave: (audioData: string, duration: numbe
         </div>
       )}
       <p className="text-xs text-muted-foreground">
-        {isRecording ? "Recording... tap to stop" : "Tap to start recording"}
+        {isRecording ? t('sampleLab.record.recording') : t('sampleLab.record.tapToStart')}
       </p>
     </div>
   );
@@ -391,6 +393,7 @@ function ClipTimeline({ samples, selectedId }: { samples: Sample[]; selectedId: 
 }
 
 export default function SampleLab() {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const { data: samples = [], isLoading } = useSamples();
@@ -470,8 +473,8 @@ export default function SampleLab() {
           <Music className="h-5 w-5 text-purple-400" />
           <div>
             <h1 className="text-lg font-bold" data-testid="text-samplelab-title">
-              Sample Lab
-              <span className="text-purple-400 text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 ml-1.5">BETA</span>
+              {t('sampleLab.title')}
+              <span className="text-purple-400 text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 ml-1.5">{t('common.beta')}</span>
             </h1>
             <p className="text-xs text-muted-foreground">Record, upload & transform audio with AI</p>
           </div>
@@ -487,14 +490,14 @@ export default function SampleLab() {
                   key={tab}
                   variant={activeTab === tab ? "default" : "ghost"}
                   size="sm"
-                  className="flex-1 text-xs capitalize gap-1"
+                  className="flex-1 text-xs gap-1"
                   onClick={() => setActiveTab(tab)}
                   data-testid={`button-tab-${tab}`}
                 >
                   {tab === "record" && <Mic className="h-3 w-3" />}
                   {tab === "upload" && <Upload className="h-3 w-3" />}
                   {tab === "transform" && <Wand2 className="h-3 w-3" />}
-                  {tab}
+                  {t(`sampleLab.tabs.${tab}`)}
                 </Button>
               ))}
             </div>
@@ -695,8 +698,8 @@ export default function SampleLab() {
               ) : samples.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Music className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm">No samples yet</p>
-                  <p className="text-xs mt-1">Record or upload audio to get started</p>
+                  <p className="text-sm">{t('sampleLab.record.noSamples')}</p>
+                  <p className="text-xs mt-1">{t('sampleLab.record.noSamplesSubtitle')}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -838,7 +841,7 @@ export default function SampleLab() {
             ) : samples.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Music className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                <p className="text-sm">No samples yet</p>
+                <p className="text-sm">{t('sampleLab.record.noSamples')}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -864,9 +867,9 @@ export default function SampleLab() {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10 safe-area-bottom" data-testid="nav-mobile-bottom-samplelab">
         <div className="flex items-center justify-around px-2 py-1">
           {([
-            { id: "record" as const, label: "Record", icon: Mic },
-            { id: "upload" as const, label: "Upload", icon: Upload },
-            { id: "transform" as const, label: "AI Magic", icon: Wand2 },
+            { id: "record" as const, label: t('sampleLab.tabs.record'), icon: Mic },
+            { id: "upload" as const, label: t('sampleLab.tabs.upload'), icon: Upload },
+            { id: "transform" as const, label: t('sampleLab.tabs.transform'), icon: Wand2 },
           ]).map((item) => {
             const isActive = activeTab === item.id;
             return (

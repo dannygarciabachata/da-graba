@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "react-i18next";
 import {
   Check, Loader2, Crown, Zap, Music, Disc, X,
   Sparkles, Scissors, Mic2, SlidersHorizontal, Upload,
@@ -163,6 +164,7 @@ function parsePlans(products: any[] | undefined) {
 }
 
 export default function PricingPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const searchStr = useSearch();
   const params = new URLSearchParams(searchStr);
@@ -199,10 +201,10 @@ export default function PricingPage() {
       <div className="text-center space-y-3">
         <Badge className="bg-primary/10 text-primary border-primary/20">Pricing</Badge>
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-pricing-title">
-          Choose Your Plan
+          {t('pricing.title')}
         </h1>
         <p className="text-muted-foreground text-sm max-w-lg mx-auto">
-          Unlock the full power of DGB Studio. Start free with 12 credits, or upgrade for unlimited music creation.
+          {t('pricing.subtitle')}
         </p>
         <div className="flex items-center justify-center gap-3 pt-2">
           <Button
@@ -211,7 +213,7 @@ export default function PricingPage() {
             onClick={() => setBillingInterval("monthly")}
             data-testid="button-billing-monthly"
           >
-            Monthly
+            {t('pricing.monthly')}
           </Button>
           <Button
             variant={billingInterval === "annual" ? "default" : "outline"}
@@ -219,7 +221,7 @@ export default function PricingPage() {
             onClick={() => setBillingInterval("annual")}
             data-testid="button-billing-annual"
           >
-            Annual
+            {t('pricing.yearly')}
             <Badge className="ml-1.5 text-[10px] bg-green-500 text-white">Save 5%</Badge>
           </Button>
         </div>
@@ -243,7 +245,7 @@ export default function PricingPage() {
               {isPopular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <Badge className="bg-primary text-black font-semibold" data-testid="badge-popular">
-                    Most Popular
+                    {t('common.mostPopular')}
                   </Badge>
                 </div>
               )}
@@ -256,7 +258,7 @@ export default function PricingPage() {
                   {plan.name}
                   {isCurrentPlan && (
                     <Badge variant="secondary" data-testid={`badge-current-${plan.tier}`}>
-                      Current
+                      {t('pricing.currentPlan')}
                     </Badge>
                   )}
                 </CardTitle>
@@ -266,11 +268,11 @@ export default function PricingPage() {
               <CardContent className="flex-1 space-y-4">
                 <div className="text-center">
                   {plan.price === 0 ? (
-                    <span className="text-3xl font-bold" data-testid={`text-price-${plan.tier}`}>Free</span>
+                    <span className="text-3xl font-bold" data-testid={`text-price-${plan.tier}`}>{t('common.free')}</span>
                   ) : (
                     <div data-testid={`text-price-${plan.tier}`}>
                       <span className="text-3xl font-bold">{formatPrice(displayPrice)}</span>
-                      <span className="text-muted-foreground text-sm">/mo</span>
+                      <span className="text-muted-foreground text-sm">{t('common.perMonth')}</span>
                       {showAnnual && (
                         <p className="text-xs text-green-400 mt-1">
                           {formatPrice(plan.annualPrice)}/year (5% off)
@@ -300,11 +302,11 @@ export default function PricingPage() {
                     data-testid={`button-manage-${plan.tier}`}
                   >
                     {portal.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Manage Subscription
+                    {t('pricing.manage')}
                   </Button>
                 ) : isCurrentPlan && plan.tier === "free" ? (
                   <Button variant="outline" className="w-full" disabled data-testid={`button-current-${plan.tier}`}>
-                    Current Plan
+                    {t('pricing.currentPlan')}
                   </Button>
                 ) : activePriceId ? (
                   <Button
@@ -314,11 +316,11 @@ export default function PricingPage() {
                     data-testid={`button-subscribe-${plan.tier}`}
                   >
                     {checkout.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Subscribe
+                    {t('pricing.subscribe')}
                   </Button>
                 ) : (
                   <Button variant="outline" className="w-full" disabled data-testid={`button-subscribe-${plan.tier}`}>
-                    {plan.tier === "free" ? "Current Plan" : "Coming Soon"}
+                    {plan.tier === "free" ? t('pricing.currentPlan') : t('pricing.comingSoon')}
                   </Button>
                 )}
               </CardFooter>
@@ -334,7 +336,7 @@ export default function PricingPage() {
           data-testid="button-toggle-comparison"
           className="text-primary"
         >
-          {showComparison ? "Hide" : "Show"} Full Feature Comparison
+          {showComparison ? t('pricing.hideComparison') : t('pricing.showComparison')}
         </Button>
       </div>
 
