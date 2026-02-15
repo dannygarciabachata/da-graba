@@ -159,6 +159,8 @@ export const apiProviders = pgTable("api_providers", {
   isActive: boolean("is_active").default(true),
   defaultHeaders: jsonb("default_headers").$type<Record<string, string>>(),
   description: text("description"),
+  priority: integer("priority").notNull().default(50),
+  adapterKey: text("adapter_key"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -178,6 +180,10 @@ export const apiEndpoints = pgTable("api_endpoints", {
   conversionType: text("conversion_type"),
   asyncPattern: text("async_pattern").notNull().default("polling"),
   webhookSupported: boolean("webhook_supported").default(false),
+  callbackUrlTemplate: text("callback_url_template"),
+  successStatuses: jsonb("success_statuses").$type<string[]>(),
+  failStatuses: jsonb("fail_statuses").$type<string[]>(),
+  outputMapping: jsonb("output_mapping").$type<Record<string, string>>(),
   isActive: boolean("is_active").default(true),
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow(),
