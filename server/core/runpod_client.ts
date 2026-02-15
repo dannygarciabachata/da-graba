@@ -994,10 +994,17 @@ export function resetGpuSetupState() {
 export async function setupGpuEnvironment(): Promise<{ success: boolean; output: string }> {
   try {
     const kernelId = await getOrCreateKernel();
+    const hfToken = process.env.HF_TOKEN || "";
     const setupScript = `
 import subprocess, sys, os
 
 results = []
+
+# Set HuggingFace token
+hf_token = "${hfToken}"
+if hf_token:
+    os.environ["HF_TOKEN"] = hf_token
+    os.environ["HUGGING_FACE_HUB_TOKEN"] = hf_token
 
 # Fix CUDA environment
 os.environ["LD_LIBRARY_PATH"] = "/usr/local/cuda-12.4/compat:" + os.environ.get("LD_LIBRARY_PATH", "")
@@ -1043,37 +1050,151 @@ except:
     r = subprocess.run(["apt-get", "install", "-y", "-qq", "ffmpeg"], capture_output=True, text=True, timeout=120)
     results.append(f"ffmpeg install: {'OK' if r.returncode == 0 else r.stderr[:100]}")
 
-# Install required Python packages
+# Install required Python packages (use --break-system-packages for system Python)
+pip_cmd = [sys.executable, "-m", "pip", "install", "--quiet", "--break-system-packages"]
+
 packages = {
     "diffusers": "diffusers",
-    "stable_audio_tools": "stable-audio-tools",
+    "accelerate": "accelerate",
     "demucs": "demucs",
     "librosa": "librosa",
     "scipy": "scipy",
 }
 for pkg_import, pkg_pip in packages.items():
-    try:
-        __import__(pkg_import)
+    r = subprocess.run([sys.executable, "-c", f"import {pkg_import}"], capture_output=True, text=True, timeout=10)
+    if r.returncode == 0:
         results.append(f"{pkg_pip}: already installed")
-    except ImportError:
+    else:
         results.append(f"Installing {pkg_pip}...")
-        r = subprocess.run([sys.executable, "-m", "pip", "install", pkg_pip, "--quiet"], 
-                          capture_output=True, text=True, timeout=300)
-        results.append(f"{pkg_pip}: {'OK' if r.returncode == 0 else r.stderr[:100]}")
+        r = subprocess.run(pip_cmd + [pkg_pip], capture_output=True, text=True, timeout=300)
+        if r.returncode != 0:
+            r2 = subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "--no-cache-dir", pkg_pip], 
+                               capture_output=True, text=True, timeout=300)
+            results.append(f"{pkg_pip}: {'OK' if r2.returncode == 0 else r2.stderr[:200]}")
+        else:
+            results.append(f"{pkg_pip}: OK")
 
-# Verify all packages
-for pkg in ["torch", "torchaudio", "diffusers", "transformers", "accelerate", "stable_audio_tools", "demucs", "librosa", "soundfile", "scipy"]:
+# Install stable-audio-tools separately with special handling
+r = subprocess.run([sys.executable, "-c", "import stable_audio_tools"], capture_output=True, text=True, timeout=10)
+if r.returncode == 0:
+    results.append("stable-audio-tools: already installed")
+else:
+    results.append("Installing stable-audio-tools (with --no-cache-dir)...")
+    r = subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "--quiet", "stable-audio-tools"],
+                      capture_output=True, text=True, timeout=300)
+    if r.returncode != 0:
+        results.append(f"  stable-audio-tools pip: FAILED - {r.stderr[:300]}")
+        results.append("  Trying from git...")
+        r2 = subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "--quiet",
+                            "git+https://github.com/Stability-AI/stable-audio-tools.git"],
+                           capture_output=True, text=True, timeout=300)
+        results.append(f"  stable-audio-tools git: {'OK' if r2.returncode == 0 else r2.stderr[:300]}")
+    else:
+        results.append("  stable-audio-tools: OK")
+
+# Install heartlib from local workspace or clone if needed
+heartlib_dir = "/workspace/heartlib"
+heartlib_src = os.path.join(heartlib_dir, "src")
+# Always add src to path for heartlib (works even without pip install)
+if os.path.exists(heartlib_src) and heartlib_src not in sys.path:
+    sys.path.insert(0, heartlib_src)
+try:
+    from heartlib import HeartMuLaGenPipeline
+    results.append("heartlib: OK (imported)")
+except (ImportError, Exception) as e:
+    results.append(f"Installing heartlib... (import error: {e})")
+    if not os.path.exists(os.path.join(heartlib_dir, "pyproject.toml")):
+        results.append("  Cloning heartlib repo...")
+        subprocess.run(["git", "clone", "https://github.com/HeartMuLa/heartlib.git", heartlib_dir], 
+                       capture_output=True, text=True, timeout=120)
+    r = subprocess.run(pip_cmd + ["-e", heartlib_dir], capture_output=True, text=True, timeout=300)
+    results.append(f"  heartlib pip install: {'OK' if r.returncode == 0 else r.stderr[:200]}")
+    if os.path.exists(heartlib_src) and heartlib_src not in sys.path:
+        sys.path.insert(0, heartlib_src)
     try:
-        mod = __import__(pkg)
-        ver = getattr(mod, "__version__", "ok")
-        results.append(f"  {pkg}: {ver}")
-    except ImportError:
+        from heartlib import HeartMuLaGenPipeline
+        results.append("  heartlib import: OK")
+    except Exception as e2:
+        results.append(f"  heartlib import: FAILED - {e2}")
+
+# Download HeartMuLa model checkpoints if not present
+ckpt_dir = "/workspace/heartmula_ckpt"
+mula_dir = os.path.join(ckpt_dir, "HeartMuLa-oss-3B")
+codec_dir = os.path.join(ckpt_dir, "HeartCodec-oss")
+gen_config = os.path.join(ckpt_dir, "gen_config.json")
+
+needs_base = not os.path.exists(gen_config)
+needs_mula = not os.path.exists(mula_dir) or len(os.listdir(mula_dir)) < 2
+needs_codec = not os.path.exists(codec_dir) or len(os.listdir(codec_dir)) < 2
+
+if needs_base or needs_mula or needs_codec:
+    from huggingface_hub import snapshot_download
+    hf_token = os.environ.get("HF_TOKEN", "")
+    dl_kwargs = {"token": hf_token} if hf_token else {}
+    
+    if needs_base:
+        results.append("Downloading HeartMuLa base config...")
+        try:
+            snapshot_download(repo_id="HeartMuLa/HeartMuLaGen", local_dir=ckpt_dir, **dl_kwargs)
+            results.append("  Base config: OK")
+        except Exception as e:
+            results.append(f"  Base config: FAILED - {str(e)[:200]}")
+    
+    if needs_mula:
+        results.append("Downloading HeartMuLa-RL-oss-3B model (~6GB)...")
+        try:
+            snapshot_download(repo_id="HeartMuLa/HeartMuLa-RL-oss-3B-20260123", local_dir=mula_dir, **dl_kwargs)
+            results.append("  HeartMuLa model: OK")
+        except Exception as e:
+            results.append(f"  HeartMuLa model: FAILED - {str(e)[:200]}")
+    
+    if needs_codec:
+        results.append("Downloading HeartCodec model...")
+        try:
+            snapshot_download(repo_id="HeartMuLa/HeartCodec-oss-20260123", local_dir=codec_dir, **dl_kwargs)
+            results.append("  HeartCodec: OK")
+        except Exception as e:
+            results.append(f"  HeartCodec: FAILED - {str(e)[:200]}")
+else:
+    results.append("HeartMuLa checkpoints: already present")
+
+# Verify all packages using subprocess to avoid circular import issues
+results.append("=== Package Verification (subprocess) ===")
+for pkg in ["torch", "torchaudio", "diffusers", "transformers", "accelerate", "stable_audio_tools", "demucs", "librosa", "soundfile", "scipy"]:
+    r = subprocess.run([sys.executable, "-c", f"import {pkg}; print(getattr({pkg}, '__version__', 'ok'))"],
+                      capture_output=True, text=True, timeout=10)
+    if r.returncode == 0:
+        results.append(f"  {pkg}: {r.stdout.strip()}")
+    else:
         results.append(f"  {pkg}: MISSING")
+
+# Verify heartlib separately (needs sys.path)
+r = subprocess.run([sys.executable, "-c", 
+    "import sys; sys.path.insert(0, '/workspace/heartlib/src'); from heartlib import HeartMuLaGenPipeline; print('OK')"],
+    capture_output=True, text=True, timeout=15)
+if r.returncode == 0:
+    results.append(f"  heartlib: {r.stdout.strip()}")
+else:
+    results.append(f"  heartlib: MISSING ({r.stderr.strip()[:100]})")
+
+# Verify checkpoints
+if os.path.exists(gen_config):
+    results.append("  heartmula_ckpt/gen_config.json: PRESENT")
+else:
+    results.append("  heartmula_ckpt/gen_config.json: MISSING")
+if os.path.exists(mula_dir) and len(os.listdir(mula_dir)) >= 2:
+    results.append(f"  HeartMuLa-oss-3B: PRESENT ({len(os.listdir(mula_dir))} files)")
+else:
+    results.append("  HeartMuLa-oss-3B: MISSING")
+if os.path.exists(codec_dir) and len(os.listdir(codec_dir)) >= 2:
+    results.append(f"  HeartCodec-oss: PRESENT ({len(os.listdir(codec_dir))} files)")
+else:
+    results.append("  HeartCodec-oss: MISSING")
 
 print("\\n".join(results))
 `;
 
-    const output = await executeCode(kernelId, setupScript, 300000);
+    const output = await executeCode(kernelId, setupScript, 600000);
     const isTimeout = output === "execution_timeout_submitted" || output === "timeout";
     if (isTimeout) {
       return { success: false, output: "Setup timed out. The installation may still be running on the GPU. Check status again in a few minutes." };

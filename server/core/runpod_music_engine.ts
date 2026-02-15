@@ -49,6 +49,7 @@ function buildMusicGenerationScript(
   return `
 import json
 import os
+import sys
 import time
 import requests
 import subprocess
@@ -280,6 +281,11 @@ import time
 import subprocess
 import requests
 
+# Ensure heartlib src is in path
+heartlib_src = "/workspace/heartlib/src"
+if os.path.exists(heartlib_src) and heartlib_src not in sys.path:
+    sys.path.insert(0, heartlib_src)
+
 song_id = ${songId}
 prompt = "${safePrompt}"
 lyrics_text = """${safeLyrics}"""
@@ -341,9 +347,12 @@ try:
     except ImportError:
         print("[HeartMuLa] Installing heartlib...")
         heartlib_dir = "/workspace/heartlib"
+        heartlib_src = os.path.join(heartlib_dir, "src")
         if not os.path.exists(heartlib_dir):
             subprocess.run(["git", "clone", "https://github.com/HeartMuLa/heartlib.git", heartlib_dir], check=True, timeout=120)
-        subprocess.run([sys.executable, "-m", "pip", "install", "-e", heartlib_dir, "--quiet"], check=True, timeout=300)
+        subprocess.run([sys.executable, "-m", "pip", "install", "-e", heartlib_dir, "--quiet"], capture_output=True, text=True, timeout=300)
+        if os.path.exists(heartlib_src) and heartlib_src not in sys.path:
+            sys.path.insert(0, heartlib_src)
         from heartlib import HeartMuLaGenPipeline
         print("[HeartMuLa] heartlib installed successfully")
 
@@ -825,8 +834,8 @@ export async function runGpuDiagnostics(): Promise<{output: string[], errors: st
     '        result["workspace"]["heartlib_dir"] = sorted(os.listdir(heartlib_dir))[:10]',
     "",
     "try:",
-    '    r = subprocess.run([sys.executable, "-c", "from heartlib import HeartMuLaGenPipeline; print(\'OK\')"], capture_output=True, text=True, timeout=30)',
-    '    result["install_test"]["heartlib_import"] = r.stdout.strip()',
+    '    r = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, \'/workspace/heartlib/src\'); from heartlib import HeartMuLaGenPipeline; print(\'OK\')"], capture_output=True, text=True, timeout=30)',
+    '    result["install_test"]["heartlib_import"] = r.stdout.strip() if r.returncode == 0 else "FAILED"',
     "    if r.returncode != 0:",
     '        result["install_test"]["heartlib_error"] = r.stderr[-500:] if r.stderr else "unknown error"',
     "except Exception as e:",
@@ -845,10 +854,17 @@ export async function runGpuDiagnostics(): Promise<{output: string[], errors: st
   const listRes = await fetchWithTimeout(base + "/api/kernels", { headers }, 15000);
   if (!listRes.ok) return { output: [], errors: ["Cannot reach GPU kernels"], status: "error" };
   const kernels = await listRes.json();
-  if (!Array.isArray(kernels) || kernels.length === 0) {
-    return { output: [], errors: ["No kernels available on GPU"], status: "error" };
+  let kernelId: string;
+  if (Array.isArray(kernels) && kernels.length > 0) {
+    kernelId = kernels[0].id;
+  } else {
+    const createRes = await fetchWithTimeout(base + "/api/kernels", {
+      method: "POST", headers, body: JSON.stringify({ name: "python3" }),
+    }, 15000);
+    if (!createRes.ok) return { output: [], errors: ["Failed to create kernel"], status: "error" };
+    const kernel = await createRes.json();
+    kernelId = kernel.id;
   }
-  const kernelId = kernels[0].id;
 
   const wsProtocol = base.startsWith("https") ? "wss" : "ws";
   const wsBase = base.replace(/^https?/, wsProtocol);

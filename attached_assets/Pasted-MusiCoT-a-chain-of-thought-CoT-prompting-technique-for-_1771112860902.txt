@@ -1,0 +1,402 @@
+MusiCoT, a chain-of-thought (CoT) prompting technique for music generation [pdf] (musicot.github.io)
+51 points by jinqueeny 10 months ago | hide | past | favorite | 63 comments
+
+	
+heeen2 10 months ago | next [–]
+
+I can't comment on the merit of the technical aspects, but I feel like of all the AI generated content, especially AI generated music is as interesting as AI generated memoirs - sort of pointless. It lacks the human element that makes it relatable on an emotional level.
+
+	
+itchyjunk 10 months ago | parent | next [–]
+
+You will be able to detect any AI music from human music because of the ability to detect this human element? Or are you saying you'll retroactively hate a song once you figure out it was AI generated?
+
+	
+lesostep 10 months ago | root | parent | next [–]
+
+Can't speak for the person, who brought topic up, but I can't detect AI music from any human music. That's to say music rules aren't that hard, you can learn a basic structure, a few popular scales and a write a completely soulless peace yourself. Google "Minor Scale", choose any note as a starter, and here you go. You can even add any popular drum pattern. Soulless music written by humans is dime a dozen. It's out there, people just choose to listen to a better music. Scratch human written, there are algorithms based on music theory that could generate light music endlessly.
+But the completely original peaces, written by professionals, aiming to express a feeling, are easily distinguishable from any AI song. AI songs doesn't leave you hanging or waiting, it doesn't know the value of breaking a pattern.
+
+It's Mozart vs Salieri all over again.
+
+
+	
+freejazz 10 months ago | root | parent | prev | next [–]
+
+I think the point is more like, MusicAI might give you a progression from a Bob Dylan song, but it can't give you a Bob Dylan song and it will be easy to discern between the two.
+
+	
+idonotknowwhy 10 months ago | root | parent | prev | next [–]
+
+> Or are you saying you'll retroactively hate a song once you figure out it was AI generated?
+Can't speak for OP, but for me personally, I don't mind AI augmented content, as long as it's done well. Eg. I recently played a game called "Slay the Princess", where they very clearly used Claude to write a lot of the dialogue/narration, but that didn't detract from the experience.
+
+On the other hand, I hate it when I open a youtube video and the script is 100% chatgpt slop.
+
+Music -- a lot of it is already made using software. If I enjoy listening to it, I don't care how it was made.
+
+What about you?
+
+
+	
+timschmidt 10 months ago | parent | prev | next [–]
+
+You can't convince me this isn't art: https://www.youtube.com/shorts/6WWT0Wu2LQg
+
+	
+otabdeveloper4 10 months ago | root | parent | next [–]
+
+Meme/joke mashups is about the only thing generative AI is good at. Like collage but exponentially better executed technically.
+
+	
+timschmidt 10 months ago | root | parent | next [–]
+
+No worries, I'm sure it'll never improve. /s
+
+	
+otabdeveloper4 10 months ago | root | parent | next [–]
+
+It won't. LLMs aren't magic, they're machines built to spec. And their spec is basically "copy-paste with a really good blur filter".
+
+	
+timschmidt 10 months ago | root | parent | next [–]
+
+Whatever helps you sleep at night.
+You just described everything: https://www.youtube.com/watch?v=nJPERZDfyWc
+
+The entire evolutionary process which resulted in us and all of human invention can be summed as copy w/ blur; fight; repeat.
+
+
+	
+otabdeveloper4 10 months ago | root | parent | next [–]
+
+Yes, and people in 18th century used analogies like "humans are just intricate clockwork mechanisms". (Clockwork mechanisms were the most advanced technology at the time.)
+I bet they thought themselves very smart too.
+
+
+	
+timschmidt 10 months ago | root | parent | next [–]
+
+Like I said man, whatever helps you sleep at night. Even if it's a straw man like an unreferenced assertion about unnamed people in the 18th century.
+p.s. which part is the clockwork? the ticker tape with the encoded data, or the part that reads it? whole thing?: https://www.youtube.com/watch?v=TfYf_rPWUdY
+
+edit: Probably none of those since rhibosomes were discovered in the 1950s it seems.
+
+
+	
+timschmidt 10 months ago | root | parent | next [–]
+
+This clockwork lookin' fella seems to have been characterized sometime around 1990: https://www.youtube.com/watch?v=VPSm9gJkPxU
+
+	
+kace91 10 months ago | parent | prev | next [–]
+
+I agree for fully generated work, but I think we’ll eventually reach a sweet spot for assisting tools that retain creativity while removing technical blockers. Things like beat quantization for producers but exponentially better.
+The trick is going to be surfacing content in the sea of bullshit, though.
+
+
+	
+otabdeveloper4 10 months ago | root | parent | next [–]
+
+Generative API won't ever be able to do this because generative AI (by its very design) can only do averaged, common-denominator stuff.
+You need a whole new paradigm of AI/ML stuff to do what you want.
+
+
+	
+kace91 10 months ago | root | parent | next [–]
+
+I’m not sure I get your point. Is it that you can’t make art with tools that produce average results?
+If so I really disagree, achieving great results with average building blocks is both feasible and I’d say usual - you can perfectly imagine a greatly useful and successful app where any given individual block of code is nothing to write home about.
+
+You can get a great solo of jazz piano over a generated battery filler, you can stitch two recordings by having AI generate the microseconds in the gap, you can produce a melody where AI adds human-like timing micro errors in the synth so doesn’t sound like a robotic rendition, you can rap and generate adlibs as a second voice…
+
+
+	
+mbrock 10 months ago | parent | prev | next [–]
+
+sometimes I specifically want to hear music that doesn't have any emotional content
+
+	
+import 10 months ago | root | parent | next [–]
+
+Industrial techno is exactly this
+
+	
+pearlsontheroad 10 months ago | root | parent | next [–]
+
+I think boredom is still an emotion
+
+	
+import 10 months ago | root | parent | next [–]
+
+You can listen to generic health insurance advertisement music maybe?
+
+	
+TheRealQueequeg 10 months ago | parent | prev | next [–]
+
+It's giving Daniel Ek a hard-on. Finally, he can replace those arrogant musicians who demand to be paid for their work. /s
+
+	
+earthnail 10 months ago | root | parent | next [–]
+
+What's giving Daniel Ek a hard-on is that the music industry realised AI isn't a big threat. AI first made Spotify's stock plummet from $300 to under $80, and once the realisation kicked in that the music industry is more about fame (i.e. real people other people want to relate to) than music itself, the stock price climbed up to $600.
+
+	
+LegitShady 10 months ago | root | parent | next [–]
+
+Nah Spotify just realized they could generate their own AI music and pay no one for it.
+
+	
+MSFT_Edging 10 months ago | prev | next [–]
+
+So when is AI going to do useful work no one wants to do instead of doing the art people enjoy doing.
+
+	
+balivandi 10 months ago | parent | next [–]
+
+About 30 years ago in a creative 2-week fit I wrote a mini-symphony. I’ve always envisioned expanding it into a full-length orchestral piece but don’t have the skills to do so.
+I would love to use a music model that could help me do that.
+
+I’m imagining feeding it my score and then iterating with it to create the final piece I’ve had stuck in my head all this time.
+
+
+	
+eman2d 10 months ago | root | parent | next [–]
+
+https://projectsam.com/libraries/the-free-orchestra play around with something like this, and you'll be surprised with what you can come up with. Modern DAW's have given me a ton of freedom to create all types of music.
+
+	
+larodi 10 months ago | parent | prev | next [–]
+
+Nobody needs this thing indeed. Nice to have, but out of 100 producers I know only 1 employing end-to-end AI in his process. People love to mold and generally touch what they creatively pursue. Even most of the elevator music (so called vapourwave) was and is being done by humans.
+
+	
+MSFT_Edging 10 months ago | root | parent | next [–]
+
+Odd how you refer to vaporwave as elevator music. The original artists of the genre very lovingly remixed classic city pop from the 80s and 90s, and overlayed their own music on top.
+I think you might be referring to "Muzak", a particular brand of background music that would sell to businesses to play in stores and elevators.
+
+
+	
+saltwatercowboy 10 months ago | root | parent | prev | next [–]
+
+You're thinking of muzak. Vaporwave was a pastiche and explored/deconstructed that sound intentionally as a form of artistic expression.
+
+	
+joenot443 10 months ago | parent | prev | next [–]
+
+Yesterday ChatGPT saved me a good hour in figuring out my taxes, so with that saved time I decided to play some piano.
+In my experience, today's AI is more than thrilled to do your extra busy work, one just needs to learn how to ask.
+
+
+	
+MSFT_Edging 10 months ago | root | parent | next [–]
+
+Good use but I do hope you don't hear back from the IRS if it hallucinated.
+
+	
+thunky 10 months ago | parent | prev | next [–]
+
+Agree, but many more people listen to music than create it. And people that enjoy creating art will still do it regardless.
+A better example of the problem imo is the robot advertised to watch your kids so you can work.
+
+
+	
+MSFT_Edging 10 months ago | root | parent | next [–]
+
+I'd like it if people who create art could also survive without spending most of their time in a menial job.
+Your example is good though, "why raise my children when a robot can do it for me, so I can survive using my energy for someone else".
+
+
+	
+jarbus 10 months ago | root | parent | prev | next [–]
+
+> And people that enjoy creating art will still do it regardless.
+Some people will, but for me, I could never justify spending time and money to learn something an AI could do better than me. I'd constantly feel like I'm wasting my time.
+
+
+	
+epiccoleman 10 months ago | root | parent | next [–]
+
+That seems silly. I spend time and money to get better at guitar even though there are countless pro (and amateur) musicians who can do it better than me.
+
+	
+jarbus 10 months ago | root | parent | next [–]
+
+Yeah, but you don't have access to those people all the time. If I have a free tool on my laptop that can do everything better than me at my command, it feels silly to spend the time to master the instrument.
+
+	
+itchyjunk 10 months ago | root | parent | prev | next [–]
+
+People still calligraph even though we have printer. People will actively spend money in a hobby they like. It's totally fair that you personally might not want to do it anymore if AI can, but I think parent was saying other people will continue to do it if they enjoy it. There are tons of people who create copy right free music anyways. Talking about those type of people. :)
+
+	
+jarbus 10 months ago | root | parent | next [–]
+
+I agree, but there's probably a lot of people who would love calligraphy who never even try it out, because it seems useless.
+
+	
+rTX5CMRXIfFG 10 months ago | root | parent | prev | next [–]
+
+You will be able to once you change your success indicator from profit to the simple joy of learning and making
+
+	
+jarbus 10 months ago | root | parent | next [–]
+
+I don't even care about profit. My success indicator is "making something I couldn't make before". Since AI can do it, I can't justify learning an instrument, even if I might enjoy the process a bit.
+
+	
+MSFT_Edging 10 months ago | root | parent | prev | next [–]
+
+I think this sentiment is actually incredibly sad and more or less the crux of the matter.
+AI is a tool intended on increasing efficiency. The way you describe the act of making art/crafting things seems to come through the lens of efficiency, where you're wasting your time in the struggle of improvement.
+
+The time spent struggling is not time wasted. The struggle is the single most important aspect of learning and improving. Its how lessons learned reach the deep subconscious as if you're walking or writing with a pen. No good musician, painter, sculptor, systems engineer, etc became that way without that deep struggle. If someone says they never struggled, be wary of them.
+
+If we round off every corner in the name of efficiency and the bottom line, all we're left with is toil. We don't benefit from that toil, the people who push for greater and greater efficiency do. No matter how efficient we get, the excesses produced by the efficiencies will be guarded. Food thrown away, excess milk dumped in the dirt, crops burned, profits stowed away.
+
+The AI can only exist via previous struggle. The music produced by AI will only ever be a shadow of Human struggle. It will never truly exceed that struggle. A series of vectors in memory on a graphics card can't know the feeling of a beat as it resounds in ones chest, or the resolution of a chord as the bridge turns around. It can't know the sympathetic emotions of a story told in lyrics. It can't know the nostalgia evoked by a shadow in a painting, or the familiarity of an expression in a face.
+
+Only we as humans can create this, and its sad and disgusting to see these tools used to degrade the human experience for an ounce of profit by people who refuse to allow themselves to understand the struggle of creating art.
+
+
+	
+jarbus 10 months ago | root | parent | next [–]
+
+I appreciate the in-depth response, and I agree for the most part; the issue is, I can choose to struggle on something more practical. I'd get less fulfillment, but in today's economy, it's a far safer option, and I'd still learn and grow.
+
+	
+rTX5CMRXIfFG 10 months ago | root | parent | prev | next [–]
+
+> many more people listen to music than create it
+Exactly why we ask what’s the point of the tool then?
+
+Like I get it, “helps experienced creators become even better yadda yadda” but I’m directly refuting the argument re: target market
+
+
+	
+postalrat 10 months ago | parent | prev | next [–]
+
+Where do I find these people who want to create music for me for pennies?
+
+	
+MSFT_Edging 10 months ago | root | parent | next [–]
+
+Perhaps your issue is you devalue music so far that you believe its worth pennies while whatever you're making seems to be worth the money.
+
+	
+gnabgib 10 months ago | prev | next [–]
+
+Do you think you're, perhaps over doing self-the promotion?
+> Please don't use HN primarily for promotion. It's ok to post your own stuff part of the time, but the primary use of the site should be for curiosity.
+
+https://news.ycombinator.com/newsguidelines.html
+
+(4 subs, 2 weeks) https://news.ycombinator.com/from?site=musicot.github.io
+
+(3 subs, 1 week/5 subs, 1 month) https://news.ycombinator.com/from?site=github.com%2Finclusio...
+
+(3 subs 1 week) https://news.ycombinator.com/from?site=mainfunc.ai
+
+(2 subs, 2 weeks) https://news.ycombinator.com/from?site=mureka.ai
+
+(4 subs, 3 months) https://news.ycombinator.com/from?site=trae.ai
+
+(approaching ∞ subs) https://news.ycombinator.com/from?site=pingcap.com
+
+
+	
+Palmik 10 months ago | parent | next [–]
+
+I did not see this paper on the front page before. It seems like a genuine contribution.
+And do you think it's better or worse than this: https://hn.algolia.com/?dateRange=pastMonth&page=0&prefix=tr... -- posting a link to their website >2 a day, in 23% of their posts/comments.
+
+
+	
+laborcontract 10 months ago | root | parent | next [–]
+
+That's pretty amusing. I'm all for personal reposts as well as self simonw's blog-linking so long as they're relevant.
+
+	
+itchyjunk 10 months ago | parent | prev | next [–]
+
+It doesn't seem to be the same content being pushed each time. Someone posting their book or the same article once a week vs posting new content each week is not the same to me. To me, it's not obvious that it's against the rule. Especially when the content seems to be engaging enough for it to make to FP.
+
+	
+jinqueeny 10 months ago | parent | prev | next [–]
+
+Sorry. I will restrain myself.
+
+	
+1oooqooq 10 months ago | parent | prev | next [–]
+
+ai is not going to push itself... oh wait.
+
+	
+zaptrem 10 months ago | prev | next [–]
+
+I work on music models, and this is a very cool paper! There are no papers that go into depth on how token-based AR music models (that aren't absurdly inefficient like Yue) are trained. I'm particularly interested in your semantic tokens. I tried reproducing the CTC loss part but my curve was very spikey and didn't seem to actually figure out any characters. The semantic tokens gave great acoustic info but gibberish lyrics. What did your CTC loss curves look like and did you see anything similar at any point?
+As a semi-aside, I feel like semantic tokens in general may end up being a bottleneck on how interesting model outputs can be.
+
+
+	
+minihat 10 months ago | parent | next [–]
+
+How is it possible that text-to-score/notation is lagging text-to-audio in music generation? Generating audio seems wildly more complicated!
+Since you are working in this space, I wonder if you could comment on my pet theories for why this is true: 1. Not enough training data (scores not available for most songs), or 2. Difficulty with tokenization of musical notation vs. audio
+
+
+	
+zaptrem 10 months ago | root | parent | next [–]
+
+Mostly 1 I think. There are a few open source efforts doing what you mentioned https://github.com/EleutherAI/aria
+
+	
+nprateem 10 months ago | root | parent | prev | next [–]
+
+3. Smaller market so fewer people trying to solve it
+
+	
+balivandi 10 months ago | parent | prev | next [–]
+
+Can you recommend any music models that can expand a composition I wrote into a full length symphony?
+
+	
+AIPedant 10 months ago | prev | next [–]
+
+Were there any examples of "de novo" music generation using this? The only one I could find on the website was translating the vocals of an existing song, couldn't find any AI compositions.
+
+	
+yxchng 10 months ago | prev | next [–]
+
+This company has a track record of cheating on benchmark by training on test datasets. Take it with pinch of salt and try the model yourself.
+
+	
+bilekas 10 months ago | parent | next [–]
+
+> This company has a track record of cheating on benchmark by training on test datasets.
+That's a really bold statement to make without any references, could you by any chance add some references for us not in the know ?
+
+
+	
+yxchng 10 months ago | root | parent | next [–]
+
+Mostly anecdotal and also based on the large gap between benchmark performance and actual performance on personal use
+
+	
+earthnail 10 months ago | root | parent | next [–]
+
+I think saying "track record" is then factually wrong. Merriam Webster defines track record as: "a record of past performance often taken as an indicator of likely future performance". In that case, you should be able to point to the record.
+I assume you will still stand behind the essence of your comment. In that case, it would be better to say "Based on my experience on playing with their models, I have strong reasons to believe that they continuously cheat on benchmarks by training on test datasets." You can then also add that this maps with what you hear from others in the field.
+
+
+	
+itchyjunk 10 months ago | root | parent | next [–]
+
+Hmm, even if the model performed poorly on real world task vs benchmark, it doesn't necessarily imply they train on the benchmarks themselves, right? They did the train, test split properly. Didn't train on the test. But the benchmark itself was bad at representing real world tasks? Is so, seems pretty wild to accuse a company of training on test data.. maybe this is "vibe commenting" and I'm just out of loop.
+
+	
+otabdeveloper4 10 months ago | parent | prev | next [–]
+
+> This company has a track record of cheating on benchmark by training on test datasets.
+That's like all of them, bro. Don't hate the player, hate the game.
