@@ -173,10 +173,9 @@ function AdminDashboard({ role }: { role: string }) {
 
 function DashboardTab() {
   const { data: stats, isLoading } = useAdminStats();
+  const { t } = useTranslation();
 
   if (isLoading) return <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>;
-
-  const { t } = useTranslation();
 
   const statCards = [
     { label: t('admin.stats.totalUsers'), value: stats?.totalUsers || 0, icon: Users, color: "text-blue-400" },
