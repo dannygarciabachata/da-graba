@@ -1,0 +1,11 @@
+{
+    "dataset_type": "audio_dir",
+    "datasets": [
+        {
+            "id": "dgb_bachata_boleros",
+            "path": "/workspace/dgb-dataset/04_dataset",
+            "custom_metadata_module": "/workspace/training/metadata_loader.py"
+        }
+    ],
+    "random_crop": false
+}
