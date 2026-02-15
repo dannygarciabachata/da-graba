@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import dgbLogo from "@assets/Dgb_1771188880013.png";
 import {
   Sidebar,
   SidebarContent,
@@ -69,15 +70,7 @@ export function AppSidebar() {
           onClick={() => setLocation("/create")}
           data-testid="link-sidebar-logo"
         >
-          <div className="bg-gradient-to-tr from-primary to-blue-600 p-1.5 rounded-lg">
-            <Disc className="h-5 w-5 text-white animate-spin-slow" />
-          </div>
-          <div>
-            <span className="text-base font-bold tracking-tight">DGB Audio</span>
-            <span className="text-primary text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 ml-1.5">
-              PRO
-            </span>
-          </div>
+          <img src={dgbLogo} alt="DGB Studio" className="h-10 w-auto" />
         </div>
       </SidebarHeader>
 
