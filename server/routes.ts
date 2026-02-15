@@ -356,7 +356,7 @@ export async function registerRoutes(
             const { submitRunPodMusicGeneration, canUseRunPodMusic } = await import("./core/runpod_music_engine");
             if (canUseRunPodMusic()) {
               await storage.updateSongStatus(songId, "processing", undefined, "Switching to instrumental engine...");
-              const saoResult = await submitRunPodMusicGeneration(songId, song.prompt || "", 30);
+              const saoResult = await submitRunPodMusicGeneration(songId, song.prompt || "", song.duration || 180);
               if (saoResult.success) {
                 await storage.updateSongTaskId(songId, saoResult.jobId);
                 console.log(`[Webhook] SAO fallback submitted for song ${songId}: ${saoResult.jobId}`);

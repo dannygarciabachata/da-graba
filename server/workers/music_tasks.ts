@@ -177,7 +177,7 @@ export async function processMusicGeneration(
       if (heartResult.success) {
         await storage.updateSongTaskId(songId, heartResult.jobId);
         console.log(`[Worker] HeartMuLa job ${heartResult.jobId} submitted for song ${songId}`);
-        startRunPodTimeout(songId, 600000);
+        startRunPodTimeout(songId, 300000);
         generateSongCoverImage(songId, safePrompt, style).catch(() => {});
         return;
       } else {
@@ -259,8 +259,35 @@ export function startRunPodTimeout(songId: number, timeoutMs: number) {
     try {
       const song = await storage.getSong(songId);
       if (song && song.status === "processing") {
-        console.log(`[RunPod Music] Song ${songId} timed out after ${timeoutMs / 1000}s`);
-        await storage.updateSongStatus(songId, "failed", undefined, "Generation timed out - RunPod may still be processing");
+        console.log(`[RunPod Music] Song ${songId} timed out after ${timeoutMs / 1000}s, attempting API fallback...`);
+
+        const useGeneric = await hasProviderForOperation("music_generation");
+        if (useGeneric) {
+          try {
+            const prompt = song.prompt || "";
+            const webhookUrl = getWebhookUrl();
+            const submitResult = await submitGenericJob("music_generation", {
+              prompt,
+              music_style: song.genre || "Bachata",
+              output_length: 180,
+              make_instrumental: false,
+              webhook_url: webhookUrl,
+            });
+            if (submitResult.taskId) {
+              await storage.updateSongTaskId(songId, submitResult.taskId);
+              pendingTaskMap.set(submitResult.taskId, songId);
+              await storage.updateSongStatus(songId, "processing", undefined, "GPU timed out, trying backup engine...");
+              console.log(`[RunPod Music] Fallback API submitted for song ${songId}: ${submitResult.taskId}`);
+              startFallbackPoller(songId, submitResult.taskId, true, submitResult.endpointId, { prompt, genre: song.genre || "Bachata" });
+              pendingRunPodSongs.delete(songId);
+              return;
+            }
+          } catch (fallbackErr: any) {
+            console.log(`[RunPod Music] API fallback failed: ${fallbackErr.message}`);
+          }
+        }
+
+        await storage.updateSongStatus(songId, "failed", undefined, "La generación tardó demasiado. Intenta de nuevo.");
       }
     } catch (err: any) {
       console.error(`[RunPod Music] Timeout check error for song ${songId}:`, err.message);

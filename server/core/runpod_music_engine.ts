@@ -108,24 +108,34 @@ def send_result(audio_file, gen_time, device, sample_rate):
     }
     
     print(f"[SAO Music] Sending webhook ({file_size / 1024 / 1024:.1f}MB, {'mp3' if is_mp3 else 'wav'})...")
-    resp = requests.post(
-        webhook_url,
-        json=result,
-        timeout=120,
-        headers={"Content-Type": "application/json"}
-    )
-    print(f"[SAO Music] Webhook response: {resp.status_code}")
+    for attempt in range(3):
+        try:
+            resp = requests.post(webhook_url, json=result, timeout=120, headers={"Content-Type": "application/json"})
+            print(f"[SAO Music] Webhook response: {resp.status_code}")
+            if resp.status_code < 400:
+                return
+        except Exception as e:
+            print(f"[SAO Music] Webhook attempt {attempt+1} failed: {e}")
+        if attempt < 2:
+            time.sleep(5)
+    print("[SAO Music] WARNING: All webhook attempts failed, audio saved locally at: " + audio_file)
 
 def send_error(error_msg):
-    try:
-        requests.post(webhook_url, json={
-            "songId": song_id,
-            "status": "failed",
-            "error": error_msg,
-            "engine": "sao"
-        }, timeout=30)
-    except Exception as we:
-        print(f"[SAO Music] Error webhook failed: {we}")
+    for attempt in range(3):
+        try:
+            resp = requests.post(webhook_url, json={
+                "songId": song_id,
+                "status": "failed",
+                "error": error_msg,
+                "engine": "sao"
+            }, timeout=30)
+            if resp.status_code < 400:
+                return
+        except Exception as we:
+            print(f"[SAO Music] Error webhook attempt {attempt+1} failed: {we}")
+        if attempt < 2:
+            time.sleep(3)
+    print(f"[SAO Music] WARNING: Could not report error to server: {error_msg}")
 
 try:
     import torch
@@ -325,19 +335,34 @@ def send_result(audio_file, gen_time, device):
         "engine": "heartmula"
     }
     print(f"[HeartMuLa] Sending webhook ({file_size / 1024 / 1024:.1f}MB)...")
-    resp = requests.post(webhook_url, json=result, timeout=120, headers={"Content-Type": "application/json"})
-    print(f"[HeartMuLa] Webhook response: {resp.status_code}")
+    for attempt in range(3):
+        try:
+            resp = requests.post(webhook_url, json=result, timeout=120, headers={"Content-Type": "application/json"})
+            print(f"[HeartMuLa] Webhook response: {resp.status_code}")
+            if resp.status_code < 400:
+                return
+        except Exception as e:
+            print(f"[HeartMuLa] Webhook attempt {attempt+1} failed: {e}")
+        if attempt < 2:
+            time.sleep(5)
+    print("[HeartMuLa] WARNING: All webhook attempts failed, audio saved locally at: " + audio_file)
 
 def send_error(error_msg):
-    try:
-        requests.post(webhook_url, json={
-            "songId": song_id,
-            "status": "failed",
-            "error": error_msg,
-            "engine": "heartmula"
-        }, timeout=30)
-    except Exception as we:
-        print(f"[HeartMuLa] Error webhook failed: {we}")
+    for attempt in range(3):
+        try:
+            resp = requests.post(webhook_url, json={
+                "songId": song_id,
+                "status": "failed",
+                "error": error_msg,
+                "engine": "heartmula"
+            }, timeout=30)
+            if resp.status_code < 400:
+                return
+        except Exception as we:
+            print(f"[HeartMuLa] Error webhook attempt {attempt+1} failed: {we}")
+        if attempt < 2:
+            time.sleep(3)
+    print(f"[HeartMuLa] WARNING: Could not report error to server: {error_msg}")
 
 try:
     # === STEP 1: Ensure heartlib is installed ===
@@ -568,8 +593,8 @@ export async function submitHeartMuLaGeneration(
 
           if (msg.msg_type === "stream") {
             const text = msg.content?.text || "";
-            if (text.includes("[HeartMuLa]")) {
-              console.log(`[HeartMuLa GPU] ${text.trim()}`);
+            if (text.trim()) {
+              console.log(`[HeartMuLa GPU] ${text.trim().substring(0, 500)}`);
             }
           }
 
