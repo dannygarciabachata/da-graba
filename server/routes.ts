@@ -283,8 +283,11 @@ export async function registerRoutes(
     const { lyrics, genre, description } = req.body;
     if (!lyrics && !description) return res.status(400).json({ message: "Lyrics or description required" });
     try {
-      const openai = (await import("openai")).default;
-      const client = new openai();
+      const OpenAI = (await import("openai")).default;
+      const client = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
       const response = await client.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
@@ -308,8 +311,11 @@ export async function registerRoutes(
     const { prompt, songId } = req.body;
     if (!prompt) return res.status(400).json({ message: "Prompt is required" });
     try {
-      const openai = (await import("openai")).default;
-      const client = new openai();
+      const OpenAI = (await import("openai")).default;
+      const client = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
       const response = await client.images.generate({
         model: "dall-e-3",
         prompt: `Album cover art: ${prompt}. High quality, professional album artwork, square format, visually striking.`,
@@ -317,7 +323,7 @@ export async function registerRoutes(
         size: "1024x1024",
         quality: "standard",
       });
-      const imageUrl = response.data[0]?.url;
+      const imageUrl = response.data?.[0]?.url;
       if (!imageUrl) throw new Error("No image generated");
       if (songId) {
         const fs = await import("fs/promises");
