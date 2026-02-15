@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useGenerateSong, useSongs } from "@/hooks/use-songs";
 import { useStyleKits } from "@/hooks/use-style-kits";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Loader2,
   Sparkles,
@@ -30,6 +37,10 @@ import {
   Info,
   User,
   Copyright,
+  Paperclip,
+  ArrowDown,
+  Wrench,
+  RefreshCw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -82,12 +93,6 @@ const PROMPT_SUGGESTIONS = [
   "Acoustic folk song about road trips",
 ];
 
-const CREATION_MODES = [
-  { id: "song", label: "Create song", icon: Music, active: true },
-  { id: "sound", label: "Create Sound", icon: FileAudio, active: true },
-  { id: "speak", label: "Speak text", icon: Mic, active: true },
-];
-
 const TTS_LANGUAGES = [
   { value: "en", label: "English" },
   { value: "es", label: "Spanish" },
@@ -102,11 +107,14 @@ const TTS_LANGUAGES = [
   { value: "hi", label: "Hindi" },
 ];
 
+type CreationMode = "song" | "sound" | "speak";
+
 export default function CreatePage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [currentSong, setCurrentSong] = useState<any>(null);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [prompt, setPrompt] = useState("");
   const [selectedGenre, setSelectedGenre] = useState("Bachata");
@@ -117,10 +125,11 @@ export default function CreatePage() {
   const [isInstrumental, setIsInstrumental] = useState(false);
   const [songDuration, setSongDuration] = useState(180);
   const [lyrics, setLyrics] = useState("");
-  const [activeCreationMode, setActiveCreationMode] = useState("song");
+  const [activeCreationMode, setActiveCreationMode] = useState<CreationMode>("song");
   const [selectedStyleKit, setSelectedStyleKit] = useState<number | undefined>(undefined);
   const [artistName, setArtistName] = useState("");
   const [copyrightHolder, setCopyrightHolder] = useState("DGB Studio");
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
 
   const [soundPrompt, setSoundPrompt] = useState("");
   const [soundDuration, setSoundDuration] = useState([5]);
@@ -134,6 +143,29 @@ export default function CreatePage() {
   const { mutate: deleteSong } = useDeleteSong();
   const { data: styleKits } = useStyleKits();
 
+  const { mutate: uploadSample, isPending: isUploadPending } = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("audio", file);
+      formData.append("name", file.name.replace(/\.[^.]+$/, ""));
+      const res = await fetch("/api/samples/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/samples"] });
+      toast({ title: "File Uploaded", description: "Your audio file has been uploaded to Sample Lab." });
+      setAttachedFile(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+    },
+  });
+
   const { mutate: generateSound, isPending: isSoundPending } = useMutation({
     mutationFn: async (data: { prompt: string; duration: number }) => {
       const res = await apiRequest("POST", "/api/audio/sound-generator", data);
@@ -141,18 +173,11 @@ export default function CreatePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/songs"] });
-      toast({
-        title: "Sound Effect Created",
-        description: "Your sound effect is being generated.",
-      });
+      toast({ title: "Sound Effect Created", description: "Your sound effect is being generated." });
       setSoundPrompt("");
     },
     onError: (error: Error) => {
-      toast({
-        title: "Sound Generation Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Sound Generation Failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -163,18 +188,11 @@ export default function CreatePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/songs"] });
-      toast({
-        title: "Speech Generated",
-        description: "Your text-to-speech audio is being created.",
-      });
+      toast({ title: "Speech Generated", description: "Your text-to-speech audio is being created." });
       setTtsText("");
     },
     onError: (error: Error) => {
-      toast({
-        title: "TTS Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "TTS Failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -265,16 +283,56 @@ export default function CreatePage() {
     setPrompt(random);
   };
 
-  const isAnyPending = isPending || isSoundPending || isTTSPending;
+  const handleFileAttach = () => {
+    fileInputRef.current?.click();
+  };
 
-  const canCreate =
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAttachedFile(file);
+      toast({ title: "File Attached", description: `${file.name} ready to upload.` });
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const isAnyPending = isPending || isSoundPending || isTTSPending || isUploadPending;
+
+  const hasPromptContent =
     activeCreationMode === "song"
       ? !!(prompt.trim() || title.trim() || lyrics.trim())
       : activeCreationMode === "sound"
       ? !!soundPrompt.trim()
       : !!ttsText.trim();
 
+  const canCreate = hasPromptContent || !!attachedFile;
+
+  const handleSubmit = () => {
+    if (attachedFile) {
+      uploadSample(attachedFile);
+    }
+    if (hasPromptContent) {
+      if (activeCreationMode === "song") handleGenerate();
+      else if (activeCreationMode === "sound") handleSoundGenerate();
+      else if (activeCreationMode === "speak") handleTTSGenerate();
+    }
+  };
+
+  const modeLabels: Record<CreationMode, string> = {
+    song: "Create song",
+    sound: "Create Sound",
+    speak: "Speak text",
+  };
+
+  const modeIcons: Record<CreationMode, typeof Music> = {
+    song: Music,
+    sound: FileAudio,
+    speak: Mic,
+  };
+
   if (!user) return null;
+
+  const ActiveIcon = modeIcons[activeCreationMode];
 
   return (
     <ScrollArea className="h-full">
@@ -294,392 +352,51 @@ export default function CreatePage() {
             </p>
           </motion.div>
 
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3 flex-wrap">
-              {CREATION_MODES.map((m) => (
-                <motion.div
-                  key={m.id}
-                  whileTap={{ scale: 0.97 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                >
-                  <Badge
-                    variant={activeCreationMode === m.id ? "default" : "outline"}
-                    className={cn(
-                      "cursor-pointer text-xs gap-1.5 py-1 transition-all duration-200",
-                      activeCreationMode === m.id
-                        ? "bg-primary/15 text-primary border-primary/30"
-                        : "text-muted-foreground border-white/10"
-                    )}
-                    onClick={() => setActiveCreationMode(m.id)}
-                    data-testid={`badge-mode-${m.id}`}
-                  >
-                    <m.icon className="h-3 w-3" />
-                    {m.label}
-                  </Badge>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          <AnimatePresence mode="wait">
-            {activeCreationMode === "song" && (
-              <motion.div
-                key="song-form"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="mb-6 space-y-3">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <Card className="border-white/10 bg-card overflow-hidden mb-6">
+              <div className="p-4">
+                {activeCreationMode === "song" && (
                   <div className="relative">
                     <Textarea
-                      placeholder={`${selectedGenre} with vocals about...`}
+                      placeholder={`Describe your ${selectedGenre} track...`}
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
-                      className="bg-card border-white/10 focus:border-primary/50 focus:ring-primary/20 min-h-[100px] resize-none text-base"
+                      className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[100px] resize-none text-base p-0 placeholder:text-muted-foreground/50"
                       data-testid="input-prompt"
                       maxLength={500}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                          handleGenerate();
+                          handleSubmit();
                         }
                       }}
                     />
-                    <span className="absolute bottom-2 right-3 text-[10px] text-muted-foreground/60" data-testid="text-prompt-charcount">
+                    <span className="absolute bottom-0 right-0 text-[10px] text-muted-foreground/40" data-testid="text-prompt-charcount">
                       {prompt.length}/500
                     </span>
                   </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <Button
-                      variant="ghost"
-                      className="text-muted-foreground gap-1.5"
-                      onClick={handleRandomPrompt}
-                      data-testid="button-random-prompt"
-                    >
-                      <Dices className="h-4 w-4" />
-                      <span className="text-xs">Random</span>
-                    </Button>
-                    <Button
-                      onClick={handleGenerate}
-                      disabled={isPending || (!prompt.trim() && !title.trim() && !lyrics.trim())}
-                      className={cn(
-                        "bg-primary text-black gap-2 transition-all duration-300",
-                        canCreate && !isPending && "shadow-[0_0_16px_rgba(0,243,255,0.3)]"
-                      )}
-                      data-testid="button-submit"
-                    >
-                      {isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4" />
-                          <span>Create</span>
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
+                )}
 
-                <div className="flex items-center gap-2 mb-6 flex-wrap">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() => setShowProControls(!showProControls)}
-                    data-testid="button-pro-controls"
-                  >
-                    <SlidersHorizontal className="h-3.5 w-3.5" />
-                    Pro controls
-                    {showProControls ? (
-                      <ChevronDown className="h-3 w-3" />
-                    ) : (
-                      <ChevronRight className="h-3 w-3" />
-                    )}
-                  </Button>
-                  <Badge
-                    variant={isInstrumental ? "default" : "outline"}
-                    className={cn(
-                      "cursor-pointer text-xs gap-1 toggle-elevate",
-                      isInstrumental && "toggle-elevated bg-primary/20 text-primary border-primary/30"
-                    )}
-                    onClick={() => setIsInstrumental(!isInstrumental)}
-                    data-testid="badge-instrumental"
-                  >
-                    <Music className="h-3 w-3" />
-                    Instrumental
-                  </Badge>
-                  <Badge
-                    variant={!isInstrumental ? "default" : "outline"}
-                    className={cn(
-                      "cursor-pointer text-xs gap-1 toggle-elevate",
-                      !isInstrumental && "toggle-elevated bg-primary/20 text-primary border-primary/30"
-                    )}
-                    onClick={() => setIsInstrumental(false)}
-                    data-testid="badge-lyrics-mode"
-                  >
-                    <Mic className="h-3 w-3" />
-                    Lyrics
-                  </Badge>
-                </div>
-
-                <AnimatePresence>
-                  {showProControls && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden mb-6"
-                    >
-                      <Card className="p-4 space-y-4 border-white/5">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            Title
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="h-3 w-3" />
-                              </TooltipTrigger>
-                              <TooltipContent>Optional song title</TooltipContent>
-                            </Tooltip>
-                          </Label>
-                          <Input
-                            placeholder="Enter song title (optional)"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            className="bg-background border-white/10 focus:border-primary/50 text-sm"
-                            data-testid="input-title"
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            <User className="h-3 w-3" />
-                            Artist Name
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="h-3 w-3" />
-                              </TooltipTrigger>
-                              <TooltipContent>Your artist or stage name for credits</TooltipContent>
-                            </Tooltip>
-                          </Label>
-                          <Input
-                            placeholder="Your artist/stage name"
-                            value={artistName}
-                            onChange={(e) => setArtistName(e.target.value)}
-                            className="bg-background border-white/10 focus:border-primary/50 text-sm"
-                            data-testid="input-artist-name"
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            <Copyright className="h-3 w-3" />
-                            Copyright Holder
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="h-3 w-3" />
-                              </TooltipTrigger>
-                              <TooltipContent>Entity or person who owns the copyright</TooltipContent>
-                            </Tooltip>
-                          </Label>
-                          <Input
-                            placeholder="DGB Studio"
-                            value={copyrightHolder}
-                            onChange={(e) => setCopyrightHolder(e.target.value)}
-                            className="bg-background border-white/10 focus:border-primary/50 text-sm"
-                            data-testid="input-copyright-holder"
-                          />
-                        </div>
-
-                        {styleKits && styleKits.length > 0 && (
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                              Style Kit
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <Info className="h-3 w-3" />
-                                </TooltipTrigger>
-                                <TooltipContent>Use a custom instrument kit to define your song's style</TooltipContent>
-                              </Tooltip>
-                            </Label>
-                            <select
-                              className="w-full rounded-md border border-white/10 bg-background px-3 py-2 text-sm"
-                              value={selectedStyleKit || ""}
-                              onChange={(e) => setSelectedStyleKit(e.target.value ? Number(e.target.value) : undefined)}
-                              data-testid="select-style-kit"
-                            >
-                              <option value="">None (default)</option>
-                              {styleKits.map((kit) => (
-                                <option key={kit.id} value={kit.id}>
-                                  {kit.name} ({kit.genre.replace(/_/g, " ")}) — {kit.instruments.length} instruments
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            <Clock className="h-3 w-3" />
-                            Song duration
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="h-3 w-3" />
-                              </TooltipTrigger>
-                              <TooltipContent>Length of the generated song in seconds</TooltipContent>
-                            </Tooltip>
-                          </Label>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {[60, 120, 180, 240, 300].map((d) => (
-                              <Badge
-                                key={d}
-                                variant={songDuration === d ? "default" : "outline"}
-                                className={cn(
-                                  "cursor-pointer text-xs py-1 px-2.5",
-                                  songDuration === d
-                                    ? "bg-primary/15 text-primary border-primary/30"
-                                    : "text-muted-foreground border-white/10"
-                                )}
-                                onClick={() => setSongDuration(d)}
-                                data-testid={`badge-duration-${d}`}
-                              >
-                                {d >= 60 ? `${Math.floor(d / 60)}:${String(d % 60).padStart(2, "0")}` : `${d}s`}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            Prompt intensity
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="h-3 w-3" />
-                              </TooltipTrigger>
-                              <TooltipContent>How closely the AI follows your prompt</TooltipContent>
-                            </Tooltip>
-                          </Label>
-                          <div className="flex items-center gap-3">
-                            <Slider
-                              value={promptIntensity}
-                              onValueChange={setPromptIntensity}
-                              min={0}
-                              max={100}
-                              step={1}
-                              className="flex-1"
-                              data-testid="slider-prompt-intensity"
-                            />
-                            <span className="text-xs font-mono text-muted-foreground w-8 text-right">{promptIntensity[0]}</span>
-                          </div>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            Lyrics intensity
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="h-3 w-3" />
-                              </TooltipTrigger>
-                              <TooltipContent>Controls creativity vs. precision in lyrics</TooltipContent>
-                            </Tooltip>
-                          </Label>
-                          <div className="flex items-center gap-3">
-                            <Slider
-                              value={lyricsIntensity}
-                              onValueChange={setLyricsIntensity}
-                              min={0}
-                              max={100}
-                              step={1}
-                              className="flex-1"
-                              data-testid="slider-lyrics-intensity"
-                            />
-                            <span className="text-xs font-mono text-muted-foreground w-8 text-right">{lyricsIntensity[0]}</span>
-                          </div>
-                        </div>
-
-                        {!isInstrumental && (
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground">Custom lyrics</Label>
-                            <div className="relative">
-                              <Textarea
-                                placeholder={"[Verse]\nWrite your lyrics here...\n\n[Chorus]\nYour chorus..."}
-                                value={lyrics}
-                                onChange={(e) => setLyrics(e.target.value)}
-                                className="bg-background border-white/10 focus:border-primary/50 min-h-[80px] resize-none text-sm font-mono"
-                                data-testid="input-lyrics"
-                                maxLength={3000}
-                              />
-                              <span className="absolute bottom-2 right-3 text-[10px] text-muted-foreground/60" data-testid="text-lyrics-charcount">
-                                {lyrics.length}/3000
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </Card>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div className="mb-8">
-                  <ScrollArea className="w-full">
-                    <div className="flex gap-2.5 pb-3">
-                      {GENRE_CARDS.map((genre) => (
-                        <Card
-                          key={genre.value}
-                          className={cn(
-                            "p-3 cursor-pointer transition-all border-white/5 flex-shrink-0 w-[140px]",
-                            selectedGenre === genre.value
-                              ? "border-primary/50 bg-primary/5"
-                              : "hover-elevate"
-                          )}
-                          onClick={() => setSelectedGenre(genre.value)}
-                          data-testid={`card-genre-${genre.value}`}
-                        >
-                          <div className="text-sm font-medium mb-1 line-clamp-1">{genre.value}</div>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <ThumbsUp className="h-3 w-3" />
-                            {genre.likes} Likes
-                          </div>
-                        </Card>
-                      ))}
+                {activeCreationMode === "sound" && (
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Textarea
+                        placeholder="Describe your sound effect... (e.g., thunderclap followed by rain on a tin roof)"
+                        value={soundPrompt}
+                        onChange={(e) => setSoundPrompt(e.target.value)}
+                        className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[100px] resize-none text-base p-0 placeholder:text-muted-foreground/50"
+                        data-testid="input-sound-prompt"
+                        maxLength={500}
+                      />
+                      <span className="absolute bottom-0 right-0 text-[10px] text-muted-foreground/40" data-testid="text-sound-charcount">
+                        {soundPrompt.length}/500
+                      </span>
                     </div>
-                    <ScrollBar orientation="horizontal" />
-                  </ScrollArea>
-                </div>
-              </motion.div>
-            )}
-
-            {activeCreationMode === "sound" && (
-              <motion.div
-                key="sound-form"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="mb-6 space-y-4">
-                  <Card className="p-4 space-y-4 border-white/5">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                        <FileAudio className="h-3 w-3" />
-                        Describe your sound effect
-                      </Label>
-                      <div className="relative">
-                        <Textarea
-                          placeholder="A thunderclap followed by heavy rain on a tin roof..."
-                          value={soundPrompt}
-                          onChange={(e) => setSoundPrompt(e.target.value)}
-                          className="bg-background border-white/10 focus:border-primary/50 focus:ring-primary/20 min-h-[120px] resize-none text-base"
-                          data-testid="input-sound-prompt"
-                          maxLength={500}
-                        />
-                        <span className="absolute bottom-2 right-3 text-[10px] text-muted-foreground/60" data-testid="text-sound-charcount">
-                          {soundPrompt.length}/500
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <div className="flex items-center gap-3">
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         Duration: {soundDuration[0]}s
                       </Label>
@@ -689,94 +406,43 @@ export default function CreatePage() {
                         min={1}
                         max={30}
                         step={1}
-                        className="flex-1"
+                        className="flex-1 max-w-[200px]"
                         data-testid="slider-sound-duration"
                       />
-                      <div className="flex justify-between text-[10px] text-muted-foreground/60">
-                        <span>1s</span>
-                        <span>30s</span>
-                      </div>
                     </div>
-                  </Card>
-
-                  <div className="flex items-center justify-end">
-                    <Button
-                      onClick={handleSoundGenerate}
-                      disabled={isSoundPending || !soundPrompt.trim()}
-                      className={cn(
-                        "bg-primary text-black gap-2 transition-all duration-300",
-                        soundPrompt.trim() && !isSoundPending && "shadow-[0_0_16px_rgba(0,243,255,0.3)]"
-                      )}
-                      data-testid="button-sound-submit"
-                    >
-                      {isSoundPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <FileAudio className="h-4 w-4" />
-                          <span>Generate Sound</span>
-                        </>
-                      )}
-                    </Button>
                   </div>
-                </div>
-              </motion.div>
-            )}
+                )}
 
-            {activeCreationMode === "speak" && (
-              <motion.div
-                key="speak-form"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="mb-6 space-y-4">
-                  <Card className="p-4 space-y-4 border-white/5">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                        <Mic className="h-3 w-3" />
-                        Text to speak
-                      </Label>
-                      <div className="relative">
-                        <Textarea
-                          placeholder="Enter the text you want to convert to speech..."
-                          value={ttsText}
-                          onChange={(e) => setTtsText(e.target.value)}
-                          className="bg-background border-white/10 focus:border-primary/50 focus:ring-primary/20 min-h-[120px] resize-none text-base"
-                          data-testid="input-tts-text"
-                          maxLength={2000}
-                        />
-                        <span className="absolute bottom-2 right-3 text-[10px] text-muted-foreground/60" data-testid="text-tts-charcount">
-                          {ttsText.length}/2000
-                        </span>
-                      </div>
+                {activeCreationMode === "speak" && (
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Textarea
+                        placeholder="Enter text to convert to speech..."
+                        value={ttsText}
+                        onChange={(e) => setTtsText(e.target.value)}
+                        className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[100px] resize-none text-base p-0 placeholder:text-muted-foreground/50"
+                        data-testid="input-tts-text"
+                        maxLength={2000}
+                      />
+                      <span className="absolute bottom-0 right-0 text-[10px] text-muted-foreground/40" data-testid="text-tts-charcount">
+                        {ttsText.length}/2000
+                      </span>
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          Voice ID (optional)
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Info className="h-3 w-3" />
-                            </TooltipTrigger>
-                            <TooltipContent>Specific voice model ID for synthesis</TooltipContent>
-                          </Tooltip>
-                        </Label>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs text-muted-foreground">Voice ID</Label>
                         <Input
-                          placeholder="Leave empty for default"
+                          placeholder="Default"
                           value={ttsVoiceId}
                           onChange={(e) => setTtsVoiceId(e.target.value)}
-                          className="bg-background border-white/10 focus:border-primary/50 text-sm"
+                          className="bg-background/50 border-white/10 text-xs w-[120px]"
                           data-testid="input-tts-voice-id"
                         />
                       </div>
-
-                      <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
                         <Label className="text-xs text-muted-foreground">Language</Label>
                         <select
-                          className="w-full rounded-md border border-white/10 bg-background px-3 py-2 text-sm"
+                          className="rounded-md border border-white/10 bg-background/50 px-2 py-1 text-xs"
                           value={ttsLanguage}
                           onChange={(e) => setTtsLanguage(e.target.value)}
                           data-testid="select-tts-language"
@@ -789,32 +455,431 @@ export default function CreatePage() {
                         </select>
                       </div>
                     </div>
-                  </Card>
+                  </div>
+                )}
 
-                  <div className="flex items-center justify-end">
+                {attachedFile && (
+                  <div className="flex items-center gap-2 mt-2 p-2 rounded-md bg-primary/5 border border-primary/20">
+                    <FileAudio className="h-4 w-4 text-primary" />
+                    <span className="text-xs text-primary flex-1 truncate">{attachedFile.name}</span>
                     <Button
-                      onClick={handleTTSGenerate}
-                      disabled={isTTSPending || !ttsText.trim()}
-                      className={cn(
-                        "bg-primary text-black gap-2 transition-all duration-300",
-                        ttsText.trim() && !isTTSPending && "shadow-[0_0_16px_rgba(0,243,255,0.3)]"
-                      )}
-                      data-testid="button-tts-submit"
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground"
+                      onClick={() => setAttachedFile(null)}
+                      data-testid="button-remove-file"
                     >
-                      {isTTSPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Mic className="h-4 w-4" />
-                          <span>Generate Speech</span>
-                        </>
-                      )}
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
-                </div>
+                )}
+              </div>
+
+              <div className="border-t border-white/5 px-3 py-2 flex items-center gap-1 flex-wrap">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  data-testid="input-file-upload"
+                />
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground"
+                      onClick={handleFileAttach}
+                      data-testid="button-attach-file"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Attach audio file</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={showProControls ? "secondary" : "ghost"}
+                      size="sm"
+                      className={cn(
+                        "gap-1.5 text-xs",
+                        showProControls ? "text-primary" : "text-muted-foreground"
+                      )}
+                      onClick={() => setShowProControls(!showProControls)}
+                      data-testid="button-pro-controls"
+                    >
+                      <SlidersHorizontal className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Pro controls</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Advanced settings</TooltipContent>
+                </Tooltip>
+
+                {activeCreationMode === "song" && (
+                  <>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={isInstrumental ? "secondary" : "ghost"}
+                          size="sm"
+                          className={cn(
+                            "gap-1 text-xs",
+                            isInstrumental ? "text-primary" : "text-muted-foreground"
+                          )}
+                          onClick={() => setIsInstrumental(true)}
+                          data-testid="button-instrumental"
+                        >
+                          <Music className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Instrumental</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Instrumental only (no vocals)</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={!isInstrumental ? "secondary" : "ghost"}
+                          size="sm"
+                          className={cn(
+                            "gap-1 text-xs",
+                            !isInstrumental ? "text-primary" : "text-muted-foreground"
+                          )}
+                          onClick={() => setIsInstrumental(false)}
+                          data-testid="button-lyrics-mode"
+                        >
+                          <Mic className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Lyrics</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Song with lyrics & vocals</TooltipContent>
+                    </Tooltip>
+                  </>
+                )}
+
+                <div className="flex-1" />
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 text-xs text-muted-foreground"
+                      data-testid="button-tools-dropdown"
+                    >
+                      <Wrench className="h-3.5 w-3.5" />
+                      Tools
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem
+                      onClick={() => setActiveCreationMode("song")}
+                      className={cn(activeCreationMode === "song" && "bg-primary/10 text-primary")}
+                      data-testid="menu-create-song"
+                    >
+                      <Music className="h-4 w-4 mr-2" />
+                      Create song
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setActiveCreationMode("sound")}
+                      className={cn(activeCreationMode === "sound" && "bg-primary/10 text-primary")}
+                      data-testid="menu-create-sound"
+                    >
+                      <FileAudio className="h-4 w-4 mr-2" />
+                      Create Sound
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setActiveCreationMode("speak")}
+                      className={cn(activeCreationMode === "speak" && "bg-primary/10 text-primary")}
+                      data-testid="menu-speak-text"
+                    >
+                      <Mic className="h-4 w-4 mr-2" />
+                      Speak text
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleFileAttach}
+                      data-testid="menu-change-file"
+                    >
+                      <Paperclip className="h-4 w-4 mr-2" />
+                      Change file
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={handleRandomPrompt}
+                      data-testid="menu-random"
+                    >
+                      <Dices className="h-4 w-4 mr-2" />
+                      Random
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isAnyPending || !canCreate}
+                  size="sm"
+                  className={cn(
+                    "bg-primary text-black gap-1.5 transition-all duration-300",
+                    canCreate && !isAnyPending && "shadow-[0_0_12px_rgba(0,243,255,0.3)]"
+                  )}
+                  data-testid="button-submit"
+                >
+                  {isAnyPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="h-3.5 w-3.5" />
+                      <span className="text-xs font-semibold">Submit</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </Card>
+
+            <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground/60">
+              <ActiveIcon className="h-3.5 w-3.5" />
+              <span>{modeLabels[activeCreationMode]}</span>
+              {activeCreationMode === "song" && (
+                <>
+                  <span className="mx-1">•</span>
+                  <span>{isInstrumental ? "Instrumental" : "With lyrics"}</span>
+                  <span className="mx-1">•</span>
+                  <span>{selectedGenre}</span>
+                </>
+              )}
+            </div>
+          </motion.div>
+
+          <AnimatePresence>
+            {showProControls && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden mb-6"
+              >
+                <Card className="p-4 space-y-4 border-white/5">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      Title
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3 w-3" />
+                        </TooltipTrigger>
+                        <TooltipContent>Optional song title</TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <Input
+                      placeholder="Enter song title (optional)"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="bg-background border-white/10 focus:border-primary/50 text-sm"
+                      data-testid="input-title"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <User className="h-3 w-3" />
+                      Artist Name
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3 w-3" />
+                        </TooltipTrigger>
+                        <TooltipContent>Your artist or stage name for credits</TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <Input
+                      placeholder="Your artist/stage name"
+                      value={artistName}
+                      onChange={(e) => setArtistName(e.target.value)}
+                      className="bg-background border-white/10 focus:border-primary/50 text-sm"
+                      data-testid="input-artist-name"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Copyright className="h-3 w-3" />
+                      Copyright Holder
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3 w-3" />
+                        </TooltipTrigger>
+                        <TooltipContent>Entity or person who owns the copyright</TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <Input
+                      placeholder="DGB Studio"
+                      value={copyrightHolder}
+                      onChange={(e) => setCopyrightHolder(e.target.value)}
+                      className="bg-background border-white/10 focus:border-primary/50 text-sm"
+                      data-testid="input-copyright-holder"
+                    />
+                  </div>
+
+                  {styleKits && styleKits.length > 0 && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        Style Kit
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-3 w-3" />
+                          </TooltipTrigger>
+                          <TooltipContent>Use a custom instrument kit to define your song's style</TooltipContent>
+                        </Tooltip>
+                      </Label>
+                      <select
+                        className="w-full rounded-md border border-white/10 bg-background px-3 py-2 text-sm"
+                        value={selectedStyleKit || ""}
+                        onChange={(e) => setSelectedStyleKit(e.target.value ? Number(e.target.value) : undefined)}
+                        data-testid="select-style-kit"
+                      >
+                        <option value="">None (default)</option>
+                        {styleKits.map((kit) => (
+                          <option key={kit.id} value={kit.id}>
+                            {kit.name} ({kit.genre.replace(/_/g, " ")}) — {kit.instruments.length} instruments
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" />
+                      Song duration
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3 w-3" />
+                        </TooltipTrigger>
+                        <TooltipContent>Length of the generated song</TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {[60, 120, 180, 240, 300].map((d) => (
+                        <Badge
+                          key={d}
+                          variant={songDuration === d ? "default" : "outline"}
+                          className={cn(
+                            "cursor-pointer text-xs py-1 px-2.5",
+                            songDuration === d
+                              ? "bg-primary/15 text-primary border-primary/30"
+                              : "text-muted-foreground border-white/10"
+                          )}
+                          onClick={() => setSongDuration(d)}
+                          data-testid={`badge-duration-${d}`}
+                        >
+                          {d >= 60 ? `${Math.floor(d / 60)}:${String(d % 60).padStart(2, "0")}` : `${d}s`}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      Prompt intensity
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3 w-3" />
+                        </TooltipTrigger>
+                        <TooltipContent>How closely the AI follows your prompt</TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <Slider
+                        value={promptIntensity}
+                        onValueChange={setPromptIntensity}
+                        min={0}
+                        max={100}
+                        step={1}
+                        className="flex-1"
+                        data-testid="slider-prompt-intensity"
+                      />
+                      <span className="text-xs font-mono text-muted-foreground w-8 text-right">{promptIntensity[0]}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      Lyrics intensity
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3 w-3" />
+                        </TooltipTrigger>
+                        <TooltipContent>Controls creativity vs. precision in lyrics</TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <Slider
+                        value={lyricsIntensity}
+                        onValueChange={setLyricsIntensity}
+                        min={0}
+                        max={100}
+                        step={1}
+                        className="flex-1"
+                        data-testid="slider-lyrics-intensity"
+                      />
+                      <span className="text-xs font-mono text-muted-foreground w-8 text-right">{lyricsIntensity[0]}</span>
+                    </div>
+                  </div>
+
+                  {!isInstrumental && activeCreationMode === "song" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Custom lyrics</Label>
+                      <div className="relative">
+                        <Textarea
+                          placeholder={"[Verse]\nWrite your lyrics here...\n\n[Chorus]\nYour chorus..."}
+                          value={lyrics}
+                          onChange={(e) => setLyrics(e.target.value)}
+                          className="bg-background border-white/10 focus:border-primary/50 min-h-[80px] resize-none text-sm font-mono"
+                          data-testid="input-lyrics"
+                          maxLength={3000}
+                        />
+                        <span className="absolute bottom-2 right-3 text-[10px] text-muted-foreground/60" data-testid="text-lyrics-charcount">
+                          {lyrics.length}/3000
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </Card>
               </motion.div>
             )}
           </AnimatePresence>
+
+          {activeCreationMode === "song" && (
+            <div className="mb-8">
+              <ScrollArea className="w-full">
+                <div className="flex gap-2.5 pb-3">
+                  {GENRE_CARDS.map((genre) => (
+                    <Card
+                      key={genre.value}
+                      className={cn(
+                        "p-3 cursor-pointer transition-all border-white/5 flex-shrink-0 w-[140px]",
+                        selectedGenre === genre.value
+                          ? "border-primary/50 bg-primary/5"
+                          : "hover-elevate"
+                      )}
+                      onClick={() => setSelectedGenre(genre.value)}
+                      data-testid={`card-genre-${genre.value}`}
+                    >
+                      <div className="text-sm font-medium mb-1 line-clamp-1">{genre.value}</div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <ThumbsUp className="h-3 w-3" />
+                        {genre.likes} Likes
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            </div>
+          )}
 
           {isPending && (
             <motion.div
@@ -959,7 +1024,6 @@ export default function CreatePage() {
                               <div className="flex-1 min-w-0">
                                 <h4 className="text-sm font-medium line-clamp-1">
                                   {song.variationLabel ? `Version ${song.variationLabel}` : (song.title || song.prompt)}
-                                  {!song.variationLabel && ""}
                                 </h4>
                                 <div className="flex items-center gap-2 mt-1">
                                   {song.genre && (
@@ -1013,7 +1077,6 @@ export default function CreatePage() {
               </div>
             </div>
           )}
-
 
         </div>
       </div>
