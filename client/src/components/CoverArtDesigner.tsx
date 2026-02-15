@@ -434,7 +434,7 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
 
-    const badgeText = "DGB Audio";
+    const badgeText = "DGB Studio";
     ctx.font = `10px ${font.family}`;
     ctx.globalAlpha = 0.3;
     ctx.fillStyle = textColor;

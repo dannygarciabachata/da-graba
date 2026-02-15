@@ -3,6 +3,7 @@ import { Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import dgbLogo from "@assets/Dgb_1771188880013.png";
 import {
   Play, Pause, Mic2, Wand2, Music, Headphones, Sparkles, Scissors, Zap,
   Crown, Shield, Globe, Layers, ArrowRight, CheckCircle2, Star,
@@ -210,7 +211,7 @@ function DemoPlayer() {
             >
               <div className="h-1.5 w-full bg-white/10 rounded-full pointer-events-none">
                 <div
-                  className="h-full bg-gradient-to-r from-primary to-blue-500 rounded-full relative transition-all duration-100"
+                  className="h-full bg-gradient-to-r from-primary via-blue-400 to-purple-500 rounded-full relative transition-all duration-100"
                   style={{ width: `${progress}%` }}
                 >
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" />
@@ -261,7 +262,7 @@ function DemoPlayer() {
 export default function Landing() {
   const { user, isLoading } = useAuth();
 
-  if (isLoading) return <div className="min-h-screen bg-black flex items-center justify-center text-primary" data-testid="loading-landing">Loading DGB Audio...</div>;
+  if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center text-primary" data-testid="loading-landing">Loading DGB Studio...</div>;
   if (user) return <Redirect to="/dashboard" />;
 
   const handleLogin = () => {
@@ -270,15 +271,12 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-background to-background z-0" />
-      <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-primary/5 to-transparent z-0" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-500/8 via-background to-background z-0" />
+      <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-primary/5 via-purple-500/3 to-transparent z-0" />
 
       <nav className="relative z-10 container mx-auto px-4 md:px-6 py-4 md:py-6 flex justify-between items-center" data-testid="nav-landing">
-        <div className="flex items-center gap-2">
-          <div className="bg-gradient-to-tr from-primary to-blue-600 p-1.5 rounded-lg">
-            <Radio className="h-5 w-5 text-white" />
-          </div>
-          <h1 className="text-xl md:text-2xl font-bold font-display tracking-tighter">DGB Audio</h1>
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+          <img src={dgbLogo} alt="DGB Studio" className="h-9 md:h-10 w-auto" data-testid="img-landing-logo" />
         </div>
         <div className="flex items-center gap-3">
           <Button variant="ghost" className="hidden sm:inline-flex text-sm" onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} data-testid="link-features">
@@ -308,7 +306,7 @@ export default function Landing() {
 
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight leading-tight" data-testid="text-hero-title">
                 Create Bachata with the{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-400 to-purple-500">
                   DNA of Danny Garcia
                 </span>
               </h1>
@@ -320,7 +318,7 @@ export default function Landing() {
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center lg:justify-start pt-2 md:pt-4">
                 <Button
                   size="lg"
-                  className="h-12 md:h-14 px-6 md:px-8 text-base md:text-lg bg-primary text-black font-bold shadow-[0_0_20px_rgba(0,243,255,0.3)] gap-2"
+                  className="h-12 md:h-14 px-6 md:px-8 text-base md:text-lg bg-gradient-to-r from-primary to-blue-500 text-black font-bold shadow-[0_0_25px_rgba(0,200,255,0.35)] gap-2"
                   onClick={handleLogin}
                   data-testid="button-start-creating"
                 >
@@ -383,7 +381,7 @@ export default function Landing() {
               Everything You Need to Create
             </h2>
             <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">
-              From AI-powered music generation to professional mastering tools, DGB Audio gives you a complete music production suite.
+              From AI-powered music generation to professional mastering tools, DGB Studio gives you a complete music production suite.
             </p>
           </motion.div>
 
@@ -485,17 +483,17 @@ export default function Landing() {
         <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp}>
             <div className="relative rounded-2xl overflow-hidden border border-white/10">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-blue-600/10" />
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-blue-600/10 to-purple-500/10" />
               <div className="relative p-6 sm:p-8 md:p-16 text-center space-y-4 sm:space-y-6">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-cta-title">
                   Ready to Create Your First Track?
                 </h2>
                 <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-lg">
-                  Join DGB Audio today and get 12 free credits to start making music with AI. No credit card needed.
+                  Join DGB Studio today and get 12 free credits to start making music with AI. No credit card needed.
                 </p>
                 <Button
                   size="lg"
-                  className="h-12 sm:h-14 px-6 sm:px-10 text-base sm:text-lg bg-primary text-black font-bold shadow-[0_0_30px_rgba(0,243,255,0.3)] gap-2"
+                  className="h-12 sm:h-14 px-6 sm:px-10 text-base sm:text-lg bg-gradient-to-r from-primary to-blue-500 text-black font-bold shadow-[0_0_30px_rgba(0,200,255,0.35)] gap-2"
                   onClick={handleLogin}
                   data-testid="button-cta-signup"
                 >
@@ -513,10 +511,7 @@ export default function Landing() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <div className="bg-gradient-to-tr from-primary to-blue-600 p-1.5 rounded-lg">
-                  <Radio className="h-4 w-4 text-white" />
-                </div>
-                <span className="font-bold">DGB Audio</span>
+                <img src={dgbLogo} alt="DGB Studio" className="h-8 w-auto" />
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 AI-powered music creation platform. Generate, mix, master, and publish your music from one place.
@@ -551,7 +546,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} DGB Audio. All rights reserved.</p>
+            <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} DGB Studio. All rights reserved.</p>
             <p className="text-xs text-muted-foreground">Powered by DGB Studio Engine</p>
           </div>
         </div>

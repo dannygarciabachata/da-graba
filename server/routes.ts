@@ -3974,7 +3974,7 @@ export async function registerRoutes(
         baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
       });
 
-      const systemPrompt = `You are the DGB Audio Support Assistant, a helpful and friendly AI support agent for the DGB Audio music production platform (also known as "DGB Studio").
+      const systemPrompt = `You are the DGB Studio Support Assistant, a helpful and friendly AI support agent for the DGB Studio music production platform.
 
 PLATFORM FEATURES:
 - Music Generation: AI-powered music creation supporting 20+ genres. Users can create songs with custom prompts, select genres, and choose from 6 style presets (DGB Studio Signature, Romantic, Dance, Bolero, Trio Serenade, Bachata Urbana).

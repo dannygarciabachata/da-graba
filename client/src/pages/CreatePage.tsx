@@ -624,8 +624,8 @@ export default function CreatePage() {
                   disabled={isAnyPending || !canCreate}
                   size="sm"
                   className={cn(
-                    "bg-primary text-black gap-1.5 transition-all duration-300",
-                    canCreate && !isAnyPending && "shadow-[0_0_12px_rgba(0,243,255,0.3)]"
+                    "bg-gradient-to-r from-primary to-blue-500 text-black gap-1.5 transition-all duration-300",
+                    canCreate && !isAnyPending && "shadow-[0_0_15px_rgba(0,200,255,0.4)]"
                   )}
                   data-testid="button-submit"
                 >
@@ -860,10 +860,10 @@ export default function CreatePage() {
                     <Card
                       key={genre.value}
                       className={cn(
-                        "p-3 cursor-pointer transition-all border-white/5 flex-shrink-0 w-[140px]",
+                        "p-3 cursor-pointer transition-all flex-shrink-0 w-[130px] sm:w-[140px]",
                         selectedGenre === genre.value
-                          ? "border-primary/50 bg-primary/5"
-                          : "hover-elevate"
+                          ? "border-primary/50 bg-gradient-to-br from-primary/10 to-purple-500/10"
+                          : "border-white/5 hover-elevate"
                       )}
                       onClick={() => setSelectedGenre(genre.value)}
                       data-testid={`card-genre-${genre.value}`}

@@ -202,7 +202,7 @@ export default function PricingPage() {
           Choose Your Plan
         </h1>
         <p className="text-muted-foreground text-sm max-w-lg mx-auto">
-          Unlock the full power of DGB Audio. Start free with 12 credits, or upgrade for unlimited music creation.
+          Unlock the full power of DGB Studio. Start free with 12 credits, or upgrade for unlimited music creation.
         </p>
         <div className="flex items-center justify-center gap-3 pt-2">
           <Button

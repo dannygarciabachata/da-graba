@@ -1387,7 +1387,7 @@ function SettingsTab() {
   const { toast } = useToast();
 
   const generalSettings = [
-    { key: "site_name", label: "Site Name", defaultValue: "DGB Audio", category: "general", description: "Platform name" },
+    { key: "site_name", label: "Site Name", defaultValue: "DGB Studio", category: "general", description: "Platform name" },
     { key: "maintenance_mode", label: "Maintenance Mode", defaultValue: "false", category: "general", description: "Enable maintenance page" },
     { key: "signup_enabled", label: "Signup Enabled", defaultValue: "true", category: "general", description: "Allow new user registrations" },
     { key: "default_subscription_tier", label: "Default Tier", defaultValue: "free", category: "billing", description: "Default subscription for new users" },
@@ -1491,7 +1491,7 @@ function EmailSettingsTab() {
 
   const emailFields = [
     { key: "email_provider", label: "Email Provider", defaultValue: "smtp", description: "SMTP, SendGrid, Mailgun, etc." },
-    { key: "email_from_name", label: "From Name", defaultValue: "DGB Audio", description: "Sender display name" },
+    { key: "email_from_name", label: "From Name", defaultValue: "DGB Studio", description: "Sender display name" },
     { key: "email_from_address", label: "From Address", defaultValue: "noreply@dgbaudio.com", description: "Sender email address" },
     { key: "email_smtp_host", label: "SMTP Host", defaultValue: "", description: "e.g. smtp.gmail.com" },
     { key: "email_smtp_port", label: "SMTP Port", defaultValue: "587", description: "Usually 587 (TLS) or 465 (SSL)" },
@@ -1500,7 +1500,7 @@ function EmailSettingsTab() {
   ];
 
   const templateFields = [
-    { key: "email_template_welcome", label: "Welcome Email", defaultValue: "Welcome to DGB Audio! Start creating music with the DGB Studio Engine.", description: "Sent to new users" },
+    { key: "email_template_welcome", label: "Welcome Email", defaultValue: "Welcome to DGB Studio! Start creating music with the DGB Studio Engine.", description: "Sent to new users" },
     { key: "email_template_subscription", label: "Subscription Confirmation", defaultValue: "Your {plan} subscription is now active. Enjoy unlimited music creation!", description: "Sent after subscription" },
     { key: "email_template_support_reply", label: "Support Reply Notification", defaultValue: "Your support ticket #{ticketId} has a new reply from our team.", description: "Sent when admin replies to ticket" },
     { key: "email_template_password_reset", label: "Password Reset", defaultValue: "Click the link below to reset your password.", description: "Password reset email" },
@@ -2743,7 +2743,7 @@ function BlogAdminTab() {
           <div className="text-center py-12 text-muted-foreground">
             <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
             <p className="text-sm">No hay posts aún.</p>
-            <p className="text-xs">Crea tu primer post para el blog de DGB Audio.</p>
+            <p className="text-xs">Crea tu primer post para el blog de DGB Studio.</p>
           </div>
         )}
       </div>

@@ -34,7 +34,7 @@ function AuthenticatedLayout() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">
-          <header className="h-12 flex items-center px-3 border-b border-white/5 bg-background/80 backdrop-blur-md sticky top-0 z-40 lg:hidden">
+          <header className="h-12 flex items-center px-3 border-b border-white/5 bg-background/90 backdrop-blur-md sticky top-0 z-40 lg:hidden">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
           </header>
           <main className="flex-1 overflow-auto">
@@ -70,7 +70,7 @@ function Router() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center text-primary">
-        Loading DGB Audio...
+        Loading DGB Studio...
       </div>
     );
   }

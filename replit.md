@@ -1,7 +1,7 @@
-# DGB Audio - DGB Studio
+# DGB Studio
 
 ## Overview
-DGB Audio is developing "DGB Studio," an AI-powered SaaS platform for music generation. It utilizes a self-hosted private GPU architecture on RunPod, featuring a dual-engine system: HeartMuLa for songs with lyrics and vocals (including native Spanish support), and Stable Audio Open for instrumental-only tracks. All generation occurs on the private GPU, with OpenAI used for lyrics and prompt enrichment. A key feature is custom model fine-tuning through "Style Kits," where users can upload instruments for AI analysis and training. The platform incorporates a comprehensive subscription model via Stripe, an admin dashboard, and an AI-driven support chatbot. The business aims to empower musicians with advanced AI tools for high-quality, diverse music creation, leveraging the growing market for AI-assisted creative tools.
+DGB Studio is an AI-powered SaaS platform for music generation. It utilizes a self-hosted private GPU architecture on RunPod, featuring a dual-engine system: HeartMuLa for songs with lyrics and vocals (including native Spanish support), and Stable Audio Open for instrumental-only tracks. All generation occurs on the private GPU, with OpenAI used for lyrics and prompt enrichment. A key feature is custom model fine-tuning through "Style Kits," where users can upload instruments for AI analysis and training. The platform incorporates a comprehensive subscription model via Stripe, an admin dashboard, and an AI-driven support chatbot. The business aims to empower musicians with advanced AI tools for high-quality, diverse music creation, leveraging the growing market for AI-assisted creative tools.
 
 ## User Preferences
 I prefer clear and concise communication. For coding, I favor modular and maintainable solutions. I appreciate an iterative development approach with regular updates. Before implementing significant architectural changes or new external dependencies, please ask for my approval. I expect the agent to prioritize secure and scalable solutions.
@@ -11,7 +11,7 @@ The "DGB Studio" music engine employs a microservices-oriented architecture.
 
 **Frontend:**
 - **Technology Stack:** React, Vite, TailwindCSS, Shadcn UI.
-- **UI/UX Design:** Dark mode theme (`#121212`) with neon blue accents (`#00F3FF`) and silver highlights (`#C0C0C0`). Uses Inter and JetBrains Mono fonts. Mobile-first, responsive design with consistent bottom tab navigation.
+- **UI/UX Design:** Dark mode theme with navy background (`#0A0E1A` / hsl 228 50% 6%), neon cyan primary (`#00C8FF` / hsl 190 100% 50%), purple/magenta accents (`#A855F7` / hsl 270 90% 60%). Blue-to-purple gradients throughout. Uses Inter and JetBrains Mono fonts. Mobile-first, responsive design.
 - **Layout:** Left sidebar for navigation and controls, dynamic full-width main content area.
 - **Key UI Components:** CreatePage (Suno-style music creation), LibraryPage (user songs, audio player), Studio (multitrack editor with AI stem separation, track controls, AI tools), Sample Lab (audio recording, upload, AI Remix, Key/BPM detection), AdminPage (owner-only management), Producer Store/Style Kits (user-browsable/uploadable instrument kits).
 
