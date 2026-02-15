@@ -63,11 +63,13 @@ interface CoverArtDesignerProps {
   songTitle?: string;
   artistName?: string;
   songId?: number;
+  existingImageUrl?: string;
   onSave?: (dataUrl: string) => void;
+  onApplied?: () => void;
   onClose?: () => void;
 }
 
-export function CoverArtDesigner({ songTitle = "", artistName = "", songId, onSave, onClose }: CoverArtDesignerProps) {
+export function CoverArtDesigner({ songTitle = "", artistName = "", songId, existingImageUrl, onSave, onApplied, onClose }: CoverArtDesignerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -189,6 +191,38 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, onSa
       return res.json();
     },
   });
+
+  const applyToSongMutation = useMutation({
+    mutationFn: async () => {
+      if (!songId) throw new Error("No song selected");
+      const canvas = canvasRef.current;
+      if (!canvas) throw new Error("No canvas");
+      const imageData = canvas.toDataURL("image/png");
+      const renderResult = await saveRenderMutation.mutateAsync({ imageData });
+      if (!renderResult?.url) throw new Error("Failed to render");
+      const res = await apiRequest("PATCH", `/api/songs/${songId}/cover`, { imageUrl: renderResult.url });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/songs"] });
+      toast({ description: "Cover art applied to your song!" });
+      onApplied?.();
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to apply cover art", variant: "destructive" });
+    },
+  });
+
+  useEffect(() => {
+    if (existingImageUrl) {
+      const img = new window.Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        setUploadedImage(img);
+      };
+      img.src = existingImageUrl;
+    }
+  }, [existingImageUrl]);
 
   const getFilterString = useCallback(() => {
     const f = selectedFilter.id === "none" ? customFilters : selectedFilter;
@@ -930,6 +964,20 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, onSa
               <Button className="w-full max-w-[300px] bg-primary text-black gap-1.5" onClick={handleSave} data-testid="button-save-cover">
                 <Sparkles className="h-4 w-4" />
                 Save Cover Art
+              </Button>
+            )}
+            {songId && (
+              <Button
+                className="w-full max-w-[300px] bg-green-600 hover:bg-green-700 text-white gap-1.5"
+                onClick={() => applyToSongMutation.mutate()}
+                disabled={applyToSongMutation.isPending}
+                data-testid="button-apply-to-song"
+              >
+                {applyToSongMutation.isPending ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Applying...</>
+                ) : (
+                  <><Save className="h-4 w-4" /> Apply to Song</>
+                )}
               </Button>
             )}
           </div>

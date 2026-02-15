@@ -265,6 +265,18 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  app.patch("/api/songs/:id/cover", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const song = await storage.getSong(Number(req.params.id));
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    const { imageUrl } = req.body;
+    if (!imageUrl) return res.status(400).json({ message: "imageUrl required" });
+    const updated = await storage.updateSongImage(song.id, imageUrl);
+    res.json(updated);
+  });
+
   // ========== AI LYRICS TITLE SUGGESTIONS ==========
   app.post("/api/ai/suggest-titles", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

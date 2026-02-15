@@ -241,7 +241,10 @@ export default function LibraryPage() {
               <CoverArtDesigner
                 songTitle={designCoverFor.title || ""}
                 artistName={user?.firstName || ""}
+                songId={designCoverFor.id}
+                existingImageUrl={designCoverFor.imageUrl || undefined}
                 onClose={() => setDesignCoverFor(null)}
+                onApplied={() => setDesignCoverFor(null)}
                 onSave={(dataUrl) => {
                   const link = document.createElement("a");
                   link.download = `${(designCoverFor.title || "cover").replace(/\s+/g, "_")}-cover.png`;
