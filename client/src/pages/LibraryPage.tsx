@@ -19,13 +19,14 @@ import {
   Palette,
 } from "lucide-react";
 import { CoverArtDesigner } from "@/components/CoverArtDesigner";
+import { NowPlayingBanner } from "@/components/NowPlayingBanner";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function LibraryPage() {
   const { user } = useAuth();
@@ -58,7 +59,7 @@ export default function LibraryPage() {
 
       <div className="flex-1 overflow-auto">
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-4">
-          {activeSong && (
+          {activeSong && !activeSong.audioUrl && (
             <motion.div
               key={activeSong.id}
               initial={{ opacity: 0, y: -10 }}
@@ -253,6 +254,15 @@ export default function LibraryPage() {
           )}
         </div>
       </div>
+
+      <AnimatePresence>
+        {activeSong && activeSong.audioUrl && (
+          <NowPlayingBanner
+            song={activeSong}
+            onClose={() => setCurrentSong(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

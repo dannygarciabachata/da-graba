@@ -40,6 +40,7 @@ export interface IStorage {
   updateSongStatus(id: number, status: string, audioUrl?: string, error?: string): Promise<Song>;
   updateSongTaskId(id: number, taskId: string): Promise<Song>;
   updateSongImage(id: number, imageUrl: string): Promise<Song>;
+  updateSongMetadata(id: number, data: { artistName?: string; copyrightHolder?: string; lyricsText?: string; title?: string }): Promise<Song>;
   deleteSong(id: number): Promise<void>;
 
   createTrack(track: InsertTrack): Promise<Track>;
@@ -211,6 +212,20 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db
       .update(songs)
       .set({ imageUrl })
+      .where(eq(songs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateSongMetadata(id: number, data: { artistName?: string; copyrightHolder?: string; lyricsText?: string; title?: string }): Promise<Song> {
+    const updateData: any = {};
+    if (data.artistName !== undefined) updateData.artistName = data.artistName;
+    if (data.copyrightHolder !== undefined) updateData.copyrightHolder = data.copyrightHolder;
+    if (data.lyricsText !== undefined) updateData.lyricsText = data.lyricsText;
+    if (data.title !== undefined) updateData.title = data.title;
+    const [updated] = await db
+      .update(songs)
+      .set(updateData)
       .where(eq(songs.id, id))
       .returning();
     return updated;

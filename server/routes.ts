@@ -174,6 +174,9 @@ export async function registerRoutes(
       }
 
       const pairId = `pair_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      const artistName = (req.body.artistName as string) || undefined;
+      const copyrightHolder = (req.body.copyrightHolder as string) || "DGB Studio";
+      const lyricsText = lyrics || undefined;
 
       const song1 = await storage.createSong({
         userId,
@@ -183,6 +186,9 @@ export async function registerRoutes(
         mode,
         pairId,
         variationLabel: "A",
+        artistName,
+        copyrightHolder,
+        lyricsText,
       });
 
       const song2 = await storage.createSong({
@@ -193,6 +199,9 @@ export async function registerRoutes(
         mode,
         pairId,
         variationLabel: "B",
+        artistName,
+        copyrightHolder,
+        lyricsText,
       });
 
       const makeInstrumental = req.body.make_instrumental === true;
@@ -242,6 +251,81 @@ export async function registerRoutes(
     if (song.userId !== userId) return res.sendStatus(403);
     const updated = await storage.toggleSongPublic(song.id);
     res.json(updated);
+  });
+
+  // ========== SONG METADATA UPDATE ==========
+  app.patch("/api/songs/:id/metadata", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const song = await storage.getSong(Number(req.params.id));
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    const { artistName, copyrightHolder, lyricsText, title } = req.body;
+    const updated = await storage.updateSongMetadata(song.id, { artistName, copyrightHolder, lyricsText, title });
+    res.json(updated);
+  });
+
+  // ========== AI LYRICS TITLE SUGGESTIONS ==========
+  app.post("/api/ai/suggest-titles", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { lyrics, genre, description } = req.body;
+    if (!lyrics && !description) return res.status(400).json({ message: "Lyrics or description required" });
+    try {
+      const openai = (await import("openai")).default;
+      const client = new openai();
+      const response = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are a creative music title generator. Given lyrics or a description, suggest 5 compelling song titles. Return only a JSON array of strings." },
+          { role: "user", content: `Genre: ${genre || "any"}\n${description ? `Description: ${description}\n` : ""}${lyrics ? `Lyrics:\n${lyrics}` : ""}` },
+        ],
+        response_format: { type: "json_object" },
+      });
+      const content = response.choices[0]?.message?.content || '{"titles":[]}';
+      const parsed = JSON.parse(content);
+      res.json({ titles: parsed.titles || parsed.suggestions || [] });
+    } catch (err: any) {
+      console.error("[AI] Title suggestion error:", err.message);
+      res.status(500).json({ message: "Failed to generate title suggestions" });
+    }
+  });
+
+  // ========== AI COVER ART GENERATION ==========
+  app.post("/api/ai/generate-cover", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { prompt, songId } = req.body;
+    if (!prompt) return res.status(400).json({ message: "Prompt is required" });
+    try {
+      const openai = (await import("openai")).default;
+      const client = new openai();
+      const response = await client.images.generate({
+        model: "dall-e-3",
+        prompt: `Album cover art: ${prompt}. High quality, professional album artwork, square format, visually striking.`,
+        n: 1,
+        size: "1024x1024",
+        quality: "standard",
+      });
+      const imageUrl = response.data[0]?.url;
+      if (!imageUrl) throw new Error("No image generated");
+      if (songId) {
+        const fs = await import("fs/promises");
+        const path = await import("path");
+        const imgResponse = await fetch(imageUrl);
+        const buffer = Buffer.from(await imgResponse.arrayBuffer());
+        const dir = path.join(process.cwd(), "public", "audio", "covers");
+        await fs.mkdir(dir, { recursive: true });
+        const filename = `cover_${songId}_${Date.now()}.png`;
+        await fs.writeFile(path.join(dir, filename), buffer);
+        const localUrl = `/audio/covers/${filename}`;
+        await storage.updateSongImage(Number(songId), localUrl);
+        res.json({ imageUrl: localUrl });
+      } else {
+        res.json({ imageUrl });
+      }
+    } catch (err: any) {
+      console.error("[AI] Cover generation error:", err.message);
+      res.status(500).json({ message: "Failed to generate cover art" });
+    }
   });
 
   // ========== AUDIO ENGINE WEBHOOK ==========

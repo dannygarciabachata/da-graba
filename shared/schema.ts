@@ -24,6 +24,9 @@ export const songs = pgTable("songs", {
   taskId: text("task_id"),
   pairId: text("pair_id"),
   variationLabel: text("variation_label"),
+  artistName: text("artist_name"),
+  copyrightHolder: text("copyright_holder").default("DGB Studio"),
+  lyricsText: text("lyrics_text"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -458,6 +461,10 @@ export type GenerateSongRequest = {
   genre?: string;
   voiceModelId?: number;
   styleReferenceId?: number;
+  artistName?: string;
+  copyrightHolder?: string;
+  make_instrumental?: boolean;
+  styleKitId?: number;
 };
 
 export type GenerateLyricsRequest = {
