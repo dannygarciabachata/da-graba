@@ -16,7 +16,7 @@ export interface MusicGenerationResult {
   prompt: string;
   config: MusicPromptConfig;
   duration: number;
-  provider: "mureka" | "replicate";
+  provider: "mureka" | "replicate" | "kie";
 }
 
 function cleanPromptForMusicGen(rawPrompt: string): string {
@@ -102,7 +102,7 @@ export async function generateMusic(
   console.log(`[MusicEngine] Generating with prompt: ${finalPrompt}`);
 
   let audioUrl: string;
-  let usedProvider: "mureka" | "replicate";
+  let usedProvider: "mureka" | "replicate" | "kie";
 
   try {
     audioUrl = await generateWithMureka(userPrompt, style, lyrics);

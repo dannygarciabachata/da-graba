@@ -9,6 +9,7 @@ import {
 } from "../core/musicgpt_engine";
 import { generateCreativeLyrics, enrichPromptForMusicGen } from "../core/antigravity_engine";
 import { canUseRunPodMusic, submitRunPodMusicGeneration, submitHeartMuLaGeneration } from "../core/runpod_music_engine";
+import { canUseKie, submitKieMusicGeneration, pollKieTask } from "../core/kie_engine";
 import { ensureGpuReady } from "../core/runpod_client";
 import { generateImageBuffer } from "../replit_integrations/image/client";
 import * as fs from "fs";
@@ -204,7 +205,44 @@ export async function processMusicGeneration(
       console.log(`[Worker] Private GPU not configured, trying API fallback...`);
     }
 
-    // Fallback: Generic API providers (only if private GPU fails)
+    // Priority 3: Kie.ai — high-quality Suno V5 generation at $0.06/song
+    if (canUseKie()) {
+      console.log(`[Worker] Priority 3: Kie.ai (Suno V5) for song ${songId}`);
+      try {
+        let songLyrics = lyrics || "";
+        if (!songLyrics && !instrumental) {
+          try {
+            const lyricsStyle = mapStyleToLyricsStyle(style);
+            songLyrics = await generateCreativeLyrics(safePrompt, lyricsStyle, style);
+            console.log(`[Worker] Generated ${songLyrics.length} chars of lyrics for Kie.ai`);
+          } catch (err: any) {
+            console.log(`[Worker] Lyrics generation failed: ${err.message}`);
+          }
+        }
+
+        const kieResult = await submitKieMusicGeneration(enrichedPrompt, style, {
+          title: `DGB Studio - ${style}`,
+          lyrics: songLyrics || undefined,
+          instrumental,
+        });
+
+        await storage.updateSongTaskId(songId, kieResult.taskId);
+        console.log(`[Worker] Kie.ai task ${kieResult.taskId} submitted for song ${songId}, polling...`);
+
+        startKiePoller(songId, kieResult.taskId, { prompt: safePrompt, genre: style });
+        generateSongCoverImage(songId, safePrompt, style).catch(() => {});
+        return;
+      } catch (kieErr: any) {
+        const msg = kieErr.message || "";
+        if (msg.includes("KIE_QUOTA_EXCEEDED") || msg.includes("KIE_AUTH_ERROR")) {
+          console.log(`[Worker] Kie.ai unavailable: ${msg}, falling back to generic API...`);
+        } else {
+          console.log(`[Worker] Kie.ai failed: ${msg}, falling back to generic API...`);
+        }
+      }
+    }
+
+    // Fallback: Generic API providers (only if private GPU and Kie.ai fail)
     const useGeneric = await hasProviderForOperation("music_generation");
 
     if (useGeneric) {
@@ -301,6 +339,58 @@ export function startRunPodTimeout(songId: number, timeoutMs: number) {
   }, timeoutMs);
 
   pendingRunPodSongs.set(songId, timer);
+}
+
+function startKiePoller(songId: number, taskId: string, imageContext?: { prompt: string; genre: string }) {
+  const checkInterval = 15000;
+  const maxChecks = 30;
+  let checks = 0;
+
+  const timer = setInterval(async () => {
+    checks++;
+    try {
+      const song = await storage.getSong(songId);
+      if (!song || song.status === "completed" || song.status === "failed") {
+        clearInterval(timer);
+        return;
+      }
+
+      if (checks >= maxChecks) {
+        console.log(`[Kie.ai] Song ${songId} timed out after ${maxChecks * checkInterval / 1000}s`);
+        await storage.updateSongStatus(songId, "failed", undefined, "Generation timed out. Please try again.");
+        clearInterval(timer);
+        return;
+      }
+
+      console.log(`[Kie.ai] Poll ${checks}/${maxChecks} for song ${songId} (task ${taskId})`);
+
+      try {
+        const result = await pollKieTask(taskId, 14000, 14000);
+        if (result.audioUrl) {
+          const localUrl = await downloadFile(result.audioUrl, "songs", "song");
+          await storage.updateSongStatus(songId, "completed", localUrl);
+          if (result.imageUrl) {
+            try {
+              const localImageUrl = await downloadFile(result.imageUrl, "images", "cover");
+              await storage.updateSongImage(songId, localImageUrl);
+            } catch {}
+          } else if (imageContext) {
+            await generateSongCoverImage(songId, imageContext.prompt, imageContext.genre);
+          }
+          console.log(`[Kie.ai] Song ${songId} completed successfully`);
+          clearInterval(timer);
+        }
+      } catch (pollErr: any) {
+        if (pollErr.message?.includes("failed") || pollErr.message?.includes("error")) {
+          console.log(`[Kie.ai] Song ${songId} generation failed: ${pollErr.message}`);
+          await storage.updateSongStatus(songId, "failed", undefined, "Music generation failed. Please try again.");
+          clearInterval(timer);
+        }
+      }
+    } catch (err: any) {
+      console.log(`[Kie.ai] Poll error for song ${songId}: ${err.message?.substring(0, 80)}`);
+    }
+  }, checkInterval);
 }
 
 function startFallbackPoller(songId: number, taskId: string, useGeneric: boolean, endpointId?: number, imageContext?: { prompt: string; genre: string }) {

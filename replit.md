@@ -25,6 +25,7 @@ The "DGB Studio" music engine employs a microservices-oriented architecture.
 - **AI Engines:**
     - **HeartMuLa (Primary):** 3B parameter model for full songs with vocals/lyrics, supports Spanish. Runs on private RunPod GPU.
     - **Stable Audio Open (Instrumental):** Secondary engine for instrumental generation. Supports fine-tuned models from Style Kits. Runs on private RunPod GPU.
+    - **Kie.ai (Cloud API):** Cost-effective Suno V5 integration (~$0.06/song) for high-quality music generation with vocals. Priority 3 fallback after private GPU engines. Supports generation, extend, covers, and stem separation.
     - **DGB Studio Audio Engine:** MusicGPT-based fallback.
     - **OpenAI Integration:** Used for lyrics generation (GPT-5.1), support chatbot, and instrument prompt generation.
     - **SAO Training Pipeline:** Fine-tuning pipeline for custom instrument kits using OpenAI for prompts and cloud GPU for training.
@@ -60,3 +61,4 @@ The "DGB Studio" music engine employs a microservices-oriented architecture.
 - **Feb 15, 2026:** Improved genre/rhythm adherence - enhanced HeartMuLa tags with BPM, time signature, and genre-specific instrument descriptors. Improved prompt enrichment system prompt to prioritize genre name and rhythm feel. Made lyrics generation genre-aware (no longer hardcoded to "Bachata").
 - **Feb 15, 2026:** Added Hip Hop to GENRE_INSTRUMENT_MAP in antigravity_engine.ts. Expanded buildHeartMuLaTags to cover R&B, Hip Hop, Pop, EDM genres with proper tag normalization.
 - **Feb 15, 2026:** Full blog system with WordPress-like features: blogComments, blogLikes, blogStars, blogShares tables. Public-facing blog page (/blog) with search, category filters, and blog post detail view with comments, likes (toggle), star ratings (1-5), share (Twitter, Facebook, WhatsApp, copy link). Admin blog editor enhanced with image file upload (multer) alongside URL input. Blog added to sidebar navigation.
+- **Feb 15, 2026:** Integrated Kie.ai as Priority 3 music generation engine (after HeartMuLa/SAO private GPU). Uses Suno V5 model at ~$0.06/song. Added kie_engine.ts with generate, poll, extend, cover, and stem separation functions. Fallback chain: HeartMuLa → SAO → Kie.ai → Generic API → MusicGPT.
