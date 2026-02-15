@@ -127,6 +127,30 @@ export function canUseKie(): boolean {
   return !!process.env.KIE_API_KEY;
 }
 
+export async function boostMusicStyle(content: string): Promise<string> {
+  console.log(`[Kie.ai] Boosting style: "${content.substring(0, 80)}..."`);
+
+  const result = await kieFetch("/style/generate", {
+    method: "POST",
+    body: JSON.stringify({ content }),
+  });
+
+  if (result?.code !== 200 || result?.data?.successFlag === "2") {
+    const errMsg = result?.data?.errorMessage || result?.msg || "Style boost failed";
+    console.warn(`[Kie.ai] Style boost failed: ${errMsg}, using original style`);
+    return content;
+  }
+
+  const boosted = result?.data?.result;
+  if (!boosted) {
+    console.warn(`[Kie.ai] Style boost returned no result, using original`);
+    return content;
+  }
+
+  console.log(`[Kie.ai] Boosted style: "${boosted.substring(0, 120)}..."`);
+  return boosted;
+}
+
 export async function submitKieMusicGeneration(
   prompt: string,
   style: string,
@@ -141,14 +165,24 @@ export async function submitKieMusicGeneration(
   console.log(`[Kie.ai] Submitting music generation`);
   console.log(`[Kie.ai] Style: ${style}, Instrumental: ${options.instrumental || false}`);
 
+  let boostedStyle = style;
+  if (style) {
+    try {
+      boostedStyle = await boostMusicStyle(style);
+    } catch (err: any) {
+      console.warn(`[Kie.ai] Style boost error, using original: ${err.message}`);
+      boostedStyle = style;
+    }
+  }
+
   const body: Record<string, any> = {
     model: "V5",
     callBackUrl: options.callbackUrl || undefined,
   };
 
-  if (options.lyrics || style) {
+  if (options.lyrics || boostedStyle) {
     body.customMode = true;
-    body.style = style || "Pop";
+    body.style = boostedStyle || "Pop";
     body.title = options.title || "DGB Studio Track";
     body.prompt = options.lyrics || prompt;
   } else {
