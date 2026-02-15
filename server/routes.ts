@@ -3459,10 +3459,63 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-      const url = `/blog/images/${req.file.filename}`;
+      const coverDir = path.join(process.cwd(), "public", "audio", "covers");
+      if (!fs.existsSync(coverDir)) fs.mkdirSync(coverDir, { recursive: true });
+      const ext = path.extname(req.file.originalname) || ".png";
+      const filename = `bg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+      fs.copyFileSync(req.file.path, path.join(coverDir, filename));
+      const url = `/audio/covers/${filename}`;
       res.json({ url });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/cover-designs/remove-background", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { imageData } = req.body;
+      if (!imageData) return res.status(400).json({ message: "No image data" });
+
+      const base64Input = imageData.replace(/^data:image\/\w+;base64,/, "");
+      const inputBuffer = Buffer.from(base64Input, "base64");
+
+      const coverDir = path.join(process.cwd(), "public", "audio", "covers");
+      if (!fs.existsSync(coverDir)) fs.mkdirSync(coverDir, { recursive: true });
+      const inputFilename = `rmbg_input_${Date.now()}.png`;
+      const inputPath = path.join(coverDir, inputFilename);
+      fs.writeFileSync(inputPath, inputBuffer);
+
+      const Replicate = (await import("replicate")).default;
+      const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
+
+      const dataUri = `data:image/png;base64,${base64Input}`;
+      const output = await replicate.run(
+        "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003",
+        { input: { image: dataUri } }
+      );
+
+      let outputUrl: string;
+      if (typeof output === "string") {
+        outputUrl = output;
+      } else if (output && typeof (output as any).url === "function") {
+        outputUrl = (output as any).url();
+      } else {
+        outputUrl = String(output);
+      }
+
+      const response = await fetch(outputUrl);
+      const outputBuffer = Buffer.from(await response.arrayBuffer());
+      const outputFilename = `rmbg_${Date.now()}.png`;
+      fs.writeFileSync(path.join(coverDir, outputFilename), outputBuffer);
+      const url = `/audio/covers/${outputFilename}`;
+
+      try { fs.unlinkSync(inputPath); } catch {}
+
+      res.json({ url });
+    } catch (err: any) {
+      console.error("[BG Removal] Error:", err.message);
+      res.status(500).json({ message: "Failed to remove background: " + err.message });
     }
   });
 

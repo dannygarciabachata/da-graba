@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Download, Palette, RefreshCw, Sparkles, X, Upload, Image, Wand2, Loader2, SlidersHorizontal, Save, History, Trash2, GripVertical, Star, Zap } from "lucide-react";
+import { Download, Palette, RefreshCw, Sparkles, X, Upload, Image, Wand2, Loader2, SlidersHorizontal, Save, History, Trash2, GripVertical, Star, Zap, FileDown, Scissors, Edit3, FolderOpen } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -73,6 +73,7 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(songTitle);
   const [artist, setArtist] = useState(artistName);
   const [template, setTemplate] = useState(TEMPLATES[0]);
@@ -81,6 +82,7 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
   const [artistSize, setArtistSize] = useState([24]);
   const [showSubtitle, setShowSubtitle] = useState(true);
   const [uploadedImage, setUploadedImage] = useState<HTMLImageElement | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiEffectPrompt, setAiEffectPrompt] = useState("");
   const [activeTab, setActiveTab] = useState<"template" | "upload" | "ai" | "filters" | "effects" | "history">("template");
@@ -111,6 +113,7 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
         img.crossOrigin = "anonymous";
         img.onload = () => {
           setUploadedImage(img);
+          setUploadedImageUrl(data.imageUrl);
           setActiveTab("filters");
           toast({ description: "AI cover art generated!" });
         };
@@ -192,6 +195,48 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
     },
   });
 
+  const uploadBackgroundMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch("/api/cover-designs/upload-background", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setUploadedImageUrl(data.url);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to upload image", variant: "destructive" });
+    },
+  });
+
+  const removeBackgroundMutation = useMutation({
+    mutationFn: async (imageDataUrl: string) => {
+      const res = await apiRequest("POST", "/api/cover-designs/remove-background", { imageData: imageDataUrl });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.url) {
+        const img = new window.Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          setUploadedImage(img);
+          setUploadedImageUrl(data.url);
+          toast({ description: "Background removed successfully!" });
+        };
+        img.src = data.url;
+      }
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err?.message || "Failed to remove background", variant: "destructive" });
+    },
+  });
+
   const applyToSongMutation = useMutation({
     mutationFn: async () => {
       if (!songId) throw new Error("No song selected");
@@ -219,6 +264,7 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
       img.crossOrigin = "anonymous";
       img.onload = () => {
         setUploadedImage(img);
+        setUploadedImageUrl(existingImageUrl);
       };
       img.src = existingImageUrl;
     }
@@ -457,13 +503,38 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
       toast({ title: "Invalid file", description: "Please upload an image file", variant: "destructive" });
       return;
     }
+    uploadBackgroundMutation.mutate(file);
     const reader = new FileReader();
     reader.onload = () => {
       const img = new window.Image();
       img.onload = () => {
         setUploadedImage(img);
         setActiveTab("filters");
-        toast({ description: "Image uploaded! Apply filters to customize." });
+        toast({ description: "Image uploaded and saved!" });
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImportDesign = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please import an image file", variant: "destructive" });
+      return;
+    }
+    uploadBackgroundMutation.mutate(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onload = () => {
+        setUploadedImage(img);
+        setSelectedFilter(FILTER_PRESETS[0]);
+        setCustomFilters({ brightness: 100, contrast: 100, saturation: 100, blur: 0, sepia: 0, grayscale: 0, hueRotate: 0 });
+        setGlamourEffect("none");
+        setActiveTab("filters");
+        toast({ description: "Design imported! Customize with filters and effects." });
       };
       img.src = reader.result as string;
     };
@@ -487,13 +558,6 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
     link.download = `${title || "cover"}-art.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
-  };
-
-  const handleSave = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dataUrl = canvas.toDataURL("image/png");
-    onSave?.(dataUrl);
   };
 
   const handleSaveDesign = async () => {
@@ -520,6 +584,7 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
       artistPosition: artistPos,
       filterSettings: customFilters,
       overlayElements: [{ type: "glamour", effect: glamourEffect, duotoneColor }],
+      backgroundImageUrl: uploadedImageUrl || null,
       renderedImageUrl: renderResult?.url || null,
       thumbnailUrl: renderResult?.url || null,
       aiPrompt: aiPrompt || aiEffectPrompt || null,
@@ -529,8 +594,8 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
   const loadDesign = (design: any) => {
     setCurrentDesignId(design.id);
     setDesignName(design.name || "Untitled Design");
-    if (design.titleText) setTitle(design.titleText);
-    if (design.artistText) setArtist(design.artistText);
+    if (design.titleText !== undefined) setTitle(design.titleText || "");
+    if (design.artistText !== undefined) setArtist(design.artistText || "");
     if (design.titleSize) setTitleSize([design.titleSize]);
     if (design.artistSize) setArtistSize([design.artistSize]);
     if (design.titlePosition) setTitlePos(design.titlePosition as TextPosition);
@@ -563,11 +628,35 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
     if (design.backgroundImageUrl) {
       const img = new window.Image();
       img.crossOrigin = "anonymous";
-      img.onload = () => setUploadedImage(img);
+      img.onload = () => {
+        setUploadedImage(img);
+        setUploadedImageUrl(design.backgroundImageUrl);
+      };
       img.src = design.backgroundImageUrl;
+    } else {
+      setUploadedImage(null);
+      setUploadedImageUrl(null);
     }
     toast({ description: `Loaded: ${design.name}` });
     setActiveTab("template");
+  };
+
+  const handleRemoveBackground = () => {
+    if (!uploadedImage) return;
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = uploadedImage.width;
+    tempCanvas.height = uploadedImage.height;
+    const tempCtx = tempCanvas.getContext("2d");
+    if (!tempCtx) return;
+    tempCtx.drawImage(uploadedImage, 0, 0);
+    const imageDataUrl = tempCanvas.toDataURL("image/png");
+    removeBackgroundMutation.mutate(imageDataUrl);
+  };
+
+  const handleClearImage = () => {
+    setUploadedImage(null);
+    setUploadedImageUrl(null);
+    toast({ description: "Image cleared - using gradient template" });
   };
 
   const randomize = () => {
@@ -583,12 +672,6 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
     if (preset.id !== "none") {
       setCustomFilters({ brightness: preset.brightness, contrast: preset.contrast, saturation: preset.saturation, blur: preset.blur, sepia: preset.sepia, grayscale: preset.grayscale, hueRotate: preset.hueRotate });
     }
-  };
-
-  const removeBackground = () => {
-    if (!uploadedImage) return;
-    setUploadedImage(null);
-    toast({ description: "Background removed - using gradient template" });
   };
 
   const TABS = [
@@ -658,7 +741,7 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
                     <Label className="text-sm">Template</Label>
                     <div className="grid grid-cols-3 gap-2">
                       {TEMPLATES.map((t) => (
-                        <button key={t.id} onClick={() => { setTemplate(t); setUploadedImage(null); }}
+                        <button key={t.id} onClick={() => { setTemplate(t); setUploadedImage(null); setUploadedImageUrl(null); }}
                           className={`h-10 rounded-lg border-2 transition-all ${template.id === t.id && !uploadedImage ? "border-primary shadow-lg shadow-primary/20 scale-105" : "border-white/10"}`}
                           style={{ background: `linear-gradient(135deg, ${t.gradient[0]}, ${t.gradient[1]})` }}
                           title={t.name} data-testid={`button-template-${t.id}`} />
@@ -688,25 +771,61 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
               {activeTab === "upload" && (
                 <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
                   <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                  <input ref={importInputRef} type="file" accept="image/*" onChange={handleImportDesign} className="hidden" />
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center cursor-pointer hover:border-primary/30 transition-colors"
+                    className="border-2 border-dashed border-white/10 rounded-xl p-6 text-center cursor-pointer hover:border-primary/30 transition-colors"
                     data-testid="dropzone-upload"
                   >
                     <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">Click to upload an image</p>
                     <p className="text-xs text-muted-foreground/60 mt-1">JPG, PNG, WebP supported</p>
                   </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-1.5 text-xs"
+                    onClick={() => importInputRef.current?.click()}
+                    data-testid="button-import-design"
+                  >
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    Import External Design
+                  </Button>
+
                   {uploadedImage && (
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={removeBackground} data-testid="button-remove-bg">
-                        <Image className="h-3.5 w-3.5 mr-1" />
-                        Remove Image
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-xs gap-1"
+                          onClick={handleRemoveBackground}
+                          disabled={removeBackgroundMutation.isPending}
+                          data-testid="button-remove-bg"
+                        >
+                          {removeBackgroundMutation.isPending ? (
+                            <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Removing...</>
+                          ) : (
+                            <><Scissors className="h-3.5 w-3.5" /> Remove Background</>
+                          )}
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1 text-xs gap-1" onClick={() => setActiveTab("filters")} data-testid="button-go-filters">
+                          <SlidersHorizontal className="h-3.5 w-3.5" />
+                          Apply Filters
+                        </Button>
+                      </div>
+                      <Button variant="outline" size="sm" className="w-full text-xs gap-1 text-red-400 border-red-400/20 hover:bg-red-400/10" onClick={handleClearImage} data-testid="button-clear-image">
+                        <X className="h-3.5 w-3.5" />
+                        Clear Image
                       </Button>
-                      <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => setActiveTab("filters")} data-testid="button-go-filters">
-                        <SlidersHorizontal className="h-3.5 w-3.5 mr-1" />
-                        Apply Filters
-                      </Button>
+                    </div>
+                  )}
+
+                  {uploadBackgroundMutation.isPending && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Saving image to your library...
                     </div>
                   )}
                 </motion.div>
@@ -866,14 +985,24 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
                       className="bg-primary text-black gap-1.5"
                       data-testid="button-save-design"
                     >
-                      {saveDesignMutation.isPending ? (
+                      {saveDesignMutation.isPending || saveRenderMutation.isPending ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
                         <Save className="h-3.5 w-3.5" />
                       )}
-                      Save
+                      {currentDesignId ? "Update" : "Save"}
                     </Button>
                   </div>
+
+                  {currentDesignId && (
+                    <div className="flex items-center gap-2 text-xs text-primary/80 bg-primary/5 rounded-md px-3 py-1.5">
+                      <Edit3 className="h-3 w-3" />
+                      Editing: {designName}
+                      <button className="ml-auto text-muted-foreground hover:text-foreground" onClick={() => { setCurrentDesignId(null); setDesignName("Untitled Design"); }}>
+                        New
+                      </button>
+                    </div>
+                  )}
 
                   <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
                     {savedDesigns.length === 0 ? (
@@ -906,15 +1035,27 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
                               {new Date(design.updatedAt).toLocaleDateString()}
                             </p>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-red-400"
-                            onClick={(e) => { e.stopPropagation(); deleteDesignMutation.mutate(design.id); }}
-                            data-testid={`button-delete-design-${design.id}`}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-primary"
+                              onClick={(e) => { e.stopPropagation(); loadDesign(design); }}
+                              title="Edit design"
+                              data-testid={`button-edit-design-${design.id}`}
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-red-400"
+                              onClick={(e) => { e.stopPropagation(); deleteDesignMutation.mutate(design.id); }}
+                              data-testid={`button-delete-design-${design.id}`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </div>
                       ))
                     )}
@@ -960,12 +1101,18 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
                 Download
               </Button>
             </div>
-            {onSave && (
-              <Button className="w-full max-w-[300px] bg-primary text-black gap-1.5" onClick={handleSave} data-testid="button-save-cover">
-                <Sparkles className="h-4 w-4" />
-                Save Cover Art
-              </Button>
-            )}
+            <Button
+              className="w-full max-w-[300px] bg-primary text-black gap-1.5"
+              onClick={handleSaveDesign}
+              disabled={saveDesignMutation.isPending || saveRenderMutation.isPending}
+              data-testid="button-save-cover"
+            >
+              {saveDesignMutation.isPending || saveRenderMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</>
+              ) : (
+                <><Save className="h-4 w-4" /> {currentDesignId ? "Update Design" : "Save Design"}</>
+              )}
+            </Button>
             {songId && (
               <Button
                 className="w-full max-w-[300px] bg-green-600 hover:bg-green-700 text-white gap-1.5"

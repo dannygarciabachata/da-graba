@@ -245,13 +245,6 @@ export default function LibraryPage() {
                 existingImageUrl={designCoverFor.imageUrl || undefined}
                 onClose={() => setDesignCoverFor(null)}
                 onApplied={() => setDesignCoverFor(null)}
-                onSave={(dataUrl) => {
-                  const link = document.createElement("a");
-                  link.download = `${(designCoverFor.title || "cover").replace(/\s+/g, "_")}-cover.png`;
-                  link.href = dataUrl;
-                  link.click();
-                  setDesignCoverFor(null);
-                }}
               />
             </motion.div>
           )}
