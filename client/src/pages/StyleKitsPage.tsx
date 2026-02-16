@@ -76,15 +76,18 @@ function InstrumentRow({ instrument, kitId }: { instrument: StyleKitInstrument; 
         method: "POST",
         body: formData,
       });
-      if (!res.ok) throw new Error("Upload failed");
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message || "Upload failed");
+      }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/style-kits"] });
       toast({ title: t('styleKits.upload.success') });
     },
-    onError: () => {
-      toast({ title: t('styleKits.upload.error'), variant: "destructive" });
+    onError: (err: Error) => {
+      toast({ title: err.message || t('styleKits.upload.error'), variant: "destructive" });
     },
   });
 

@@ -991,9 +991,9 @@ export async function registerRoutes(
         cb(null, `${uuidv4()}${ext}`);
       },
     }),
-    limits: { fileSize: 50 * 1024 * 1024 },
+    limits: { fileSize: 200 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
-      const allowed = [".wav", ".mp3", ".ogg", ".webm", ".m4a", ".flac"];
+      const allowed = [".wav", ".mp3", ".ogg", ".webm", ".m4a", ".flac", ".aif", ".aiff"];
       const ext = path.extname(file.originalname).toLowerCase();
       if (allowed.includes(ext) || file.mimetype.startsWith("audio/")) {
         cb(null, true);
@@ -4272,6 +4272,19 @@ IMPORTANT: Always be helpful, concise, and supportive. If you don't know somethi
       console.error("[Support] Chat error:", err.message);
       res.status(500).json({ message: "Support chat unavailable" });
     }
+  });
+
+  app.use((err: any, _req: any, res: any, next: any) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(413).json({ message: "El archivo es demasiado grande. El límite es 200MB." });
+      }
+      return res.status(400).json({ message: `Error de archivo: ${err.message}` });
+    }
+    if (err && err.message === "Only audio files are allowed") {
+      return res.status(400).json({ message: "Solo se permiten archivos de audio (WAV, MP3, FLAC, OGG, M4A, AIFF)." });
+    }
+    next(err);
   });
 
   return httpServer;
