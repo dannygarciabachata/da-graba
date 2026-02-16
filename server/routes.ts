@@ -283,6 +283,60 @@ export async function registerRoutes(
     res.json(publicSongs);
   });
 
+  app.get("/api/public/charts", async (req, res) => {
+    try {
+      const limit = Math.min(Number(req.query.limit) || 100, 200);
+      const topSongs = await storage.getTopSongs(limit);
+      const songIds = topSongs.map(s => s.id);
+      const likesMap = await storage.getSongLikeCountsBatch(songIds);
+      const songsWithLikes = topSongs.map(s => ({
+        ...s,
+        likes: likesMap[s.id] || 0,
+      }));
+      res.json(songsWithLikes);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/public/charts/:genre", async (req, res) => {
+    try {
+      const genre = req.params.genre;
+      const limit = Math.min(Number(req.query.limit) || 20, 100);
+      const topSongs = await storage.getTopSongsByGenre(genre, limit);
+      const songIds = topSongs.map(s => s.id);
+      const likesMap = await storage.getSongLikeCountsBatch(songIds);
+      const songsWithLikes = topSongs.map(s => ({
+        ...s,
+        likes: likesMap[s.id] || 0,
+      }));
+      res.json(songsWithLikes);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/public/playlists", async (_req, res) => {
+    try {
+      const summaries = await storage.getGenrePlaylistSummaries();
+      res.json(summaries);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/songs/:id/play", async (req, res) => {
+    try {
+      const songId = Number(req.params.id);
+      const song = await storage.getSong(songId);
+      if (!song) return res.sendStatus(404);
+      await storage.incrementPlayCount(songId);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // ========== SONG METADATA UPDATE ==========
   app.patch("/api/songs/:id/metadata", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

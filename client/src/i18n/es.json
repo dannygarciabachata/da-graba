@@ -62,7 +62,27 @@
     "styleKits": "Kits de Estilo",
     "producerStore": "Tienda de Productor",
     "blog": "Blog",
+    "discover": "Descubrir",
     "adminPanel": "Panel Admin"
+  },
+  "discover": {
+    "title": "Descubrir",
+    "subtitle": "Las mejores canciones creadas con IA en DGB AUDIO",
+    "playlists": "Playlists",
+    "trending": "Tendencias",
+    "noSongs": "Aún no hay canciones publicadas",
+    "likes": "Likes",
+    "plays": "Reproducciones",
+    "tracks": "Canciones",
+    "playlist": "Playlist",
+    "playAll": "Reproducir",
+    "top100Subtitle": "Los tracks más escuchados en todos los géneros",
+    "backToDiscover": "Volver a Descubrir",
+    "loginToLike": "Inicia sesión para dar like",
+    "badges": {
+      "royaltyFree": "Libre de Regalías",
+      "noCopyright": "Sin Problemas de Copyright"
+    }
   },
   "landing": {
     "badge": "La Pura Sangre de la Bachata",

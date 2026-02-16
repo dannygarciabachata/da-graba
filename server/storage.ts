@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, desc, and, sql, count, gte, gt } from "drizzle-orm";
+import { eq, desc, and, sql, count, gte, gt, inArray, sum } from "drizzle-orm";
 import { 
   songs, lyrics, quizResults, tracks, samples,
   apiProviders, apiEndpoints,
@@ -193,9 +193,14 @@ export interface IStorage {
   deleteCoverDesign(id: number): Promise<void>;
 
   getPublicSongs(): Promise<Song[]>;
+  getTopSongs(limit: number): Promise<Song[]>;
+  getTopSongsByGenre(genre: string, limit: number): Promise<Song[]>;
+  getGenrePlaylistSummaries(): Promise<Array<{ genre: string; songCount: number; totalPlays: number; totalLikes: number }>>;
+  incrementPlayCount(songId: number): Promise<void>;
   toggleSongLike(songId: number, userId: string, value: number): Promise<{ liked: boolean; value: number; likes: number; dislikes: number }>;
   getSongLikeStatus(songId: number, userId: string): Promise<{ value: number } | null>;
   getSongLikeCounts(songId: number): Promise<{ likes: number; dislikes: number }>;
+  getSongLikeCountsBatch(songIds: number[]): Promise<Record<number, number>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1141,6 +1146,68 @@ export class DatabaseStorage implements IStorage {
     const [dislikesResult] = await db.select({ count: count() }).from(songLikes)
       .where(and(eq(songLikes.songId, songId), eq(songLikes.value, -1)));
     return { likes: likesResult?.count || 0, dislikes: dislikesResult?.count || 0 };
+  }
+
+  async getTopSongs(limit: number): Promise<Song[]> {
+    return await db.select().from(songs)
+      .where(and(eq(songs.isPublic, true), eq(songs.status, "completed")))
+      .orderBy(desc(songs.playCount))
+      .limit(limit);
+  }
+
+  async getTopSongsByGenre(genre: string, limit: number): Promise<Song[]> {
+    return await db.select().from(songs)
+      .where(and(eq(songs.isPublic, true), eq(songs.status, "completed"), eq(songs.genre, genre)))
+      .orderBy(desc(songs.playCount))
+      .limit(limit);
+  }
+
+  async getGenrePlaylistSummaries(): Promise<Array<{ genre: string; songCount: number; totalPlays: number; totalLikes: number }>> {
+    const results = await db.select({
+      genre: songs.genre,
+      songCount: count(),
+      totalPlays: sum(songs.playCount),
+    }).from(songs)
+      .where(and(eq(songs.isPublic, true), eq(songs.status, "completed")))
+      .groupBy(songs.genre);
+
+    const summaries: Array<{ genre: string; songCount: number; totalPlays: number; totalLikes: number }> = [];
+    for (const r of results) {
+      if (!r.genre) continue;
+      const genreSongs = await db.select({ id: songs.id }).from(songs)
+        .where(and(eq(songs.isPublic, true), eq(songs.status, "completed"), eq(songs.genre, r.genre)));
+      const songIds = genreSongs.map(s => s.id);
+      let totalLikes = 0;
+      if (songIds.length > 0) {
+        const [likeResult] = await db.select({ count: count() }).from(songLikes)
+          .where(and(inArray(songLikes.songId, songIds), eq(songLikes.value, 1)));
+        totalLikes = likeResult?.count || 0;
+      }
+      summaries.push({
+        genre: r.genre,
+        songCount: r.songCount,
+        totalPlays: Number(r.totalPlays) || 0,
+        totalLikes,
+      });
+    }
+    return summaries.sort((a, b) => b.totalPlays - a.totalPlays);
+  }
+
+  async incrementPlayCount(songId: number): Promise<void> {
+    await db.update(songs).set({ playCount: sql`${songs.playCount} + 1` }).where(eq(songs.id, songId));
+  }
+
+  async getSongLikeCountsBatch(songIds: number[]): Promise<Record<number, number>> {
+    if (songIds.length === 0) return {};
+    const results = await db.select({
+      songId: songLikes.songId,
+      count: count(),
+    }).from(songLikes)
+      .where(and(inArray(songLikes.songId, songIds), eq(songLikes.value, 1)))
+      .groupBy(songLikes.songId);
+    const map: Record<number, number> = {};
+    for (const r of results) map[r.songId] = r.count;
+    return map;
   }
 }
 

@@ -62,7 +62,27 @@
     "styleKits": "Style Kits",
     "producerStore": "Producer Store",
     "blog": "Blog",
+    "discover": "Discover",
     "adminPanel": "Admin Panel"
+  },
+  "discover": {
+    "title": "Discover",
+    "subtitle": "Top AI-generated songs on DGB AUDIO",
+    "playlists": "Playlists",
+    "trending": "Trending",
+    "noSongs": "No published songs yet",
+    "likes": "Likes",
+    "plays": "Plays",
+    "tracks": "Tracks",
+    "playlist": "Playlist",
+    "playAll": "Play",
+    "top100Subtitle": "Discover the Top 100 tracks, featuring chart-toppers across all genres",
+    "backToDiscover": "Back to Discover",
+    "loginToLike": "Log in to like songs",
+    "badges": {
+      "royaltyFree": "Royalty Free",
+      "noCopyright": "No Copyright Issues"
+    }
   },
   "landing": {
     "badge": "The Purebred of Bachata",

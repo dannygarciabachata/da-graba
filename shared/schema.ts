@@ -28,6 +28,7 @@ export const songs = pgTable("songs", {
   artistName: text("artist_name"),
   copyrightHolder: text("copyright_holder").default("DGB AUDIO"),
   lyricsText: text("lyrics_text"),
+  playCount: integer("play_count").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

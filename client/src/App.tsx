@@ -20,6 +20,8 @@ import ProducerStorePage from "@/pages/ProducerStorePage";
 import AudioToolsPage from "@/pages/AudioToolsPage";
 import BlogPage from "@/pages/BlogPage";
 import CoverDesignerPage from "@/pages/CoverDesignerPage";
+import DiscoverPage from "@/pages/DiscoverPage";
+import PlaylistPage from "@/pages/PlaylistPage";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
 import { useTranslation } from "react-i18next";
@@ -42,6 +44,8 @@ function AuthenticatedLayout() {
             <Switch>
               <Route path="/create" component={CreatePage} />
               <Route path="/dashboard"><Redirect to="/create" /></Route>
+              <Route path="/discover/:genre" component={PlaylistPage} />
+              <Route path="/discover" component={DiscoverPage} />
               <Route path="/library" component={LibraryPage} />
               <Route path="/lyrics" component={LyricsPage} />
               <Route path="/quiz" component={QuizPage} />
@@ -81,6 +85,8 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/discover/:genre" component={PlaylistPage} />
+        <Route path="/discover" component={DiscoverPage} />
         <Route path="/blog/:slug" component={BlogPage} />
         <Route path="/blog" component={BlogPage} />
         <Route><Redirect to="/" /></Route>

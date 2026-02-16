@@ -42,6 +42,7 @@ import { Badge } from "@/components/ui/badge";
 
 const NAV_ITEMS = [
   { titleKey: "nav.create", url: "/create", icon: Sparkles },
+  { titleKey: "nav.discover", url: "/discover", icon: Disc },
   { titleKey: "nav.library", url: "/library", icon: Library },
   { titleKey: "nav.lyrics", url: "/lyrics", icon: PenLine },
   { titleKey: "nav.quiz", url: "/quiz", icon: HelpCircle },
