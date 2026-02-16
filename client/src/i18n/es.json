@@ -388,7 +388,8 @@
     "openStudio": "Abrir en Estudio",
     "downloadMp3": "Descargar MP3",
     "downloadWav": "Descargar WAV",
-    "designCover": "Diseñar Portada"
+    "designCover": "Diseñar Portada",
+    "nowPlaying": "Reproduciendo ahora"
   },
   "studio": {
     "title": "Estudio Multipista",

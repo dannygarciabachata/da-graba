@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSongs, useTogglePublish } from "@/hooks/use-songs";
-import { AudioPlayer } from "@/components/AudioPlayer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
@@ -51,21 +50,27 @@ export default function LibraryPage() {
 
       <div className="flex-1 overflow-auto">
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-4">
-          {activeSong && activeSong.audioUrl && (
+          {activeSong && (
             <motion.div
               key={activeSong.id}
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
+              className="glass-panel rounded-2xl p-4 flex items-center gap-3"
             >
-              <AudioPlayer
-                url={activeSong.audioUrl}
-                title={activeSong.title || "Untitled Track"}
-                imageUrl={activeSong.imageUrl}
-                genre={activeSong.genre}
-                duration={activeSong.duration}
-                createdAt={activeSong.createdAt}
-                isPublic={activeSong.isPublic}
-                onTogglePublic={() => togglePublish.mutate(activeSong.id)}
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                {activeSong.imageUrl ? (
+                  <img src={activeSong.imageUrl} alt={activeSong.title} className="w-full h-full object-cover" />
+                ) : (
+                  <Music className="w-5 h-5 text-primary/50" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-semibold truncate">{activeSong.title || "Untitled Track"}</h4>
+                <p className="text-xs text-primary">{t('library.nowPlaying')}</p>
+              </div>
+              <SongActionMenu
+                song={activeSong}
+                onDesignCover={() => setDesignCoverFor(designCoverFor?.id === activeSong.id ? null : activeSong)}
                 onOpenStudio={() => setLocation("/studio")}
               />
             </motion.div>

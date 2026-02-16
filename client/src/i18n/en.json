@@ -388,7 +388,8 @@
     "openStudio": "Open in Studio",
     "downloadMp3": "Download MP3",
     "downloadWav": "Download WAV",
-    "designCover": "Design Cover Art"
+    "designCover": "Design Cover Art",
+    "nowPlaying": "Now Playing"
   },
   "studio": {
     "title": "Multitrack Studio",

@@ -1,18 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
   Music,
-  ChevronUp,
-  ChevronDown,
   Copyright,
   User,
   X,
-  FileText,
+  Heart,
+  ThumbsDown,
+  Share2,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface NowPlayingBannerProps {
   song: {
@@ -39,9 +44,15 @@ function parseLyricsLines(text: string): string[] {
 
 export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [isReady, setIsReady] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [disliked, setDisliked] = useState(false);
   const [showLyrics, setShowLyrics] = useState(true);
   const lyricsRef = useRef<HTMLDivElement>(null);
 
@@ -63,16 +74,28 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
     audio.src = song.audioUrl;
     audioRef.current = audio;
 
+    const onCanPlay = () => setIsReady(true);
     const onLoadedMetadata = () => setDuration(audio.duration || 0);
     const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onEnded = () => setIsPlaying(false);
 
+    audio.addEventListener("canplay", onCanPlay);
     audio.addEventListener("loadedmetadata", onLoadedMetadata);
     audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    audio.addEventListener("ended", onEnded);
 
     return () => {
       audio.pause();
+      audio.removeEventListener("canplay", onCanPlay);
       audio.removeEventListener("loadedmetadata", onLoadedMetadata);
       audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("ended", onEnded);
       audio.src = "";
       audioRef.current = null;
     };
@@ -87,6 +110,16 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
     }
   }, [currentLineIndex]);
 
+  const togglePlay = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) {
+      audio.play().catch(console.error);
+    } else {
+      audio.pause();
+    }
+  }, []);
+
   const handleSeek = useCallback(
     (val: number[]) => {
       const audio = audioRef.current;
@@ -95,6 +128,44 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
     },
     [duration]
   );
+
+  const handleVolume = useCallback((val: number[]) => {
+    const newVol = val[0];
+    setVolume(newVol);
+    if (audioRef.current) audioRef.current.volume = newVol;
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    if (volume > 0) {
+      setVolume(0);
+      if (audioRef.current) audioRef.current.volume = 0;
+    } else {
+      setVolume(1);
+      if (audioRef.current) audioRef.current.volume = 1;
+    }
+  }, [volume]);
+
+  const handleLike = () => {
+    setLiked(!liked);
+    if (disliked) setDisliked(false);
+  };
+
+  const handleDislike = () => {
+    setDisliked(!disliked);
+    if (liked) setLiked(false);
+  };
+
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `${song.title} - DGB Studio`, url: shareUrl });
+      } catch {}
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+      toast({ title: "Link copied", description: "Share link copied to clipboard" });
+    }
+  };
 
   const formatTime = (t: number) => {
     if (!t || !isFinite(t)) return "0:00";
@@ -106,7 +177,7 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
   if (!song.audioUrl) return null;
 
   const artistDisplay = song.artistName || "Unknown Artist";
-  const copyrightDisplay = song.copyrightHolder || "DGB AUDIO";
+  const copyrightDisplay = song.copyrightHolder || "DGB Studio";
 
   return (
     <motion.div
@@ -117,7 +188,7 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
       data-testid="now-playing-banner"
     >
       <div className="relative">
-        <div className="h-[340px] w-full overflow-hidden">
+        <div className="h-[300px] w-full overflow-hidden">
           {song.imageUrl ? (
             <img
               src={song.imageUrl}
@@ -169,104 +240,163 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
         </div>
       </div>
 
-      <div className="px-4 py-3 space-y-3">
-        <Slider
-          value={[duration > 0 ? currentTime / duration : 0]}
-          max={1}
-          step={0.001}
-          onValueChange={handleSeek}
-          className="w-full"
-          data-testid="slider-banner-seek"
-        />
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{formatTime(currentTime)}</span>
-          <span>-{formatTime(duration - currentTime)}</span>
-        </div>
-
-      </div>
-
-      <div className="px-4 py-2 border-t border-white/5">
-        <div className="flex items-center justify-between">
-          <span
-            className="text-[10px] text-muted-foreground flex items-center gap-1"
-            data-testid="text-banner-copyright"
+      <div className="px-4 py-2 space-y-1">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={togglePlay}
+            disabled={!isReady}
+            className="h-8 w-8 rounded-full bg-white/10 text-white flex-shrink-0"
+            data-testid="button-banner-play"
           >
-            <Copyright className="h-3 w-3" />
-            {copyrightDisplay}
-          </span>
-          {hasLyrics && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowLyrics(!showLyrics)}
-              className="text-xs text-muted-foreground gap-1"
-              data-testid="button-toggle-lyrics"
-            >
-              <FileText className="h-3 w-3" />
-              {t('player.lyrics')}
-              {showLyrics ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronUp className="h-3 w-3" />
-              )}
-            </Button>
-          )}
+            {isPlaying ? (
+              <Pause className="w-3.5 h-3.5 fill-current" />
+            ) : (
+              <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+            )}
+          </Button>
+
+          <div className="flex-1 min-w-0">
+            <Slider
+              value={[duration > 0 ? currentTime / duration : 0]}
+              max={1}
+              step={0.001}
+              onValueChange={handleSeek}
+              className="w-full"
+              data-testid="slider-banner-seek"
+            />
+          </div>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleMute}
+            className="text-muted-foreground flex-shrink-0"
+            data-testid="button-banner-mute"
+          >
+            {volume === 0 ? (
+              <VolumeX className="h-3.5 w-3.5" />
+            ) : (
+              <Volume2 className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-muted-foreground font-mono">
+              {formatTime(currentTime)}
+            </span>
+            <span className="text-[10px] text-muted-foreground/50">/</span>
+            <span className="text-[10px] text-muted-foreground font-mono">
+              -{formatTime(duration - currentTime)}
+            </span>
+          </div>
+
+          <Slider
+            value={[volume]}
+            max={1}
+            step={0.01}
+            onValueChange={handleVolume}
+            className="w-16"
+            data-testid="slider-banner-volume"
+          />
         </div>
       </div>
 
-      {hasLyrics && (
-        <AnimatePresence>
-          {showLyrics && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="flex-1 overflow-hidden border-t border-white/5"
-            >
-              <div
-                ref={lyricsRef}
-                className="p-4 overflow-y-auto flex-1 space-y-2"
-                style={{ maxHeight: "calc(100vh - 560px)" }}
-                data-testid="lyrics-sync-container"
-              >
-                {lyricsLines.map((line, idx) => {
-                  const isSection = line.startsWith("[") && line.endsWith("]");
-                  const isActive = idx === currentLineIndex;
-
-                  return (
-                    <motion.p
-                      key={idx}
-                      animate={{
-                        opacity: isActive ? 1 : 0.4,
-                        scale: isActive ? 1.02 : 1,
-                      }}
-                      transition={{ duration: 0.3 }}
-                      className={`text-sm leading-relaxed transition-colors ${
-                        isSection
-                          ? "text-primary/60 font-semibold text-xs uppercase mt-3"
-                          : isActive
-                            ? "text-white font-medium"
-                            : "text-white/40"
-                      }`}
-                      data-testid={`lyrics-line-${idx}`}
-                    >
-                      {line}
-                    </motion.p>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      )}
-
-      {!hasLyrics && (
-        <div className="flex-1 flex items-center justify-center p-4">
-          <p className="text-sm text-muted-foreground/50 text-center italic">
-            {t('player.noLyrics')}
-          </p>
+      <div className="px-4 py-1 flex items-center justify-between border-t border-white/5">
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLike}
+            className={`h-8 w-8 ${liked ? "text-pink-500" : "text-muted-foreground"}`}
+            data-testid="button-banner-like"
+          >
+            <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDislike}
+            className={`h-8 w-8 ${disliked ? "text-blue-400" : "text-muted-foreground"}`}
+            data-testid="button-banner-dislike"
+          >
+            <ThumbsDown className={`h-4 w-4 ${disliked ? "fill-current" : ""}`} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleShare}
+            className="h-8 w-8 text-muted-foreground"
+            data-testid="button-banner-share"
+          >
+            <Share2 className="h-4 w-4" />
+          </Button>
         </div>
-      )}
+        <span
+          className="text-[10px] text-muted-foreground flex items-center gap-1"
+          data-testid="text-banner-copyright"
+        >
+          <Copyright className="h-3 w-3" />
+          {copyrightDisplay}
+        </span>
+      </div>
+
+      <div className="flex-1 overflow-hidden border-t border-white/5">
+        {hasLyrics && showLyrics ? (
+          <div className="relative h-full">
+            <div className="absolute inset-0 pointer-events-none z-10">
+              <div className="h-8 bg-gradient-to-b from-background to-transparent" />
+            </div>
+            <div
+              ref={lyricsRef}
+              className="h-full overflow-y-auto px-4 py-6 space-y-3 scroll-smooth"
+              data-testid="lyrics-sync-container"
+            >
+              {lyricsLines.map((line, idx) => {
+                const isSection = line.startsWith("[") && line.endsWith("]");
+                const isActive = idx === currentLineIndex;
+                const isPast = idx < currentLineIndex;
+
+                return (
+                  <motion.p
+                    key={idx}
+                    animate={{
+                      opacity: isActive ? 1 : isPast ? 0.25 : 0.4,
+                      scale: isActive ? 1.05 : 1,
+                      y: isActive ? -2 : 0,
+                    }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
+                    className={`text-center leading-relaxed transition-colors ${
+                      isSection
+                        ? "text-primary/50 font-semibold text-[10px] uppercase tracking-widest mt-4"
+                        : isActive
+                          ? "text-white font-bold text-base drop-shadow-[0_0_10px_rgba(0,200,255,0.4)]"
+                          : isPast
+                            ? "text-white/20 text-sm"
+                            : "text-white/40 text-sm"
+                    }`}
+                    data-testid={`lyrics-line-${idx}`}
+                  >
+                    {line}
+                  </motion.p>
+                );
+              })}
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 pointer-events-none z-10">
+              <div className="h-8 bg-gradient-to-t from-background to-transparent" />
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center p-4 h-full">
+            <p className="text-sm text-muted-foreground/50 text-center italic">
+              {hasLyrics ? t('player.lyrics') : t('player.noLyrics')}
+            </p>
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }
