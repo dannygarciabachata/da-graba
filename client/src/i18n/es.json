@@ -65,7 +65,8 @@
     "discover": "Descubrir",
     "adminPanel": "Panel Admin",
     "artist": "Artista",
-    "artistDashboard": "Mi Perfil de Artista"
+    "artistDashboard": "Mi Perfil de Artista",
+    "discography": "Discografía"
   },
   "discover": {
     "title": "Descubrir",
@@ -949,5 +950,21 @@
       "created": "¡Perfil de artista creado!",
       "updated": "¡Perfil actualizado!"
     }
+  },
+  "discography": {
+    "title": "Discografía",
+    "subtitle": "Descubre la música de nuestros artistas en todas las plataformas digitales",
+    "albumLabel": "Álbum",
+    "compilation": "Compilación",
+    "tracks": "canciones",
+    "trackTitle": "Título",
+    "showTracks": "Ver canciones",
+    "hideTracks": "Ocultar",
+    "noAlbums": "Aún no hay discografía publicada",
+    "verified": "Verificado",
+    "website": "Sitio Web",
+    "release": "lanzamiento",
+    "releases": "lanzamientos",
+    "listenOn": "Escuchar en"
   }
 }

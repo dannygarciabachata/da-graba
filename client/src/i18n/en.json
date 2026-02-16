@@ -65,7 +65,8 @@
     "discover": "Discover",
     "adminPanel": "Admin Panel",
     "artist": "Artist",
-    "artistDashboard": "My Artist Profile"
+    "artistDashboard": "My Artist Profile",
+    "discography": "Discography"
   },
   "discover": {
     "title": "Discover",
@@ -949,5 +950,21 @@
       "created": "Artist profile created!",
       "updated": "Profile updated!"
     }
+  },
+  "discography": {
+    "title": "Discography",
+    "subtitle": "Discover our artists' music on all digital platforms",
+    "albumLabel": "Album",
+    "compilation": "Compilation",
+    "tracks": "tracks",
+    "trackTitle": "Title",
+    "showTracks": "Show tracks",
+    "hideTracks": "Hide",
+    "noAlbums": "No discography published yet",
+    "verified": "Verified",
+    "website": "Website",
+    "release": "release",
+    "releases": "releases",
+    "listenOn": "Listen on"
   }
 }
