@@ -1,0 +1,114 @@
+Every new user gets $20 in free credits to try out core features. Explore, test, and create without limits upfront.
+​
+Plans
+
+API Free
+$0/month
+API Plus
+$19/month
+API Pro
+$69/month
+Enterprise
+Contact Us
+​
+Generation Features Pricing
+
+Feature	Pro Plan	Plus Plan	Free Plan
+AI Music Generator
+Generate AI music from prompt	$0.03 /song	$0.05 /song	$0.495 /song
+Custom Voice Music Generator
+Generate AI song with voice you like	$0.0609 /song	$0.0727 /song	$0.745 /song
+Text to Speech
+Convert text into speech	$0.026/100 words	$0.035/100 words	$0.49 + $0.19/100 words
+Remix
+Remix audio into a new music style	$0.05 /song	$0.07 /song	$0.595 /song
+Inpaint
+Re-imagine and replace the selected portion of audio	$0.05 /song	$0.07 /song	$0.595 /song
+Extend
+Extend the input audio	$0.05 /song	$0.07 /song	$0.595 /song
+Sing Over Instrumental
+Blend your custom lyrics to an instrumental audio	$0.05 /song	$0.07 /song	$0.595 /song
+Sound Generator
+Generate sounds from prompt	$0.037 /generation	$0.0496 /generation	$0.99 /generation
+Lyrics Generator
+Generate Lyrics from prompt	$0.005 /generation	$0.005 /generation	$0.05 /generation
+Voice Changer
+Transform voice in audio	$0.016 + $0.0022/min	$0.022 + $0.003/min	$0.49 + $0.058/min
+Cover Song
+Create AI-generated cover songs	$0.0235 + $0.0037/min	$0.0315 + $0.005/min	$0.49 + $0.078/min
+The pricing for Remix, Inpaint, Extend, and Sing Over Instrumental has been updated, effective October 14, 2025.
+📝 Note: AI Music, Custom Voice Music, Remix, Inpaint, Extend and Sing Over Instrumental generates 2 output versions. All features use 60s increments (except Text-to-Speech: 100 words).
+​
+Stem Splitter Features Pricing
+
+Feature	Pro Plan	Plus Plan	Free Plan
+Vocal Extraction
+Isolate vocals from track	$0.0115 + $0.0022/min	$0.0155 + $0.003/min	$0.49 + $0.29/min
+Gender-Based Vocal Extraction
+Split male and female vocals	$0.0186 + $0.003/min	$0.0248 + $0.0045/min	$0.49 + $0.29/min
+Lead/Back Vocals Separation
+Split lead and backing vocals	$0.0242 + $0.0037/min	$0.0322 + $0.005/min	$0.49 + $0.29/min
+Instrumental Extraction
+Extract instrumental parts	$0.0576 + $0.0089/min	$0.0768 + $0.012/min	$0.99 + $0.6/min
+Guitar Type Stems
+Split acoustic/electric guitars	$0.0576 + $0.1289/min	$0.0768 + $0.1319/min	$0.99 + $0.6/min
+Guitar Part Stems
+Separate rhythm & solo guitar	$0.0576 + $0.1289/min	$0.0768 + $0.1319/min	$0.99 + $0.6/min
+Strings Stems
+Separate string instruments	$0.0576 + $0.0989/min	$0.0768 + $0.1019/min	$0.99 + $0.6/min
+Keys Extraction
+Extract piano & keys	$0.067 + $0.0104/min	$0.089 + $0.0134/min	$0.99 + $0.6/min
+Winds Splitter
+Split wind instruments	$0.0727 + $0.0119/min	$0.097 + $0.0149/min	$0.49 + $0.29/min
+Band Parts Splitter
+Extract drums, bass, piano, guitar	$0.1078 + $0.0179/min	$0.1438 + $0.0238/min	$0.49 + $0.29/min
+Premium Bass/Drums Split
+High-accuracy drums/bass isolation	$0.2455 + $0.0372/min	$0.3273 + $0.0521/min	$0.99 + $0.6/min
+Drum Stems Separation
+Separate Drum Stems	$0.1078 + $0.0179/min	$0.1438 + $0.0238/min	$0.49 + $0.29/min
+Example : For Vocal Extraction Pro plan, a 3-minute song costs 0.0115+(0.0022 × 3 minutes).
+​
+Audio Enhancement Features Pricing
+
+Feature	Pro Plan	Plus Plan	Free Plan
+Voice Cleaner
+Remove background noise	$0.0223 + $0.0037/min	$0.0298 + $0.0045/min	$0.29 + $0.042/min
+DeEcho
+Remove echo	$0.0171 + $0.003/min	$0.0228 + $0.0037/min	$0.29 + $0.042/min
+DeReverb
+Remove reverb	$0.0145 + $0.0022/min	$0.0193 + $0.003/min	$0.29 + $0.042/min
+Audio Cutter
+Trim specific parts of audio	$0.003 + $0.003/min	$0.004 + $0.004/min	$0.29 + $0.042/min
+Speed Changer
+Adjust audio speed	$0.003 + $0.003/min	$0.004 + $0.004/min	$0.29 + $0.042/min
+Audio Mastering
+Master audio based on reference track	$0.003 + $0.003/min	$0.004 + $0.004/min	$0.29 + $0.042/min
+File Converter
+Convert audio formats	$0.002 + $0.0008/min	$0.003 + $0.0011/min	$0.29 + $0.042/min
+​
+Audio Analysis Features Pricing
+
+Feature	Pro Plan	Plus Plan	Free Plan
+Key & BPM Detector
+Detect BPM and musical key	$0.00186 + $0.0002/min	$0.00248 + $0.0003/min	$0.29 + $0.042/min
+Audio Transcription
+Convert speech to text & translate	$0.0223 + $0.0037/min	$0.0298 + $0.0045/min	$0.29 + $0.042/min
+Audio to MIDI
+Generate MIDI from audio	$0.005 + $0.0037/min	$0.007 + $0.005/min	$0.29 + $0.042/min
+Plans don’t give you credits—they just lower the cost of each API call.
+​
+💡 Pricing Summary
+
+Base Cost: One-time charge per request
++/min: Additional cost per minute (60s increments)
+Text-to-Speech: Only feature using word count (per 100 words)
+Multiple Outputs: AI Music, Custom Voice Music & Remix deliver 2 versions and its cost is based on per each song.
+For custom plans, contact us at support@musicgpt.com.
+​
+📈 API Usage Limits
+
+To ensure optimal system performance and fair usage:
+Music Generation: Max 10 parallel tasks
+Other Conversions: Max 60 conversions per minute
+Conversion Status (GetById): Max 200 API calls per minute
+Upgrade to increase limits and enjoy priority processing.

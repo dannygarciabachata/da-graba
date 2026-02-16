@@ -13,24 +13,24 @@ import {
 } from "lucide-react";
 
 const FEATURE_COMPARISON = [
-  { feature: "AI Music Generation", free: true, pro: true, producer: true, premium: true },
-  { feature: "Credits per month", free: "12 (one-time)", pro: "100", producer: "500", premium: "Unlimited" },
-  { feature: "AI Lyrics Generator", free: true, pro: true, producer: true, premium: true },
-  { feature: "Basic Stem Separation", free: true, pro: true, producer: true, premium: true },
-  { feature: "Advanced Stem Separation (Demucs)", free: false, pro: true, producer: true, premium: true },
-  { feature: "AI Mastering", free: false, pro: true, producer: true, premium: true },
-  { feature: "AI Denoise", free: false, pro: true, producer: true, premium: true },
-  { feature: "Sample Lab", free: false, pro: true, producer: true, premium: true },
-  { feature: "AI Cover Creation", free: false, pro: true, producer: true, premium: true },
-  { feature: "Audio Trimming", free: true, pro: true, producer: true, premium: true },
-  { feature: "Priority Processing", free: false, pro: true, producer: true, premium: true },
-  { feature: "Custom Instrument Kits", free: false, pro: false, producer: true, premium: true },
-  { feature: "AI Training (Your Sounds)", free: false, pro: false, producer: true, premium: true },
-  { feature: "Producer Store Access", free: false, pro: false, producer: true, premium: true },
-  { feature: "Cloud GPU Training", free: false, pro: false, producer: true, premium: true },
-  { feature: "Custom Voice Models", free: false, pro: false, producer: false, premium: true },
-  { feature: "Commercial License", free: false, pro: false, producer: false, premium: true },
-  { feature: "Priority Support", free: false, pro: false, producer: false, premium: true },
+  { feature: "AI Music Generation", free: true, basic: true, pro: true, premium: true },
+  { feature: "Credits per month", free: "12 (one-time)", basic: "1,000", pro: "1,500", premium: "3,500" },
+  { feature: "AI Lyrics Generator", free: true, basic: true, pro: true, premium: true },
+  { feature: "Basic Stem Separation", free: true, basic: true, pro: true, premium: true },
+  { feature: "Advanced Stem Separation (Demucs)", free: false, basic: false, pro: true, premium: true },
+  { feature: "AI Mastering", free: false, basic: false, pro: true, premium: true },
+  { feature: "AI Denoise", free: false, basic: false, pro: true, premium: true },
+  { feature: "Sample Lab", free: false, basic: false, pro: true, premium: true },
+  { feature: "AI Cover Creation", free: false, basic: false, pro: true, premium: true },
+  { feature: "Audio Trimming", free: true, basic: true, pro: true, premium: true },
+  { feature: "Priority Processing", free: false, basic: false, pro: true, premium: true },
+  { feature: "Custom Instrument Kits", free: false, basic: false, pro: false, premium: true },
+  { feature: "AI Training (Your Sounds)", free: false, basic: false, pro: false, premium: true },
+  { feature: "Credit Top-Ups", free: false, basic: true, pro: true, premium: true },
+  { feature: "Commercial License", free: false, basic: false, pro: false, premium: true },
+  { feature: "Priority Support", free: false, basic: false, pro: false, premium: true },
+  { feature: "100% Rights (Royalty Free)", free: false, basic: true, pro: true, premium: true },
+  { feature: "Annual Discount", free: "-", basic: "2%", pro: "5%", premium: "10%" },
 ];
 
 const FALLBACK_PLANS = [
@@ -40,6 +40,7 @@ const FALLBACK_PLANS = [
     description: "Get started with AI music creation. 12 credits included to explore the platform.",
     tier: "free",
     price: 0,
+    annualDiscount: 0,
     priceId: null,
     features: [
       "12 credits (one-time)",
@@ -47,72 +48,73 @@ const FALLBACK_PLANS = [
       "Basic stem separation",
       "AI lyrics generator",
       "Audio trimming",
-      "Bachata Quiz",
     ],
     icon: Music,
     order: 0,
     color: "text-blue-400",
   },
   {
-    id: "pro",
-    name: "Pro",
-    description: "Professional tools for serious music creators. More credits, more power.",
-    tier: "pro",
-    price: 1499,
-    priceId: null,
-    features: [
-      "100 credits/month",
-      "Everything in Free",
-      "Advanced stem separation (Demucs AI)",
-      "AI mastering & denoise",
-      "Sample Lab (record, upload, remix)",
-      "AI cover creation",
-      "Key & BPM detection",
-      "Priority processing",
-    ],
-    icon: Zap,
-    order: 1,
-    color: "text-yellow-400",
-  },
-  {
-    id: "producer",
-    name: "Producer",
-    description: "Upload your own instruments, train AI with your sounds, and build your sonic brand.",
-    tier: "producer",
-    price: 2900,
-    annualPrice: 33060,
+    id: "basic",
+    name: "Basic",
+    description: "Essential tools for aspiring music creators. 1,000 credits monthly.",
+    tier: "basic",
+    price: 699,
+    annualDiscount: 2,
     priceId: null,
     annualPriceId: null,
     features: [
-      "500 credits/month",
-      "Everything in Pro",
-      "Upload custom instrument kits",
-      "AI training for your sounds",
-      "Personal Producer Store",
-      "Cloud GPU AI training",
-      "Style kit creation & sharing",
-      "Priority AI processing",
+      "1,000 credits/month",
+      "AI music generation",
+      "Stem separation",
+      "AI lyrics generator",
+      "Credit top-ups available",
+      "100% rights (Royalty Free)",
+    ],
+    icon: Zap,
+    order: 1,
+    color: "text-green-400",
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    description: "Professional tools for serious music creators. 1,500 credits monthly.",
+    tier: "pro",
+    price: 1499,
+    annualDiscount: 5,
+    priceId: null,
+    annualPriceId: null,
+    features: [
+      "1,500 credits/month",
+      "Everything in Basic",
+      "Advanced stem separation (Demucs AI)",
+      "AI mastering & denoise",
+      "Sample Lab (record, upload, remix)",
+      "Priority processing",
+      "Credit top-ups available",
+      "100% rights (Royalty Free)",
     ],
     icon: Disc,
     order: 2,
-    color: "text-purple-400",
+    color: "text-yellow-400",
   },
   {
     id: "premium",
     name: "Premium",
-    description: "Unlimited access to every tool. Create without limits, license commercially.",
+    description: "Full access to every tool. 3,500 credits, custom AI training, commercial license.",
     tier: "premium",
     price: 2999,
+    annualDiscount: 10,
     priceId: null,
+    annualPriceId: null,
     features: [
-      "Unlimited credits",
-      "Everything in Producer",
-      "Custom voice models",
+      "3,500 credits/month",
+      "Everything in Pro",
+      "Custom instrument kits",
+      "AI training for your sounds",
       "Commercial use license",
       "Priority support",
-      "Early access to new features",
-      "Cover art designer",
-      "API access (coming soon)",
+      "Credit top-ups available",
+      "100% rights (Royalty Free)",
     ],
     icon: Crown,
     order: 3,
@@ -137,13 +139,16 @@ function parsePlans(products: any[] | undefined) {
       const annualPrice = prices.find((p: any) => p.interval === "year");
       const fallback = FALLBACK_PLANS.find((p) => p.tier === tier);
 
-      const iconMap: Record<string, any> = { free: Music, pro: Zap, producer: Disc, premium: Crown };
+      const iconMap: Record<string, any> = { free: Music, basic: Zap, pro: Disc, premium: Crown };
       const colorMap: Record<string, string> = {
         free: "text-blue-400",
+        basic: "text-green-400",
         pro: "text-yellow-400",
-        producer: "text-purple-400",
         premium: "text-amber-400",
       };
+
+      const discountMap: Record<string, number> = { free: 0, basic: 2, pro: 5, premium: 10 };
+      const annualDiscount = parseInt(product.metadata?.annualDiscount || "0", 10) || discountMap[tier] || (fallback as any)?.annualDiscount || 0;
 
       return {
         id: product.id,
@@ -152,8 +157,9 @@ function parsePlans(products: any[] | undefined) {
         tier,
         price: monthlyPrice?.unitAmount || fallback?.price || 0,
         priceId: monthlyPrice?.id || null,
-        annualPrice: annualPrice?.unitAmount || (fallback as any)?.annualPrice || null,
+        annualPrice: annualPrice?.unitAmount || null,
         annualPriceId: annualPrice?.id || null,
+        annualDiscount,
         features: features.length > 0 ? features : fallback?.features || [],
         icon: iconMap[tier] || Music,
         order: parseInt(product.metadata?.order || "0", 10) || fallback?.order || 0,
@@ -222,7 +228,7 @@ export default function PricingPage() {
             data-testid="button-billing-annual"
           >
             {t('pricing.yearly')}
-            <Badge className="ml-1.5 text-[10px] bg-green-500 text-white">Save 5%</Badge>
+            <Badge className="ml-1.5 text-[10px] bg-green-500 text-white">{t('landing.save')} 2-10%</Badge>
           </Button>
         </div>
       </div>
@@ -230,10 +236,16 @@ export default function PricingPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {plans.map((plan: any) => {
           const isCurrentPlan = currentTier === plan.tier;
-          const isPopular = plan.tier === "producer";
+          const isPopular = plan.tier === "premium";
           const IconComp = plan.icon;
-          const showAnnual = billingInterval === "annual" && plan.annualPrice;
-          const displayPrice = showAnnual ? Math.round(plan.annualPrice / 12) : plan.price;
+          const discount = plan.annualDiscount || 0;
+          const hasStripeAnnual = !!plan.annualPrice;
+          const annualMonthlyPrice = hasStripeAnnual
+            ? Math.round(plan.annualPrice / 12)
+            : plan.price > 0 ? Math.round(plan.price * (1 - discount / 100)) : 0;
+          const annualTotalPrice = hasStripeAnnual ? plan.annualPrice : annualMonthlyPrice * 12;
+          const showAnnual = billingInterval === "annual" && plan.price > 0;
+          const displayPrice = showAnnual ? annualMonthlyPrice : plan.price;
           const activePriceId = showAnnual && plan.annualPriceId ? plan.annualPriceId : plan.priceId;
 
           return (
@@ -273,9 +285,9 @@ export default function PricingPage() {
                     <div data-testid={`text-price-${plan.tier}`}>
                       <span className="text-3xl font-bold">{formatPrice(displayPrice)}</span>
                       <span className="text-muted-foreground text-sm">{t('common.perMonth')}</span>
-                      {showAnnual && (
+                      {showAnnual && discount > 0 && (
                         <p className="text-xs text-green-400 mt-1">
-                          {formatPrice(plan.annualPrice)}/year (5% off)
+                          {formatPrice(annualTotalPrice)}{t('landing.perYear')} ({discount}% off)
                         </p>
                       )}
                     </div>
@@ -347,16 +359,16 @@ export default function PricingPage() {
               <tr className="border-b border-white/10 bg-white/[0.02]">
                 <th className="text-left p-3 font-semibold">Feature</th>
                 <th className="text-center p-3 font-semibold">Free</th>
+                <th className="text-center p-3 font-semibold">Basic</th>
                 <th className="text-center p-3 font-semibold">Pro</th>
-                <th className="text-center p-3 font-semibold text-primary">Producer</th>
-                <th className="text-center p-3 font-semibold">Premium</th>
+                <th className="text-center p-3 font-semibold text-primary">Premium</th>
               </tr>
             </thead>
             <tbody>
               {FEATURE_COMPARISON.map((row, i) => (
                 <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
                   <td className="p-3 text-muted-foreground">{row.feature}</td>
-                  {(["free", "pro", "producer", "premium"] as const).map((tier) => (
+                  {(["free", "basic", "pro", "premium"] as const).map((tier) => (
                     <td key={tier} className="text-center p-3">
                       {typeof row[tier] === "boolean" ? (
                         row[tier] ? (

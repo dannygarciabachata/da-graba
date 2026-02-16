@@ -22,12 +22,12 @@ const FEATURES_ICONS = [Sparkles, Scissors, Mic2, SlidersHorizontal, Volume2, Up
 
 const HOW_IT_WORKS_KEYS = ["step1", "step2", "step3"];
 
-const PLANS_KEYS = ["free", "pro", "producer", "premium"];
+const PLANS_KEYS = ["free", "basic", "pro", "premium"];
 const PLANS_META = [
-  { price: "$0", highlight: false },
-  { price: "$14.99", highlight: false },
-  { price: "$29.00", highlight: true },
-  { price: "$29.99", highlight: false },
+  { monthlyPrice: 0, annualDiscount: 0, credits: 12, highlight: false, isOneTime: true },
+  { monthlyPrice: 6.99, annualDiscount: 2, credits: 1000, highlight: false, isOneTime: false },
+  { monthlyPrice: 14.99, annualDiscount: 5, credits: 1500, highlight: false, isOneTime: false },
+  { monthlyPrice: 29.99, annualDiscount: 10, credits: 3500, highlight: true, isOneTime: false },
 ];
 
 const STATS_KEYS = ["genres", "stems", "credits", "apiCosts"];
@@ -314,6 +314,7 @@ export default function Landing() {
   const { t, i18n } = useTranslation();
   const { data: publicSongs } = usePublicSongs();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [billingAnnual, setBillingAnnual] = useState(false);
 
   useEffect(() => {
     return () => {};
@@ -653,6 +654,27 @@ export default function Landing() {
             <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">
               {t('landing.pricingSubtitle')}
             </p>
+
+            <div className="flex items-center justify-center gap-3 mt-8" data-testid="billing-toggle">
+              <span className={`text-sm font-medium transition-colors ${!billingAnnual ? "text-primary" : "text-muted-foreground"}`}>
+                {t('landing.billingMonthly')}
+              </span>
+              <button
+                onClick={() => setBillingAnnual(!billingAnnual)}
+                className={`relative w-14 h-7 rounded-full transition-colors ${billingAnnual ? "bg-primary" : "bg-white/20"}`}
+                data-testid="button-billing-toggle"
+              >
+                <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${billingAnnual ? "translate-x-7" : "translate-x-0.5"}`} />
+              </button>
+              <span className={`text-sm font-medium transition-colors ${billingAnnual ? "text-primary" : "text-muted-foreground"}`}>
+                {t('landing.billingAnnual')}
+              </span>
+              {billingAnnual && (
+                <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
+                  {t('landing.save')} 2-10%
+                </Badge>
+              )}
+            </div>
           </motion.div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
@@ -660,6 +682,15 @@ export default function Landing() {
               const meta = PLANS_META[i];
               const planFeatures = t(`landing.plans.${key}.features`, { returnObjects: true }) as string[];
               const planName = t(`landing.plans.${key}.name`);
+
+              const monthlyPrice = meta.monthlyPrice;
+              const annualMonthly = monthlyPrice > 0
+                ? Number((monthlyPrice * (1 - meta.annualDiscount / 100)).toFixed(2))
+                : 0;
+              const annualTotal = Number((annualMonthly * 12).toFixed(2));
+              const displayPrice = billingAnnual && !meta.isOneTime ? annualMonthly : monthlyPrice;
+              const showDiscount = billingAnnual && !meta.isOneTime && meta.annualDiscount > 0;
+
               return (
                 <motion.div key={i} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.1 }}>
                   <Card
@@ -671,12 +702,39 @@ export default function Landing() {
                         <Badge className="bg-primary text-black font-semibold">{t('common.mostPopular')}</Badge>
                       </div>
                     )}
+                    {showDiscount && (
+                      <div className="absolute -top-3 right-3">
+                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px]">
+                          -{meta.annualDiscount}%
+                        </Badge>
+                      </div>
+                    )}
                     <CardContent className="p-3 sm:p-5 md:p-6 flex flex-col h-full">
                       <h3 className="font-bold text-sm sm:text-lg">{planName}</h3>
-                      <div className="mt-1.5 sm:mt-2 mb-3 sm:mb-4">
-                        <span className="text-2xl sm:text-3xl font-bold">{meta.price}</span>
-                        {meta.price !== "$0" && <span className="text-muted-foreground text-xs sm:text-sm">{t('common.perMonth')}</span>}
+                      <div className="mt-1.5 sm:mt-2 mb-1">
+                        {monthlyPrice === 0 ? (
+                          <span className="text-2xl sm:text-3xl font-bold">$0</span>
+                        ) : (
+                          <>
+                            <span className="text-2xl sm:text-3xl font-bold">${displayPrice.toFixed(2)}</span>
+                            <span className="text-muted-foreground text-xs sm:text-sm">{t('common.perMonth')}</span>
+                          </>
+                        )}
                       </div>
+                      {billingAnnual && !meta.isOneTime && monthlyPrice > 0 && (
+                        <div className="mb-2">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground line-through">${monthlyPrice.toFixed(2)}{t('common.perMonth')}</p>
+                          <p className="text-[10px] sm:text-xs text-green-400">${annualTotal.toFixed(2)}{t('landing.perYear')}</p>
+                        </div>
+                      )}
+                      {!meta.isOneTime && (
+                        <div className="mb-3 sm:mb-4">
+                          <Badge variant="outline" className="text-[10px] border-primary/20 text-primary/80">
+                            {meta.credits.toLocaleString()} {i18n.language === 'es' ? 'créditos/mes' : 'credits/mo'}
+                          </Badge>
+                        </div>
+                      )}
+                      {meta.isOneTime && <div className="mb-3 sm:mb-4" />}
                       <ul className="space-y-1.5 sm:space-y-2 flex-1">
                         {planFeatures.map((f, j) => (
                           <li key={j} className="flex items-start gap-1.5 sm:gap-2 text-xs sm:text-sm">
@@ -691,7 +749,7 @@ export default function Landing() {
                         onClick={handleLogin}
                         data-testid={`button-plan-${key}`}
                       >
-                        {meta.price === "$0" ? t('common.getStarted') : t('common.startTrial')}
+                        {monthlyPrice === 0 ? t('common.getStarted') : t('common.startTrial')}
                       </Button>
                     </CardContent>
                   </Card>
@@ -699,6 +757,32 @@ export default function Landing() {
               );
             })}
           </div>
+
+          <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.4 }}>
+            <div className="mt-8 md:mt-12 max-w-2xl mx-auto">
+              <Card className="bg-gradient-to-r from-primary/5 via-blue-600/5 to-purple-500/5 border-primary/20" data-testid="card-topup-info">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 shrink-0">
+                      <Zap className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="font-bold text-sm sm:text-base">{t('landing.topUpTitle')}</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{t('landing.topUpDescription')}</p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <Badge variant="outline" className="text-xs border-primary/20 text-primary/80">
+                          {t('landing.topUpBase')}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs border-green-500/20 text-green-400/80">
+                          {t('landing.topUpScaling')}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </motion.div>
         </section>
 
         <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
