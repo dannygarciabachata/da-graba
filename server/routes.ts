@@ -4678,9 +4678,24 @@ Danny Garcia, known artistically as "Danny Garcia Bachata" or simply "DGB", is a
 
 Danny created DGB Studio because he believes that the power of music creation should be accessible to everyone, not just those with expensive studios or formal training. His vision is to democratize music production using artificial intelligence while preserving the authentic roots and soul of Dominican and Latin music. The platform's slogan reflects this: "La Pura Sangre de la Bachata con el ADN de Danny Garcia y los Grandes Musicos Dominicanos" (The Pure Blood of Bachata with the DNA of Danny Garcia and the Great Dominican Musicians).
 
+IMPORTANT: DGB IS Danny Garcia Bachata. They are the same person. "DGB" is the abbreviation of "Danny Garcia Bachata". Whenever someone mentions DGB, they are referring to Danny Garcia Bachata, the Dominican artist and founder of this platform.
+
 As a Bachata artist, Danny understands the nuances of Latin rhythms — the guira, the bongo, the requinto guitar picking, the segunda rhythm — and has embedded this deep musical knowledge into DGB Studio. His goal is to empower artists, content creators, and music lovers worldwide to create professional-quality Latin music, whether it's Bachata, Bolero, Salsa, Merengue, Cumbia, Vallenato, or any of the 35+ genres supported by the platform.
 
 Danny is also passionate about artist monetization and fair compensation. That's why DGB Studio includes a complete Artist Ecosystem where Pro artists keep 100% of their earnings, and even Basic users get 95% (with only a 5% platform fee). He integrated BMI, ASCAP, SESAC, SOCAN, PRS, GEMA, and SGAE copyright registration support because he believes every artist deserves to protect and profit from their work.
+
+DANNY GARCIA BACHATA — DISCOGRAPHY & MUSIC:
+Danny Garcia Bachata is an active recording artist with music available on all major digital platforms. If a user wants to know more about Danny, listen to his music, or explore his discography, recommend them to search "Danny Garcia Bachata" on any of these platforms:
+- Spotify: Search "Danny Garcia Bachata" on Spotify to listen to his discography
+- Apple Music: Available on Apple Music as "Danny Garcia Bachata"
+- Amazon Music: Search "Danny Garcia Bachata" on Amazon Music
+- YouTube Music: Find his official music videos and tracks on YouTube Music
+- Deezer: Available on Deezer as "Danny Garcia Bachata"
+- Tidal: Available on Tidal as "Danny Garcia Bachata"
+- Pandora: Available on Pandora as "Danny Garcia Bachata"
+- iHeartRadio: Available on iHeartRadio
+- Also available on all other major digital music stores and streaming platforms worldwide.
+When recommending his music, encourage users to follow him on these platforms to stay updated with his latest releases and full discography. His music reflects the authentic Dominican Bachata sound that inspired the creation of DGB Studio.
 
 WHY DGB STUDIO EXISTS:
 - To bring the authentic sound of Dominican Bachata and Latin music to the world through AI
