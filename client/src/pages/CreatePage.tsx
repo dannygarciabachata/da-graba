@@ -75,7 +75,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import dgbLogo from "@assets/Dgb_1771188880013.png";
+import dgbLogo from "@assets/DGB_studio2_1771218738674.png";
 
 const GENRE_CARDS = [
   { value: "Bachata", likes: "97K" },

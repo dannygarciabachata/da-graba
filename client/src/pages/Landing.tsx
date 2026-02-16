@@ -3,7 +3,7 @@ import { Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import dgbLogo from "@assets/Dgb_1771188880013.png";
+import dgbLogo from "@assets/DGB_studio2_1771218738674.png";
 import {
   Play, Pause, Mic2, Wand2, Music, Headphones, Sparkles, Scissors, Zap,
   Crown, Shield, Globe, Layers, ArrowRight, CheckCircle2, Star,
@@ -258,7 +258,7 @@ export default function Landing() {
 
       <nav className="relative z-10 container mx-auto px-4 md:px-6 py-4 md:py-6 flex justify-between items-center" data-testid="nav-landing">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-          <img src={dgbLogo} alt="DGB AUDIO" className="h-9 md:h-10 w-auto" data-testid="img-landing-logo" />
+          <img src={dgbLogo} alt="DGB Studio" className="h-12 md:h-16 w-auto drop-shadow-[0_0_15px_rgba(0,200,255,0.3)]" data-testid="img-landing-logo" />
         </div>
         <div className="flex items-center gap-3">
           <Button variant="ghost" className="hidden sm:inline-flex text-sm" onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} data-testid="link-features">
@@ -636,7 +636,7 @@ export default function Landing() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <img src={dgbLogo} alt="DGB AUDIO" className="h-8 w-auto" />
+                <img src={dgbLogo} alt="DGB Studio" className="h-10 w-auto drop-shadow-[0_0_10px_rgba(217,70,239,0.3)]" />
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {t('landing.footer.footerDescription')}

@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
-import dgbLogo from "@assets/Dgb_1771188880013.png";
+import dgbLogo from "@assets/DGB_studio2_1771218738674.png";
 import {
   Sidebar,
   SidebarContent,
@@ -73,19 +73,24 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="p-4 pb-2">
         <div
-          className="flex items-center gap-2.5 cursor-pointer"
+          className="flex items-center justify-center cursor-pointer group"
           onClick={() => setLocation("/create")}
           data-testid="link-sidebar-logo"
         >
-          <img src={dgbLogo} alt="DGB AUDIO" className="h-10 w-auto" />
+          <img
+            src={dgbLogo}
+            alt="DGB Studio"
+            className="h-16 w-auto drop-shadow-[0_0_15px_rgba(0,200,255,0.3)] group-hover:drop-shadow-[0_0_25px_rgba(217,70,239,0.5)] transition-all duration-300"
+          />
         </div>
+        <div className="h-px mt-2 bg-gradient-to-r from-transparent via-[#D946EF]/40 to-transparent" />
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>{t("nav.music")}</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[#D946EF]/70 font-semibold uppercase tracking-wider text-[10px]">{t("nav.music")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {NAV_ITEMS.map((item) => {
@@ -95,6 +100,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
+                      className={isActive ? "bg-gradient-to-r from-[#00C8FF]/15 to-[#D946EF]/15 border-l-2 border-[#00C8FF] text-[#00C8FF]" : "hover:bg-gradient-to-r hover:from-[#00C8FF]/5 hover:to-[#D946EF]/5 transition-all duration-200"}
                       data-testid={`link-sidebar-${item.titleKey.split(".").pop()?.toLowerCase()}`}
                     >
                       <a
@@ -104,7 +110,7 @@ export function AppSidebar() {
                           setLocation(item.url);
                         }}
                       >
-                        <item.icon className="h-4 w-4" />
+                        <item.icon className={`h-4 w-4 ${isActive ? "text-[#00C8FF]" : "text-[#D946EF]/60"}`} />
                         <span>{t(item.titleKey)}</span>
                       </a>
                     </SidebarMenuButton>
@@ -115,10 +121,10 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
+        <div className="mx-4 h-px bg-gradient-to-r from-transparent via-[#D946EF]/20 to-transparent" />
 
         <SidebarGroup>
-          <SidebarGroupLabel>{t("nav.tools")}</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[#D946EF]/70 font-semibold uppercase tracking-wider text-[10px]">{t("nav.tools")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {TOOLS_ITEMS.map((item) => {
@@ -128,6 +134,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
+                      className={isActive ? "bg-gradient-to-r from-[#00C8FF]/15 to-[#D946EF]/15 border-l-2 border-[#D946EF] text-[#D946EF]" : "hover:bg-gradient-to-r hover:from-[#00C8FF]/5 hover:to-[#D946EF]/5 transition-all duration-200"}
                       data-testid={`link-sidebar-${item.titleKey.split(".").pop()?.toLowerCase()}`}
                     >
                       <a
@@ -137,7 +144,7 @@ export function AppSidebar() {
                           setLocation(item.url);
                         }}
                       >
-                        <item.icon className="h-4 w-4" />
+                        <item.icon className={`h-4 w-4 ${isActive ? "text-[#D946EF]" : "text-[#00C8FF]/50"}`} />
                         <span>{t(item.titleKey)}</span>
                       </a>
                     </SidebarMenuButton>
@@ -149,15 +156,16 @@ export function AppSidebar() {
         </SidebarGroup>
         {adminCheck?.isAdmin && (
           <>
-            <SidebarSeparator />
+            <div className="mx-4 h-px bg-gradient-to-r from-transparent via-[#D946EF]/20 to-transparent" />
             <SidebarGroup>
-              <SidebarGroupLabel>{t("nav.admin")}</SidebarGroupLabel>
+              <SidebarGroupLabel className="text-[#D946EF]/70 font-semibold uppercase tracking-wider text-[10px]">{t("nav.admin")}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
                       isActive={location === "/admin"}
+                      className={location === "/admin" ? "bg-gradient-to-r from-[#00C8FF]/15 to-[#D946EF]/15 border-l-2 border-[#00C8FF] text-[#00C8FF]" : "hover:bg-gradient-to-r hover:from-[#00C8FF]/5 hover:to-[#D946EF]/5 transition-all duration-200"}
                       data-testid="link-sidebar-admin"
                     >
                       <a
@@ -167,7 +175,7 @@ export function AppSidebar() {
                           setLocation("/admin");
                         }}
                       >
-                        <Settings className="h-4 w-4" />
+                        <Settings className={`h-4 w-4 ${location === "/admin" ? "text-[#00C8FF]" : "text-[#D946EF]/60"}`} />
                         <span>{t("nav.adminPanel")}</span>
                       </a>
                     </SidebarMenuButton>
@@ -182,27 +190,27 @@ export function AppSidebar() {
       {user && (
         <SidebarFooter className="p-3 space-y-2">
           <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer hover-elevate"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-[#D946EF]/5 transition-colors"
             onClick={toggleLanguage}
             data-testid="button-language-toggle"
           >
-            <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Globe className="h-4 w-4 text-[#D946EF]/60 shrink-0" />
             <span className="text-xs text-muted-foreground">
               {t("language.label")}: {i18n.language === "es" ? t("language.es") : t("language.en")}
             </span>
           </div>
           {creditsData && (
             <div
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10 cursor-pointer hover:bg-primary/10 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-[#00C8FF]/5 to-[#D946EF]/5 border border-[#D946EF]/15 cursor-pointer hover:from-[#00C8FF]/10 hover:to-[#D946EF]/10 transition-all duration-200"
               onClick={() => setLocation("/pricing")}
               data-testid="link-credits-display"
             >
-              <Zap className="h-4 w-4 text-primary shrink-0" />
+              <Zap className="h-4 w-4 text-[#00C8FF] shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] text-muted-foreground">{t("common.credits")}</p>
-                <p className="text-sm font-bold" data-testid="text-credits-balance">
+                <p className="text-sm font-bold bg-gradient-to-r from-[#00C8FF] to-[#D946EF] bg-clip-text text-transparent" data-testid="text-credits-balance">
                   {creditsData.isUnlimited ? (
-                    <span className="flex items-center gap-1"><Infinity className="h-4 w-4" /> {t("common.unlimited")}</span>
+                    <span className="flex items-center gap-1"><Infinity className="h-4 w-4 text-[#00C8FF]" /> {t("common.unlimited")}</span>
                   ) : (
                     <span>{creditsData.credits} {t("common.remaining")}</span>
                   )}
@@ -216,10 +224,10 @@ export function AppSidebar() {
               )}
             </div>
           )}
-          <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-sidebar-accent/50">
-            <Avatar className="h-7 w-7">
+          <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-gradient-to-r from-[#00C8FF]/5 to-[#D946EF]/10 border border-white/5">
+            <Avatar className="h-7 w-7 ring-1 ring-[#D946EF]/30">
               <AvatarImage src={user.profileImageUrl || undefined} />
-              <AvatarFallback className="text-xs bg-primary text-black font-bold">
+              <AvatarFallback className="text-xs bg-gradient-to-br from-[#00C8FF] to-[#D946EF] text-white font-bold">
                 {user.firstName?.[0]}{user.lastName?.[0]}
               </AvatarFallback>
             </Avatar>
@@ -230,7 +238,7 @@ export function AppSidebar() {
               variant="ghost"
               size="icon"
               onClick={() => logout()}
-              className="text-muted-foreground"
+              className="text-muted-foreground hover:text-[#D946EF]"
               data-testid="button-sidebar-logout"
             >
               <LogOut className="h-3.5 w-3.5" />

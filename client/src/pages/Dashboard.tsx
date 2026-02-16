@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
-import dgbLogo from "@assets/Dgb_1771188880013.png";
+import dgbLogo from "@assets/DGB_studio2_1771218738674.png";
 import { MusicGenerator } from "@/components/MusicGenerator";
 import { LyricsGenerator } from "@/components/LyricsGenerator";
 import { AudioPlayer } from "@/components/AudioPlayer";
@@ -40,7 +40,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans overflow-hidden">
       <header className="h-14 md:h-16 border-b border-white/5 bg-black/50 backdrop-blur-md px-4 md:px-6 flex items-center justify-between gap-2 z-50 sticky top-0">
         <div className="flex items-center gap-2 md:gap-3">
-          <img src={dgbLogo} alt="DGB AUDIO" className="h-9 md:h-10 w-auto" />
+          <img src={dgbLogo} alt="DGB Studio" className="h-12 md:h-16 w-auto drop-shadow-[0_0_15px_rgba(0,200,255,0.3)]" />
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
