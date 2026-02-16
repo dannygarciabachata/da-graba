@@ -75,7 +75,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import dgbLogo from "@assets/DGB_studio_transparente_1771220431451.png";
+
 
 const GENRE_CARDS = [
   { value: "Bachata", likes: "97K" },
@@ -412,10 +412,6 @@ export default function CreatePage() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-6 md:mb-8"
           >
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <img src={dgbLogo} alt="DGB" className="h-7 w-7" />
-              <span className="text-sm font-semibold text-muted-foreground">DGB AUDIO</span>
-            </div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold" data-testid="text-create-title">
               {t('create.pageTitle')}
             </h1>

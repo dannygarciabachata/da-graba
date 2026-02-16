@@ -218,7 +218,7 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
           <span>-{formatTime(duration - currentTime)}</span>
         </div>
 
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex items-center justify-center gap-3">
           <Button
             variant="ghost"
             size="icon"
@@ -241,26 +241,12 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
             )}
           </Button>
 
-          <Button
-            size="icon"
-            onClick={togglePlay}
-            disabled={!isReady}
-            className="h-12 w-12 rounded-full bg-white text-black shadow-lg shadow-white/10"
-            data-testid="button-banner-play"
-          >
-            {isPlaying ? (
-              <Pause className="w-5 h-5 fill-current" />
-            ) : (
-              <Play className="w-5 h-5 fill-current ml-0.5" />
-            )}
-          </Button>
-
           <Slider
             value={[volume]}
             max={1}
             step={0.01}
             onValueChange={handleVolume}
-            className="w-20"
+            className="flex-1"
             data-testid="slider-banner-volume"
           />
         </div>

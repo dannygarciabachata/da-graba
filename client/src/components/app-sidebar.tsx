@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
-import dgbLogo from "@assets/DGB_studio_transparente_1771220431451.png";
+import dgbLogo from "@assets/DGB_studio_mobil_1771220799892.png";
 import {
   Sidebar,
   SidebarContent,
@@ -82,7 +82,7 @@ export function AppSidebar() {
           <img
             src={dgbLogo}
             alt="DGB Studio"
-            className="h-16 w-auto drop-shadow-[0_0_15px_rgba(0,200,255,0.3)] group-hover:drop-shadow-[0_0_25px_rgba(217,70,239,0.5)] transition-all duration-300"
+            className="h-14 w-14 rounded-full drop-shadow-[0_0_15px_rgba(0,200,255,0.3)] group-hover:drop-shadow-[0_0_25px_rgba(217,70,239,0.5)] transition-all duration-300"
           />
         </div>
         <div className="h-px mt-2 bg-gradient-to-r from-transparent via-[#D946EF]/40 to-transparent" />
