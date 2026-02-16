@@ -342,8 +342,8 @@ export default function Landing() {
       <nav className="relative z-20 border-b border-white/[0.06] backdrop-blur-xl bg-background/70 sticky top-0" data-testid="nav-landing">
         <div className="container mx-auto px-4 md:px-6 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-            <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border-2 border-primary/30 shadow-[0_0_15px_rgba(0,200,255,0.2)] flex-shrink-0">
-              <img src={dgbLogo} alt="DGB Studio" className="w-full h-full object-cover scale-150" data-testid="img-landing-logo" />
+            <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border-2 border-primary/30 shadow-[0_0_15px_rgba(0,200,255,0.2)] flex-shrink-0 flex items-center justify-center">
+              <img src={dgbLogo} alt="DGB Studio" className="w-[150%] h-[150%] object-contain" data-testid="img-landing-logo" />
             </div>
             <span className="text-lg sm:text-xl font-bold tracking-tight">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">DGB</span>{" "}
@@ -820,8 +820,8 @@ export default function Landing() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 flex-shrink-0">
-                  <img src={dgbLogo} alt="DGB Studio" className="w-full h-full object-cover scale-150" />
+                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 flex-shrink-0 flex items-center justify-center">
+                  <img src={dgbLogo} alt="DGB Studio" className="w-[150%] h-[150%] object-contain" />
                 </div>
                 <span className="font-bold text-lg">
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">DGB</span>{" "}
