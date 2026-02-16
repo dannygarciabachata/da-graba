@@ -285,11 +285,11 @@ export default function PlaylistPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 bg-[#0a0a12]/80 rounded-xl my-2">
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="h-16 bg-white/[0.03] rounded-lg animate-pulse" />
+              <div key={i} className="h-16 bg-[#0d0d18]/80 rounded-lg animate-pulse" />
             ))}
           </div>
         ) : !songs?.length ? (
@@ -304,7 +304,7 @@ export default function PlaylistPage() {
               return (
                 <div
                   key={song.id}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors group ${isCurrent ? "bg-white/[0.06]" : ""}`}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#12121f]/90 transition-colors group ${isCurrent ? "bg-[#0d0d18]/90" : "bg-[#0d0d18]/60"}`}
                   data-testid={`row-song-${song.id}`}
                 >
                   <span className="text-sm font-mono text-muted-foreground w-8 text-right" data-testid={`text-rank-${song.id}`}>

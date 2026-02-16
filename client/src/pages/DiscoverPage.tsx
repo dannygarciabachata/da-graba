@@ -159,7 +159,7 @@ function SongCard({ song, rank, onPlay, currentSongId, isPlaying }: SongCardProp
   });
 
   return (
-    <Card className="bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06] transition-colors group" data-testid={`card-song-${song.id}`}>
+    <Card className="bg-[#0d0d18]/90 border-white/[0.06] hover:bg-[#12121f]/95 transition-colors group" data-testid={`card-song-${song.id}`}>
       <div className="flex items-center gap-3 p-3">
         {rank && (
           <span className="text-sm font-mono text-muted-foreground w-6 text-right" data-testid={`text-rank-${song.id}`}>
@@ -395,7 +395,7 @@ export default function DiscoverPage() {
 
   return (
     <div className="h-full overflow-auto">
-      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 space-y-8">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 space-y-8 bg-[#0a0a12]/80 rounded-xl my-2">
         <div className="flex items-center gap-3">
           <Compass className="h-6 w-6 text-primary" />
           <div>
@@ -415,7 +415,7 @@ export default function DiscoverPage() {
           {isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-16 bg-white/[0.03] rounded-lg animate-pulse" />
+                <div key={i} className="h-16 bg-[#0d0d18]/80 rounded-lg animate-pulse" />
               ))}
             </div>
           ) : featured.length === 0 ? (
