@@ -383,19 +383,19 @@ function SubscriptionsTab() {
               return (
                 <Card key={pid} className="bg-card/50 border-white/10" data-testid={`card-product-${pid}`}>
                   <CardContent className="p-4">
-                    {isEditing ? (
-                      <div className="space-y-3">
-                        <Input value={productForm.name} onChange={e => setProductForm(f => ({ ...f, name: e.target.value }))} placeholder="Nombre" data-testid="input-edit-product-name" />
-                        <Input value={productForm.description} onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))} placeholder="Descripción" data-testid="input-edit-product-desc" />
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => updateProduct.mutate({ id: pid, data: productForm })} disabled={updateProduct.isPending} data-testid="button-save-product">
-                            {updateProduct.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />} Guardar
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setEditingProduct(null)} data-testid="button-cancel-edit-product">Cancelar</Button>
+                    <div>
+                      {isEditing ? (
+                        <div className="space-y-3 mb-3">
+                          <Input value={productForm.name} onChange={e => setProductForm(f => ({ ...f, name: e.target.value }))} placeholder="Nombre" data-testid="input-edit-product-name" />
+                          <Input value={productForm.description} onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))} placeholder="Descripción" data-testid="input-edit-product-desc" />
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => updateProduct.mutate({ id: pid, data: productForm })} disabled={updateProduct.isPending} data-testid="button-save-product">
+                              {updateProduct.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />} Guardar
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setEditingProduct(null)} data-testid="button-cancel-edit-product">Cancelar</Button>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div>
+                      ) : (
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
@@ -408,9 +408,6 @@ function SubscriptionsTab() {
                             <p className="text-[10px] text-muted-foreground/60 font-mono mt-1">{pid}</p>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button size="sm" variant="ghost" onClick={() => setShowAddPrice(isAddingPrice ? null : pid)} title="Agregar precio" data-testid={`button-add-price-${pid}`}>
-                              <Plus className="h-3.5 w-3.5" />
-                            </Button>
                             <Button size="sm" variant="ghost" onClick={() => startEditProduct(p)} title="Editar" data-testid={`button-edit-product-${pid}`}>
                               <Edit className="h-3.5 w-3.5" />
                             </Button>
@@ -419,43 +416,54 @@ function SubscriptionsTab() {
                             </Button>
                           </div>
                         </div>
+                      )}
 
-                        {p.unit_amount != null && (
-                          <div className="mt-2 flex items-center justify-between bg-background/50 rounded-md p-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-primary">${(Number(p.unit_amount) / 100).toFixed(2)}</span>
-                              <span className="text-xs text-muted-foreground">/{(p.recurring as any)?.interval || "month"}</span>
-                              <span className="text-[10px] font-mono text-muted-foreground/60">{p.price_id}</span>
-                            </div>
-                            {p.price_id && (
-                              <Button size="sm" variant="ghost" className="text-destructive h-6 px-2" onClick={() => { if (confirm("¿Desactivar este precio?")) deactivatePrice.mutate(p.price_id); }} title="Desactivar precio" data-testid={`button-deactivate-price-${p.price_id}`}>
-                                <XCircle className="h-3 w-3" />
-                              </Button>
-                            )}
+                      {p.unit_amount != null && (
+                        <div className="mt-2 flex items-center justify-between bg-background/50 rounded-md p-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-primary">${(Number(p.unit_amount) / 100).toFixed(2)}</span>
+                            <span className="text-xs text-muted-foreground">/{(p.recurring as any)?.interval || "month"}</span>
+                            <span className="text-[10px] font-mono text-muted-foreground/60">{p.price_id}</span>
                           </div>
-                        )}
+                          {p.price_id && (
+                            <Button size="sm" variant="ghost" className="text-destructive h-6 px-2" onClick={() => { if (confirm("¿Desactivar este precio?")) deactivatePrice.mutate(p.price_id); }} title="Desactivar precio" data-testid={`button-deactivate-price-${p.price_id}`}>
+                              <XCircle className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
 
-                        {!p.unit_amount && (
-                          <p className="text-xs text-muted-foreground mt-2 italic">Sin precio configurado (plan gratuito)</p>
-                        )}
+                      {!p.unit_amount && (
+                        <p className="text-xs text-muted-foreground mt-2 italic">Sin precio configurado</p>
+                      )}
 
-                        {isAddingPrice && (
-                          <div className="mt-3 p-3 bg-background/50 rounded-md space-y-2 border border-white/10">
+                      {!isAddingPrice && (
+                        <Button size="sm" variant="outline" className="mt-3 border-primary/30 text-primary" onClick={() => setShowAddPrice(pid)} data-testid={`button-add-price-${pid}`}>
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Agregar Precio
+                        </Button>
+                      )}
+
+                      {isAddingPrice && (
+                        <div className="mt-3 p-3 bg-background/50 rounded-md space-y-2 border border-white/10">
+                          <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold">Agregar nuevo precio</p>
-                            <div className="flex gap-2">
-                              <Input placeholder="Monto (en centavos, ej: 2999)" type="number" value={priceForm.unitAmount} onChange={e => setPriceForm(f => ({ ...f, unitAmount: e.target.value }))} className="flex-1" data-testid="input-price-amount" />
-                              <select className="bg-background border border-white/10 rounded-md px-2 text-sm" value={priceForm.interval} onChange={e => setPriceForm(f => ({ ...f, interval: e.target.value }))} data-testid="select-price-interval">
-                                <option value="month">Mensual</option>
-                                <option value="year">Anual</option>
-                              </select>
-                              <Button size="sm" onClick={() => createPrice.mutate({ productId: pid, unitAmount: priceForm.unitAmount, currency: priceForm.currency, interval: priceForm.interval })} disabled={createPrice.isPending || !priceForm.unitAmount} data-testid="button-submit-price">
-                                {createPrice.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                              </Button>
-                            </div>
+                            <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => setShowAddPrice(null)} data-testid="button-cancel-add-price">
+                              <XCircle className="h-3 w-3" />
+                            </Button>
                           </div>
-                        )}
-                      </div>
-                    )}
+                          <div className="flex gap-2">
+                            <Input placeholder="Monto (en centavos, ej: 2999)" type="number" value={priceForm.unitAmount} onChange={e => setPriceForm(f => ({ ...f, unitAmount: e.target.value }))} className="flex-1" data-testid="input-price-amount" />
+                            <select className="bg-background border border-white/10 rounded-md px-2 text-sm" value={priceForm.interval} onChange={e => setPriceForm(f => ({ ...f, interval: e.target.value }))} data-testid="select-price-interval">
+                              <option value="month">Mensual</option>
+                              <option value="year">Anual</option>
+                            </select>
+                            <Button size="sm" onClick={() => createPrice.mutate({ productId: pid, unitAmount: priceForm.unitAmount, currency: priceForm.currency, interval: priceForm.interval })} disabled={createPrice.isPending || !priceForm.unitAmount} data-testid="button-submit-price">
+                              {createPrice.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               );
