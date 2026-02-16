@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import dgbLogo from "@assets/DGB_studio_transparente_1771220431451.png";
+import palettaBg from "@assets/palettabg_1771282011333.png";
 import {
   Play, Pause, Mic2, Wand2, Music, Headphones, Sparkles, Scissors, Zap,
   Crown, Shield, Globe, Layers, ArrowRight, CheckCircle2, Star,
@@ -815,8 +816,17 @@ export default function Landing() {
         </section>
       </main>
 
-      <footer className="border-t border-white/5 py-8 md:py-12 px-4" data-testid="footer-landing">
-        <div className="container mx-auto">
+      <footer
+        className="border-t border-white/5 py-8 md:py-12 px-4 relative overflow-hidden"
+        style={{
+          backgroundImage: `url(${palettaBg})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center right",
+        }}
+        data-testid="footer-landing"
+      >
+        <div className="absolute inset-0 bg-background/85 pointer-events-none" />
+        <div className="container mx-auto relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-3 mb-4">

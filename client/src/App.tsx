@@ -77,7 +77,7 @@ function AuthenticatedLayout() {
               backgroundAttachment: "fixed",
             }}
           >
-            <div className="absolute inset-0 bg-background/80 pointer-events-none" />
+            <div className="absolute inset-0 bg-background/90 pointer-events-none" />
             <div className="relative z-10 min-h-full">
             <Switch>
               <Route path="/create" component={CreatePage} />
