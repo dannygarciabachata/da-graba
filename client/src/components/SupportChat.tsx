@@ -33,16 +33,30 @@ const SERVICE_LABELS: Record<string, string> = {
   producer_store: "Producer Store",
 };
 
+function getTicketKey(ctx?: string): string {
+  return ctx ? `dgb_support_ticket_${ctx}` : "dgb_support_ticket_id";
+}
+
 export default function SupportChat({ serviceContext }: SupportChatProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [ticketId, setTicketId] = useState<number | null>(() => {
-    const stored = localStorage.getItem("dgb_support_ticket_id");
+    const stored = localStorage.getItem(getTicketKey(serviceContext));
     return stored ? Number(stored) : null;
   });
+  const prevContextRef = useRef(serviceContext);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (prevContextRef.current !== serviceContext) {
+      prevContextRef.current = serviceContext;
+      setMessages([]);
+      const stored = localStorage.getItem(getTicketKey(serviceContext));
+      setTicketId(stored ? Number(stored) : null);
+    }
+  }, [serviceContext]);
 
   const sendMessage = useMutation({
     mutationFn: async (message: string) => {
@@ -58,7 +72,7 @@ export default function SupportChat({ serviceContext }: SupportChatProps) {
     onSuccess: (data: { reply: string; ticketId?: number }) => {
       if (data.ticketId && !ticketId) {
         setTicketId(data.ticketId);
-        localStorage.setItem("dgb_support_ticket_id", String(data.ticketId));
+        localStorage.setItem(getTicketKey(serviceContext), String(data.ticketId));
       }
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
     },

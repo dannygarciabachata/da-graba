@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { loadStripe } from "@stripe/stripe-js";
+import { loadStripe, type Stripe, type StripeCardElement } from "@stripe/stripe-js";
 import {
   Play,
   Pause,
@@ -29,6 +29,7 @@ import {
   DollarSign,
   Loader2,
   X,
+  CreditCard,
 } from "lucide-react";
 
 function formatCount(n: number): string {
@@ -46,6 +47,17 @@ function formatDuration(seconds: number | null | undefined): string {
 
 const GIFT_AMOUNTS = [100, 300, 500, 1000, 2500, 5000];
 
+let stripePromise: Promise<Stripe | null> | null = null;
+function getStripe() {
+  if (!stripePromise) {
+    stripePromise = fetch("/api/stripe/publishable-key")
+      .then((r) => r.json())
+      .then(({ publishableKey }) => loadStripe(publishableKey))
+      .catch(() => null);
+  }
+  return stripePromise;
+}
+
 export default function ArtistProfilePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -56,16 +68,24 @@ export default function ArtistProfilePage() {
 
   const [currentSong, setCurrentSong] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useState<HTMLAudioElement | null>(null);
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
 
   const [showGiftForm, setShowGiftForm] = useState(false);
   const [giftAmount, setGiftAmount] = useState(300);
   const [customAmount, setCustomAmount] = useState("");
   const [giftMessage, setGiftMessage] = useState("");
   const [fanName, setFanName] = useState("");
+  const cardElementRef = useRef<StripeCardElement | null>(null);
+  const cardContainerRef = useRef<HTMLDivElement | null>(null);
+  const [cardReady, setCardReady] = useState(false);
 
   const { data: artist, isLoading } = useQuery<any>({
-    queryKey: [`/api/public/artists/${artistId}`],
+    queryKey: ["/api/public/artists", artistId],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/artists/${artistId}`);
+      if (!res.ok) return null;
+      return res.json();
+    },
     enabled: !!artistId,
   });
 
@@ -78,10 +98,50 @@ export default function ArtistProfilePage() {
     enabled: !!artistId,
   });
 
+  useEffect(() => {
+    if (!showGiftForm || !cardContainerRef.current) return;
+    let mounted = true;
+    let cardEl: StripeCardElement | null = null;
+
+    (async () => {
+      const stripe = await getStripe();
+      if (!stripe || !mounted || !cardContainerRef.current) return;
+      const elements = stripe.elements();
+      cardEl = elements.create("card", {
+        style: {
+          base: {
+            color: "#ffffff",
+            fontFamily: "Inter, sans-serif",
+            fontSize: "14px",
+            "::placeholder": { color: "#6b7280" },
+          },
+          invalid: { color: "#ef4444" },
+        },
+      });
+      cardEl.mount(cardContainerRef.current);
+      cardEl.on("ready", () => { if (mounted) setCardReady(true); });
+      cardElementRef.current = cardEl;
+    })();
+
+    return () => {
+      mounted = false;
+      if (cardEl) {
+        cardEl.unmount();
+        cardEl.destroy();
+      }
+      cardElementRef.current = null;
+      setCardReady(false);
+    };
+  }, [showGiftForm]);
+
   const giftMutation = useMutation({
     mutationFn: async () => {
       const amountCents = customAmount ? Math.round(parseFloat(customAmount) * 100) : giftAmount;
       if (amountCents < 100 || amountCents > 100000) throw new Error("Invalid amount");
+      if (!cardElementRef.current) throw new Error("Card not ready");
+
+      const stripe = await getStripe();
+      if (!stripe) throw new Error("Payment system not available");
 
       const res = await apiRequest("POST", `/api/artists/${artistId}/gift`, {
         amountCents,
@@ -90,27 +150,27 @@ export default function ArtistProfilePage() {
       });
       const data = await res.json();
 
-      const keyRes = await fetch("/api/stripe/publishable-key");
-      const { publishableKey } = await keyRes.json();
-      const stripe = await loadStripe(publishableKey);
-      if (!stripe) throw new Error("Stripe not loaded");
-
-      const { error } = await stripe.confirmCardPayment(data.clientSecret, {
-        payment_method: {
-          card: { token: "tok_visa" } as any,
-        },
+      const { error, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret, {
+        payment_method: { card: cardElementRef.current },
       });
 
       if (error) throw new Error(error.message);
 
-      const confirmRes = await apiRequest("POST", `/api/gifts/${data.gift.id}/confirm`, {});
-      return confirmRes.json();
+      if (paymentIntent?.status === "succeeded") {
+        const confirmRes = await apiRequest("POST", `/api/gifts/${data.gift.id}/confirm`, {
+          paymentIntentId: paymentIntent.id,
+        });
+        return confirmRes.json();
+      }
+
+      throw new Error("Payment not completed");
     },
     onSuccess: () => {
       toast({ title: t('artist.gift.success') });
       setShowGiftForm(false);
       setGiftMessage("");
       setCustomAmount("");
+      setFanName("");
       queryClient.invalidateQueries({ queryKey: ["/api/public/artists", artistId, "gifts-summary"] });
     },
     onError: (err: any) => {
@@ -124,7 +184,7 @@ export default function ArtistProfilePage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/public/artists/${artistId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/public/artists", artistId] });
     },
   });
 
@@ -134,7 +194,7 @@ export default function ArtistProfilePage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/public/artists/${artistId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/public/artists", artistId] });
       toast({ title: t('artist.profile.subscribed') });
     },
   });
@@ -143,20 +203,20 @@ export default function ArtistProfilePage() {
     if (!song.audioUrl) return;
     if (currentSong?.id === song.id) {
       if (isPlaying) {
-        audioRef[0]?.pause();
+        audioElRef.current?.pause();
         setIsPlaying(false);
       } else {
-        audioRef[0]?.play();
+        audioElRef.current?.play();
         setIsPlaying(true);
       }
       return;
     }
-    if (audioRef[0]) {
-      audioRef[0].pause();
+    if (audioElRef.current) {
+      audioElRef.current.pause();
     }
     const audio = new Audio(song.audioUrl);
     audio.play();
-    audioRef[1](audio);
+    audioElRef.current = audio;
     setCurrentSong(song);
     setIsPlaying(true);
     audio.addEventListener("ended", () => setIsPlaying(false));
@@ -349,6 +409,17 @@ export default function ArtistProfilePage() {
                   data-testid="input-gift-message"
                 />
               </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
+                  <CreditCard className="h-3 w-3" />
+                  {t('artist.gift.cardDetails')}
+                </label>
+                <div
+                  ref={cardContainerRef}
+                  className="bg-white/[0.05] border border-white/10 rounded-md px-3 py-3 min-h-[40px]"
+                  data-testid="stripe-card-element"
+                />
+              </div>
             </div>
 
             <div className="flex items-center justify-between">
@@ -361,7 +432,7 @@ export default function ArtistProfilePage() {
               <Button
                 className="bg-gradient-to-r from-pink-500 to-purple-600 text-white"
                 onClick={() => giftMutation.mutate()}
-                disabled={giftMutation.isPending || activeAmount < 100 || activeAmount > 100000}
+                disabled={giftMutation.isPending || activeAmount < 100 || activeAmount > 100000 || !cardReady}
                 data-testid="button-confirm-gift"
               >
                 {giftMutation.isPending ? (

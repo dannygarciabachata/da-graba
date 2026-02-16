@@ -1991,6 +1991,14 @@ export async function registerRoutes(
         return res.json({ gift });
       }
 
+      if (gift.stripePaymentIntentId) {
+        const stripeClient = await getUncachableStripeClient();
+        const pi = await stripeClient.paymentIntents.retrieve(gift.stripePaymentIntentId);
+        if (pi.status !== "succeeded") {
+          return res.status(400).json({ message: "Payment not yet completed" });
+        }
+      }
+
       const updatedGift = await storage.updateArtistGift(giftId, { status: "completed" });
 
       const wallet = await storage.updateArtistWalletBalance(

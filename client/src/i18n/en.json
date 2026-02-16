@@ -930,6 +930,7 @@
       "messagePlaceholder": "Thanks for your amazing music!",
       "total": "Total",
       "sendButton": "Send Gift",
+      "cardDetails": "Card Details",
       "feeNote": "90% goes directly to the artist. 10% platform fee.",
       "success": "Gift sent successfully! Thank you for your support.",
       "error": "Error sending gift",
