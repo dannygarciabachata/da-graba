@@ -327,8 +327,7 @@
           "pad": "Pad",
           "violines": "Violines",
           "chelos": "Chelos",
-          "coro_femenino": "Coro Femenino",
-          "coro_masculino": "Coro Masculino"
+          "coros": "Coros (Fem/Masc)"
         }
       }
     },
@@ -534,7 +533,22 @@
     "instrumentCount_plural": "{{count}} instrumentos",
     "showMore": "Ver {{count}} más",
     "showLess": "Ver menos",
-    "noInstruments": "Sin instrumentos todavía"
+    "noInstruments": "Sin instrumentos todavía",
+    "upload": {
+      "upload": "Subir",
+      "replace": "Reemplazar",
+      "success": "Audio subido correctamente",
+      "error": "Error al subir el audio"
+    },
+    "reference": {
+      "title": "Referencia de Audio",
+      "desc": "Sube una canción de referencia completa para que el training identifique el estilo, los géneros y la forma de tocar.",
+      "uploadBtn": "Subir Referencia",
+      "uploaded": "Referencia subida correctamente",
+      "removed": "Referencia eliminada",
+      "error": "Error al subir la referencia",
+      "loaded": "Referencia cargada"
+    }
   },
   "lyricsGenerator": {
     "title": "Letras Inteligentes",

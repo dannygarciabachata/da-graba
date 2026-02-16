@@ -266,6 +266,7 @@ export const styleKits = pgTable("style_kits", {
   genre: text("genre").notNull(),
   description: text("description"),
   imageUrl: text("image_url"),
+  referenceUrl: text("reference_url"),
   createdBy: text("created_by").notNull(),
   isActive: boolean("is_active").default(true),
   isPublic: boolean("is_public").default(false),

@@ -664,8 +664,7 @@ export async function seedTrainingKits(): Promise<void> {
       { name: "Strings (Chelos)", type: "strings", description: "Sección de chelos — base armónica y profundidad orquestal", position: 12 },
       { name: "Voz Principal", type: "vocal", description: "Voz principal — melodía vocal líder del bolero", position: 13 },
       { name: "Dúo de Voz", type: "vocal", description: "Dúo de voz — armonía vocal a dos voces", position: 14 },
-      { name: "Coro Femenino", type: "choir", description: "Coro femenino — armonías completas de voces femeninas", position: 15 },
-      { name: "Coro Masculino", type: "choir", description: "Coro masculino — armonías completas de voces masculinas", position: 16 },
+      { name: "Coros", type: "choir", description: "Coros estéreo — armonías completas femeninas y masculinas, el training identifica los géneros automáticamente", position: 15 },
     ];
     for (const instr of dgbBoleroInstruments) {
       await storage.createStyleKitInstrument({ kitId: kit.id, ...instr, volume: 100, uploadStatus: "pending", analysisStatus: "pending" });

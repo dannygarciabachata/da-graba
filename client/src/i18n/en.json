@@ -327,8 +327,7 @@
           "pad": "Pad",
           "violines": "Violins",
           "chelos": "Cellos",
-          "coro_femenino": "Female Choir",
-          "coro_masculino": "Male Choir"
+          "coros": "Choirs (Fem/Male)"
         }
       }
     },
@@ -534,7 +533,22 @@
     "instrumentCount_plural": "{{count}} instruments",
     "showMore": "Show {{count}} more",
     "showLess": "Show less",
-    "noInstruments": "No instruments yet"
+    "noInstruments": "No instruments yet",
+    "upload": {
+      "upload": "Upload",
+      "replace": "Replace",
+      "success": "Audio uploaded successfully",
+      "error": "Error uploading audio"
+    },
+    "reference": {
+      "title": "Audio Reference",
+      "desc": "Upload a complete reference track so the training identifies the style, genres and playing technique.",
+      "uploadBtn": "Upload Reference",
+      "uploaded": "Reference uploaded successfully",
+      "removed": "Reference removed",
+      "error": "Error uploading reference",
+      "loaded": "Reference loaded"
+    }
   },
   "lyricsGenerator": {
     "title": "Smart Lyrics",

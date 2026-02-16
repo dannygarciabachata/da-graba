@@ -2297,6 +2297,58 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/style-kits/instruments/:id/upload", upload.single("audio"), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const instrument = await storage.getStyleKitInstrument(Number(req.params.id));
+      if (!instrument) return res.sendStatus(404);
+      const kit = await storage.getStyleKit(instrument.kitId);
+      if (!kit) return res.sendStatus(404);
+      if (kit.createdBy !== userId && !isAdmin(req)) return res.sendStatus(403);
+      if (!req.file) return res.status(400).json({ message: "No audio file provided" });
+
+      const audioUrl = `/audio/${req.file.filename}`;
+      const updated = await storage.updateStyleKitInstrument(instrument.id, { audioUrl, uploadStatus: "uploaded" });
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/producer/kits/:id/reference", upload.single("audio"), async (req, res) => {
+    if (!(await checkProducerTier(req, res))) return;
+    const userId = (req.user as any).claims.sub;
+    try {
+      const kitId = Number(req.params.id);
+      const kit = await storage.getStyleKit(kitId);
+      if (!kit) return res.sendStatus(404);
+      if (kit.createdBy !== userId && !isAdmin(req)) return res.sendStatus(403);
+      if (!req.file) return res.status(400).json({ message: "No audio file provided" });
+
+      const referenceUrl = `/audio/${req.file.filename}`;
+      await storage.updateStyleKit(kitId, { referenceUrl });
+      res.json({ referenceUrl });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/producer/kits/:id/reference", async (req, res) => {
+    if (!(await checkProducerTier(req, res))) return;
+    const userId = (req.user as any).claims.sub;
+    try {
+      const kitId = Number(req.params.id);
+      const kit = await storage.getStyleKit(kitId);
+      if (!kit) return res.sendStatus(404);
+      if (kit.createdBy !== userId && !isAdmin(req)) return res.sendStatus(403);
+      await storage.updateStyleKit(kitId, { referenceUrl: null });
+      res.sendStatus(204);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.delete("/api/producer/kits/:kitId/instruments/:id", async (req, res) => {
     if (!(await checkProducerTier(req, res))) return;
     const userId = (req.user as any).claims.sub;

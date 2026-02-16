@@ -7,12 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import {
   Music, Play, Pause, Volume2, Filter, Disc,
   Guitar, Drum, Piano, Mic, ChevronDown, Loader2,
+  Upload, FileAudio, Trash2, CheckCircle2,
 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { StyleKitInstrument } from "@shared/schema";
 
 const GENRE_LABELS: Record<string, string> = {
   bachata: "Bachata",
   bolero: "Bolero",
+  dgb_bolero: "DGB Bolero",
   latin_pop: "Latin Pop",
   merengue: "Merengue",
   salsa: "Salsa",
@@ -28,16 +33,24 @@ const INSTRUMENT_ICONS: Record<string, typeof Music> = {
   bongo: Drum,
   conga: Drum,
   timbal: Drum,
+  campana: Drum,
   requinto: Guitar,
   segunda_guitarra: Guitar,
   bass: Guitar,
   piano: Piano,
+  vocal: Mic,
+  choir: Mic,
   vocals: Mic,
+  pad: Music,
+  strings: Music,
 };
 
-function InstrumentPlayer({ instrument }: { instrument: StyleKitInstrument }) {
+function InstrumentRow({ instrument, kitId }: { instrument: StyleKitInstrument; kitId: number }) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const togglePlay = () => {
     if (!instrument.audioUrl) return;
@@ -55,12 +68,38 @@ function InstrumentPlayer({ instrument }: { instrument: StyleKitInstrument }) {
     }
   };
 
+  const { mutate: uploadAudio, isPending } = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("audio", file);
+      const res = await fetch(`/api/style-kits/instruments/${instrument.id}/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/style-kits"] });
+      toast({ title: t('styleKits.upload.success') });
+    },
+    onError: () => {
+      toast({ title: t('styleKits.upload.error'), variant: "destructive" });
+    },
+  });
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadAudio(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const Icon = INSTRUMENT_ICONS[instrument.type] || Music;
   const typeName = instrument.type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
   return (
     <div
-      className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors group"
+      className="flex items-center gap-3 p-3 rounded-lg bg-white/5 group"
       data-testid={`instrument-${instrument.id}`}
     >
       <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -70,23 +109,177 @@ function InstrumentPlayer({ instrument }: { instrument: StyleKitInstrument }) {
         <p className="text-sm font-medium truncate">{instrument.name}</p>
         <p className="text-xs text-muted-foreground">{typeName}</p>
       </div>
-      {instrument.audioUrl && (
+      <div className="flex items-center gap-1.5">
+        {instrument.audioUrl ? (
+          <>
+            <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 opacity-60 group-hover:opacity-100 transition-opacity"
+              onClick={togglePlay}
+              data-testid={`button-play-instrument-${instrument.id}`}
+            >
+              {playing ? (
+                <Pause className="h-4 w-4 text-primary" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
+            </Button>
+          </>
+        ) : (
+          <Volume2 className="h-4 w-4 text-muted-foreground/30" />
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="audio/*"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
         <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 opacity-60 group-hover:opacity-100 transition-opacity"
-          onClick={togglePlay}
-          data-testid={`button-play-instrument-${instrument.id}`}
+          variant="outline"
+          size="sm"
+          className="h-7 text-[10px] px-2"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isPending}
+          data-testid={`button-upload-instrument-${instrument.id}`}
         >
-          {playing ? (
-            <Pause className="h-4 w-4 text-primary" />
+          {isPending ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
-            <Play className="h-4 w-4" />
+            <>
+              <Upload className="h-3 w-3 mr-1" />
+              {instrument.audioUrl ? t('styleKits.upload.replace') : t('styleKits.upload.upload')}
+            </>
           )}
         </Button>
-      )}
-      {!instrument.audioUrl && (
-        <Volume2 className="h-4 w-4 text-muted-foreground/30" />
+      </div>
+    </div>
+  );
+}
+
+function ReferenceSection({ kit }: { kit: any }) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const { mutate: uploadRef, isPending } = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("audio", file);
+      const res = await fetch(`/api/producer/kits/${kit.id}/reference`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/style-kits"] });
+      toast({ title: t('styleKits.reference.uploaded') });
+    },
+    onError: () => {
+      toast({ title: t('styleKits.reference.error'), variant: "destructive" });
+    },
+  });
+
+  const { mutate: deleteRef, isPending: isDeleting } = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", `/api/producer/kits/${kit.id}/reference`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/style-kits"] });
+      toast({ title: t('styleKits.reference.removed') });
+    },
+  });
+
+  const togglePlay = () => {
+    if (!kit.referenceUrl) return;
+    if (!audioRef.current) {
+      audioRef.current = new Audio(kit.referenceUrl);
+      audioRef.current.onended = () => setPlaying(false);
+    }
+    if (playing) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setPlaying(false);
+    } else {
+      audioRef.current.play();
+      setPlaying(true);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadRef(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  return (
+    <div className="mt-3 p-3 rounded-lg border border-dashed border-purple-400/30 bg-purple-500/[0.04]" data-testid={`reference-section-${kit.id}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <FileAudio className="h-3.5 w-3.5 text-purple-400" />
+        <span className="text-xs font-semibold text-purple-300">{t('styleKits.reference.title')}</span>
+      </div>
+      <p className="text-[10px] text-muted-foreground mb-2">{t('styleKits.reference.desc')}</p>
+
+      {kit.referenceUrl ? (
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-3.5 w-3.5 text-green-400 flex-shrink-0" />
+          <span className="text-xs text-green-300 flex-1 truncate">{t('styleKits.reference.loaded')}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={togglePlay}
+            data-testid={`button-play-reference-${kit.id}`}
+          >
+            {playing ? <Pause className="h-3.5 w-3.5 text-primary" /> : <Play className="h-3.5 w-3.5" />}
+          </Button>
+          <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileSelect} />
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-[10px] px-2"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isPending}
+            data-testid={`button-replace-reference-${kit.id}`}
+          >
+            {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Upload className="h-3 w-3 mr-1" />{t('styleKits.upload.replace')}</>}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-destructive"
+            onClick={() => deleteRef()}
+            disabled={isDeleting}
+            data-testid={`button-delete-reference-${kit.id}`}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ) : (
+        <div>
+          <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileSelect} />
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full h-8 text-xs border-dashed border-purple-400/30"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isPending}
+            data-testid={`button-upload-reference-${kit.id}`}
+          >
+            {isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+            ) : (
+              <Upload className="h-3.5 w-3.5 mr-1.5" />
+            )}
+            {t('styleKits.reference.uploadBtn')}
+          </Button>
+        </div>
       )}
     </div>
   );
@@ -185,14 +378,14 @@ export default function StyleKitsPage() {
                   <>
                     <div className="space-y-1">
                       {(isExpanded ? kit.instruments : kit.instruments.slice(0, 3)).map((instr) => (
-                        <InstrumentPlayer key={instr.id} instrument={instr} />
+                        <InstrumentRow key={instr.id} instrument={instr} kitId={kit.id} />
                       ))}
                     </div>
                     {kit.instruments.length > 3 && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full text-xs text-muted-foreground hover:text-foreground"
+                        className="w-full text-xs text-muted-foreground"
                         onClick={() => setExpandedKit(isExpanded ? null : kit.id)}
                         data-testid={`button-expand-kit-${kit.id}`}
                       >
@@ -208,6 +401,8 @@ export default function StyleKitsPage() {
                     {t('styleKits.noInstruments')}
                   </p>
                 )}
+
+                <ReferenceSection kit={kit} />
               </CardContent>
             </Card>
           );

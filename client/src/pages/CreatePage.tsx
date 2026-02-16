@@ -138,7 +138,7 @@ const DGB_BOLERO_BASE_INSTRUMENTS = [
 ] as const;
 
 const DGB_BOLERO_ORCHESTRATION = [
-  "piano", "pad", "violines", "chelos", "coro_femenino", "coro_masculino",
+  "piano", "pad", "violines", "chelos", "coros",
 ] as const;
 
 type CreationMode = "song" | "sound" | "speak";
