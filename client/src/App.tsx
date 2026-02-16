@@ -27,6 +27,7 @@ import ArtistProfilePage from "@/pages/ArtistProfilePage";
 import ArtistOnboardingPage from "@/pages/ArtistOnboardingPage";
 import DiscographyPage from "@/pages/DiscographyPage";
 import CopyrightHubPage from "@/pages/CopyrightHubPage";
+import LegalPage from "@/pages/LegalPage";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
 import { useTranslation } from "react-i18next";
@@ -89,6 +90,9 @@ function AuthenticatedLayout() {
               <Route path="/discography" component={DiscographyPage} />
               <Route path="/artist/:id" component={ArtistProfilePage} />
               <Route path="/admin" component={AdminPage} />
+              <Route path="/terms">{() => <LegalPage section="terms" />}</Route>
+              <Route path="/privacy">{() => <LegalPage section="privacy" />}</Route>
+              <Route path="/cookies">{() => <LegalPage section="cookies" />}</Route>
               <Route component={NotFound} />
             </Switch>
             <SupportChat serviceContext={serviceContext} />
@@ -120,6 +124,9 @@ function Router() {
         <Route path="/blog/:slug" component={BlogPage} />
         <Route path="/blog" component={BlogPage} />
         <Route path="/discography" component={DiscographyPage} />
+        <Route path="/terms">{() => <LegalPage section="terms" />}</Route>
+        <Route path="/privacy">{() => <LegalPage section="privacy" />}</Route>
+        <Route path="/cookies">{() => <LegalPage section="cookies" />}</Route>
         <Route><Redirect to="/" /></Route>
       </Switch>
     );

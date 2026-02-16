@@ -862,7 +862,13 @@ export default function Landing() {
           </div>
           <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} {t('landing.footer.copyright')}</p>
-            <p className="text-xs text-muted-foreground">{t('common.poweredBy')} {t('common.engineName')}</p>
+            <div className="flex items-center gap-4">
+              <a href="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors" data-testid="link-terms">Términos de Servicio</a>
+              <span className="text-white/10">|</span>
+              <a href="/privacy" className="text-xs text-muted-foreground hover:text-foreground transition-colors" data-testid="link-privacy">Política de Privacidad</a>
+              <span className="text-white/10">|</span>
+              <a href="/cookies" className="text-xs text-muted-foreground hover:text-foreground transition-colors" data-testid="link-cookies">Política de Cookies</a>
+            </div>
           </div>
         </div>
       </footer>

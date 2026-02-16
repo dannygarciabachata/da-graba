@@ -47,6 +47,7 @@ import {
   ArrowRight,
   Wrench,
   RefreshCw,
+  Shield,
   Upload,
   MicIcon,
   Link2,
@@ -990,7 +991,14 @@ export default function CreatePage() {
               </div>
             </Card>
 
-            <div className="mt-3 overflow-x-auto pb-1">
+            <div className="mt-2 flex items-center gap-1.5 px-1" data-testid="adn-protegido-notice">
+              <Shield className="h-3 w-3 text-primary/60 flex-shrink-0" />
+              <span className="text-[10px] text-muted-foreground/70">
+                {t('create.adnProtegido', 'Usando instrumentos originales DGB — ADN Protegido')}
+              </span>
+            </div>
+
+            <div className="mt-2 overflow-x-auto pb-1">
               <div className="flex gap-2 min-w-0">
                 <button
                   className={cn(
