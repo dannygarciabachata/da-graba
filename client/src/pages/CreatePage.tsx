@@ -131,6 +131,16 @@ type DnaFlow = "bachata" | "bolero" | null;
 const BACHATA_STYLE_KEYS = ["tradicional", "moderna", "sensual", "urbana", "rosa"] as const;
 const BOLERO_STYLE_KEYS = ["romantico", "ranchero", "son", "moderno"] as const;
 
+const DGB_BOLERO_BASE_INSTRUMENTS = [
+  "bongo", "conga", "guira", "timbal", "campanas",
+  "requinto", "segunda_guitarra", "bajo",
+  "voz_principal", "duo_voz",
+] as const;
+
+const DGB_BOLERO_ORCHESTRATION = [
+  "piano", "pad", "violines", "chelos", "coro_femenino", "coro_masculino",
+] as const;
+
 type CreationMode = "song" | "sound" | "speak";
 
 export default function CreatePage() {
@@ -160,6 +170,7 @@ export default function CreatePage() {
 
   const [dnaFlow, setDnaFlow] = useState<DnaFlow>(null);
   const [selectedSubStyle, setSelectedSubStyle] = useState<string | null>(null);
+  const [selectedOrchestration, setSelectedOrchestration] = useState<Set<string>>(new Set());
 
   const [soundPrompt, setSoundPrompt] = useState("");
   const [soundDuration, setSoundDuration] = useState([5]);
@@ -312,6 +323,9 @@ export default function CreatePage() {
     const finalPrompt = isInstrumental
       ? `${prompt || title} (instrumental, no vocals)`
       : prompt || title;
+    const orchestrationList = dnaFlow === "bolero" && !selectedSubStyle
+      ? [...DGB_BOLERO_BASE_INSTRUMENTS, ...Array.from(selectedOrchestration)]
+      : undefined;
     generate({
       prompt: finalPrompt,
       title: title || undefined,
@@ -324,6 +338,7 @@ export default function CreatePage() {
       copyrightHolder: copyrightHolder || undefined,
       ...(lyrics.trim() && !isInstrumental ? { lyrics: lyrics.trim() } : {}),
       ...(selectedStyleKit ? { styleKitId: selectedStyleKit } : {}),
+      ...(orchestrationList ? { orchestration: orchestrationList } : {}),
     } as any);
     setPrompt("");
   };
@@ -528,6 +543,68 @@ export default function CreatePage() {
                       <div className="text-[10px] text-muted-foreground mt-0.5">{t(`create.dnaFlow.styles.${styleKey}.desc`)}</div>
                     </button>
                   ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {dnaFlow === "bolero" && !selectedSubStyle && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden mb-4"
+              >
+                <div className="rounded-xl border border-purple-400/20 bg-purple-500/[0.04] p-3" data-testid="orchestration-panel">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-purple-400" />
+                    <span className="text-xs font-semibold text-purple-300">{t('create.dnaFlow.orchestration.title')}</span>
+                  </div>
+
+                  <div className="mb-2">
+                    <div className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wider">{t('create.dnaFlow.orchestration.baseLabel')}</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {DGB_BOLERO_BASE_INSTRUMENTS.map((instr) => (
+                        <span
+                          key={instr}
+                          className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-400/20 text-[10px] text-purple-300"
+                          data-testid={`base-instr-${instr}`}
+                        >
+                          {t(`create.dnaFlow.orchestration.instruments.${instr}`)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wider">{t('create.dnaFlow.orchestration.extrasLabel')}</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {DGB_BOLERO_ORCHESTRATION.map((instr) => {
+                        const isSelected = selectedOrchestration.has(instr);
+                        return (
+                          <button
+                            key={instr}
+                            className={cn(
+                              "px-2.5 py-1 rounded-lg border text-[11px] transition-all",
+                              isSelected
+                                ? "border-purple-400/50 bg-purple-500/20 text-purple-200 shadow-[0_0_8px_rgba(168,85,247,0.15)]"
+                                : "border-white/10 text-muted-foreground hover:border-purple-400/30 hover:text-purple-300"
+                            )}
+                            onClick={() => {
+                              const next = new Set(selectedOrchestration);
+                              if (isSelected) next.delete(instr);
+                              else next.add(instr);
+                              setSelectedOrchestration(next);
+                            }}
+                            data-testid={`orch-${instr}`}
+                          >
+                            {t(`create.dnaFlow.orchestration.instruments.${instr}`)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}

@@ -307,6 +307,29 @@
         "ranchero": { "label": "Ranchero", "desc": "Mariachi, maracas, timbal y guitarra" },
         "son": { "label": "Son", "desc": "Son cubano con maracas y timbal" },
         "moderno": { "label": "Moderno", "desc": "Contemporáneo con maracas y arreglos" }
+      },
+      "orchestration": {
+        "title": "Orquestación DGB Bolero",
+        "baseLabel": "Base (siempre incluidos)",
+        "extrasLabel": "Adornos y orquestación (opcional)",
+        "instruments": {
+          "bongo": "Bongó",
+          "conga": "Conga",
+          "guira": "Güira",
+          "timbal": "Timbal",
+          "campanas": "Campanas",
+          "requinto": "Requinto",
+          "segunda_guitarra": "2da Guitarra",
+          "bajo": "Bajo",
+          "voz_principal": "Voz Principal",
+          "duo_voz": "Dúo de Voz",
+          "piano": "Piano",
+          "pad": "Pad",
+          "violines": "Violines",
+          "chelos": "Chelos",
+          "coro_femenino": "Coro Femenino",
+          "coro_masculino": "Coro Masculino"
+        }
       }
     },
     "unlockCustomization": "Desbloquea personalización con Pro",

@@ -307,6 +307,29 @@
         "ranchero": { "label": "Ranchero", "desc": "Mariachi, maracas, timbales & guitar" },
         "son": { "label": "Son", "desc": "Cuban son with maracas & timbales" },
         "moderno": { "label": "Modern", "desc": "Contemporary with maracas & arrangements" }
+      },
+      "orchestration": {
+        "title": "DGB Bolero Orchestration",
+        "baseLabel": "Base (always included)",
+        "extrasLabel": "Extras & orchestration (optional)",
+        "instruments": {
+          "bongo": "Bongó",
+          "conga": "Conga",
+          "guira": "Güira",
+          "timbal": "Timbales",
+          "campanas": "Bells",
+          "requinto": "Requinto",
+          "segunda_guitarra": "2nd Guitar",
+          "bajo": "Bass",
+          "voz_principal": "Lead Vocal",
+          "duo_voz": "Vocal Duo",
+          "piano": "Piano",
+          "pad": "Pad",
+          "violines": "Violins",
+          "chelos": "Cellos",
+          "coro_femenino": "Female Choir",
+          "coro_masculino": "Male Choir"
+        }
       }
     },
     "unlockCustomization": "Unlock customization with Pro",
