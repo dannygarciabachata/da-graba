@@ -509,7 +509,8 @@
     "placeholder": "Type a message...",
     "send": "Send",
     "newConversation": "New conversation",
-    "errorMessage": "Sorry, something went wrong. Please try again."
+    "errorMessage": "Sorry, something went wrong. Please try again.",
+    "contextHint": "I'm here to help you with: {{service}}"
   },
   "notFound": {
     "title": "404 Page Not Found",
@@ -880,6 +881,7 @@
       "upgradeButton": "Upgrade",
       "tabs": {
         "overview": "Overview",
+        "gifts": "Gifts & Wallet",
         "copyright": "Copyright",
         "monetization": "Monetization"
       },
@@ -889,6 +891,8 @@
         "desc": "Fans subscribe to your profile monthly. You set the price.",
         "subscribers": "Grow Your Audience",
         "subscribersDesc": "Publish songs, share your profile, and gain followers and subscribers.",
+        "gifts": "Fan Gifts",
+        "giftsDesc": "Your fans can send you gifts from $1. You receive 90% — the platform charges a 10% fee.",
         "proVsBasic": "Pro vs Basic",
         "proVsBasicDesc": "Pro users keep 100% of revenue. Basic users pay 5% platform fee."
       },
@@ -915,6 +919,35 @@
       "notFound": "Artist not found",
       "discography": "Discography",
       "noSongs": "This artist hasn't published any songs yet"
+    },
+    "gift": {
+      "sendGift": "Send Gift",
+      "title": "Gift to {{name}}",
+      "customAmount": "Custom amount",
+      "yourName": "Your name",
+      "anonymous": "Anonymous",
+      "message": "Thank you message",
+      "messagePlaceholder": "Thanks for your amazing music!",
+      "total": "Total",
+      "sendButton": "Send Gift",
+      "feeNote": "90% goes directly to the artist. 10% platform fee.",
+      "success": "Gift sent successfully! Thank you for your support.",
+      "error": "Error sending gift",
+      "recentGifts": "Recent Gifts",
+      "gifts": "gifts"
+    },
+    "wallet": {
+      "balance": "Wallet",
+      "availableBalance": "Available Balance",
+      "totalEarned": "Total Earned",
+      "totalFees": "Fees Paid",
+      "platformFeeRate": "10% transaction fee",
+      "recentGifts": "Gifts Received",
+      "noGifts": "No gifts received yet",
+      "noGiftsDesc": "Share your profile so fans can send you gifts",
+      "transactionHistory": "Transaction History",
+      "noTransactions": "No transactions yet",
+      "fee": "Fee"
     },
     "onboarding": {
       "title": "Create Your Artist Profile",

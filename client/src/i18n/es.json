@@ -509,7 +509,8 @@
     "placeholder": "Escribe un mensaje...",
     "send": "Enviar",
     "newConversation": "Nueva conversación",
-    "errorMessage": "Lo sentimos, algo salió mal. Por favor, inténtalo de nuevo."
+    "errorMessage": "Lo sentimos, algo salió mal. Por favor, inténtalo de nuevo.",
+    "contextHint": "Estoy aquí para ayudarte con: {{service}}"
   },
   "notFound": {
     "title": "404 Página No Encontrada",
@@ -880,6 +881,7 @@
       "upgradeButton": "Actualizar",
       "tabs": {
         "overview": "Vista General",
+        "gifts": "Regalos & Billetera",
         "copyright": "Derechos de Autor",
         "monetization": "Monetización"
       },
@@ -889,6 +891,8 @@
         "desc": "Los fans se suscriben a tu perfil mensualmente. Tú estableces el precio.",
         "subscribers": "Crece tu Audiencia",
         "subscribersDesc": "Publica canciones, comparte tu perfil y obtén seguidores y suscriptores.",
+        "gifts": "Regalos de Fans",
+        "giftsDesc": "Tus fans pueden enviarte regalos desde $1. Recibes el 90% — la plataforma cobra 10% de comisión.",
         "proVsBasic": "Pro vs Básico",
         "proVsBasicDesc": "Usuarios Pro conservan 100% de ingresos. Usuarios Básicos pagan 5% de comisión."
       },
@@ -915,6 +919,35 @@
       "notFound": "Artista no encontrado",
       "discography": "Discografía",
       "noSongs": "Este artista aún no ha publicado canciones"
+    },
+    "gift": {
+      "sendGift": "Enviar Regalo",
+      "title": "Regalar a {{name}}",
+      "customAmount": "Monto personalizado",
+      "yourName": "Tu nombre",
+      "anonymous": "Anónimo",
+      "message": "Mensaje de agradecimiento",
+      "messagePlaceholder": "¡Gracias por tu música increíble!",
+      "total": "Total",
+      "sendButton": "Enviar Regalo",
+      "feeNote": "El 90% va directamente al artista. 10% comisión de plataforma.",
+      "success": "¡Regalo enviado exitosamente! Gracias por tu apoyo.",
+      "error": "Error al enviar el regalo",
+      "recentGifts": "Regalos Recientes",
+      "gifts": "regalos"
+    },
+    "wallet": {
+      "balance": "Billetera",
+      "availableBalance": "Balance Disponible",
+      "totalEarned": "Total Ganado",
+      "totalFees": "Comisiones Pagadas",
+      "platformFeeRate": "10% comisión por transacción",
+      "recentGifts": "Regalos Recibidos",
+      "noGifts": "Aún no has recibido regalos",
+      "noGiftsDesc": "Comparte tu perfil para que tus fans puedan enviarte regalos",
+      "transactionHistory": "Historial de Transacciones",
+      "noTransactions": "No hay transacciones aún",
+      "fee": "Comisión"
     },
     "onboarding": {
       "title": "Crea tu Perfil de Artista",

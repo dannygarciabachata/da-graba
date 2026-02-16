@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Send, X, Loader2, RotateCcw } from "lucide-react";
 
 interface ChatMessage {
@@ -12,7 +13,27 @@ interface ChatMessage {
   content: string;
 }
 
-export default function SupportChat() {
+interface SupportChatProps {
+  serviceContext?: string;
+}
+
+const SERVICE_LABELS: Record<string, string> = {
+  create: "Music Creation",
+  library: "Song Library",
+  studio: "Studio Editor",
+  sample_lab: "Sample Lab",
+  artist_dashboard: "Artist Dashboard",
+  artist_profile: "Artist Profile",
+  discover: "Music Discovery",
+  discography: "Discography",
+  pricing: "Subscriptions & Pricing",
+  blog: "Blog",
+  admin: "Admin Panel",
+  style_kits: "Style Kits",
+  producer_store: "Producer Store",
+};
+
+export default function SupportChat({ serviceContext }: SupportChatProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -26,7 +47,12 @@ export default function SupportChat() {
   const sendMessage = useMutation({
     mutationFn: async (message: string) => {
       const history = messages.map((m) => ({ role: m.role, content: m.content }));
-      const res = await apiRequest("POST", "/api/support/chat", { message, history, ticketId });
+      const res = await apiRequest("POST", "/api/support/chat", {
+        message,
+        history,
+        ticketId,
+        serviceContext: serviceContext || undefined,
+      });
       return await res.json();
     },
     onSuccess: (data: { reply: string; ticketId?: number }) => {
@@ -90,6 +116,8 @@ export default function SupportChat() {
     }
   };
 
+  const contextLabel = serviceContext ? SERVICE_LABELS[serviceContext] || serviceContext : null;
+
   return (
     <>
       {isOpen && (
@@ -99,10 +127,17 @@ export default function SupportChat() {
         >
           <Card className="flex flex-col h-[500px] max-h-[70vh] shadow-xl border-primary/20">
             <CardHeader className="flex flex-row items-center justify-between gap-2 py-3 px-4 border-b space-y-0">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <MessageCircle className="h-4 w-4 text-primary" />
-                {t('support.title')}
-              </CardTitle>
+              <div>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-primary" />
+                  {t('support.title')}
+                </CardTitle>
+                {contextLabel && (
+                  <Badge variant="outline" className="text-[10px] mt-1 text-primary/70 border-primary/20">
+                    {contextLabel}
+                  </Badge>
+                )}
+              </div>
               <div className="flex gap-1">
                 <Button
                   size="icon"
@@ -130,6 +165,11 @@ export default function SupportChat() {
                   <MessageCircle className="h-8 w-8 mx-auto mb-3 opacity-30" />
                   <p>{t('support.greeting')}</p>
                   <p className="text-xs mt-1">{t('support.greetingSubtitle')}</p>
+                  {contextLabel && (
+                    <p className="text-xs mt-2 text-primary/60">
+                      {t('support.contextHint', { service: contextLabel })}
+                    </p>
+                  )}
                 </div>
               )}
 

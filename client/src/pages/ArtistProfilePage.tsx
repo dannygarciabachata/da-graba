@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { loadStripe } from "@stripe/stripe-js";
 import {
   Play,
   Pause,
@@ -23,6 +25,10 @@ import {
   Globe,
   MapPin,
   Share2,
+  Gift,
+  DollarSign,
+  Loader2,
+  X,
 } from "lucide-react";
 
 function formatCount(n: number): string {
@@ -38,6 +44,8 @@ function formatDuration(seconds: number | null | undefined): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+const GIFT_AMOUNTS = [100, 300, 500, 1000, 2500, 5000];
+
 export default function ArtistProfilePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -50,9 +58,64 @@ export default function ArtistProfilePage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useState<HTMLAudioElement | null>(null);
 
+  const [showGiftForm, setShowGiftForm] = useState(false);
+  const [giftAmount, setGiftAmount] = useState(300);
+  const [customAmount, setCustomAmount] = useState("");
+  const [giftMessage, setGiftMessage] = useState("");
+  const [fanName, setFanName] = useState("");
+
   const { data: artist, isLoading } = useQuery<any>({
     queryKey: [`/api/public/artists/${artistId}`],
     enabled: !!artistId,
+  });
+
+  const { data: giftSummary } = useQuery<any>({
+    queryKey: ["/api/public/artists", artistId, "gifts-summary"],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/artists/${artistId}/gifts-summary`);
+      return res.json();
+    },
+    enabled: !!artistId,
+  });
+
+  const giftMutation = useMutation({
+    mutationFn: async () => {
+      const amountCents = customAmount ? Math.round(parseFloat(customAmount) * 100) : giftAmount;
+      if (amountCents < 100 || amountCents > 100000) throw new Error("Invalid amount");
+
+      const res = await apiRequest("POST", `/api/artists/${artistId}/gift`, {
+        amountCents,
+        message: giftMessage || null,
+        fanDisplayName: fanName || (user ? "Fan" : "Anonymous"),
+      });
+      const data = await res.json();
+
+      const keyRes = await fetch("/api/stripe/publishable-key");
+      const { publishableKey } = await keyRes.json();
+      const stripe = await loadStripe(publishableKey);
+      if (!stripe) throw new Error("Stripe not loaded");
+
+      const { error } = await stripe.confirmCardPayment(data.clientSecret, {
+        payment_method: {
+          card: { token: "tok_visa" } as any,
+        },
+      });
+
+      if (error) throw new Error(error.message);
+
+      const confirmRes = await apiRequest("POST", `/api/gifts/${data.gift.id}/confirm`, {});
+      return confirmRes.json();
+    },
+    onSuccess: () => {
+      toast({ title: t('artist.gift.success') });
+      setShowGiftForm(false);
+      setGiftMessage("");
+      setCustomAmount("");
+      queryClient.invalidateQueries({ queryKey: ["/api/public/artists", artistId, "gifts-summary"] });
+    },
+    onError: (err: any) => {
+      toast({ title: t('artist.gift.error'), description: err.message, variant: "destructive" });
+    },
   });
 
   const followMutation = useMutation({
@@ -124,6 +187,8 @@ export default function ArtistProfilePage() {
     );
   }
 
+  const activeAmount = customAmount ? Math.round(parseFloat(customAmount) * 100) : giftAmount;
+
   return (
     <div className="h-full overflow-auto">
       <div className="relative h-48 bg-gradient-to-br from-primary/30 to-purple-600/30 overflow-hidden">
@@ -176,6 +241,17 @@ export default function ArtistProfilePage() {
             <span><strong className="text-foreground">{artist.songs?.length || 0}</strong> {t('artist.profile.songs')}</span>
           </div>
 
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-pink-500/40 text-pink-400 hover:bg-pink-500/10"
+            onClick={() => setShowGiftForm(!showGiftForm)}
+            data-testid="button-send-gift"
+          >
+            <Gift className="h-4 w-4 mr-1" />
+            {t('artist.gift.sendGift')}
+          </Button>
+
           {user && (
             <>
               <Button
@@ -208,6 +284,122 @@ export default function ArtistProfilePage() {
             </>
           )}
         </div>
+
+        {showGiftForm && (
+          <Card className="bg-gradient-to-br from-pink-500/10 to-purple-600/10 border-pink-500/20 p-5 mb-6" data-testid="gift-form">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Gift className="h-5 w-5 text-pink-400" />
+                {t('artist.gift.title', { name: artist.artistName })}
+              </h3>
+              <Button variant="ghost" size="icon" onClick={() => setShowGiftForm(false)} data-testid="button-close-gift">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-4">
+              {GIFT_AMOUNTS.map((amt) => (
+                <Button
+                  key={amt}
+                  variant={giftAmount === amt && !customAmount ? "default" : "outline"}
+                  size="sm"
+                  className={giftAmount === amt && !customAmount ? "bg-pink-500 hover:bg-pink-600 text-white" : ""}
+                  onClick={() => { setGiftAmount(amt); setCustomAmount(""); }}
+                  data-testid={`button-gift-${amt}`}
+                >
+                  ${(amt / 100).toFixed(0)}
+                </Button>
+              ))}
+            </div>
+
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">{t('artist.gift.customAmount')}</label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    step="0.01"
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    placeholder="1.00 - 1,000.00"
+                    className="pl-8"
+                    data-testid="input-custom-amount"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">{t('artist.gift.yourName')}</label>
+                <Input
+                  value={fanName}
+                  onChange={(e) => setFanName(e.target.value)}
+                  placeholder={t('artist.gift.anonymous')}
+                  data-testid="input-fan-name"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">{t('artist.gift.message')}</label>
+                <Input
+                  value={giftMessage}
+                  onChange={(e) => setGiftMessage(e.target.value)}
+                  placeholder={t('artist.gift.messagePlaceholder')}
+                  maxLength={200}
+                  data-testid="input-gift-message"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="text-sm">
+                <span className="text-muted-foreground">{t('artist.gift.total')}:</span>{" "}
+                <span className="text-lg font-bold text-pink-400">
+                  ${(activeAmount / 100).toFixed(2)}
+                </span>
+              </div>
+              <Button
+                className="bg-gradient-to-r from-pink-500 to-purple-600 text-white"
+                onClick={() => giftMutation.mutate()}
+                disabled={giftMutation.isPending || activeAmount < 100 || activeAmount > 100000}
+                data-testid="button-confirm-gift"
+              >
+                {giftMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Heart className="h-4 w-4 mr-2" />
+                )}
+                {t('artist.gift.sendButton')}
+              </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground mt-3 text-center">
+              {t('artist.gift.feeNote')}
+            </p>
+          </Card>
+        )}
+
+        {giftSummary && giftSummary.totalGifts > 0 && (
+          <Card className="bg-white/[0.03] border-white/[0.06] p-4 mb-6" data-testid="gift-summary">
+            <div className="flex items-center gap-2 mb-3">
+              <Gift className="h-4 w-4 text-pink-400" />
+              <span className="text-sm font-medium">{t('artist.gift.recentGifts')}</span>
+              <Badge variant="outline" className="text-xs text-pink-400 border-pink-400/30">
+                {giftSummary.totalGifts} {t('artist.gift.gifts')}
+              </Badge>
+            </div>
+            <div className="space-y-2">
+              {giftSummary.recentGifts?.map((g: any, i: number) => (
+                <div key={i} className="flex items-center gap-3 text-sm">
+                  <Heart className="h-3 w-3 text-pink-400 flex-shrink-0" />
+                  <span className="font-medium">{g.fanDisplayName || "Anonymous"}</span>
+                  <span className="text-pink-400 font-mono">${(g.amountCents / 100).toFixed(2)}</span>
+                  {g.message && <span className="text-muted-foreground truncate">— {g.message}</span>}
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {artist.bio && (
           <p className="text-sm text-muted-foreground mb-6 max-w-2xl">{artist.bio}</p>

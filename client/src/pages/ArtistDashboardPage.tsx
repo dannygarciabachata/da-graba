@@ -26,6 +26,10 @@ import {
   Clock,
   AlertCircle,
   ExternalLink,
+  Gift,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
 
 function formatCents(cents: number): string {
@@ -36,6 +40,20 @@ function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return String(n);
+}
+
+function timeAgo(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 30) return `${diffDay}d ago`;
+  return d.toLocaleDateString();
 }
 
 export default function ArtistDashboardPage() {
@@ -51,6 +69,10 @@ export default function ArtistDashboardPage() {
 
   const { data: registrations } = useQuery<any[]>({
     queryKey: ["/api/artist/pro-registrations"],
+  });
+
+  const { data: giftsData } = useQuery<any>({
+    queryKey: ["/api/artist/gifts"],
   });
 
   if (isLoading) {
@@ -100,6 +122,9 @@ export default function ArtistDashboardPage() {
   }
 
   const { profile, isPro, platformFeePercent, subscribers, followers, totals, totalSongs, totalPlays } = dashboard;
+  const wallet = giftsData?.wallet;
+  const gifts = giftsData?.gifts || [];
+  const transactions = giftsData?.transactions || [];
 
   return (
     <div className="h-full overflow-auto">
@@ -139,7 +164,7 @@ export default function ArtistDashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Card className="bg-white/[0.03] border-white/[0.06] p-4" data-testid="stat-earnings">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
               <DollarSign className="h-3.5 w-3.5" />
@@ -151,6 +176,16 @@ export default function ArtistDashboardPage() {
                 {t('artist.dashboard.platformFee', { percent: platformFeePercent })}
               </p>
             )}
+          </Card>
+          <Card className="bg-white/[0.03] border-white/[0.06] p-4" data-testid="stat-wallet">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+              <Wallet className="h-3.5 w-3.5" />
+              {t('artist.wallet.balance')}
+            </div>
+            <p className="text-xl font-bold text-pink-400">{formatCents(wallet?.balanceCents || 0)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {gifts.filter((g: any) => g.status === "completed").length} {t('artist.gift.gifts')}
+            </p>
           </Card>
           <Card className="bg-white/[0.03] border-white/[0.06] p-4" data-testid="stat-subscribers">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
@@ -200,6 +235,9 @@ export default function ArtistDashboardPage() {
             <TabsTrigger value="overview" data-testid="tab-overview">
               <BarChart3 className="h-4 w-4 mr-1" /> {t('artist.dashboard.tabs.overview')}
             </TabsTrigger>
+            <TabsTrigger value="gifts" data-testid="tab-gifts">
+              <Gift className="h-4 w-4 mr-1" /> {t('artist.dashboard.tabs.gifts')}
+            </TabsTrigger>
             <TabsTrigger value="copyright" data-testid="tab-copyright">
               <Shield className="h-4 w-4 mr-1" /> {t('artist.dashboard.tabs.copyright')}
             </TabsTrigger>
@@ -225,6 +263,15 @@ export default function ArtistDashboardPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3 bg-white/[0.02] rounded-lg p-3">
+                  <div className="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center flex-shrink-0">
+                    <Gift className="h-4 w-4 text-pink-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{t('artist.dashboard.howItWorks.gifts')}</p>
+                    <p className="text-muted-foreground">{t('artist.dashboard.howItWorks.giftsDesc')}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 bg-white/[0.02] rounded-lg p-3">
                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                     <Users className="h-4 w-4 text-primary" />
                   </div>
@@ -243,6 +290,126 @@ export default function ArtistDashboardPage() {
                   </div>
                 </div>
               </div>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="gifts" className="space-y-4 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <Card className="bg-gradient-to-br from-pink-500/10 to-purple-600/10 border-pink-500/20 p-4">
+                <div className="flex items-center gap-2 text-pink-400 text-xs mb-1">
+                  <Wallet className="h-3.5 w-3.5" />
+                  {t('artist.wallet.availableBalance')}
+                </div>
+                <p className="text-2xl font-bold text-pink-400" data-testid="text-wallet-balance">
+                  {formatCents(wallet?.balanceCents || 0)}
+                </p>
+              </Card>
+              <Card className="bg-white/[0.03] border-white/[0.06] p-4">
+                <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  {t('artist.wallet.totalEarned')}
+                </div>
+                <p className="text-2xl font-bold text-green-400" data-testid="text-wallet-total">
+                  {formatCents(wallet?.totalEarnedCents || 0)}
+                </p>
+              </Card>
+              <Card className="bg-white/[0.03] border-white/[0.06] p-4">
+                <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+                  <DollarSign className="h-3.5 w-3.5" />
+                  {t('artist.wallet.totalFees')}
+                </div>
+                <p className="text-2xl font-bold text-red-400" data-testid="text-wallet-fees">
+                  -{formatCents(wallet?.totalFeesPaidCents || 0)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{t('artist.wallet.platformFeeRate')}</p>
+              </Card>
+            </div>
+
+            <Card className="bg-white/[0.03] border-white/[0.06] p-5">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <Gift className="h-4 w-4 text-pink-400" />
+                {t('artist.wallet.recentGifts')}
+              </h3>
+              {gifts.length > 0 ? (
+                <div className="space-y-3">
+                  {gifts.map((gift: any) => (
+                    <div key={gift.id} className="flex items-center justify-between bg-white/[0.02] rounded-lg p-3" data-testid={`gift-row-${gift.id}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center flex-shrink-0">
+                          <Heart className="h-4 w-4 text-pink-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{gift.fanDisplayName || "Anonymous"}</p>
+                          {gift.message && <p className="text-xs text-muted-foreground truncate max-w-xs">{gift.message}</p>}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-pink-400">{formatCents(gift.amountCents)}</p>
+                        <div className="flex items-center gap-1">
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${gift.status === "completed" ? "text-green-400 border-green-400/30" : gift.status === "pending" ? "text-amber-400 border-amber-400/30" : "text-red-400 border-red-400/30"}`}
+                          >
+                            {gift.status === "completed" && <CheckCircle className="h-2.5 w-2.5 mr-0.5" />}
+                            {gift.status === "pending" && <Clock className="h-2.5 w-2.5 mr-0.5" />}
+                            {gift.status}
+                          </Badge>
+                          {gift.createdAt && <span className="text-[10px] text-muted-foreground">{timeAgo(gift.createdAt)}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Gift className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">{t('artist.wallet.noGifts')}</p>
+                  <p className="text-xs mt-1">{t('artist.wallet.noGiftsDesc')}</p>
+                </div>
+              )}
+            </Card>
+
+            <Card className="bg-white/[0.03] border-white/[0.06] p-5">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                {t('artist.wallet.transactionHistory')}
+              </h3>
+              {transactions.length > 0 ? (
+                <div className="space-y-2">
+                  {transactions.map((tx: any) => (
+                    <div key={tx.id} className="flex items-center justify-between py-2 border-b border-white/[0.04] last:border-0" data-testid={`tx-row-${tx.id}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${tx.type === "gift_received" ? "bg-green-500/20" : tx.type === "payout" ? "bg-amber-500/20" : "bg-red-500/20"}`}>
+                          {tx.type === "gift_received" ? (
+                            <ArrowDownRight className="h-3 w-3 text-green-400" />
+                          ) : (
+                            <ArrowUpRight className="h-3 w-3 text-amber-400" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm">{tx.description || tx.type}</p>
+                          {tx.createdAt && <p className="text-[10px] text-muted-foreground">{timeAgo(tx.createdAt)}</p>}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-mono font-medium ${tx.type === "gift_received" || tx.type === "subscription_income" ? "text-green-400" : "text-red-400"}`}>
+                          {tx.type === "gift_received" || tx.type === "subscription_income" ? "+" : "-"}{formatCents(tx.netAmountCents || 0)}
+                        </p>
+                        {tx.platformFeeCents > 0 && (
+                          <p className="text-[10px] text-muted-foreground">
+                            {t('artist.wallet.fee')}: -{formatCents(tx.platformFeeCents)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">{t('artist.wallet.noTransactions')}</p>
+                </div>
+              )}
             </Card>
           </TabsContent>
 

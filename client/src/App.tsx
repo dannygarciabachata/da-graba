@@ -29,8 +29,28 @@ import DiscographyPage from "@/pages/DiscographyPage";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
 import { useTranslation } from "react-i18next";
+import { useLocation as useWouterLocation } from "wouter";
+
+function useServiceContext(): string | undefined {
+  const [location] = useWouterLocation();
+  if (location.startsWith("/create")) return "create";
+  if (location.startsWith("/library")) return "library";
+  if (location.startsWith("/studio")) return "studio";
+  if (location.startsWith("/sample-lab")) return "sample_lab";
+  if (location.startsWith("/artist-dashboard")) return "artist_dashboard";
+  if (location.startsWith("/artist/")) return "artist_profile";
+  if (location.startsWith("/discover")) return "discover";
+  if (location.startsWith("/discography")) return "discography";
+  if (location.startsWith("/pricing")) return "pricing";
+  if (location.startsWith("/blog")) return "blog";
+  if (location.startsWith("/admin")) return "admin";
+  if (location.startsWith("/style-kits")) return "style_kits";
+  if (location.startsWith("/producer-store")) return "producer_store";
+  return undefined;
+}
 
 function AuthenticatedLayout() {
+  const serviceContext = useServiceContext();
   const style = {
     "--sidebar-width": "15rem",
     "--sidebar-width-icon": "3rem",
@@ -69,7 +89,7 @@ function AuthenticatedLayout() {
               <Route path="/admin" component={AdminPage} />
               <Route component={NotFound} />
             </Switch>
-            <SupportChat />
+            <SupportChat serviceContext={serviceContext} />
           </main>
         </div>
       </div>
