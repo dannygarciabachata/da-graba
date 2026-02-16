@@ -66,10 +66,35 @@ const GENRE_INSTRUMENT_MAP: Record<string, string> = {
   "reggaeton": "modern reggaeton beat with deep bass and crisp hi-hats, urban Latin groove, polished club production, tight rhythm section, 90 BPM",
   "latin pop": "polished Latin pop production, acoustic guitar with light drums and melodic hooks, catchy and warm, radio-ready sound, 120 BPM",
   "cumbia": "traditional Colombian cumbia groove, accordion-driven melody with rhythmic percussion, tropical dance feel, tight band arrangement, 100 BPM",
+  "vallenato": "authentic Colombian vallenato ensemble, accordion lead melody with caja vallenata and guacharaca percussion, romantic storytelling feel, warm tropical groove, 120 BPM",
+  "son": "classic Cuban son ensemble, tres guitar with clave rhythm and trumpet accents, warm Havana groove, tight rhythmic feel, professional Afro-Cuban sound, 110 BPM",
+  "mambo": "big band mambo orchestra, driving brass section with piano montuno and timbales, high-energy Cuban dance music, powerful rhythmic groove, 170 BPM",
+  "cha-cha-chá": "elegant cha-cha-chá ensemble, flute melody with piano guajeo and light percussion, smooth Cuban dance rhythm, charanga style, polished production, 120 BPM",
+  "cha cha cha": "elegant cha-cha-chá ensemble, flute melody with piano guajeo and light percussion, smooth Cuban dance rhythm, charanga style, polished production, 120 BPM",
+  "guaracha": "high-energy guaracha beat, driving tribal percussion with electronic bass and synth stabs, modern Latin club sound, intense dance groove, 130 BPM",
+  "dembow": "hard-hitting dembow beat, heavy 808 bass with Dominican percussion pattern, urban Caribbean bounce, aggressive club energy, crisp production, 115 BPM",
+  "plena": "traditional Puerto Rican plena ensemble, pandereta drums with güiro and brass, festive street music groove, call-and-response energy, 110 BPM",
+  "bomba": "Afro-Puerto Rican bomba drumming ensemble, barrel drums with cuá sticks and maracas, powerful polyrhythmic groove, ceremonial dance energy, 100 BPM",
+  "punta": "Garifuna punta beat, fast-paced turtle shell and drum rhythms, high-energy Central American dance groove, celebratory feel, tight percussion, 150 BPM",
+  "champeta": "Colombian champeta groove, African-inspired rhythm with electronic production, tropical Cartagena sound, danceable Afro-Colombian beat, warm and festive, 110 BPM",
+  "tropical": "tropical Latin dance music, warm percussion with brass accents and melodic hooks, festive Caribbean groove, professional Latin production, 120 BPM",
   "edm": "electronic dance music with synthesizer pads and driving beats, professional club production with buildups and drops, 128 BPM",
   "r&b": "smooth R&B groove with warm electric piano and soft drums, soulful and intimate, polished production, 85 BPM",
   "hip hop": "hip hop beat with boom bap drums and 808 bass, sampled melodies, urban groove, crisp production, 90 BPM",
   "pop": "catchy pop production with acoustic guitar and modern drums, bright and upbeat, radio-ready mix, 120 BPM",
+  "k-pop": "polished K-pop production, catchy synth hooks with tight drum programming, energetic and glossy, modern pop arrangement, 125 BPM",
+  "afrobeat": "West African afrobeat groove, driving polyrhythmic percussion with horn section and guitar riffs, warm and danceable, Fela-inspired energy, 110 BPM",
+  "jazz": "smooth jazz ensemble, warm saxophone or trumpet lead with piano comping and walking bass, intimate club atmosphere, sophisticated harmony, 140 BPM",
+  "rock": "driving rock band, electric guitar riffs with powerful drums and bass, energetic and raw, professional studio sound, 130 BPM",
+  "synthwave": "retro synthwave production, analog synth pads with arpeggiators and electronic drums, nostalgic 80s cinematic feel, 110 BPM",
+  "house": "deep house groove, four-on-the-floor kick with warm bassline and synth chords, club-ready dance production, 124 BPM",
+  "soul": "classic soul groove, warm organ with smooth bass and tight drums, heartfelt and soulful, vintage production feel, 95 BPM",
+  "country": "modern country arrangement, steel guitar with acoustic strumming and steady drums, warm and authentic, Nashville studio sound, 110 BPM",
+  "blues": "classic blues groove, expressive electric guitar with walking bass and shuffle drums, raw and emotional, 12-bar feel, 90 BPM",
+  "indie": "indie alternative production, jangly guitars with lo-fi drums and warm textures, dreamy and atmospheric, 115 BPM",
+  "classical": "orchestral classical arrangement, strings and woodwinds with dynamic expression, elegant and timeless, concert hall production",
+  "funk": "tight funk groove, slap bass with wah guitar and horn stabs, infectious dance rhythm, James Brown-inspired energy, 105 BPM",
+  "drum & bass": "fast drum and bass production, breakbeat drums with deep sub-bass and atmospheric pads, high-energy electronic, 174 BPM",
 };
 
 export async function enrichPromptForMusicGen(
@@ -77,8 +102,10 @@ export async function enrichPromptForMusicGen(
   genre: string
 ): Promise<string> {
   try {
-    const genreLower = genre.toLowerCase();
-    const genreHints = GENRE_INSTRUMENT_MAP[genreLower] || GENRE_INSTRUMENT_MAP["bachata"];
+    const genreLower = genre.toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/-/g, " ").trim();
+    const genreHints = GENRE_INSTRUMENT_MAP[genreLower] || GENRE_INSTRUMENT_MAP[genreLower.replace(/\s+/g, "_")] || GENRE_INSTRUMENT_MAP["bachata"];
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -122,8 +149,10 @@ Genre reference: ${genreHints}`
     console.log(`[PromptEnrich] OpenAI enrichment failed: ${err.message}, using fallback`);
   }
 
-  const genreLower = genre.toLowerCase();
-  const hints = GENRE_INSTRUMENT_MAP[genreLower] || GENRE_INSTRUMENT_MAP["bachata"];
+  const genreLower = genre.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/-/g, " ").trim();
+  const hints = GENRE_INSTRUMENT_MAP[genreLower] || GENRE_INSTRUMENT_MAP[genreLower.replace(/\s+/g, "_")] || GENRE_INSTRUMENT_MAP["bachata"];
   const fallback = `${genre} music, ${hints}`;
   console.log(`[PromptEnrich] Fallback prompt: "${fallback}"`);
   return fallback;

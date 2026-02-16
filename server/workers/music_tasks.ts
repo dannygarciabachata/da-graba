@@ -59,14 +59,52 @@ export function buildHeartMuLaTags(prompt: string, style: string): string {
     son: ["son cubano", "latin", "tres cubano", "bongo", "claves", "maracas", "traditional Cuban", "moderate tempo", "studio quality"],
     latin_pop: ["latin pop", "pop", "modern production", "acoustic guitar", "piano", "melodic hooks", "radio-ready", "120 BPM", "catchy", "studio quality"],
     vallenato: ["vallenato", "latin", "romantic", "accordion melody", "caja vallenata", "guacharaca", "Colombian", "moderate tempo", "studio quality"],
+    mambo: ["mambo", "latin", "big band", "brass section", "piano montuno", "timbales", "high energy", "Cuban dance", "170 BPM", "4/4 time", "studio quality"],
+    cha_cha_cha: ["cha-cha-chá", "latin", "charanga", "flute melody", "piano guajeo", "light percussion", "Cuban dance", "120 BPM", "4/4 time", "elegant", "studio quality"],
+    chachacha: ["cha-cha-chá", "latin", "charanga", "flute melody", "piano guajeo", "light percussion", "Cuban dance", "120 BPM", "4/4 time", "elegant", "studio quality"],
+    guaracha: ["guaracha", "latin", "tribal percussion", "electronic bass", "synth stabs", "modern Latin club", "high energy", "130 BPM", "dance", "studio quality"],
+    dembow: ["dembow", "Dominican urban", "heavy 808 bass", "Dominican percussion", "Caribbean bounce", "aggressive", "club energy", "115 BPM", "4/4 time", "studio quality"],
+    plena: ["plena", "latin", "Puerto Rican", "pandereta", "güiro", "brass", "festive", "street music", "call and response", "110 BPM", "studio quality"],
+    bomba: ["bomba", "Afro-Puerto Rican", "barrel drums", "cuá sticks", "maracas", "polyrhythmic", "ceremonial dance", "100 BPM", "studio quality"],
+    punta: ["punta", "Garifuna", "Central American", "turtle shell drums", "fast rhythm", "high energy dance", "150 BPM", "celebratory", "studio quality"],
+    champeta: ["champeta", "Colombian", "African-inspired", "Cartagena sound", "tropical", "danceable", "Afro-Colombian", "110 BPM", "festive", "studio quality"],
+    tropical: ["tropical", "latin", "warm percussion", "brass", "melodic hooks", "Caribbean groove", "dance", "120 BPM", "festive", "studio quality"],
     r_b: ["r&b", "smooth groove", "electric piano", "soft drums", "soulful", "intimate", "85 BPM", "4/4 time", "warm production"],
     hip_hop: ["hip hop", "boom bap", "808 bass", "crisp snares", "sampled melody", "90 BPM", "4/4 time", "urban"],
     pop: ["pop", "catchy melody", "modern drums", "acoustic guitar", "bright production", "120 BPM", "radio-ready", "upbeat"],
     edm: ["edm", "electronic", "synthesizer", "driving beat", "build-up", "drop", "128 BPM", "4/4 time", "club production"],
+    k_pop: ["k-pop", "pop", "synth hooks", "tight drums", "energetic", "glossy production", "125 BPM", "modern", "studio quality"],
+    kpop: ["k-pop", "pop", "synth hooks", "tight drums", "energetic", "glossy production", "125 BPM", "modern", "studio quality"],
+    afrobeat: ["afrobeat", "West African", "polyrhythmic", "horn section", "guitar riffs", "danceable", "110 BPM", "4/4 time", "warm", "studio quality"],
+    jazz: ["jazz", "saxophone", "trumpet", "piano comping", "walking bass", "sophisticated", "140 BPM", "swing", "studio quality"],
+    rock: ["rock", "electric guitar", "power drums", "bass", "energetic", "raw", "130 BPM", "4/4 time", "studio quality"],
+    synthwave: ["synthwave", "analog synth", "arpeggiator", "electronic drums", "80s retro", "cinematic", "110 BPM", "nostalgic", "studio quality"],
+    house: ["house", "four-on-the-floor", "warm bassline", "synth chords", "club", "dance", "124 BPM", "4/4 time", "studio quality"],
+    soul: ["soul", "warm organ", "smooth bass", "tight drums", "heartfelt", "vintage", "95 BPM", "4/4 time", "studio quality"],
+    country: ["country", "steel guitar", "acoustic guitar", "steady drums", "Nashville", "authentic", "110 BPM", "4/4 time", "studio quality"],
+    blues: ["blues", "electric guitar", "walking bass", "shuffle drums", "emotional", "12-bar", "90 BPM", "studio quality"],
+    indie: ["indie", "jangly guitar", "lo-fi drums", "atmospheric", "dreamy", "115 BPM", "4/4 time", "studio quality"],
+    classical: ["classical", "orchestral", "strings", "woodwinds", "dynamic expression", "elegant", "concert hall", "studio quality"],
+    funk: ["funk", "slap bass", "wah guitar", "horn stabs", "infectious groove", "dance", "105 BPM", "4/4 time", "studio quality"],
+    drum_bass: ["drum and bass", "breakbeat", "deep sub-bass", "atmospheric pads", "high energy", "174 BPM", "electronic", "studio quality"],
+    drum_and_bass: ["drum and bass", "breakbeat", "deep sub-bass", "atmospheric pads", "high energy", "174 BPM", "electronic", "studio quality"],
+    drumandbass: ["drum and bass", "breakbeat", "deep sub-bass", "atmospheric pads", "high energy", "174 BPM", "electronic", "studio quality"],
+    r_and_b: ["r&b", "smooth groove", "electric piano", "soft drums", "soulful", "intimate", "85 BPM", "4/4 time", "warm production"],
+    randb: ["r&b", "smooth groove", "electric piano", "soft drums", "soulful", "intimate", "85 BPM", "4/4 time", "warm production"],
   };
 
-  const normalizedStyle = style.toLowerCase().replace(/[&]/g, "_").replace(/\s+/g, "_").replace(/[^a-z_]/g, "");
-  let tags = genreTagMap[normalizedStyle] || genreTagMap[normalizedStyle.replace(/_/g, "")] || genreTagMap["bachata"] || [];
+  const normalizedStyle = style.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, "_and_")
+    .replace(/-/g, "_")
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+  let tags = genreTagMap[normalizedStyle]
+    || genreTagMap[normalizedStyle.replace(/_/g, "")]
+    || genreTagMap[normalizedStyle.replace(/_and_/g, "_")]
+    || genreTagMap["bachata"] || [];
 
   const lowerPrompt = prompt.toLowerCase();
   if (lowerPrompt.includes("romantic") || lowerPrompt.includes("amor") || lowerPrompt.includes("love")) {
