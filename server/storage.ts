@@ -6,7 +6,7 @@ import {
   styleKits, styleKitInstruments,
   platformSettings, supportTickets, supportMessages,
   cloudServers, voiceModels, voiceSamples, styleReferences,
-  blogPosts, blogCategories, blogComments, blogLikes, blogStars, blogShares, pricingPlans, coverDesigns,
+  blogPosts, blogCategories, blogComments, blogLikes, blogStars, blogShares, pricingPlans, coverDesigns, songLikes,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
@@ -31,6 +31,7 @@ import {
   type BlogShare, type InsertBlogShare,
   type PricingPlan, type InsertPricingPlan,
   type CoverDesign, type InsertCoverDesign,
+  type SongLike, type InsertSongLike,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -190,6 +191,11 @@ export interface IStorage {
   createCoverDesign(design: InsertCoverDesign): Promise<CoverDesign>;
   updateCoverDesign(id: number, data: Partial<CoverDesign>): Promise<CoverDesign>;
   deleteCoverDesign(id: number): Promise<void>;
+
+  getPublicSongs(): Promise<Song[]>;
+  toggleSongLike(songId: number, userId: string, value: number): Promise<{ liked: boolean; value: number; likes: number; dislikes: number }>;
+  getSongLikeStatus(songId: number, userId: string): Promise<{ value: number } | null>;
+  getSongLikeCounts(songId: number): Promise<{ likes: number; dislikes: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1094,6 +1100,47 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCoverDesign(id: number): Promise<void> {
     await db.delete(coverDesigns).where(eq(coverDesigns.id, id));
+  }
+
+  async getPublicSongs(): Promise<Song[]> {
+    return await db.select().from(songs)
+      .where(and(eq(songs.isPublic, true), eq(songs.status, "completed")))
+      .orderBy(desc(songs.createdAt));
+  }
+
+  async toggleSongLike(songId: number, userId: string, value: number): Promise<{ liked: boolean; value: number; likes: number; dislikes: number }> {
+    const [existing] = await db.select().from(songLikes)
+      .where(and(eq(songLikes.songId, songId), eq(songLikes.userId, userId)));
+
+    if (existing) {
+      if (existing.value === value) {
+        await db.delete(songLikes).where(eq(songLikes.id, existing.id));
+        const counts = await this.getSongLikeCounts(songId);
+        return { liked: false, value: 0, ...counts };
+      } else {
+        await db.update(songLikes).set({ value }).where(eq(songLikes.id, existing.id));
+        const counts = await this.getSongLikeCounts(songId);
+        return { liked: true, value, ...counts };
+      }
+    } else {
+      await db.insert(songLikes).values({ songId, userId, value });
+      const counts = await this.getSongLikeCounts(songId);
+      return { liked: true, value, ...counts };
+    }
+  }
+
+  async getSongLikeStatus(songId: number, userId: string): Promise<{ value: number } | null> {
+    const [existing] = await db.select().from(songLikes)
+      .where(and(eq(songLikes.songId, songId), eq(songLikes.userId, userId)));
+    return existing ? { value: existing.value } : null;
+  }
+
+  async getSongLikeCounts(songId: number): Promise<{ likes: number; dislikes: number }> {
+    const [likesResult] = await db.select({ count: count() }).from(songLikes)
+      .where(and(eq(songLikes.songId, songId), eq(songLikes.value, 1)));
+    const [dislikesResult] = await db.select({ count: count() }).from(songLikes)
+      .where(and(eq(songLikes.songId, songId), eq(songLikes.value, -1)));
+    return { likes: likesResult?.count || 0, dislikes: dislikesResult?.count || 0 };
   }
 }
 

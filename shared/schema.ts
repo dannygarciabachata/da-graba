@@ -765,6 +765,24 @@ export type InsertBlogStar = z.infer<typeof insertBlogStarSchema>;
 export type BlogShare = typeof blogShares.$inferSelect;
 export type InsertBlogShare = z.infer<typeof insertBlogShareSchema>;
 
+// === SONG LIKES ===
+
+export const songLikes = pgTable("song_likes", {
+  id: serial("id").primaryKey(),
+  songId: integer("song_id").notNull().references(() => songs.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
+  value: integer("value").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSongLikeSchema = createInsertSchema(songLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type SongLike = typeof songLikes.$inferSelect;
+export type InsertSongLike = z.infer<typeof insertSongLikeSchema>;
+
 // === COVER DESIGNS ===
 
 export const coverDesigns = pgTable("cover_designs", {

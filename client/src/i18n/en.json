@@ -648,6 +648,36 @@
     "noLyrics": "No lyrics available for this track",
     "copyright": "Copyright"
   },
+  "songMenu": {
+    "download": "Download",
+    "fullSong": "Full Song",
+    "vocals": "Vocals",
+    "instrumental": "Instrumental",
+    "copy": "Copy",
+    "link": "Link",
+    "prompt": "Prompt",
+    "lyrics": "Lyrics",
+    "visibility": "Visibility",
+    "private": "Private",
+    "public": "Public",
+    "stems": "Stem Separation",
+    "designCover": "Design Cover",
+    "studio": "Open in Studio",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this song?",
+    "proRequired": "Pro Plan Required",
+    "upgradeForStems": "Upgrade your plan to download vocals and instrumentals separately.",
+    "linkCopied": "Link copied",
+    "promptCopied": "Prompt copied",
+    "lyricsCopied": "Lyrics copied",
+    "share": "Share"
+  },
+  "publicSongs": {
+    "title": "Community Music",
+    "subtitle": "Discover songs created by our community of artists",
+    "noSongs": "No public songs yet",
+    "listenNow": "Listen Now"
+  },
   "language": {
     "label": "Language",
     "es": "Español",

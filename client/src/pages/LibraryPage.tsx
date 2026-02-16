@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSongs, useDeleteSong, useTogglePublish } from "@/hooks/use-songs";
+import { useSongs, useTogglePublish } from "@/hooks/use-songs";
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,22 +11,13 @@ import { cn } from "@/lib/utils";
 import {
   Play,
   AlertCircle,
-  Trash2,
-  Scissors,
   Loader2,
   Library,
   Music,
-  Download,
-  Palette,
 } from "lucide-react";
 import { CoverArtDesigner } from "@/components/CoverArtDesigner";
 import { NowPlayingBanner } from "@/components/NowPlayingBanner";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { SongActionMenu } from "@/components/SongActionMenu";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function LibraryPage() {
@@ -34,8 +25,7 @@ export default function LibraryPage() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { data: songs, isLoading } = useSongs();
-  const { mutate: deleteSong } = useDeleteSong();
-  const { mutate: togglePublish } = useTogglePublish();
+  const togglePublish = useTogglePublish();
   const [currentSong, setCurrentSong] = useState<any>(null);
   const [designCoverFor, setDesignCoverFor] = useState<any>(null);
 
@@ -61,7 +51,7 @@ export default function LibraryPage() {
 
       <div className="flex-1 overflow-auto">
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-4">
-          {activeSong && !activeSong.audioUrl && (
+          {activeSong && activeSong.audioUrl && (
             <motion.div
               key={activeSong.id}
               initial={{ opacity: 0, y: -10 }}
@@ -75,7 +65,7 @@ export default function LibraryPage() {
                 duration={activeSong.duration}
                 createdAt={activeSong.createdAt}
                 isPublic={activeSong.isPublic}
-                onTogglePublic={() => togglePublish(activeSong.id)}
+                onTogglePublic={() => togglePublish.mutate(activeSong.id)}
                 onOpenStudio={() => setLocation("/studio")}
               />
             </motion.div>
@@ -138,6 +128,9 @@ export default function LibraryPage() {
                         </span>
                         {song.genre && <span>{song.genre}</span>}
                         {song.duration && <span>{Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}</span>}
+                        {song.isPublic && (
+                          <span className="text-primary text-[10px] font-medium">{t('songMenu.public')}</span>
+                        )}
                         {song.status === "processing" && (
                           <span className="text-yellow-500 animate-pulse">{t('common.processing')}</span>
                         )}
@@ -149,88 +142,11 @@ export default function LibraryPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {song.status === "completed" && song.audioUrl && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-green-400"
-                              onClick={(e) => e.stopPropagation()}
-                              data-testid={`button-download-lib-${song.id}`}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                const a = document.createElement("a");
-                                a.href = `/api/songs/${song.id}/download?format=mp3`;
-                                a.download = `${(song.title || "track").replace(/\s+/g, "_")}.mp3`;
-                                a.click();
-                              }}
-                              data-testid={`button-download-mp3-${song.id}`}
-                            >
-                              {t('library.downloadMp3')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                const a = document.createElement("a");
-                                a.href = `/api/songs/${song.id}/download?format=wav`;
-                                a.download = `${(song.title || "track").replace(/\s+/g, "_")}.wav`;
-                                a.click();
-                              }}
-                              data-testid={`button-download-wav-${song.id}`}
-                            >
-                              {t('library.downloadWav')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                      {song.status === "completed" && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-purple-400"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDesignCoverFor(designCoverFor?.id === song.id ? null : song);
-                          }}
-                          title={t('library.designCover')}
-                          data-testid={`button-cover-lib-${song.id}`}
-                        >
-                          <Palette className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {song.status === "completed" && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-primary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setLocation("/studio");
-                          }}
-                          data-testid={`button-studio-lib-${song.id}`}
-                        >
-                          <Scissors className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-muted-foreground"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteSong(song.id);
-                        }}
-                        data-testid={`button-delete-lib-${song.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <SongActionMenu
+                      song={song}
+                      onDesignCover={() => setDesignCoverFor(designCoverFor?.id === song.id ? null : song)}
+                      onOpenStudio={() => setLocation("/studio")}
+                    />
                   </div>
                 </Card>
               ))}

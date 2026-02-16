@@ -254,6 +254,35 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  // ========== SONG LIKES ==========
+  app.post("/api/songs/:id/like", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const songId = Number(req.params.id);
+    const { value } = req.body;
+    if (value !== 1 && value !== -1) return res.status(400).json({ message: "Value must be 1 or -1" });
+    const result = await storage.toggleSongLike(songId, userId, value);
+    res.json(result);
+  });
+
+  app.get("/api/songs/:id/likes", async (req, res) => {
+    const songId = Number(req.params.id);
+    const counts = await storage.getSongLikeCounts(songId);
+    let userValue = 0;
+    if (req.isAuthenticated()) {
+      const userId = (req.user as any).claims.sub;
+      const status = await storage.getSongLikeStatus(songId, userId);
+      userValue = status?.value || 0;
+    }
+    res.json({ ...counts, userValue });
+  });
+
+  // ========== PUBLIC SONGS ==========
+  app.get("/api/public/songs", async (_req, res) => {
+    const publicSongs = await storage.getPublicSongs();
+    res.json(publicSongs);
+  });
+
   // ========== SONG METADATA UPDATE ==========
   app.patch("/api/songs/:id/metadata", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

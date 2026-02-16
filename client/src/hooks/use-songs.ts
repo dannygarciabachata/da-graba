@@ -123,3 +123,78 @@ export function useTogglePublish() {
     },
   });
 }
+
+export function useSongLike(songId: number | null) {
+  return useQuery({
+    queryKey: ["/api/songs", songId, "likes"],
+    enabled: !!songId,
+    queryFn: async () => {
+      const res = await fetch(`/api/songs/${songId}/likes`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch likes");
+      return res.json() as Promise<{ likes: number; dislikes: number; userValue: number }>;
+    },
+  });
+}
+
+export function useToggleSongLike() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ songId, value }: { songId: number; value: 1 | -1 }) => {
+      const res = await fetch(`/api/songs/${songId}/like`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to toggle like");
+      return res.json();
+    },
+    onSuccess: (_data: any, variables: { songId: number; value: 1 | -1 }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/songs", variables.songId, "likes"] });
+    },
+  });
+}
+
+export function usePublicSongs() {
+  return useQuery({
+    queryKey: ["/api/public/songs"],
+    queryFn: async () => {
+      const res = await fetch("/api/public/songs");
+      if (!res.ok) throw new Error("Failed to fetch public songs");
+      return res.json();
+    },
+  });
+}
+
+export function useStemSeparation() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (songId: number) => {
+      const res = await fetch(`/api/songs/${songId}/stems`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to start stem separation");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Stem Separation Started",
+        description: "Processing stems... This may take a few minutes.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Stem Separation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}

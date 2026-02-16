@@ -12,6 +12,7 @@ import {
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { usePublicSongs } from "@/hooks/use-songs";
 
 const FEATURES_KEYS = ["aiMusic", "multitrack", "lyrics", "mastering", "sampleLab", "producerStore"];
 const FEATURES_ICONS = [Sparkles, Scissors, Mic2, SlidersHorizontal, Volume2, Upload];
@@ -207,6 +208,41 @@ function DemoPlayer() {
 export default function Landing() {
   const { user, isLoading } = useAuth();
   const { t, i18n } = useTranslation();
+  const { data: publicSongs } = usePublicSongs();
+  const [publicPlayingSong, setPublicPlayingSong] = useState<any>(null);
+  const [isPublicPlaying, setIsPublicPlaying] = useState(false);
+  const publicAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const handlePublicSongPlay = useCallback((song: any) => {
+    if (!song.audioUrl) return;
+    if (publicPlayingSong?.id === song.id) {
+      if (isPublicPlaying) {
+        publicAudioRef.current?.pause();
+        setIsPublicPlaying(false);
+      } else {
+        publicAudioRef.current?.play();
+        setIsPublicPlaying(true);
+      }
+    } else {
+      if (publicAudioRef.current) {
+        publicAudioRef.current.pause();
+        publicAudioRef.current.onended = null;
+        publicAudioRef.current = null;
+      }
+      const audio = new Audio(song.audioUrl);
+      audio.onended = () => { setIsPublicPlaying(false); setPublicPlayingSong(null); };
+      audio.play().catch(() => setIsPublicPlaying(false));
+      publicAudioRef.current = audio;
+      setPublicPlayingSong(song);
+      setIsPublicPlaying(true);
+    }
+  }, [publicPlayingSong, isPublicPlaying]);
+
+  useEffect(() => {
+    return () => {
+      publicAudioRef.current?.pause();
+    };
+  }, []);
 
   if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center text-primary" data-testid="loading-landing">{t('common.loading')}</div>;
   if (user) return <Redirect to="/dashboard" />;
@@ -501,6 +537,73 @@ export default function Landing() {
             </Card>
           </motion.div>
         </section>
+
+        {publicSongs && publicSongs.length > 0 && (
+          <section id="community" className="container mx-auto px-4 md:px-6 py-16 md:py-24">
+            <motion.div {...fadeUp} className="text-center mb-10">
+              <Badge variant="outline" className="mb-4 border-primary/30 text-primary">
+                <Globe className="h-3 w-3 mr-1" />
+                {t('publicSongs.title')}
+              </Badge>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3" data-testid="text-community-title">
+                {t('publicSongs.title')}
+              </h2>
+              <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-base">
+                {t('publicSongs.subtitle')}
+              </p>
+            </motion.div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {publicSongs.slice(0, 6).map((song: any, idx: number) => (
+                <motion.div
+                  key={song.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: idx * 0.1, duration: 0.5 }}
+                >
+                  <Card className="bg-card/50 border-white/5 overflow-hidden group hover:border-primary/30 transition-all" data-testid={`card-public-song-${song.id}`}>
+                    <div className="relative h-40 overflow-hidden">
+                      {song.imageUrl ? (
+                        <img src={song.imageUrl} alt={song.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
+                          <Music className="h-12 w-12 text-primary/30" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
+                      <button
+                        onClick={() => handlePublicSongPlay(song)}
+                        className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-primary text-black flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        data-testid={`button-play-public-${song.id}`}
+                      >
+                        {publicPlayingSong?.id === song.id && isPublicPlaying ? (
+                          <Pause className="h-4 w-4 fill-current" />
+                        ) : (
+                          <Play className="h-4 w-4 fill-current ml-0.5" />
+                        )}
+                      </button>
+                    </div>
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold text-sm truncate" data-testid={`text-public-song-title-${song.id}`}>{song.title || song.prompt}</h3>
+                      <div className="flex items-center justify-between mt-1">
+                        {song.genre && (
+                          <Badge variant="outline" className="text-[10px] border-white/10">
+                            {song.genre}
+                          </Badge>
+                        )}
+                        {song.duration && (
+                          <span className="text-[10px] text-muted-foreground">
+                            {Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}
+                          </span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp}>
