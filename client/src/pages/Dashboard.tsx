@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
-import dgbLogo from "@assets/DGB_studio2_1771218738674.png";
+import dgbLogo from "@assets/DGB_studio_transparente_1771220431451.png";
 import { MusicGenerator } from "@/components/MusicGenerator";
 import { LyricsGenerator } from "@/components/LyricsGenerator";
 import { AudioPlayer } from "@/components/AudioPlayer";

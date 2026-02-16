@@ -271,7 +271,7 @@ export function AudioPlayer({ url, title, imageUrl, genre, duration: songDuratio
             />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration)}</span>
+              <span>-{formatTime(duration - currentTime)}</span>
             </div>
           </div>
         )}

@@ -3,7 +3,7 @@ import { Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import dgbLogo from "@assets/DGB_studio2_1771218738674.png";
+import dgbLogo from "@assets/DGB_studio_transparente_1771220431451.png";
 import {
   Play, Pause, Mic2, Wand2, Music, Headphones, Sparkles, Scissors, Zap,
   Crown, Shield, Globe, Layers, ArrowRight, CheckCircle2, Star,
@@ -166,7 +166,7 @@ function DemoPlayer() {
             </div>
             <div className="flex justify-between text-[10px] text-muted-foreground">
               <span data-testid="text-demo-current">{formatTime(currentTime)}</span>
-              <span data-testid="text-demo-duration">{formatTime(duration)}</span>
+              <span data-testid="text-demo-duration">-{formatTime(duration - currentTime)}</span>
             </div>
           </div>
 

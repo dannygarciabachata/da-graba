@@ -215,7 +215,7 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
         />
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
+          <span>-{formatTime(duration - currentTime)}</span>
         </div>
 
         <div className="flex items-center justify-center gap-4">
