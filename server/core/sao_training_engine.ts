@@ -145,6 +145,20 @@ Output ONLY the prompt text.`,
   return completion.choices[0].message.content?.trim() || `A ${kit.genre} instrument kit with ${instruments.length} instruments.`;
 }
 
+function resolveAudioUrl(audioUrl: string): string {
+  if (audioUrl.startsWith("http://") || audioUrl.startsWith("https://")) {
+    return audioUrl;
+  }
+  const replitDomains = process.env.REPLIT_DOMAINS?.split(",")[0];
+  const replitDevDomain = process.env.REPLIT_DEV_DOMAIN;
+  const domain = replitDomains || replitDevDomain;
+  if (domain) {
+    const base = domain.startsWith("http") ? domain : `https://${domain}`;
+    return `${base.replace(/\/$/, "")}${audioUrl}`;
+  }
+  return `http://localhost:5000${audioUrl}`;
+}
+
 export function buildTrainingConfig(
   kit: StyleKit,
   instruments: StyleKitInstrument[]
@@ -165,7 +179,7 @@ export function buildTrainingConfig(
         id: i.id,
         name: i.name,
         type: i.type,
-        audioUrl: i.audioUrl!,
+        audioUrl: resolveAudioUrl(i.audioUrl!),
         prompt: i.generatedPrompt!,
         metadata: {
           key: i.detectedKey || undefined,
