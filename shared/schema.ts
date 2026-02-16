@@ -1140,3 +1140,100 @@ export const insertDiscographyTrackSchema = createInsertSchema(discographyTracks
 
 export type DiscographyTrack = typeof discographyTracks.$inferSelect;
 export type InsertDiscographyTrack = z.infer<typeof insertDiscographyTrackSchema>;
+
+// === ARTIST GIFTS / FAN DONATIONS ===
+
+export const artistGifts = pgTable("artist_gifts", {
+  id: serial("id").primaryKey(),
+  artistId: integer("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  fanUserId: text("fan_user_id"),
+  fanDisplayName: text("fan_display_name").default("Anonymous"),
+  amountCents: integer("amount_cents").notNull(),
+  message: text("message"),
+  thankYouMessage: text("thank_you_message"),
+  status: text("status").notNull().default("pending"),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  platformFeeCents: integer("platform_fee_cents").default(0),
+  netAmountCents: integer("net_amount_cents").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const artistGiftsRelations = relations(artistGifts, ({ one }) => ({
+  artist: one(artistProfiles, {
+    fields: [artistGifts.artistId],
+    references: [artistProfiles.id],
+  }),
+}));
+
+export const insertArtistGiftSchema = createInsertSchema(artistGifts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ArtistGift = typeof artistGifts.$inferSelect;
+export type InsertArtistGift = z.infer<typeof insertArtistGiftSchema>;
+
+export const GIFT_STATUSES = ["pending", "completed", "failed", "refunded"] as const;
+
+// === ARTIST WALLETS ===
+
+export const artistWallets = pgTable("artist_wallets", {
+  id: serial("id").primaryKey(),
+  artistId: integer("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  balanceCents: integer("balance_cents").default(0),
+  pendingBalanceCents: integer("pending_balance_cents").default(0),
+  totalEarnedCents: integer("total_earned_cents").default(0),
+  totalWithdrawnCents: integer("total_withdrawn_cents").default(0),
+  totalFeesPaidCents: integer("total_fees_paid_cents").default(0),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const artistWalletsRelations = relations(artistWallets, ({ one }) => ({
+  artist: one(artistProfiles, {
+    fields: [artistWallets.artistId],
+    references: [artistProfiles.id],
+  }),
+}));
+
+export const insertArtistWalletSchema = createInsertSchema(artistWallets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ArtistWallet = typeof artistWallets.$inferSelect;
+export type InsertArtistWallet = z.infer<typeof insertArtistWalletSchema>;
+
+// === WALLET TRANSACTIONS (LEDGER) ===
+
+export const walletTransactions = pgTable("wallet_transactions", {
+  id: serial("id").primaryKey(),
+  artistId: integer("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  description: text("description"),
+  grossAmountCents: integer("gross_amount_cents").default(0),
+  platformFeeCents: integer("platform_fee_cents").default(0),
+  netAmountCents: integer("net_amount_cents").default(0),
+  relatedGiftId: integer("related_gift_id"),
+  balanceAfterCents: integer("balance_after_cents").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const walletTransactionsRelations = relations(walletTransactions, ({ one }) => ({
+  artist: one(artistProfiles, {
+    fields: [walletTransactions.artistId],
+    references: [artistProfiles.id],
+  }),
+}));
+
+export const insertWalletTransactionSchema = createInsertSchema(walletTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type WalletTransaction = typeof walletTransactions.$inferSelect;
+export type InsertWalletTransaction = z.infer<typeof insertWalletTransactionSchema>;
+
+export const TRANSACTION_TYPES = ["gift_received", "subscription_income", "payout", "platform_fee", "adjustment"] as const;
+export type TransactionType = typeof TRANSACTION_TYPES[number];

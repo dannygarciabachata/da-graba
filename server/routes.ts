@@ -1926,6 +1926,136 @@ export async function registerRoutes(
     }
   });
 
+  // ========== ARTIST GIFTS / DONATIONS ==========
+
+  app.post("/api/artists/:id/gift", async (req, res) => {
+    try {
+      const artistId = Number(req.params.id);
+      const { amountCents, message, fanDisplayName } = req.body;
+
+      if (!amountCents || amountCents < 100) {
+        return res.status(400).json({ message: "Minimum gift is $1.00" });
+      }
+      if (amountCents > 100000) {
+        return res.status(400).json({ message: "Maximum gift is $1,000.00" });
+      }
+
+      const artist = await storage.getArtistProfileById(artistId);
+      if (!artist) return res.status(404).json({ message: "Artist not found" });
+
+      const platformFeeCents = Math.round(amountCents * 0.10);
+      const netAmountCents = amountCents - platformFeeCents;
+
+      const stripeClient = await getUncachableStripeClient();
+
+      const paymentIntent = await stripeClient.paymentIntents.create({
+        amount: amountCents,
+        currency: "usd",
+        metadata: {
+          type: "artist_gift",
+          artistId: String(artistId),
+          artistName: artist.artistName,
+        },
+      });
+
+      const userId = (req as any).user?.claims?.sub || null;
+      const gift = await storage.createArtistGift({
+        artistId,
+        fanUserId: userId,
+        fanDisplayName: fanDisplayName || "Anonymous",
+        amountCents,
+        message: message || null,
+        status: "pending",
+        stripePaymentIntentId: paymentIntent.id,
+        platformFeeCents,
+        netAmountCents,
+      });
+
+      res.json({
+        gift,
+        clientSecret: paymentIntent.client_secret,
+      });
+    } catch (err: any) {
+      console.error("[Gift] Error:", err.message);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/gifts/:id/confirm", async (req, res) => {
+    try {
+      const giftId = Number(req.params.id);
+      const gift = await storage.getArtistGift(giftId);
+      if (!gift) return res.status(404).json({ message: "Gift not found" });
+
+      if (gift.status === "completed") {
+        return res.json({ gift });
+      }
+
+      const updatedGift = await storage.updateArtistGift(giftId, { status: "completed" });
+
+      const wallet = await storage.updateArtistWalletBalance(
+        gift.artistId,
+        gift.netAmountCents || 0,
+        gift.platformFeeCents || 0
+      );
+
+      await storage.createWalletTransaction({
+        artistId: gift.artistId,
+        type: "gift_received",
+        description: `Gift from ${gift.fanDisplayName || "Anonymous"}`,
+        grossAmountCents: gift.amountCents,
+        platformFeeCents: gift.platformFeeCents || 0,
+        netAmountCents: gift.netAmountCents || 0,
+        relatedGiftId: gift.id,
+        balanceAfterCents: wallet.balanceCents || 0,
+      });
+
+      res.json({ gift: updatedGift, wallet });
+    } catch (err: any) {
+      console.error("[Gift] Confirm error:", err.message);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/artist/gifts", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const userId = (req.user as any).claims.sub;
+      const profile = await storage.getArtistProfile(userId);
+      if (!profile) {
+        return res.json({ gifts: [], wallet: null, transactions: [] });
+      }
+
+      const gifts = await storage.getArtistGifts(profile.id);
+      const wallet = await storage.getOrCreateArtistWallet(profile.id);
+      const transactions = await storage.getWalletTransactions(profile.id);
+
+      res.json({ gifts, wallet, transactions });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/public/artists/:id/gifts-summary", async (req, res) => {
+    try {
+      const artistId = Number(req.params.id);
+      const gifts = await storage.getArtistGifts(artistId);
+      const completed = gifts.filter(g => g.status === "completed");
+      res.json({
+        totalGifts: completed.length,
+        totalAmountCents: completed.reduce((sum, g) => sum + g.amountCents, 0),
+        recentGifts: completed.slice(0, 5).map(g => ({
+          fanDisplayName: g.fanDisplayName,
+          amountCents: g.amountCents,
+          message: g.message,
+          createdAt: g.createdAt,
+        })),
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/admin/check", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = (req.user as any).claims.sub;

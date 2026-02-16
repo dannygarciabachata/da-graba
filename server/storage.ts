@@ -9,6 +9,7 @@ import {
   blogPosts, blogCategories, blogComments, blogLikes, blogStars, blogShares, pricingPlans, coverDesigns, songLikes,
   artistProfiles, artistSubscriptions, songEarnings, proRegistrations, artistFollowers,
   discographyAlbums, discographyTracks,
+  artistGifts, artistWallets, walletTransactions,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
@@ -41,6 +42,9 @@ import {
   type ArtistFollower, type InsertArtistFollower,
   type DiscographyAlbum, type InsertDiscographyAlbum,
   type DiscographyTrack, type InsertDiscographyTrack,
+  type ArtistGift, type InsertArtistGift,
+  type ArtistWallet, type InsertArtistWallet,
+  type WalletTransaction, type InsertWalletTransaction,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -253,6 +257,20 @@ export interface IStorage {
   deleteDiscographyTrack(id: number): Promise<void>;
   getArtistDiscographyPublic(artistId: number): Promise<Array<DiscographyAlbum & { tracks: DiscographyTrack[] }>>;
   getAllDiscographyPublic(): Promise<Array<DiscographyAlbum & { artist: ArtistProfile; tracks: DiscographyTrack[] }>>;
+
+  createArtistGift(gift: InsertArtistGift): Promise<ArtistGift>;
+  getArtistGift(id: number): Promise<ArtistGift | undefined>;
+  getArtistGiftByPaymentIntent(paymentIntentId: string): Promise<ArtistGift | undefined>;
+  updateArtistGift(id: number, data: Partial<ArtistGift>): Promise<ArtistGift>;
+  getArtistGifts(artistId: number, limit?: number): Promise<ArtistGift[]>;
+  getGiftsByFan(fanUserId: string): Promise<ArtistGift[]>;
+
+  getOrCreateArtistWallet(artistId: number): Promise<ArtistWallet>;
+  getArtistWallet(artistId: number): Promise<ArtistWallet | undefined>;
+  updateArtistWalletBalance(artistId: number, addCents: number, feeCents: number): Promise<ArtistWallet>;
+
+  createWalletTransaction(tx: InsertWalletTransaction): Promise<WalletTransaction>;
+  getWalletTransactions(artistId: number, limit?: number): Promise<WalletTransaction[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1533,6 +1551,98 @@ export class DatabaseStorage implements IStorage {
       result.push({ ...album, artist, tracks: albumTracks });
     }
     return result;
+  }
+  // === ARTIST GIFTS ===
+
+  async createArtistGift(gift: InsertArtistGift): Promise<ArtistGift> {
+    const [created] = await db.insert(artistGifts).values(gift).returning();
+    return created;
+  }
+
+  async getArtistGift(id: number): Promise<ArtistGift | undefined> {
+    const [gift] = await db.select().from(artistGifts).where(eq(artistGifts.id, id));
+    return gift;
+  }
+
+  async getArtistGiftByPaymentIntent(paymentIntentId: string): Promise<ArtistGift | undefined> {
+    const [gift] = await db.select().from(artistGifts).where(eq(artistGifts.stripePaymentIntentId, paymentIntentId));
+    return gift;
+  }
+
+  async updateArtistGift(id: number, data: Partial<ArtistGift>): Promise<ArtistGift> {
+    const [updated] = await db.update(artistGifts).set(data).where(eq(artistGifts.id, id)).returning();
+    return updated;
+  }
+
+  async getArtistGifts(artistId: number, limit = 50): Promise<ArtistGift[]> {
+    return db.select().from(artistGifts)
+      .where(eq(artistGifts.artistId, artistId))
+      .orderBy(desc(artistGifts.createdAt))
+      .limit(limit);
+  }
+
+  async getGiftsByFan(fanUserId: string): Promise<ArtistGift[]> {
+    return db.select().from(artistGifts)
+      .where(eq(artistGifts.fanUserId, fanUserId))
+      .orderBy(desc(artistGifts.createdAt));
+  }
+
+  // === ARTIST WALLETS ===
+
+  async getOrCreateArtistWallet(artistId: number): Promise<ArtistWallet> {
+    const [existing] = await db.select().from(artistWallets).where(eq(artistWallets.artistId, artistId));
+    if (existing) return existing;
+    const [created] = await db.insert(artistWallets).values({
+      artistId,
+      balanceCents: 0,
+      pendingBalanceCents: 0,
+      totalEarnedCents: 0,
+      totalWithdrawnCents: 0,
+      totalFeesPaidCents: 0,
+    }).returning();
+    return created;
+  }
+
+  async getArtistWallet(artistId: number): Promise<ArtistWallet | undefined> {
+    const [wallet] = await db.select().from(artistWallets).where(eq(artistWallets.artistId, artistId));
+    return wallet;
+  }
+
+  async updateArtistWalletBalance(artistId: number, addCents: number, feeCents: number): Promise<ArtistWallet> {
+    return await db.transaction(async (tx) => {
+      let [wallet] = await tx.select().from(artistWallets).where(eq(artistWallets.artistId, artistId));
+      if (!wallet) {
+        [wallet] = await tx.insert(artistWallets).values({
+          artistId,
+          balanceCents: 0,
+          pendingBalanceCents: 0,
+          totalEarnedCents: 0,
+          totalWithdrawnCents: 0,
+          totalFeesPaidCents: 0,
+        }).returning();
+      }
+      const [updated] = await tx.update(artistWallets).set({
+        balanceCents: sql`${artistWallets.balanceCents} + ${addCents}`,
+        totalEarnedCents: sql`${artistWallets.totalEarnedCents} + ${addCents}`,
+        totalFeesPaidCents: sql`${artistWallets.totalFeesPaidCents} + ${feeCents}`,
+        updatedAt: new Date(),
+      }).where(eq(artistWallets.artistId, artistId)).returning();
+      return updated;
+    });
+  }
+
+  // === WALLET TRANSACTIONS ===
+
+  async createWalletTransaction(tx: InsertWalletTransaction): Promise<WalletTransaction> {
+    const [created] = await db.insert(walletTransactions).values(tx).returning();
+    return created;
+  }
+
+  async getWalletTransactions(artistId: number, limit = 50): Promise<WalletTransaction[]> {
+    return db.select().from(walletTransactions)
+      .where(eq(walletTransactions.artistId, artistId))
+      .orderBy(desc(walletTransactions.createdAt))
+      .limit(limit);
   }
 }
 
