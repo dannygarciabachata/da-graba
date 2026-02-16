@@ -90,6 +90,42 @@
   "landing": {
     "badge": "La Pura Sangre de la Bachata",
     "heroTitle": "DGB AUDIO: La Pura Sangre de la Bachata con el",
+    "useCases": {
+      "title": "Crea Música Para Todo",
+      "subtitle": "Tú pones tus ideas, tus letras, y nosotros te hacemos realidad tus historias en canciones.",
+      "church": {
+        "title": "Música Cristiana",
+        "description": "Crea alabanzas y adoración para tu iglesia. Himnos modernos con el poder de la IA."
+      },
+      "birthday": {
+        "title": "Cumpleaños",
+        "description": "Canciones personalizadas para celebrar ese día especial. Sorprende con música única."
+      },
+      "kids": {
+        "title": "Música Infantil",
+        "description": "Canciones educativas y divertidas para los más pequeños. Contenido seguro y creativo."
+      },
+      "movies": {
+        "title": "Películas & Cine",
+        "description": "Bandas sonoras y música incidental para tus producciones cinematográficas."
+      },
+      "jingles": {
+        "title": "Jingles & Comerciales",
+        "description": "Melodías pegajosas para tu marca, negocio o campaña publicitaria."
+      },
+      "youtube": {
+        "title": "YouTube & Podcasts",
+        "description": "Música de fondo libre de copyright para tus videos y programas."
+      },
+      "content": {
+        "title": "Creación de Contenido",
+        "description": "Música original para TikTok, Instagram, Reels y todas tus redes sociales."
+      },
+      "restaurant": {
+        "title": "Negocios & Ambiente",
+        "description": "Música ambiental personalizada para restaurantes, barberías y locales comerciales."
+      }
+    },
     "heroTitleHighlight": "ADN de Danny Garcia y los Grandes Músicos Dominicanos",
     "heroSubtitle": "El primer ecosistema impulsado por IA que integra el ADN musical de Danny Garcia junto al virtuosismo de los músicos más emblemáticos de la República Dominicana. Crea producciones con calidad profesional y el corazón de la ejecución dominicana.",
     "aboutTitle": "Acerca de Nosotros",

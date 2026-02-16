@@ -90,6 +90,42 @@
   "landing": {
     "badge": "The Purebred of Bachata",
     "heroTitle": "DGB AUDIO: The Purebred of Bachata with the",
+    "useCases": {
+      "title": "Create Music For Everything",
+      "subtitle": "You bring your ideas, your lyrics, and we make your stories come alive in songs.",
+      "church": {
+        "title": "Christian Music",
+        "description": "Create praise and worship for your church. Modern hymns powered by AI."
+      },
+      "birthday": {
+        "title": "Birthdays",
+        "description": "Personalized songs to celebrate that special day. Surprise with unique music."
+      },
+      "kids": {
+        "title": "Kids Music",
+        "description": "Educational and fun songs for the little ones. Safe and creative content."
+      },
+      "movies": {
+        "title": "Movies & Film",
+        "description": "Soundtracks and incidental music for your film productions."
+      },
+      "jingles": {
+        "title": "Jingles & Commercials",
+        "description": "Catchy melodies for your brand, business, or advertising campaign."
+      },
+      "youtube": {
+        "title": "YouTube & Podcasts",
+        "description": "Copyright-free background music for your videos and shows."
+      },
+      "content": {
+        "title": "Content Creation",
+        "description": "Original music for TikTok, Instagram, Reels and all your social media."
+      },
+      "restaurant": {
+        "title": "Business & Ambiance",
+        "description": "Custom ambient music for restaurants, barbershops and commercial venues."
+      }
+    },
     "heroTitleHighlight": "DNA of Danny Garcia and the Great Dominican Musicians",
     "heroSubtitle": "The first AI-powered ecosystem that integrates Danny Garcia's musical DNA alongside the virtuosity of the Dominican Republic's most iconic musicians. Create professional-quality productions with the heart of Dominican performance.",
     "aboutTitle": "About Us",

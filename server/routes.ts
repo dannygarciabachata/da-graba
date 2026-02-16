@@ -287,14 +287,16 @@ export async function registerRoutes(
   app.get("/api/public/charts", async (req, res) => {
     try {
       const limit = Math.min(Number(req.query.limit) || 100, 200);
-      const topSongs = await storage.getTopSongs(limit);
+      const topSongs = await storage.getTopSongs(limit * 2);
       const songIds = topSongs.map(s => s.id);
       const likesMap = await storage.getSongLikeCountsBatch(songIds);
       const songsWithLikes = topSongs.map(s => ({
         ...s,
         likes: likesMap[s.id] || 0,
+        score: (s.playCount || 0) + (likesMap[s.id] || 0) * 10,
       }));
-      res.json(songsWithLikes);
+      songsWithLikes.sort((a, b) => b.score - a.score);
+      res.json(songsWithLikes.slice(0, limit));
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -304,14 +306,16 @@ export async function registerRoutes(
     try {
       const genre = req.params.genre;
       const limit = Math.min(Number(req.query.limit) || 20, 100);
-      const topSongs = await storage.getTopSongsByGenre(genre, limit);
+      const topSongs = await storage.getTopSongsByGenre(genre, limit * 2);
       const songIds = topSongs.map(s => s.id);
       const likesMap = await storage.getSongLikeCountsBatch(songIds);
       const songsWithLikes = topSongs.map(s => ({
         ...s,
         likes: likesMap[s.id] || 0,
+        score: (s.playCount || 0) + (likesMap[s.id] || 0) * 10,
       }));
-      res.json(songsWithLikes);
+      songsWithLikes.sort((a, b) => b.score - a.score);
+      res.json(songsWithLikes.slice(0, limit));
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }

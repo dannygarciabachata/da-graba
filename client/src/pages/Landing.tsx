@@ -7,9 +7,11 @@ import dgbLogo from "@assets/DGB_studio_transparente_1771220431451.png";
 import {
   Play, Pause, Mic2, Wand2, Music, Headphones, Sparkles, Scissors, Zap,
   Crown, Shield, Globe, Layers, ArrowRight, CheckCircle2, Star,
-  Radio, Volume2, SlidersHorizontal, Palette, Upload, BookOpen, Clock, Heart
+  Radio, Volume2, SlidersHorizontal, Palette, Upload, BookOpen, Clock, Heart,
+  Church, Cake, Baby, Film, Megaphone, Youtube, Smartphone, Store,
+  ChevronLeft, ChevronRight, Menu, X
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { usePublicSongs } from "@/hooks/use-songs";
@@ -30,17 +32,14 @@ const PLANS_META = [
 const STATS_KEYS = ["genres", "stems", "credits", "apiCosts"];
 const STATS_VALUES = ["20+", "4", "12", "0"];
 
+const USE_CASE_KEYS = ["church", "birthday", "kids", "movies", "jingles", "youtube", "content", "restaurant"];
+const USE_CASE_ICONS = [Church, Cake, Baby, Film, Megaphone, Youtube, Smartphone, Store];
+
 const fadeUp = {
   initial: { opacity: 0, y: 30 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, margin: "-50px" },
   transition: { duration: 0.6 },
-};
-
-const DEMO_SONG = {
-  genre: "Bachata",
-  url: "/audio/songs/ac1a3408-dc10-4b06-a8d4-39f0aebdf587_song.mp3",
-  image: "https://lalals.s3.amazonaws.com/GenImages/1f6ff91d-a91e-4abc-87cd-f155ce2ea1fe.jpg",
 };
 
 const STEM_HEIGHTS = [
@@ -52,13 +51,14 @@ const STEM_HEIGHTS = [
 
 const STEM_KEYS = ["vocals", "drums", "bass", "melody"] as const;
 
-function DemoPlayer() {
+function HeroSongCarousel({ songs }: { songs: any[] }) {
   const { t } = useTranslation();
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const progressBarRef = useRef<HTMLDivElement>(null);
 
   const formatTime = useCallback((t: number) => {
@@ -66,6 +66,31 @@ function DemoPlayer() {
     const s = Math.floor(t % 60);
     return `${m}:${s.toString().padStart(2, "0")}`;
   }, []);
+
+  const currentSong = songs[currentIndex];
+
+  useEffect(() => {
+    if (songs.length <= 1) return;
+    const interval = setInterval(() => {
+      if (!isPlaying) {
+        setCurrentIndex((prev) => (prev + 1) % songs.length);
+      }
+    }, 35000);
+    return () => clearInterval(interval);
+  }, [songs.length, isPlaying]);
+
+  useEffect(() => {
+    if (!currentSong?.audioUrl || !audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+    audioRef.current.src = currentSong.audioUrl;
+    audioRef.current.load();
+    setProgress(0);
+    setCurrentTime(0);
+    setDuration(0);
+  }, [currentIndex]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -75,7 +100,12 @@ function DemoPlayer() {
       setProgress(audio.duration ? (audio.currentTime / audio.duration) * 100 : 0);
     };
     const onMeta = () => setDuration(audio.duration);
-    const onEnd = () => { setIsPlaying(false); setProgress(0); setCurrentTime(0); };
+    const onEnd = () => {
+      setIsPlaying(false);
+      setProgress(0);
+      setCurrentTime(0);
+      setCurrentIndex((prev) => (prev + 1) % songs.length);
+    };
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
     audio.addEventListener("timeupdate", onTime);
@@ -90,7 +120,7 @@ function DemoPlayer() {
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
     };
-  }, []);
+  }, [songs.length]);
 
   const togglePlay = () => {
     const audio = audioRef.current;
@@ -111,137 +141,181 @@ function DemoPlayer() {
     audio.currentTime = pct * audio.duration;
   };
 
+  const goTo = (dir: number) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+    setCurrentIndex((prev) => (prev + dir + songs.length) % songs.length);
+  };
+
+  if (!currentSong) return null;
+
   return (
-    <div className="relative glass-panel rounded-2xl p-3 sm:p-6 border border-white/10 shadow-2xl">
-      <audio ref={audioRef} src={DEMO_SONG.url} preload="metadata" />
-      <div className="rounded-xl bg-gradient-to-br from-gray-900 to-black overflow-hidden relative">
-        <div className="relative aspect-[4/3] sm:aspect-square w-full overflow-hidden">
-          <img
-            src={DEMO_SONG.image}
-            alt={t('common.demoSongTitle')}
-            className="w-full h-full object-cover"
-            data-testid="img-demo-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+    <div className="relative glass-panel rounded-2xl p-3 sm:p-6 border border-white/10 shadow-2xl" data-testid="hero-song-carousel">
+      <audio ref={audioRef} preload="metadata" />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentSong.id}
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -30 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="rounded-xl bg-gradient-to-br from-gray-900 to-black overflow-hidden relative">
+            <div className="relative aspect-[4/3] sm:aspect-square w-full overflow-hidden">
+              {currentSong.imageUrl ? (
+                <img
+                  src={currentSong.imageUrl}
+                  alt={currentSong.title}
+                  className="w-full h-full object-cover"
+                  data-testid="img-hero-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-primary/30 to-purple-600/30 flex items-center justify-center">
+                  <Music className="h-20 w-20 text-primary/40" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/10">
-            <Sparkles className="w-3 h-3 text-primary" />
-            <span className="text-[10px] text-primary font-medium">{t('common.aiGenerated')}</span>
-          </div>
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/10">
+                <Sparkles className="w-3 h-3 text-primary" />
+                <span className="text-[10px] text-primary font-medium">{t('common.aiGenerated')}</span>
+              </div>
 
-          <button
-            onClick={togglePlay}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-black/40 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-primary/30 hover:border-primary/40 hover:shadow-[0_0_30px_rgba(0,243,255,0.3)]"
-            data-testid="button-demo-play"
-          >
-            {isPlaying ? (
-              <Pause className="w-7 h-7 text-white" />
-            ) : (
-              <Play className="w-7 h-7 text-white ml-0.5" />
-            )}
-          </button>
+              <button
+                onClick={togglePlay}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-black/40 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-primary/30 hover:border-primary/40 hover:shadow-[0_0_30px_rgba(0,243,255,0.3)]"
+                data-testid="button-hero-play"
+              >
+                {isPlaying ? (
+                  <Pause className="w-7 h-7 text-white" />
+                ) : (
+                  <Play className="w-7 h-7 text-white ml-0.5" />
+                )}
+              </button>
 
-          <div className="absolute bottom-4 left-4 right-4">
-            <p className="font-bold text-lg text-white drop-shadow-lg" data-testid="text-demo-title">{t('common.demoSongTitle')}</p>
-            <p className="text-xs text-white/70">{t('common.demoSongArtist')} &middot; {DEMO_SONG.genre}</p>
-          </div>
-        </div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <p className="font-bold text-lg text-white drop-shadow-lg" data-testid="text-hero-song-title">
+                  {currentSong.title || currentSong.prompt}
+                </p>
+                <p className="text-xs text-white/70">
+                  {currentSong.artistName || "DGB AUDIO"} &middot; {currentSong.genre || ""}
+                </p>
+              </div>
+            </div>
 
-        <div className="px-4 pb-4 pt-3 space-y-3">
-          <div className="w-full space-y-1">
-            <div
-              ref={progressBarRef}
-              className="relative h-6 w-full cursor-pointer group flex items-center"
-              onClick={handleSeek}
-              data-testid="progress-demo"
-            >
-              <div className="h-1.5 w-full bg-white/10 rounded-full pointer-events-none">
+            <div className="px-4 pb-4 pt-3 space-y-3">
+              <div className="w-full space-y-1">
                 <div
-                  className="h-full bg-gradient-to-r from-primary via-blue-400 to-purple-500 rounded-full relative transition-all duration-100"
-                  style={{ width: `${progress}%` }}
+                  ref={progressBarRef}
+                  className="relative h-6 w-full cursor-pointer group flex items-center"
+                  onClick={handleSeek}
+                  data-testid="progress-hero"
                 >
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" />
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-between text-[10px] text-muted-foreground">
-              <span data-testid="text-demo-current">{formatTime(currentTime)}</span>
-              <span data-testid="text-demo-duration">-{formatTime(duration - currentTime)}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 w-full">
-            {STEM_KEYS.map((stem, i) => (
-              <div key={stem} className="flex-1 text-center p-1.5 rounded-lg bg-white/5 border border-white/5">
-                <div className="h-5 flex items-end justify-center gap-[2px]">
-                  {STEM_HEIGHTS[i].map((h, j) => (
+                  <div className="h-1.5 w-full bg-white/10 rounded-full pointer-events-none">
                     <div
-                      key={j}
-                      className={`w-[3px] rounded-full bg-primary/60 ${isPlaying ? "animate-pulse" : ""}`}
-                      style={{ height: `${h}%`, animationDelay: `${j * 0.15}s` }}
-                    />
-                  ))}
+                      className="h-full bg-gradient-to-r from-primary via-blue-400 to-purple-500 rounded-full relative transition-all duration-100"
+                      style={{ width: `${progress}%` }}
+                    >
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" />
+                    </div>
+                  </div>
                 </div>
-                <p className="text-[9px] text-muted-foreground mt-1">{t(`landing.demoStems.${stem}`)}</p>
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>{formatTime(currentTime)}</span>
+                  <span>-{formatTime(Math.max(0, duration - currentTime))}</span>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
 
-      <div className="mt-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-500/20 rounded-lg">
-            <Mic2 className="w-5 h-5 text-purple-400" />
+              <div className="flex items-center gap-2 w-full">
+                {STEM_KEYS.map((stem, i) => (
+                  <div key={stem} className="flex-1 text-center p-1.5 rounded-lg bg-white/5 border border-white/5">
+                    <div className="h-5 flex items-end justify-center gap-[2px]">
+                      {STEM_HEIGHTS[i].map((h, j) => (
+                        <div
+                          key={j}
+                          className={`w-[3px] rounded-full bg-primary/60 ${isPlaying ? "animate-pulse" : ""}`}
+                          style={{ height: `${h}%`, animationDelay: `${j * 0.15}s` }}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-[9px] text-muted-foreground mt-1">{t(`landing.demoStems.${stem}`)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="text-left">
-            <p className="text-xs text-muted-foreground">{t('common.poweredBy')}</p>
-            <p className="text-sm font-bold">{t('common.engineName')}</p>
+        </motion.div>
+      </AnimatePresence>
+
+      {songs.length > 1 && (
+        <div className="flex items-center justify-between mt-3">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => goTo(-1)} data-testid="button-hero-prev">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex gap-1">
+              {songs.slice(0, Math.min(songs.length, 8)).map((_, i) => (
+                <button
+                  key={i}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentIndex ? "bg-primary w-4" : "bg-white/20"}`}
+                  onClick={() => { if (audioRef.current) { audioRef.current.pause(); setIsPlaying(false); } setCurrentIndex(i); }}
+                  data-testid={`dot-hero-${i}`}
+                />
+              ))}
+            </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => goTo(1)} data-testid="button-hero-next">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-500/20 rounded-lg">
+              <Mic2 className="w-5 h-5 text-purple-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-xs text-muted-foreground">{t('common.poweredBy')}</p>
+              <p className="text-sm font-bold">{t('common.engineName')}</p>
+            </div>
           </div>
         </div>
-        <Wand2 className="w-5 h-5 text-white/20" />
-      </div>
+      )}
+
+      {songs.length <= 1 && (
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-500/20 rounded-lg">
+              <Mic2 className="w-5 h-5 text-purple-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-xs text-muted-foreground">{t('common.poweredBy')}</p>
+              <p className="text-sm font-bold">{t('common.engineName')}</p>
+            </div>
+          </div>
+          <Wand2 className="w-5 h-5 text-white/20" />
+        </div>
+      )}
     </div>
   );
 }
+
+const DEMO_SONG = {
+  id: 0,
+  title: "Regreso al Edén",
+  artistName: "DGB AUDIO AI",
+  genre: "Bachata",
+  audioUrl: "/audio/songs/ac1a3408-dc10-4b06-a8d4-39f0aebdf587_song.mp3",
+  imageUrl: "https://lalals.s3.amazonaws.com/GenImages/1f6ff91d-a91e-4abc-87cd-f155ce2ea1fe.jpg",
+};
 
 export default function Landing() {
   const { user, isLoading } = useAuth();
   const { t, i18n } = useTranslation();
   const { data: publicSongs } = usePublicSongs();
-  const [publicPlayingSong, setPublicPlayingSong] = useState<any>(null);
-  const [isPublicPlaying, setIsPublicPlaying] = useState(false);
-  const publicAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  const handlePublicSongPlay = useCallback((song: any) => {
-    if (!song.audioUrl) return;
-    if (publicPlayingSong?.id === song.id) {
-      if (isPublicPlaying) {
-        publicAudioRef.current?.pause();
-        setIsPublicPlaying(false);
-      } else {
-        publicAudioRef.current?.play();
-        setIsPublicPlaying(true);
-      }
-    } else {
-      if (publicAudioRef.current) {
-        publicAudioRef.current.pause();
-        publicAudioRef.current.onended = null;
-        publicAudioRef.current = null;
-      }
-      const audio = new Audio(song.audioUrl);
-      audio.onended = () => { setIsPublicPlaying(false); setPublicPlayingSong(null); };
-      audio.play().catch(() => setIsPublicPlaying(false));
-      publicAudioRef.current = audio;
-      setPublicPlayingSong(song);
-      setIsPublicPlaying(true);
-    }
-  }, [publicPlayingSong, isPublicPlaying]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    return () => {
-      publicAudioRef.current?.pause();
-    };
+    return () => {};
   }, []);
 
   if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center text-primary" data-testid="loading-landing">{t('common.loading')}</div>;
@@ -251,36 +325,109 @@ export default function Landing() {
     window.location.href = "/api/login";
   };
 
+  const heroSongs = publicSongs && publicSongs.length > 0
+    ? publicSongs.filter((s: any) => s.audioUrl).slice(0, 8)
+    : [DEMO_SONG];
+
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    setMobileMenuOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-500/8 via-background to-background z-0" />
       <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-primary/5 via-purple-500/3 to-transparent z-0" />
 
-      <nav className="relative z-10 container mx-auto px-4 md:px-6 py-4 md:py-6 flex justify-between items-center" data-testid="nav-landing">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-          <img src={dgbLogo} alt="DGB Studio" className="h-10 sm:h-14 md:h-16 w-auto drop-shadow-[0_0_15px_rgba(0,200,255,0.3)]" data-testid="img-landing-logo" />
+      <nav className="relative z-20 border-b border-white/[0.06] backdrop-blur-xl bg-background/70 sticky top-0" data-testid="nav-landing">
+        <div className="container mx-auto px-4 md:px-6 py-3 flex justify-between items-center">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+            <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border-2 border-primary/30 shadow-[0_0_15px_rgba(0,200,255,0.2)] flex-shrink-0">
+              <img src={dgbLogo} alt="DGB Studio" className="w-full h-full object-cover scale-150" data-testid="img-landing-logo" />
+            </div>
+            <span className="text-lg sm:text-xl font-bold tracking-tight">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">DGB</span>{" "}
+              <span className="text-white/90">Studio</span>
+            </span>
+          </div>
+
+          <div className="hidden md:flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="text-sm text-white/70 hover:text-white hover:bg-white/5" onClick={() => scrollTo("about")} data-testid="link-about">
+              {t('landing.aboutTitle')}
+            </Button>
+            <Button variant="ghost" size="sm" className="text-sm text-white/70 hover:text-white hover:bg-white/5" onClick={() => scrollTo("use-cases")} data-testid="link-use-cases">
+              {t('landing.useCases.title')}
+            </Button>
+            <Button variant="ghost" size="sm" className="text-sm text-white/70 hover:text-white hover:bg-white/5" onClick={() => scrollTo("features")} data-testid="link-features">
+              {t('nav.features')}
+            </Button>
+            <Button variant="ghost" size="sm" className="text-sm text-white/70 hover:text-white hover:bg-white/5" onClick={() => scrollTo("pricing")} data-testid="link-pricing">
+              {t('nav.pricing')}
+            </Button>
+            <div className="w-px h-5 bg-white/10 mx-1" />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs gap-1 text-white/60 hover:text-white"
+              onClick={() => i18n.changeLanguage(i18n.language === 'es' ? 'en' : 'es')}
+              data-testid="button-lang-toggle"
+            >
+              <Globe className="h-3.5 w-3.5" />
+              {i18n.language === 'es' ? 'EN' : 'ES'}
+            </Button>
+            <Button
+              className="ml-2 bg-gradient-to-r from-primary to-blue-500 text-black font-semibold text-sm px-5 shadow-[0_0_15px_rgba(0,200,255,0.25)]"
+              onClick={handleLogin}
+              data-testid="button-member-login"
+            >
+              {t('common.login')}
+            </Button>
+          </div>
+
+          <div className="flex md:hidden items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs gap-1"
+              onClick={() => i18n.changeLanguage(i18n.language === 'es' ? 'en' : 'es')}
+              data-testid="button-lang-toggle-mobile"
+            >
+              <Globe className="h-3.5 w-3.5" />
+              {i18n.language === 'es' ? 'EN' : 'ES'}
+            </Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} data-testid="button-mobile-menu">
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" className="hidden sm:inline-flex text-sm" onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} data-testid="link-features">
-            {t('nav.features')}
-          </Button>
-          <Button variant="ghost" className="hidden sm:inline-flex text-sm" onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} data-testid="link-pricing">
-            {t('nav.pricing')}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs gap-1"
-            onClick={() => i18n.changeLanguage(i18n.language === 'es' ? 'en' : 'es')}
-            data-testid="button-lang-toggle"
-          >
-            <Globe className="h-3.5 w-3.5" />
-            {i18n.language === 'es' ? 'EN' : 'ES'}
-          </Button>
-          <Button variant="outline" className="border-white/10 text-xs sm:text-sm px-3 sm:px-4" onClick={handleLogin} data-testid="button-member-login">
-            {t('common.login')}
-          </Button>
-        </div>
+
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden overflow-hidden border-t border-white/[0.06]"
+            >
+              <div className="px-4 py-4 space-y-1 bg-background/95 backdrop-blur-xl">
+                <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => scrollTo("about")}>{t('landing.aboutTitle')}</Button>
+                <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => scrollTo("use-cases")}>{t('landing.useCases.title')}</Button>
+                <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => scrollTo("features")}>{t('nav.features')}</Button>
+                <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => scrollTo("pricing")}>{t('nav.pricing')}</Button>
+                <div className="pt-2">
+                  <Button
+                    className="w-full bg-gradient-to-r from-primary to-blue-500 text-black font-semibold"
+                    onClick={() => { handleLogin(); setMobileMenuOpen(false); }}
+                    data-testid="button-mobile-login"
+                  >
+                    {t('common.login')}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       <main className="relative z-10">
@@ -321,7 +468,7 @@ export default function Landing() {
                   size="lg"
                   variant="outline"
                   className="h-12 md:h-14 px-6 md:px-8 text-base md:text-lg border-white/10"
-                  onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
+                  onClick={() => scrollTo("features")}
                   data-testid="button-explore-features"
                 >
                   {t('landing.exploreFeatures')}
@@ -348,7 +495,7 @@ export default function Landing() {
               className="relative"
             >
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl animate-pulse hidden md:block" />
-              <DemoPlayer />
+              <HeroSongCarousel songs={heroSongs} />
             </motion.div>
           </div>
         </section>
@@ -389,6 +536,54 @@ export default function Landing() {
               </div>
             </div>
           </motion.div>
+        </section>
+
+        <section id="use-cases" className="container mx-auto px-4 md:px-6 py-16 md:py-24">
+          <motion.div {...fadeUp} className="text-center mb-12 md:mb-16">
+            <Badge className="mb-4 bg-gradient-to-r from-primary/20 to-purple-500/20 text-primary border-primary/20">
+              <Sparkles className="h-3 w-3 mr-1" />
+              {t('landing.useCases.title')}
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-use-cases-title">
+              {t('landing.useCases.title')}
+            </h2>
+            <p className="text-muted-foreground mt-3 max-w-2xl mx-auto text-base sm:text-lg">
+              {t('landing.useCases.subtitle')}
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+            {USE_CASE_KEYS.map((key, i) => {
+              const Icon = USE_CASE_ICONS[i];
+              const gradients = [
+                "from-amber-500/10 to-yellow-600/10 border-amber-500/20",
+                "from-pink-500/10 to-rose-600/10 border-pink-500/20",
+                "from-green-500/10 to-emerald-600/10 border-green-500/20",
+                "from-blue-500/10 to-indigo-600/10 border-blue-500/20",
+                "from-orange-500/10 to-red-600/10 border-orange-500/20",
+                "from-red-500/10 to-pink-600/10 border-red-500/20",
+                "from-violet-500/10 to-purple-600/10 border-violet-500/20",
+                "from-cyan-500/10 to-teal-600/10 border-cyan-500/20",
+              ];
+              const iconColors = [
+                "text-amber-400", "text-pink-400", "text-green-400", "text-blue-400",
+                "text-orange-400", "text-red-400", "text-violet-400", "text-cyan-400"
+              ];
+              return (
+                <motion.div key={i} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.06 }}>
+                  <Card className={`bg-gradient-to-br ${gradients[i]} hover:scale-[1.02] transition-all cursor-pointer h-full`} data-testid={`card-use-case-${key}`}>
+                    <CardContent className="p-4 sm:p-5 text-center space-y-3">
+                      <div className={`mx-auto w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center`}>
+                        <Icon className={`h-6 w-6 ${iconColors[i]}`} />
+                      </div>
+                      <h3 className="font-bold text-sm">{t(`landing.useCases.${key}.title`)}</h3>
+                      <p className="text-xs text-muted-foreground leading-relaxed hidden sm:block">{t(`landing.useCases.${key}.description`)}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
         </section>
 
         <section id="features" className="container mx-auto px-4 md:px-6 py-16 md:py-24">
@@ -571,17 +766,6 @@ export default function Landing() {
                         </div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
-                      <button
-                        onClick={() => handlePublicSongPlay(song)}
-                        className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-primary text-black flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                        data-testid={`button-play-public-${song.id}`}
-                      >
-                        {publicPlayingSong?.id === song.id && isPublicPlaying ? (
-                          <Pause className="h-4 w-4 fill-current" />
-                        ) : (
-                          <Play className="h-4 w-4 fill-current ml-0.5" />
-                        )}
-                      </button>
                     </div>
                     <CardContent className="p-4">
                       <h3 className="font-semibold text-sm truncate" data-testid={`text-public-song-title-${song.id}`}>{song.title || song.prompt}</h3>
@@ -635,8 +819,14 @@ export default function Landing() {
         <div className="container mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
             <div className="col-span-2 md:col-span-1">
-              <div className="flex items-center gap-2 mb-4">
-                <img src={dgbLogo} alt="DGB Studio" className="h-14 sm:h-16 md:h-20 w-auto drop-shadow-[0_0_20px_rgba(217,70,239,0.4)]" />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 flex-shrink-0">
+                  <img src={dgbLogo} alt="DGB Studio" className="w-full h-full object-cover scale-150" />
+                </div>
+                <span className="font-bold text-lg">
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">DGB</span>{" "}
+                  <span className="text-white/80">Studio</span>
+                </span>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {t('landing.footer.footerDescription')}
@@ -645,8 +835,8 @@ export default function Landing() {
             <div>
               <h4 className="font-semibold text-sm mb-3">{t('landing.footer.product')}</h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
-                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}>{t('nav.features')}</li>
-                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })}>{t('nav.pricing')}</li>
+                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => scrollTo("features")}>{t('nav.features')}</li>
+                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => scrollTo("pricing")}>{t('nav.pricing')}</li>
                 <li className="hover:text-foreground cursor-pointer transition-colors">{t('landing.footer.producerStore')}</li>
                 <li className="hover:text-foreground cursor-pointer transition-colors">{t('landing.footer.styleKits')}</li>
               </ul>

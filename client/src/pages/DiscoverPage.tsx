@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -257,6 +257,8 @@ export default function DiscoverPage() {
   const [showVolume, setShowVolume] = useState(false);
   const [likeStatus, setLikeStatus] = useState<{ likes: number; dislikes: number; userValue: number }>({ likes: 0, dislikes: 0, userValue: 0 });
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentSongRef = useRef<any>(null);
+  const songsRef = useRef<any[]>([]);
 
   const playMutation = useMutation({
     mutationFn: async (songId: number) => {
@@ -278,6 +280,58 @@ export default function DiscoverPage() {
     queryKey: ["/api/public/charts"],
   });
 
+  useEffect(() => {
+    songsRef.current = topSongs || [];
+  }, [topSongs]);
+
+  useEffect(() => {
+    currentSongRef.current = currentSong;
+  }, [currentSong]);
+
+  const startPlayback = useCallback((song: any) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.removeAttribute("src");
+      audioRef.current.load();
+    }
+    const audio = new Audio(song.audioUrl);
+    audio.volume = isMuted ? 0 : volume / 100;
+    const onEnded = () => {
+      const list = songsRef.current;
+      const cur = currentSongRef.current;
+      if (!list || list.length === 0) { setIsPlaying(false); return; }
+      const idx = list.findIndex((s: any) => s.id === cur?.id);
+      const nextIdx = (idx + 1) % list.length;
+      const next = list[nextIdx];
+      if (next?.audioUrl) {
+        setCurrentSong(next);
+        currentSongRef.current = next;
+        playMutation.mutate(next.id);
+        fetchLikeStatus(next.id);
+        startPlayback(next);
+      } else {
+        setIsPlaying(false);
+      }
+    };
+    audio.addEventListener("ended", onEnded);
+    audio.addEventListener("timeupdate", () => setCurrentTime(audio.currentTime));
+    audio.addEventListener("loadedmetadata", () => setDuration(audio.duration));
+    audio.play().catch(() => setIsPlaying(false));
+    audioRef.current = audio;
+    setIsPlaying(true);
+    setCurrentTime(0);
+    setDuration(0);
+  }, [isMuted, volume]);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.removeAttribute("src");
+      }
+    };
+  }, []);
+
   const handlePlay = (song: any) => {
     if (!song.audioUrl) return;
     if (currentSong?.id === song.id) {
@@ -290,23 +344,11 @@ export default function DiscoverPage() {
       }
       return;
     }
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
-    }
-    const audio = new Audio(song.audioUrl);
-    audio.volume = isMuted ? 0 : volume / 100;
-    audio.play();
-    audioRef.current = audio;
     setCurrentSong(song);
-    setIsPlaying(true);
-    setCurrentTime(0);
-    setDuration(0);
+    currentSongRef.current = song;
     playMutation.mutate(song.id);
     fetchLikeStatus(song.id);
-    audio.addEventListener("ended", () => setIsPlaying(false));
-    audio.addEventListener("timeupdate", () => setCurrentTime(audio.currentTime));
-    audio.addEventListener("loadedmetadata", () => setDuration(audio.duration));
+    startPlayback(song);
   };
 
   const handleSeek = (val: number[]) => {
