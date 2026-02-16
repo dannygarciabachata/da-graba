@@ -3792,11 +3792,21 @@ export async function registerRoutes(
       const analyzed = instruments.filter(i => i.analysisStatus === "complete").length;
       const withPrompts = instruments.filter(i => i.generatedPrompt).length;
 
+      let currentPipelineStep = kit.pipelineStep || "upload";
+      if (currentPipelineStep === "prompt" && withAudio > 0 && withPrompts >= withAudio) {
+        await storage.updateStyleKit(kitId, { pipelineStep: "train", trainingStatus: "pending" });
+        currentPipelineStep = "train";
+      }
+      if (currentPipelineStep === "analyze" && withAudio > 0 && analyzed >= withAudio) {
+        await storage.updateStyleKit(kitId, { pipelineStep: "prompt" });
+        currentPipelineStep = "prompt";
+      }
+
       const pipelineSteps = ["upload", "analyze", "prompt", "train", "ready"];
-      const currentStepIndex = pipelineSteps.indexOf(kit.pipelineStep || "upload");
+      const currentStepIndex = pipelineSteps.indexOf(currentPipelineStep);
 
       let isStuck = false;
-      if (kit.pipelineStep === "train" && kit.trainingStatus === "training") {
+      if (currentPipelineStep === "train" && kit.trainingStatus === "training") {
         let jobStartTime: number | null = null;
         if (kit.trainingJobId) {
           const jobTimestampMatch = kit.trainingJobId.match(/_(\d+)$/);
@@ -3816,22 +3826,22 @@ export async function registerRoutes(
       }
 
       let progress = 0;
-      if (kit.pipelineStep === "upload") {
+      if (currentPipelineStep === "upload") {
         progress = totalInstruments > 0 ? Math.round((withAudio / totalInstruments) * 20) : 0;
-      } else if (kit.pipelineStep === "analyze") {
+      } else if (currentPipelineStep === "analyze") {
         progress = 20 + Math.round((analyzed / Math.max(withAudio, 1)) * 20);
-      } else if (kit.pipelineStep === "prompt") {
+      } else if (currentPipelineStep === "prompt") {
         progress = 40 + Math.round((withPrompts / Math.max(withAudio, 1)) * 20);
-      } else if (kit.pipelineStep === "train") {
+      } else if (currentPipelineStep === "train") {
         if (kit.trainingStatus === "training") progress = 70;
         else if (kit.trainingStatus === "queued") progress = 62;
         else progress = 60;
-      } else if (kit.pipelineStep === "ready") {
+      } else if (currentPipelineStep === "ready") {
         progress = 100;
       }
 
       let stepLabel = "";
-      switch (kit.pipelineStep) {
+      switch (currentPipelineStep) {
         case "upload": stepLabel = "Subiendo instrumentos"; break;
         case "analyze": stepLabel = "Analizando audio"; break;
         case "prompt": stepLabel = "Generando prompts IA"; break;
@@ -3840,12 +3850,12 @@ export async function registerRoutes(
           else stepLabel = kit.trainingStatus === "training" ? "Entrenando modelo..." : "En cola de entrenamiento";
           break;
         case "ready": stepLabel = "Modelo listo"; break;
-        default: stepLabel = kit.pipelineStep || "Pendiente";
+        default: stepLabel = currentPipelineStep || "Pendiente";
       }
 
       res.json({
         kitId,
-        pipelineStep: kit.pipelineStep || "upload",
+        pipelineStep: currentPipelineStep,
         trainingStatus: kit.trainingStatus || "pending",
         trainingError: kit.trainingError,
         trainedModelUrl: kit.trainedModelUrl,
