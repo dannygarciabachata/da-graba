@@ -272,6 +272,28 @@
       "fileAttached": "File Attached",
       "fileReadyToUpload": "{{name}} ready to upload."
     },
+    "attach": {
+      "uploadFile": "Upload file",
+      "record": "Record",
+      "youtubeLink": "Youtube link",
+      "creations": "Creations"
+    },
+    "toolsMenu": {
+      "tts": "Text to Speech",
+      "ttsDesc": "Speak text in any voice",
+      "remix": "Remix",
+      "remixDesc": "Remix a song with custom style or lyrics",
+      "replace": "Replace",
+      "replaceDesc": "Replace a part of a song",
+      "extend": "Extend",
+      "extendDesc": "Continue a track beyond the original",
+      "addVocals": "Add Vocals",
+      "addVocalsDesc": "Add vocals to existing instrumental",
+      "addInstrumental": "Add Instrumental",
+      "addInstrumentalDesc": "Add instrumental to existing vocals",
+      "comingSoon": "Coming soon"
+    },
+    "unlockCustomization": "Unlock customization with Pro",
     "genres": {
       "bachata": "Bachata",
       "bolero": "Bolero",

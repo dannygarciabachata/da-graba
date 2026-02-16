@@ -18,6 +18,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Loader2,
   Sparkles,
   Music,
@@ -39,9 +44,21 @@ import {
   User,
   Copyright,
   Paperclip,
-  ArrowDown,
+  ArrowRight,
   Wrench,
   RefreshCw,
+  Upload,
+  MicIcon,
+  Link2,
+  History,
+  MessageSquare,
+  Wand2,
+  Crown,
+  RotateCw,
+  Replace,
+  ArrowRightToLine,
+  MicVocal,
+  Guitar,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -58,6 +75,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import dgbLogo from "@assets/Dgb_1771188880013.png";
 
 const GENRE_CARDS = [
   { value: "Bachata", likes: "97K" },
@@ -127,11 +145,13 @@ export default function CreatePage() {
   const [isInstrumental, setIsInstrumental] = useState(false);
   const [songDuration, setSongDuration] = useState(180);
   const [lyrics, setLyrics] = useState("");
+  const [showLyrics, setShowLyrics] = useState(false);
   const [activeCreationMode, setActiveCreationMode] = useState<CreationMode>("song");
   const [selectedStyleKit, setSelectedStyleKit] = useState<number | undefined>(undefined);
   const [artistName, setArtistName] = useState("");
   const [copyrightHolder, setCopyrightHolder] = useState("DGB AUDIO");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [attachPopoverOpen, setAttachPopoverOpen] = useState(false);
 
   const [soundPrompt, setSoundPrompt] = useState("");
   const [soundDuration, setSoundDuration] = useState([5]);
@@ -140,10 +160,19 @@ export default function CreatePage() {
   const [ttsVoiceId, setTtsVoiceId] = useState("");
   const [ttsLanguage, setTtsLanguage] = useState("en");
 
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
+
   const { mutate: generate, isPending } = useGenerateSong();
   const { data: songs, isLoading: songsLoading } = useSongs();
   const { mutate: deleteSong } = useDeleteSong();
   const { data: styleKits } = useStyleKits();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIdx((prev) => (prev + 1) % PROMPT_SUGGESTIONS.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   const { mutate: uploadSample, isPending: isUploadPending } = useMutation({
     mutationFn: async (file: File) => {
@@ -205,6 +234,7 @@ export default function CreatePage() {
     const genreParam = params.get("genre");
     if (lyricsParam) {
       setLyrics(lyricsParam);
+      setShowLyrics(true);
       setShowProControls(true);
     }
     if (titleParam) setTitle(titleParam);
@@ -287,6 +317,7 @@ export default function CreatePage() {
 
   const handleFileAttach = () => {
     fileInputRef.current?.click();
+    setAttachPopoverOpen(false);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -320,54 +351,44 @@ export default function CreatePage() {
     }
   };
 
-  const modeLabels: Record<CreationMode, string> = {
-    song: t('create.modes.song'),
-    sound: t('create.modes.sound'),
-    speak: t('create.modes.speak'),
-  };
-
-  const modeIcons: Record<CreationMode, typeof Music> = {
-    song: Music,
-    sound: FileAudio,
-    speak: Mic,
-  };
+  const isPro = user && (user as any).subscriptionTier !== "free";
 
   if (!user) return null;
 
-  const ActiveIcon = modeIcons[activeCreationMode];
-
   return (
     <ScrollArea className="h-full">
-      <div className="flex flex-col items-center w-full">
-        <div className="w-full max-w-3xl px-4 py-6 md:py-10 mx-auto">
+      <div className="flex flex-col items-center w-full min-h-full">
+        <div className="w-full max-w-2xl px-4 py-6 md:py-10 mx-auto flex flex-col flex-1">
 
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
+            className="text-center mb-6 md:mb-8"
           >
-            <h1 className="text-2xl md:text-3xl font-bold mb-1" data-testid="text-create-title">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <img src={dgbLogo} alt="DGB" className="h-7 w-7" />
+              <span className="text-sm font-semibold text-muted-foreground">DGB AUDIO</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold" data-testid="text-create-title">
               {t('create.pageTitle')}
             </h1>
-            <p className="text-sm text-muted-foreground">
-              {t('create.creditsPerSong')}
-            </p>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
+            className="flex-1 flex flex-col"
           >
-            <Card className="border-white/10 bg-card overflow-hidden mb-6">
-              <div className="p-4">
+            <Card className="border-white/10 bg-card/80 backdrop-blur-sm overflow-hidden flex-1 flex flex-col min-h-0">
+              <div className="p-4 flex-1 flex flex-col min-h-0">
                 {activeCreationMode === "song" && (
-                  <div className="relative">
+                  <div className="relative flex-1">
                     <Textarea
-                      placeholder={t('create.prompt.describeGenre', { genre: selectedGenre })}
+                      placeholder={PROMPT_SUGGESTIONS[placeholderIdx]}
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
-                      className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[100px] resize-none text-base p-0 placeholder:text-muted-foreground/50"
+                      className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[120px] sm:min-h-[160px] resize-none text-base sm:text-lg p-0 placeholder:text-muted-foreground/40 transition-all"
                       data-testid="input-prompt"
                       maxLength={500}
                       onKeyDown={(e) => {
@@ -376,31 +397,25 @@ export default function CreatePage() {
                         }
                       }}
                     />
-                    <span className="absolute bottom-0 right-0 text-[10px] text-muted-foreground/40" data-testid="text-prompt-charcount">
-                      {prompt.length}/500
-                    </span>
                   </div>
                 )}
 
                 {activeCreationMode === "sound" && (
-                  <div className="space-y-3">
-                    <div className="relative">
+                  <div className="space-y-3 flex-1">
+                    <div className="relative flex-1">
                       <Textarea
                         placeholder={t('create.soundPrompt.placeholder')}
                         value={soundPrompt}
                         onChange={(e) => setSoundPrompt(e.target.value)}
-                        className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[100px] resize-none text-base p-0 placeholder:text-muted-foreground/50"
+                        className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[120px] sm:min-h-[160px] resize-none text-base sm:text-lg p-0 placeholder:text-muted-foreground/40"
                         data-testid="input-sound-prompt"
                         maxLength={500}
                       />
-                      <span className="absolute bottom-0 right-0 text-[10px] text-muted-foreground/40" data-testid="text-sound-charcount">
-                        {soundPrompt.length}/500
-                      </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Label className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {t('create.options.duration')}: {soundDuration[0]}s
+                        {soundDuration[0]}s
                       </Label>
                       <Slider
                         value={soundDuration}
@@ -416,19 +431,16 @@ export default function CreatePage() {
                 )}
 
                 {activeCreationMode === "speak" && (
-                  <div className="space-y-3">
-                    <div className="relative">
+                  <div className="space-y-3 flex-1">
+                    <div className="relative flex-1">
                       <Textarea
                         placeholder={t('create.ttsPrompt.placeholder')}
                         value={ttsText}
                         onChange={(e) => setTtsText(e.target.value)}
-                        className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[100px] resize-none text-base p-0 placeholder:text-muted-foreground/50"
+                        className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[120px] sm:min-h-[160px] resize-none text-base sm:text-lg p-0 placeholder:text-muted-foreground/40"
                         data-testid="input-tts-text"
                         maxLength={2000}
                       />
-                      <span className="absolute bottom-0 right-0 text-[10px] text-muted-foreground/40" data-testid="text-tts-charcount">
-                        {ttsText.length}/2000
-                      </span>
                     </div>
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex items-center gap-2">
@@ -461,7 +473,7 @@ export default function CreatePage() {
                 )}
 
                 {attachedFile && (
-                  <div className="flex items-center gap-2 mt-2 p-2 rounded-md bg-primary/5 border border-primary/20">
+                  <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-primary/5 border border-primary/20">
                     <FileAudio className="h-4 w-4 text-primary" />
                     <span className="text-xs text-primary flex-1 truncate">{attachedFile.name}</span>
                     <Button
@@ -475,185 +487,308 @@ export default function CreatePage() {
                     </Button>
                   </div>
                 )}
+
+                {showLyrics && !isInstrumental && activeCreationMode === "song" && (
+                  <div className="mt-3 pt-3 border-t border-white/5">
+                    <Textarea
+                      placeholder={t('create.lyrics.lyricsPlaceholder')}
+                      value={lyrics}
+                      onChange={(e) => setLyrics(e.target.value)}
+                      className="bg-background/30 border-white/10 focus:border-primary/50 min-h-[80px] resize-none text-sm font-mono"
+                      data-testid="input-lyrics"
+                      maxLength={3000}
+                    />
+                  </div>
+                )}
               </div>
 
-              <div className="border-t border-white/5 px-3 py-2 flex items-center gap-1 flex-wrap">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="audio/*"
-                  className="hidden"
-                  onChange={handleFileChange}
-                  data-testid="input-file-upload"
-                />
+              <div className="border-t border-white/5 px-3 py-2.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="audio/*"
+                    className="hidden"
+                    onChange={handleFileChange}
+                    data-testid="input-file-upload"
+                  />
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground"
-                      onClick={handleFileAttach}
-                      data-testid="button-attach-file"
-                    >
-                      <Paperclip className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('create.attachAudio')}</TooltipContent>
-                </Tooltip>
+                  <Popover open={attachPopoverOpen} onOpenChange={setAttachPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        className="h-9 w-9 rounded-full border border-white/15 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-white/30 transition-colors"
+                        data-testid="button-attach-menu"
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-52 p-1.5" sideOffset={8}>
+                      <button
+                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md hover:bg-white/5 text-sm transition-colors text-left"
+                        onClick={handleFileAttach}
+                        data-testid="menu-upload-file"
+                      >
+                        <Upload className="h-4 w-4 text-muted-foreground" />
+                        {t('create.attach.uploadFile')}
+                      </button>
+                      <button
+                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md hover:bg-white/5 text-sm transition-colors text-left"
+                        onClick={() => { setAttachPopoverOpen(false); setLocation("/sample-lab"); }}
+                        data-testid="menu-record"
+                      >
+                        <MicIcon className="h-4 w-4 text-muted-foreground" />
+                        {t('create.attach.record')}
+                      </button>
+                      <button
+                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md hover:bg-white/5 text-sm transition-colors text-left opacity-50 cursor-not-allowed"
+                        disabled
+                        data-testid="menu-youtube-link"
+                      >
+                        <Link2 className="h-4 w-4 text-muted-foreground" />
+                        {t('create.attach.youtubeLink')}
+                      </button>
+                      <button
+                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md hover:bg-white/5 text-sm transition-colors text-left"
+                        onClick={() => { setAttachPopoverOpen(false); setLocation("/library"); }}
+                        data-testid="menu-creations"
+                      >
+                        <History className="h-4 w-4 text-muted-foreground" />
+                        <span className="flex-1">{t('create.attach.creations')}</span>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
+                      </button>
+                    </PopoverContent>
+                  </Popover>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={showProControls ? "secondary" : "ghost"}
-                      size="sm"
-                      className={cn(
-                        "gap-1.5 text-xs",
-                        showProControls ? "text-primary" : "text-muted-foreground"
-                      )}
-                      onClick={() => setShowProControls(!showProControls)}
-                      data-testid="button-pro-controls"
-                    >
-                      <SlidersHorizontal className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">{t('create.options.proControls')}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('create.options.advancedSettings')}</TooltipContent>
-                </Tooltip>
+                  <button
+                    className={cn(
+                      "h-9 w-9 rounded-full border flex items-center justify-center transition-colors",
+                      showProControls
+                        ? "border-primary/40 text-primary bg-primary/10"
+                        : "border-white/15 text-muted-foreground hover:text-foreground hover:border-white/30"
+                    )}
+                    onClick={() => setShowProControls(!showProControls)}
+                    data-testid="button-pro-controls"
+                  >
+                    <SlidersHorizontal className="h-4 w-4" />
+                  </button>
 
-                {activeCreationMode === "song" && (
-                  <>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant={isInstrumental ? "secondary" : "ghost"}
-                          size="sm"
-                          className={cn(
-                            "gap-1 text-xs",
-                            isInstrumental ? "text-primary" : "text-muted-foreground"
-                          )}
-                          onClick={() => setIsInstrumental(true)}
-                          data-testid="button-instrumental"
-                        >
-                          <Music className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">{t('create.options.instrumental')}</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{t('create.options.instrumentalTooltip')}</TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant={!isInstrumental ? "secondary" : "ghost"}
-                          size="sm"
-                          className={cn(
-                            "gap-1 text-xs",
-                            !isInstrumental ? "text-primary" : "text-muted-foreground"
-                          )}
-                          onClick={() => setIsInstrumental(false)}
-                          data-testid="button-lyrics-mode"
-                        >
-                          <Mic className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">{t('create.lyrics.label')}</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{t('create.options.lyricsTooltip')}</TooltipContent>
-                    </Tooltip>
-                  </>
-                )}
-
-                <div className="flex-1" />
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="gap-1.5 text-xs text-muted-foreground"
-                      data-testid="button-tools-dropdown"
-                    >
-                      <Wrench className="h-3.5 w-3.5" />
-                      {t('create.tools')}
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem
-                      onClick={() => setActiveCreationMode("song")}
-                      className={cn(activeCreationMode === "song" && "bg-primary/10 text-primary")}
-                      data-testid="menu-create-song"
-                    >
-                      <Music className="h-4 w-4 mr-2" />
-                      {t('create.modes.song')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setActiveCreationMode("sound")}
-                      className={cn(activeCreationMode === "sound" && "bg-primary/10 text-primary")}
-                      data-testid="menu-create-sound"
-                    >
-                      <FileAudio className="h-4 w-4 mr-2" />
-                      {t('create.modes.sound')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setActiveCreationMode("speak")}
-                      className={cn(activeCreationMode === "speak" && "bg-primary/10 text-primary")}
-                      data-testid="menu-speak-text"
-                    >
-                      <Mic className="h-4 w-4 mr-2" />
-                      {t('create.modes.speak')}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={handleFileAttach}
-                      data-testid="menu-change-file"
-                    >
-                      <Paperclip className="h-4 w-4 mr-2" />
-                      {t('create.changeFile')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={handleRandomPrompt}
-                      data-testid="menu-random"
-                    >
-                      <Dices className="h-4 w-4 mr-2" />
-                      {t('create.random')}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isAnyPending || !canCreate}
-                  size="sm"
-                  className={cn(
-                    "bg-gradient-to-r from-primary to-blue-500 text-black gap-1.5 transition-all duration-300",
-                    canCreate && !isAnyPending && "shadow-[0_0_15px_rgba(0,200,255,0.4)]"
-                  )}
-                  data-testid="button-submit"
-                >
-                  {isAnyPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
+                  {activeCreationMode === "song" && (
                     <>
-                      <Send className="h-3.5 w-3.5" />
-                      <span className="text-xs font-semibold">{t('create.submit')}</span>
+                      <button
+                        className={cn(
+                          "h-9 px-4 rounded-full border flex items-center gap-1.5 text-sm transition-colors",
+                          isInstrumental
+                            ? "border-primary/40 text-primary bg-primary/10"
+                            : "border-white/15 text-muted-foreground hover:text-foreground hover:border-white/30"
+                        )}
+                        onClick={() => setIsInstrumental(!isInstrumental)}
+                        data-testid="button-instrumental"
+                      >
+                        <div className={cn("h-3.5 w-3.5 rounded-full border-2", isInstrumental ? "border-primary bg-primary" : "border-muted-foreground/50")} />
+                        {t('create.options.instrumental')}
+                      </button>
+
+                      <button
+                        className={cn(
+                          "h-9 px-4 rounded-full border flex items-center gap-1.5 text-sm transition-colors",
+                          showLyrics
+                            ? "border-primary/40 text-primary bg-primary/10"
+                            : "border-white/15 text-muted-foreground hover:text-foreground hover:border-white/30"
+                        )}
+                        onClick={() => { setShowLyrics(!showLyrics); if (isInstrumental) setIsInstrumental(false); }}
+                        data-testid="button-add-lyrics"
+                      >
+                        <span className="text-base leading-none">+</span>
+                        {t('create.lyrics.label')}
+                      </button>
                     </>
                   )}
-                </Button>
+                </div>
+
+                <div className="flex items-center gap-1.5 mt-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="h-9 px-4 rounded-full border border-white/15 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground hover:border-white/30 transition-colors"
+                        data-testid="button-tools-dropdown"
+                      >
+                        {t('create.tools')}
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-64 p-1.5">
+                      <DropdownMenuItem
+                        className="flex items-center gap-3 py-2.5 px-3 rounded-md"
+                        onClick={() => setActiveCreationMode("speak")}
+                        data-testid="menu-tts"
+                      >
+                        <div className="h-9 w-9 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0">
+                          <MessageSquare className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{t('create.toolsMenu.tts')}</span>
+                            <Badge className="bg-orange-500/20 text-orange-400 border-0 text-[10px] px-1.5 py-0">Pro</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{t('create.toolsMenu.ttsDesc')}</p>
+                        </div>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        className="flex items-center gap-3 py-2.5 px-3 rounded-md"
+                        onClick={() => toast({ title: t('create.toolsMenu.remix'), description: t('create.toolsMenu.comingSoon') })}
+                        data-testid="menu-remix"
+                      >
+                        <div className="h-9 w-9 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0">
+                          <RefreshCw className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{t('create.toolsMenu.remix')}</span>
+                            <Badge className="bg-orange-500/20 text-orange-400 border-0 text-[10px] px-1.5 py-0">Pro</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{t('create.toolsMenu.remixDesc')}</p>
+                        </div>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        className="flex items-center gap-3 py-2.5 px-3 rounded-md"
+                        onClick={() => toast({ title: t('create.toolsMenu.replace'), description: t('create.toolsMenu.comingSoon') })}
+                        data-testid="menu-replace"
+                      >
+                        <div className="h-9 w-9 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0">
+                          <RotateCw className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{t('create.toolsMenu.replace')}</span>
+                            <Badge className="bg-orange-500/20 text-orange-400 border-0 text-[10px] px-1.5 py-0">Pro</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{t('create.toolsMenu.replaceDesc')}</p>
+                        </div>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        className="flex items-center gap-3 py-2.5 px-3 rounded-md"
+                        onClick={() => toast({ title: t('create.toolsMenu.extend'), description: t('create.toolsMenu.comingSoon') })}
+                        data-testid="menu-extend"
+                      >
+                        <div className="h-9 w-9 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0">
+                          <ArrowRightToLine className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{t('create.toolsMenu.extend')}</span>
+                            <Badge className="bg-orange-500/20 text-orange-400 border-0 text-[10px] px-1.5 py-0">Pro</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{t('create.toolsMenu.extendDesc')}</p>
+                        </div>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        className="flex items-center gap-3 py-2.5 px-3 rounded-md"
+                        onClick={() => toast({ title: t('create.toolsMenu.addVocals'), description: t('create.toolsMenu.comingSoon') })}
+                        data-testid="menu-add-vocals"
+                      >
+                        <div className="h-9 w-9 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0">
+                          <Mic className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{t('create.toolsMenu.addVocals')}</span>
+                            <Badge className="bg-orange-500/20 text-orange-400 border-0 text-[10px] px-1.5 py-0">Pro</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{t('create.toolsMenu.addVocalsDesc')}</p>
+                        </div>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        className="flex items-center gap-3 py-2.5 px-3 rounded-md"
+                        onClick={() => toast({ title: t('create.toolsMenu.addInstrumental'), description: t('create.toolsMenu.comingSoon') })}
+                        data-testid="menu-add-instrumental"
+                      >
+                        <div className="h-9 w-9 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0">
+                          <Guitar className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{t('create.toolsMenu.addInstrumental')}</span>
+                            <Badge className="bg-orange-500/20 text-orange-400 border-0 text-[10px] px-1.5 py-0">Pro</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{t('create.toolsMenu.addInstrumentalDesc')}</p>
+                        </div>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <div className="flex-1" />
+
+                  <button
+                    onClick={handleSubmit}
+                    disabled={isAnyPending || !canCreate}
+                    className={cn(
+                      "h-10 w-10 rounded-full flex items-center justify-center transition-all duration-300",
+                      canCreate && !isAnyPending
+                        ? "bg-gradient-to-r from-primary to-blue-500 text-black shadow-[0_0_20px_rgba(0,200,255,0.3)] hover:shadow-[0_0_30px_rgba(0,200,255,0.5)]"
+                        : "bg-white/10 text-muted-foreground/50 cursor-not-allowed"
+                    )}
+                    data-testid="button-submit"
+                  >
+                    {isAnyPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowRight className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
             </Card>
 
-            <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground/60">
-              <ActiveIcon className="h-3.5 w-3.5" />
-              <span>{modeLabels[activeCreationMode]}</span>
-              {activeCreationMode === "song" && (
-                <>
-                  <span className="mx-1">•</span>
-                  <span>{isInstrumental ? t('create.options.instrumental') : t('create.options.withLyrics')}</span>
-                  <span className="mx-1">•</span>
-                  <span>{selectedGenre}</span>
-                </>
-              )}
+            <div className="mt-3 overflow-x-auto pb-1">
+              <div className="flex gap-2 min-w-0">
+                <button
+                  className={cn(
+                    "flex-shrink-0 h-9 px-4 rounded-full border flex items-center gap-2 text-sm transition-colors whitespace-nowrap",
+                    activeCreationMode === "sound"
+                      ? "border-primary/40 text-primary bg-primary/10"
+                      : "border-white/15 text-muted-foreground hover:text-foreground hover:border-white/30"
+                  )}
+                  onClick={() => setActiveCreationMode(activeCreationMode === "sound" ? "song" : "sound")}
+                  data-testid="chip-create-sound"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+                  {t('create.modes.sound')}
+                </button>
+                <button
+                  className={cn(
+                    "flex-shrink-0 h-9 px-4 rounded-full border flex items-center gap-2 text-sm transition-colors whitespace-nowrap",
+                    activeCreationMode === "speak"
+                      ? "border-primary/40 text-primary bg-primary/10"
+                      : "border-white/15 text-muted-foreground hover:text-foreground hover:border-white/30"
+                  )}
+                  onClick={() => setActiveCreationMode(activeCreationMode === "speak" ? "song" : "speak")}
+                  data-testid="chip-speak-text"
+                >
+                  <MessageSquare className="h-3.5 w-3.5 text-blue-400" />
+                  {t('create.modes.speak')}
+                </button>
+                <button
+                  className="flex-shrink-0 h-9 px-4 rounded-full border border-white/15 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground hover:border-white/30 transition-colors whitespace-nowrap"
+                  onClick={handleFileAttach}
+                  data-testid="chip-change-file"
+                >
+                  <Wand2 className="h-3.5 w-3.5 text-green-400" />
+                  {t('create.changeFile')}
+                </button>
+                <button
+                  className="flex-shrink-0 h-9 px-4 rounded-full border border-white/15 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground hover:border-white/30 transition-colors whitespace-nowrap"
+                  onClick={handleRandomPrompt}
+                  data-testid="chip-random"
+                >
+                  <Dices className="h-3.5 w-3.5 text-orange-400" />
+                  {t('create.random')}
+                </button>
+              </div>
             </div>
           </motion.div>
 
@@ -663,209 +798,173 @@ export default function CreatePage() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden mb-6"
+                className="overflow-hidden mt-4"
               >
-                <Card className="p-4 space-y-4 border-white/5">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      {t('create.title_field.label')}
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="h-3 w-3" />
-                        </TooltipTrigger>
-                        <TooltipContent>{t('create.title_field.tooltip')}</TooltipContent>
-                      </Tooltip>
-                    </Label>
-                    <Input
-                      placeholder={t('create.title_field.inputPlaceholder')}
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="bg-background border-white/10 focus:border-primary/50 text-sm"
-                      data-testid="input-title"
-                    />
+                <Card className="border-white/5 overflow-hidden">
+                  <div className="bg-gradient-to-r from-amber-900/30 to-amber-800/20 border-b border-amber-500/20 px-4 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-amber-400" />
+                      <span className="text-sm text-amber-200/80">{t('create.unlockCustomization')}</span>
+                    </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <User className="h-3 w-3" />
-                      {t('create.artistName')}
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="h-3 w-3" />
-                        </TooltipTrigger>
-                        <TooltipContent>{t('create.artistNameTooltip')}</TooltipContent>
-                      </Tooltip>
-                    </Label>
-                    <Input
-                      placeholder={t('create.artistNamePlaceholder')}
-                      value={artistName}
-                      onChange={(e) => setArtistName(e.target.value)}
-                      className="bg-background border-white/10 focus:border-primary/50 text-sm"
-                      data-testid="input-artist-name"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <Copyright className="h-3 w-3" />
-                      {t('create.copyrightHolder')}
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="h-3 w-3" />
-                        </TooltipTrigger>
-                        <TooltipContent>{t('create.copyrightHolderTooltip')}</TooltipContent>
-                      </Tooltip>
-                    </Label>
-                    <Input
-                      placeholder="DGB AUDIO"
-                      value={copyrightHolder}
-                      onChange={(e) => setCopyrightHolder(e.target.value)}
-                      className="bg-background border-white/10 focus:border-primary/50 text-sm"
-                      data-testid="input-copyright-holder"
-                    />
-                  </div>
-
-                  {styleKits && styleKits.length > 0 && (
+                  <div className="p-4 space-y-5">
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                        {t('create.styleKit')}
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm font-medium">{t('create.title_field.label')}</Label>
                         <Tooltip>
                           <TooltipTrigger>
-                            <Info className="h-3 w-3" />
+                            <Info className="h-3.5 w-3.5 text-muted-foreground/50" />
                           </TooltipTrigger>
-                          <TooltipContent>{t('create.styleKitTooltip')}</TooltipContent>
+                          <TooltipContent>{t('create.title_field.tooltip')}</TooltipContent>
                         </Tooltip>
-                      </Label>
-                      <select
-                        className="w-full rounded-md border border-white/10 bg-background px-3 py-2 text-sm"
-                        value={selectedStyleKit || ""}
-                        onChange={(e) => setSelectedStyleKit(e.target.value ? Number(e.target.value) : undefined)}
-                        data-testid="select-style-kit"
-                      >
-                        <option value="">{t('create.noneDefault')}</option>
-                        {styleKits.map((kit) => (
-                          <option key={kit.id} value={kit.id}>
-                            {kit.name} ({kit.genre.replace(/_/g, " ")}) — {kit.instruments.length} {t('create.instruments')}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <Clock className="h-3 w-3" />
-                      {t('create.songDuration')}
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="h-3 w-3" />
-                        </TooltipTrigger>
-                        <TooltipContent>{t('create.songDurationTooltip')}</TooltipContent>
-                      </Tooltip>
-                    </Label>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {[60, 120, 180, 240, 300].map((d) => (
-                        <Badge
-                          key={d}
-                          variant={songDuration === d ? "default" : "outline"}
-                          className={cn(
-                            "cursor-pointer text-xs py-1 px-2.5",
-                            songDuration === d
-                              ? "bg-primary/15 text-primary border-primary/30"
-                              : "text-muted-foreground border-white/10"
-                          )}
-                          onClick={() => setSongDuration(d)}
-                          data-testid={`badge-duration-${d}`}
-                        >
-                          {d >= 60 ? `${Math.floor(d / 60)}:${String(d % 60).padStart(2, "0")}` : `${d}s`}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      {t('create.promptIntensity')}
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="h-3 w-3" />
-                        </TooltipTrigger>
-                        <TooltipContent>{t('create.promptIntensityTooltip')}</TooltipContent>
-                      </Tooltip>
-                    </Label>
-                    <div className="flex items-center gap-3">
-                      <Slider
-                        value={promptIntensity}
-                        onValueChange={setPromptIntensity}
-                        min={0}
-                        max={100}
-                        step={1}
-                        className="flex-1"
-                        data-testid="slider-prompt-intensity"
+                      </div>
+                      <Input
+                        placeholder={t('create.title_field.inputPlaceholder')}
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="bg-background/50 border-white/10 focus:border-primary/50"
+                        data-testid="input-title"
                       />
-                      <span className="text-xs font-mono text-muted-foreground w-8 text-right">{promptIntensity[0]}</span>
                     </div>
-                  </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      {t('create.lyricsIntensity')}
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="h-3 w-3" />
-                        </TooltipTrigger>
-                        <TooltipContent>{t('create.lyricsIntensityTooltip')}</TooltipContent>
-                      </Tooltip>
-                    </Label>
-                    <div className="flex items-center gap-3">
-                      <Slider
-                        value={lyricsIntensity}
-                        onValueChange={setLyricsIntensity}
-                        min={0}
-                        max={100}
-                        step={1}
-                        className="flex-1"
-                        data-testid="slider-lyrics-intensity"
-                      />
-                      <span className="text-xs font-mono text-muted-foreground w-8 text-right">{lyricsIntensity[0]}</span>
-                    </div>
-                  </div>
-
-                  {!isInstrumental && activeCreationMode === "song" && (
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">{t('create.lyrics.customLyrics')}</Label>
-                      <div className="relative">
-                        <Textarea
-                          placeholder={t('create.lyrics.lyricsPlaceholder')}
-                          value={lyrics}
-                          onChange={(e) => setLyrics(e.target.value)}
-                          className="bg-background border-white/10 focus:border-primary/50 min-h-[80px] resize-none text-sm font-mono"
-                          data-testid="input-lyrics"
-                          maxLength={3000}
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm font-medium">{t('create.promptIntensity')}</Label>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground/50" />
+                          </TooltipTrigger>
+                          <TooltipContent>{t('create.promptIntensityTooltip')}</TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Slider
+                          value={promptIntensity}
+                          onValueChange={setPromptIntensity}
+                          min={0}
+                          max={100}
+                          step={1}
+                          className="flex-1"
+                          data-testid="slider-prompt-intensity"
                         />
-                        <span className="absolute bottom-2 right-3 text-[10px] text-muted-foreground/60" data-testid="text-lyrics-charcount">
-                          {lyrics.length}/3000
-                        </span>
+                        <span className="text-xs font-mono text-muted-foreground w-8 text-right">{promptIntensity[0]}</span>
                       </div>
                     </div>
-                  )}
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm font-medium">{t('create.lyricsIntensity')}</Label>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground/50" />
+                          </TooltipTrigger>
+                          <TooltipContent>{t('create.lyricsIntensityTooltip')}</TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Slider
+                          value={lyricsIntensity}
+                          onValueChange={setLyricsIntensity}
+                          min={0}
+                          max={100}
+                          step={1}
+                          className="flex-1"
+                          data-testid="slider-lyrics-intensity"
+                        />
+                        <span className="text-xs font-mono text-muted-foreground w-8 text-right">{lyricsIntensity[0]}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Label className="text-sm font-medium">{t('create.artistName')}</Label>
+                      </div>
+                      <Input
+                        placeholder={t('create.artistNamePlaceholder')}
+                        value={artistName}
+                        onChange={(e) => setArtistName(e.target.value)}
+                        className="bg-background/50 border-white/10 focus:border-primary/50"
+                        data-testid="input-artist-name"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Copyright className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Label className="text-sm font-medium">{t('create.copyrightHolder')}</Label>
+                      </div>
+                      <Input
+                        placeholder="DGB AUDIO"
+                        value={copyrightHolder}
+                        onChange={(e) => setCopyrightHolder(e.target.value)}
+                        className="bg-background/50 border-white/10 focus:border-primary/50"
+                        data-testid="input-copyright-holder"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Label className="text-sm font-medium">{t('create.songDuration')}</Label>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {[60, 120, 180, 240, 300].map((d) => (
+                          <Badge
+                            key={d}
+                            variant={songDuration === d ? "default" : "outline"}
+                            className={cn(
+                              "cursor-pointer text-xs py-1 px-2.5",
+                              songDuration === d
+                                ? "bg-primary/15 text-primary border-primary/30"
+                                : "text-muted-foreground border-white/10"
+                            )}
+                            onClick={() => setSongDuration(d)}
+                            data-testid={`badge-duration-${d}`}
+                          >
+                            {d >= 60 ? `${Math.floor(d / 60)}:${String(d % 60).padStart(2, "0")}` : `${d}s`}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    {styleKits && styleKits.length > 0 && (
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-medium">{t('create.styleKit')}</Label>
+                        <select
+                          className="w-full rounded-md border border-white/10 bg-background/50 px-3 py-2 text-sm"
+                          value={selectedStyleKit || ""}
+                          onChange={(e) => setSelectedStyleKit(e.target.value ? Number(e.target.value) : undefined)}
+                          data-testid="select-style-kit"
+                        >
+                          <option value="">{t('create.noneDefault')}</option>
+                          {styleKits.map((kit) => (
+                            <option key={kit.id} value={kit.id}>
+                              {kit.name} ({kit.genre.replace(/_/g, " ")}) — {kit.instruments.length} {t('create.instruments')}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 </Card>
               </motion.div>
             )}
           </AnimatePresence>
 
           {activeCreationMode === "song" && (
-            <div className="mb-8">
+            <div className="mt-6 mb-4">
               <ScrollArea className="w-full">
                 <div className="flex gap-2.5 pb-3">
                   {GENRE_CARDS.map((genre) => (
                     <Card
                       key={genre.value}
                       className={cn(
-                        "p-3 cursor-pointer transition-all flex-shrink-0 w-[130px] sm:w-[140px]",
+                        "p-3 cursor-pointer transition-all flex-shrink-0 w-[120px] sm:w-[130px]",
                         selectedGenre === genre.value
                           ? "border-primary/50 bg-gradient-to-br from-primary/10 to-purple-500/10"
-                          : "border-white/5 hover-elevate"
+                          : "border-white/5 hover:border-white/15"
                       )}
                       onClick={() => setSelectedGenre(genre.value)}
                       data-testid={`card-genre-${genre.value}`}
@@ -873,7 +972,7 @@ export default function CreatePage() {
                       <div className="text-sm font-medium mb-1 line-clamp-1">{genre.value}</div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <ThumbsUp className="h-3 w-3" />
-                        {genre.likes} {t('create.likes')}
+                        {genre.likes}
                       </div>
                     </Card>
                   ))}
@@ -887,7 +986,7 @@ export default function CreatePage() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="mb-8"
+              className="mt-6"
             >
               <Card className="p-4 border-primary/20 bg-primary/5">
                 <div className="flex items-center gap-3">
@@ -910,7 +1009,7 @@ export default function CreatePage() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="mb-8"
+                className="mt-6"
               >
                 <AudioPlayer
                   url={activeSong.audioUrl}
@@ -929,7 +1028,7 @@ export default function CreatePage() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="mb-8"
+                className="mt-6"
               >
                 <Card className="p-4 border-primary/20 bg-primary/5">
                   <div className="flex items-center gap-3 mb-3">
@@ -957,7 +1056,7 @@ export default function CreatePage() {
           </AnimatePresence>
 
           {recentGroups.length > 0 && (
-            <div className="mb-8">
+            <div className="mt-8 mb-8">
               <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                   {t('create.recentCreations')}
@@ -997,7 +1096,7 @@ export default function CreatePage() {
                               "overflow-visible cursor-pointer transition-all border-white/5",
                               currentSong?.id === song.id
                                 ? "border-primary/50 bg-primary/5"
-                                : "hover-elevate"
+                                : "hover:border-white/15"
                             )}
                             onClick={() => setCurrentSong(song)}
                             data-testid={`card-recent-song-${song.id}`}
