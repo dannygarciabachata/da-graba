@@ -1,10 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -12,14 +13,17 @@ import {
   Play,
   Pause,
   Heart,
+  ThumbsDown,
+  Share2,
   Download,
-  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
   Music,
   TrendingUp,
   Headphones,
   Compass,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 
 const GENRE_COLORS: Record<string, string> = {
@@ -234,10 +238,24 @@ function SongCard({ song, rank, onPlay, currentSongId, isPlaying }: SongCardProp
   );
 }
 
+function formatCountdown(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `-${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
 export default function DiscoverPage() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [currentSong, setCurrentSong] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(80);
+  const [isMuted, setIsMuted] = useState(false);
+  const [showVolume, setShowVolume] = useState(false);
+  const [likeStatus, setLikeStatus] = useState<{ likes: number; dislikes: number; userValue: number }>({ likes: 0, dislikes: 0, userValue: 0 });
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const playMutation = useMutation({
@@ -245,6 +263,16 @@ export default function DiscoverPage() {
       await apiRequest("POST", `/api/songs/${songId}/play`, {});
     },
   });
+
+  const fetchLikeStatus = useCallback(async (songId: number) => {
+    try {
+      const res = await fetch(`/api/songs/${songId}/likes`);
+      if (res.ok) {
+        const data = await res.json();
+        setLikeStatus(data);
+      }
+    } catch {}
+  }, []);
 
   const { data: topSongs, isLoading } = useQuery<any[]>({
     queryKey: ["/api/public/charts"],
@@ -267,12 +295,58 @@ export default function DiscoverPage() {
       audioRef.current.src = "";
     }
     const audio = new Audio(song.audioUrl);
+    audio.volume = isMuted ? 0 : volume / 100;
     audio.play();
     audioRef.current = audio;
     setCurrentSong(song);
     setIsPlaying(true);
+    setCurrentTime(0);
+    setDuration(0);
     playMutation.mutate(song.id);
+    fetchLikeStatus(song.id);
     audio.addEventListener("ended", () => setIsPlaying(false));
+    audio.addEventListener("timeupdate", () => setCurrentTime(audio.currentTime));
+    audio.addEventListener("loadedmetadata", () => setDuration(audio.duration));
+  };
+
+  const handleSeek = (val: number[]) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = val[0];
+      setCurrentTime(val[0]);
+    }
+  };
+
+  const handleVolumeChange = (val: number[]) => {
+    const v = val[0];
+    setVolume(v);
+    setIsMuted(v === 0);
+    if (audioRef.current) audioRef.current.volume = v / 100;
+  };
+
+  const toggleMute = () => {
+    const next = !isMuted;
+    setIsMuted(next);
+    if (audioRef.current) audioRef.current.volume = next ? 0 : volume / 100;
+  };
+
+  const handleFooterLike = async (value: 1 | -1) => {
+    if (!user) { toast({ title: t('discover.loginToLike') }); return; }
+    if (!currentSong) return;
+    await apiRequest("POST", `/api/songs/${currentSong.id}/like`, { value });
+    fetchLikeStatus(currentSong.id);
+    queryClient.invalidateQueries({ queryKey: ["/api/public/charts"] });
+  };
+
+  const handleShare = () => {
+    if (!currentSong) return;
+    const url = `${window.location.origin}/discover`;
+    const text = `${currentSong.title} - ${currentSong.artistName || "DGB AUDIO"}`;
+    if (navigator.share) {
+      navigator.share({ title: text, url });
+    } else {
+      navigator.clipboard.writeText(`${text} ${url}`);
+      toast({ title: t('discover.shared') });
+    }
   };
 
   const featured = topSongs?.slice(0, 20) || [];
@@ -331,29 +405,111 @@ export default function DiscoverPage() {
       </div>
 
       {currentSong && (
-        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-white/10 z-50 px-4 py-3" data-testid="now-playing-bar">
-          <div className="max-w-5xl mx-auto flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
-              {currentSong.imageUrl ? (
-                <img src={currentSong.imageUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Music className="h-4 w-4 text-muted-foreground" />
-                </div>
-              )}
+        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-white/10 z-50 px-4 py-2" data-testid="now-playing-bar">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
+                {currentSong.imageUrl ? (
+                  <img src={currentSong.imageUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Music className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 w-28">
+                <p className="text-sm font-medium truncate" data-testid="text-now-playing-title">{currentSong.title}</p>
+                <p className="text-xs text-muted-foreground truncate">{currentSong.artistName || "DGB AUDIO"}</p>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 flex-shrink-0"
+                onClick={() => handlePlay(currentSong)}
+                data-testid="button-now-playing-toggle"
+              >
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
+              </Button>
+
+              <div className="flex-1 flex items-center gap-2 min-w-0">
+                <Slider
+                  value={[currentTime]}
+                  max={duration || 1}
+                  step={0.1}
+                  onValueChange={handleSeek}
+                  className="flex-1"
+                  data-testid="slider-seek"
+                />
+                <span className="text-xs text-muted-foreground font-mono w-14 text-right flex-shrink-0" data-testid="text-countdown">
+                  {duration > 0 ? formatCountdown(duration - currentTime) : "--:--"}
+                </span>
+              </div>
+
+              <div
+                className="relative flex-shrink-0"
+                onMouseEnter={() => setShowVolume(true)}
+                onMouseLeave={() => setShowVolume(false)}
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={toggleMute}
+                  data-testid="button-volume-toggle"
+                >
+                  {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                </Button>
+                {showVolume && (
+                  <div
+                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-background/95 border border-white/10 rounded-lg p-2 w-8 h-24"
+                    data-testid="volume-slider-popup"
+                  >
+                    <Slider
+                      orientation="vertical"
+                      value={[isMuted ? 0 : volume]}
+                      max={100}
+                      step={1}
+                      onValueChange={handleVolumeChange}
+                      className="h-full"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`h-8 w-8 ${likeStatus.userValue === 1 ? "text-primary" : ""}`}
+                  onClick={() => handleFooterLike(1)}
+                  data-testid="button-footer-like"
+                >
+                  <Heart className={`h-4 w-4 ${likeStatus.userValue === 1 ? "fill-primary" : ""}`} />
+                </Button>
+                <span className="text-xs text-muted-foreground min-w-[1.5rem]" data-testid="text-like-count">
+                  {formatCount(likeStatus.likes || 0)}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`h-8 w-8 ${likeStatus.userValue === -1 ? "text-red-400" : ""}`}
+                  onClick={() => handleFooterLike(-1)}
+                  data-testid="button-footer-dislike"
+                >
+                  <ThumbsDown className={`h-4 w-4 ${likeStatus.userValue === -1 ? "fill-red-400" : ""}`} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleShare}
+                  data-testid="button-footer-share"
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate" data-testid="text-now-playing-title">{currentSong.title}</p>
-              <p className="text-xs text-muted-foreground truncate">{currentSong.artistName || "DGB AUDIO"}</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handlePlay(currentSong)}
-              data-testid="button-now-playing-toggle"
-            >
-              {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 fill-current" />}
-            </Button>
           </div>
         </div>
       )}
