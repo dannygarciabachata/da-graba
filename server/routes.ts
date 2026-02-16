@@ -23,6 +23,7 @@ import { initializeAdapters } from "./core/adapters";
 import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfig, buildRunPodPayload, GENRE_STYLE_HINTS } from "./core/sao_training_engine";
 import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection, getGpuStatus, resumeGpuPod, stopGpuPod, setupGpuEnvironment } from "./core/runpod_client";
 import { isCloudConfigured, getActiveServer, checkCloudHealth, checkDgbCloudHealth, uploadInstrumentToCloud, saveMidiFile, verifyWebhookFromAnyServer } from "./core/dgb_runpod_api";
+import { isServerlessConfigured as isServerlessAvailable } from "./core/runpod_serverless";
 import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, STYLE_KIT_GENRES, INSTRUMENT_TYPES, SETTING_CATEGORIES, TICKET_STATUSES, TICKET_PRIORITIES, insertApiProviderSchema, insertApiEndpointSchema, insertStyleKitSchema, insertStyleKitInstrumentSchema, insertPlatformSettingSchema } from "@shared/schema";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
@@ -617,6 +618,99 @@ export async function registerRoutes(
       res.sendStatus(200);
     } catch (err: any) {
       console.error("[Webhook] Error processing RunPod music webhook:", err);
+      res.sendStatus(200);
+    }
+  });
+
+  // ========== RUNPOD SERVERLESS WEBHOOK ==========
+
+  app.post("/api/webhooks/runpod-serverless", async (req, res) => {
+    try {
+      const payload = req.body;
+      const { output, status: jobStatus, error: topLevelError, input: jobInput } = payload;
+
+      console.log(`[Webhook] RunPod Serverless webhook: status=${jobStatus}, hasOutput=${!!output}, hasError=${!!topLevelError}`);
+
+      if (!output && (jobStatus === "FAILED" || jobStatus === "TIMED_OUT" || jobStatus === "CANCELLED")) {
+        const errorMsg = topLevelError || `Job ${jobStatus}`;
+        const inputAction = jobInput?.action;
+        const songId = jobInput?.song_id;
+        const kitId = jobInput?.kit_id;
+        console.error(`[Webhook] Serverless job ${jobStatus}: ${errorMsg} (action=${inputAction})`);
+
+        if (songId && (inputAction === "generate_music" || !inputAction)) {
+          await storage.updateSongStatus(songId, "failed", undefined, errorMsg.substring(0, 300));
+        }
+        if (kitId && (inputAction === "train_model" || !inputAction)) {
+          await storage.updateStyleKit(kitId, { trainingStatus: "failed", trainingError: errorMsg });
+        }
+        return res.sendStatus(200);
+      }
+
+      if (!output) {
+        console.log("[Webhook] RunPod Serverless: no output in payload, ignoring");
+        return res.sendStatus(200);
+      }
+
+      const action = output.action || jobInput?.action;
+      console.log(`[Webhook] RunPod Serverless processing: action=${action}, jobStatus=${jobStatus}`);
+
+      if (action === "generate_music" || output.songId) {
+        const songId = output.songId || output.song_id;
+        if (!songId) return res.sendStatus(200);
+
+        if (jobStatus === "FAILED" || output.status === "failed") {
+          const errorMsg = output.error || payload.error || "Serverless generation failed";
+          console.error(`[Webhook] Serverless music FAILED for song ${songId}: ${errorMsg}`);
+          await storage.updateSongStatus(songId, "failed", undefined, errorMsg.substring(0, 300));
+        } else if (output.audioBase64 && (jobStatus === "COMPLETED" || output.status === "completed")) {
+          const audioFormat = output.audioFormat || "mp3";
+          const localUrl = await saveRunPodAudio(output.audioBase64, songId, audioFormat);
+          await storage.updateSongStatus(songId, "completed", localUrl);
+          if (output.duration) {
+            try {
+              const { db } = await import("./db");
+              const { songs: songsTable } = await import("@shared/schema");
+              const { eq } = await import("drizzle-orm");
+              await db.update(songsTable).set({ duration: output.duration }).where(eq(songsTable.id, songId));
+            } catch {}
+          }
+          console.log(`[Webhook] Serverless song ${songId} saved: ${localUrl}`);
+        }
+      }
+
+      if (action === "train_model" || output.kitId) {
+        const kitId = output.kitId || output.kit_id;
+        if (kitId) {
+          if (jobStatus === "FAILED" || output.status === "failed") {
+            const errorMsg = output.error || output.message || "Training failed";
+            console.error(`[Webhook] Serverless training FAILED for kit ${kitId}: ${errorMsg}`);
+            await storage.updateStyleKit(kitId, { trainingStatus: "failed", trainingError: errorMsg });
+          } else if (jobStatus === "COMPLETED" || output.status === "completed") {
+            const modelUrl = output.modelPath || output.model_url || output.trainedModelUrl;
+            console.log(`[Webhook] Serverless training COMPLETED for kit ${kitId}: ${modelUrl}`);
+            await storage.updateStyleKit(kitId, {
+              trainingStatus: "completed",
+              trainedModelUrl: modelUrl,
+              pipelineStep: "ready",
+              lastTrainedAt: new Date(),
+            });
+          } else if (output.status === "training") {
+            console.log(`[Webhook] Serverless training progress for kit ${kitId}: ${output.message}`);
+          }
+        }
+      }
+
+      if (action === "separate_stems" || output.stems) {
+        const songId = output.songId || output.song_id;
+        if (songId && output.stems) {
+          console.log(`[Webhook] Serverless stems completed for song ${songId}`);
+        }
+      }
+
+      res.sendStatus(200);
+    } catch (err: any) {
+      console.error("[Webhook] Error processing RunPod Serverless webhook:", err);
       res.sendStatus(200);
     }
   });
@@ -2855,8 +2949,26 @@ export async function registerRoutes(
           analyzed,
           withPrompts,
         },
-        gpuConnected: isRunPodConfigured(),
+        gpuConnected: isRunPodConfigured() || isServerlessAvailable("training"),
+        serverless: isServerlessAvailable("training"),
       });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/serverless/health", async (_req, res) => {
+    try {
+      const { checkHealth, isServerlessConfigured } = await import("./core/runpod_serverless");
+      const results: Record<string, any> = {};
+      for (const type of ["music", "training", "stems"] as const) {
+        if (isServerlessConfigured(type)) {
+          results[type] = await checkHealth(type);
+        } else {
+          results[type] = { connected: false, error: "Not configured" };
+        }
+      }
+      res.json({ serverless: true, endpoints: results });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
