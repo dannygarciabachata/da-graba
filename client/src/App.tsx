@@ -26,6 +26,7 @@ import ArtistDashboardPage from "@/pages/ArtistDashboardPage";
 import ArtistProfilePage from "@/pages/ArtistProfilePage";
 import ArtistOnboardingPage from "@/pages/ArtistOnboardingPage";
 import DiscographyPage from "@/pages/DiscographyPage";
+import CopyrightHubPage from "@/pages/CopyrightHubPage";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
 import { useTranslation } from "react-i18next";
@@ -82,6 +83,7 @@ function AuthenticatedLayout() {
               <Route path="/blog/:slug" component={BlogPage} />
               <Route path="/blog" component={BlogPage} />
               <Route path="/cover-designer" component={CoverDesignerPage} />
+              <Route path="/copyright" component={CopyrightHubPage} />
               <Route path="/artist-dashboard" component={ArtistDashboardPage} />
               <Route path="/artist-onboarding" component={ArtistOnboardingPage} />
               <Route path="/discography" component={DiscographyPage} />

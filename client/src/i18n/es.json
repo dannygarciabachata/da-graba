@@ -66,7 +66,8 @@
     "adminPanel": "Panel Admin",
     "artist": "Artista",
     "artistDashboard": "Mi Perfil de Artista",
-    "discography": "Discografía"
+    "discography": "Discografía",
+    "copyright": "Copyright & Publishing"
   },
   "discover": {
     "title": "Descubrir",
@@ -1023,5 +1024,106 @@
     "release": "lanzamiento",
     "releases": "lanzamientos",
     "listenOn": "Escuchar en"
+  },
+  "copyright": {
+    "pageTitle": "Copyright & Publishing Hub",
+    "pageSubtitle": "Registra y protege tus obras musicales — composiciones y grabaciones",
+    "tabs": {
+      "dashboard": "Mis Registros",
+      "register": "Registrar Nueva Obra"
+    },
+    "emptyState": {
+      "title": "No tienes obras registradas",
+      "description": "Registra tu primera obra para proteger tus derechos de autor"
+    },
+    "unnamed": "Sin título",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "contributors": "colaboradores",
+    "step1": {
+      "title": "Seleccionar Canción",
+      "noSongs": "No tienes canciones completadas aún",
+      "registered": "Registrada",
+      "manualEntry": "Registrar sin canción (entrada manual)"
+    },
+    "step2": {
+      "title": "Detalles de la Obra"
+    },
+    "step3": {
+      "title": "Colaboradores y Splits",
+      "addContributor": "Agregar Colaborador",
+      "contributor": "Colaborador",
+      "totalShare": "Total de Participación"
+    },
+    "step4": {
+      "title": "Revisar y Enviar",
+      "export": "Exportar Datos",
+      "submit": "Enviar Registro"
+    },
+    "field": {
+      "title": "Título de la Obra",
+      "alternativeTitles": "Títulos Alternativos",
+      "workType": "Tipo de Obra",
+      "language": "Idioma",
+      "genre": "Género",
+      "copyrightYear": "Año de Copyright",
+      "duration": "Duración (segundos)",
+      "isrc": "Código ISRC",
+      "iswc": "Código ISWC",
+      "publisher": "Editorial",
+      "publisherShare": "Participación del Editor (%)",
+      "proEntity": "Entidad PRO",
+      "selectPro": "Seleccionar PRO",
+      "name": "Nombre",
+      "role": "Rol",
+      "ipiNumber": "Número IPI",
+      "sharePercent": "Participación %",
+      "email": "Correo Electrónico"
+    },
+    "success": {
+      "title": "¡Obra Registrada Exitosamente!",
+      "description": "Tu obra ha sido registrada en DGB Studio. Sigue estos pasos para completar el registro:",
+      "nextSteps": "Próximos Pasos",
+      "step1": "Descarga los datos de registro usando el botón 'Exportar'",
+      "step2": "Inicia sesión en el portal de tu PRO (ASCAP, BMI, etc.)",
+      "step3": "Usa los datos exportados para completar el formulario de registro",
+      "registerAnother": "Registrar Otra Obra"
+    },
+    "toast": {
+      "created": "Obra registrada",
+      "createdDesc": "Tu obra ha sido registrada exitosamente",
+      "error": "Error al registrar la obra"
+    },
+    "workType": {
+      "composition": "Composición",
+      "sound_recording": "Grabación Sonora",
+      "both": "Composición y Grabación"
+    },
+    "workTypeDesc": {
+      "composition": "Letra y melodía de la canción",
+      "sound_recording": "La grabación de audio",
+      "both": "Letra, melodía y grabación"
+    },
+    "status": {
+      "draft": "Borrador",
+      "pending": "Pendiente",
+      "submitted": "Enviado",
+      "registered": "Registrado",
+      "rejected": "Rechazado"
+    },
+    "steps": {
+      "1": "Seleccionar Canción",
+      "2": "Detalles de la Obra",
+      "3": "Colaboradores",
+      "4": "Revisar y Enviar"
+    },
+    "role": {
+      "writer": "Escritor",
+      "composer": "Compositor",
+      "lyricist": "Letrista",
+      "arranger": "Arreglista",
+      "publisher": "Editor",
+      "admin_publisher": "Editor Administrador"
+    }
   }
 }

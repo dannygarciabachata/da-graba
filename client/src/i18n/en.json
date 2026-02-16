@@ -66,7 +66,8 @@
     "adminPanel": "Admin Panel",
     "artist": "Artist",
     "artistDashboard": "My Artist Profile",
-    "discography": "Discography"
+    "discography": "Discography",
+    "copyright": "Copyright & Publishing"
   },
   "discover": {
     "title": "Discover",
@@ -1023,5 +1024,106 @@
     "release": "release",
     "releases": "releases",
     "listenOn": "Listen on"
+  },
+  "copyright": {
+    "pageTitle": "Copyright & Publishing Hub",
+    "pageSubtitle": "Register and protect your musical works — compositions and recordings",
+    "tabs": {
+      "dashboard": "My Registrations",
+      "register": "Register New Work"
+    },
+    "emptyState": {
+      "title": "No registered works yet",
+      "description": "Register your first work to protect your copyrights"
+    },
+    "unnamed": "Untitled",
+    "back": "Back",
+    "next": "Next",
+    "contributors": "contributors",
+    "step1": {
+      "title": "Select Song",
+      "noSongs": "You don't have completed songs yet",
+      "registered": "Registered",
+      "manualEntry": "Register without song (manual entry)"
+    },
+    "step2": {
+      "title": "Work Details"
+    },
+    "step3": {
+      "title": "Contributors & Splits",
+      "addContributor": "Add Contributor",
+      "contributor": "Contributor",
+      "totalShare": "Total Share"
+    },
+    "step4": {
+      "title": "Review & Submit",
+      "export": "Export Data",
+      "submit": "Submit Registration"
+    },
+    "field": {
+      "title": "Work Title",
+      "alternativeTitles": "Alternative Titles",
+      "workType": "Work Type",
+      "language": "Language",
+      "genre": "Genre",
+      "copyrightYear": "Copyright Year",
+      "duration": "Duration (seconds)",
+      "isrc": "ISRC Code",
+      "iswc": "ISWC Code",
+      "publisher": "Publisher",
+      "publisherShare": "Publisher Share (%)",
+      "proEntity": "PRO Entity",
+      "selectPro": "Select PRO",
+      "name": "Name",
+      "role": "Role",
+      "ipiNumber": "IPI Number",
+      "sharePercent": "Share %",
+      "email": "Email"
+    },
+    "success": {
+      "title": "Work Registered Successfully!",
+      "description": "Your work has been registered in DGB Studio. Follow these steps to complete the registration:",
+      "nextSteps": "Next Steps",
+      "step1": "Download the registration data using the 'Export' button",
+      "step2": "Log in to your PRO portal (ASCAP, BMI, etc.)",
+      "step3": "Use the exported data to complete the registration form",
+      "registerAnother": "Register Another Work"
+    },
+    "toast": {
+      "created": "Work registered",
+      "createdDesc": "Your work has been registered successfully",
+      "error": "Error registering work"
+    },
+    "workType": {
+      "composition": "Composition",
+      "sound_recording": "Sound Recording",
+      "both": "Composition & Recording"
+    },
+    "workTypeDesc": {
+      "composition": "Lyrics and melody of the song",
+      "sound_recording": "The audio recording",
+      "both": "Lyrics, melody, and recording"
+    },
+    "status": {
+      "draft": "Draft",
+      "pending": "Pending",
+      "submitted": "Submitted",
+      "registered": "Registered",
+      "rejected": "Rejected"
+    },
+    "steps": {
+      "1": "Select Song",
+      "2": "Work Details",
+      "3": "Contributors",
+      "4": "Review & Submit"
+    },
+    "role": {
+      "writer": "Writer",
+      "composer": "Composer",
+      "lyricist": "Lyricist",
+      "arranger": "Arranger",
+      "publisher": "Publisher",
+      "admin_publisher": "Admin Publisher"
+    }
   }
 }

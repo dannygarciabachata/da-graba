@@ -5438,6 +5438,227 @@ IMPORTANT GUIDELINES:
     }
   });
 
+  // ========== COPYRIGHT & PUBLISHING HUB ==========
+
+  app.get("/api/copyright/works", async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: "Not authenticated" });
+    try {
+      const userId = (req.user as any).claims.sub;
+      const works = await storage.getCopyrightWorks(userId);
+      const worksWithContributors = await Promise.all(
+        works.map(async (work) => {
+          const contributors = await storage.getCopyrightContributors(work.id);
+          return { ...work, contributors };
+        })
+      );
+      res.json(worksWithContributors);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/copyright/works/:id", async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: "Not authenticated" });
+    try {
+      const userId = (req.user as any).claims.sub;
+      const work = await storage.getCopyrightWork(parseInt(req.params.id));
+      if (!work) return res.status(404).json({ message: "Work not found" });
+      if (work.userId !== userId) return res.status(403).json({ message: "Forbidden" });
+      const contributors = await storage.getCopyrightContributors(work.id);
+      res.json({ ...work, contributors });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/copyright/works", async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: "Not authenticated" });
+    try {
+      const userId = (req.user as any).claims.sub;
+      const { contributors: contributorData, ...workData } = req.body;
+      const work = await storage.createCopyrightWork({
+        ...workData,
+        userId,
+      });
+      if (contributorData && Array.isArray(contributorData)) {
+        for (const c of contributorData) {
+          await storage.createCopyrightContributor({ ...c, workId: work.id });
+        }
+      }
+      const contributors = await storage.getCopyrightContributors(work.id);
+      res.json({ ...work, contributors });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/copyright/works/:id", async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: "Not authenticated" });
+    try {
+      const userId = (req.user as any).claims.sub;
+      const work = await storage.getCopyrightWork(parseInt(req.params.id));
+      if (!work) return res.status(404).json({ message: "Work not found" });
+      if (work.userId !== userId) return res.status(403).json({ message: "Forbidden" });
+      const { contributors: contributorData, ...workData } = req.body;
+      const updated = await storage.updateCopyrightWork(work.id, workData);
+      if (contributorData && Array.isArray(contributorData)) {
+        await storage.deleteCopyrightContributorsByWork(work.id);
+        for (const c of contributorData) {
+          await storage.createCopyrightContributor({ ...c, workId: work.id });
+        }
+      }
+      const contributors = await storage.getCopyrightContributors(work.id);
+      res.json({ ...updated, contributors });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/copyright/works/:id", async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: "Not authenticated" });
+    try {
+      const userId = (req.user as any).claims.sub;
+      const work = await storage.getCopyrightWork(parseInt(req.params.id));
+      if (!work) return res.status(404).json({ message: "Work not found" });
+      if (work.userId !== userId) return res.status(403).json({ message: "Forbidden" });
+      await storage.deleteCopyrightWork(work.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/copyright/works/:id/submit", async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: "Not authenticated" });
+    try {
+      const userId = (req.user as any).claims.sub;
+      const work = await storage.getCopyrightWork(parseInt(req.params.id));
+      if (!work) return res.status(404).json({ message: "Work not found" });
+      if (work.userId !== userId) return res.status(403).json({ message: "Forbidden" });
+      const contributors = await storage.getCopyrightContributors(work.id);
+      const totalWriterShare = contributors.filter(c => ["writer", "composer", "lyricist", "arranger"].includes(c.role)).reduce((sum, c) => sum + c.share, 0);
+      if (Math.abs(totalWriterShare - 100) > 0.01) {
+        return res.status(400).json({ message: "Writer shares must total 100%" });
+      }
+      const exportData = {
+        title: work.title,
+        alternativeTitles: work.alternativeTitles,
+        workType: work.workType,
+        language: work.language,
+        genre: work.genre,
+        copyrightYear: work.copyrightYear,
+        duration: work.duration,
+        isrc: work.isrc,
+        iswc: work.iswc,
+        publisher: {
+          name: work.publisherName,
+          ipi: work.publisherIpi,
+          share: work.publisherShare,
+        },
+        writers: contributors.filter(c => c.role !== "publisher" && c.role !== "admin_publisher").map(c => ({
+          name: c.name,
+          role: c.role,
+          ipiNumber: c.ipiNumber,
+          pro: c.proEntity,
+          share: c.share,
+          publisher: c.publisherName,
+        })),
+        proEntity: work.proEntity,
+        submittedAt: new Date().toISOString(),
+      };
+      const updated = await storage.updateCopyrightWork(work.id, {
+        status: "submitted",
+        submittedAt: new Date(),
+        exportData,
+      });
+      res.json({ ...updated, contributors, exportData });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/copyright/works/:id/export", async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: "Not authenticated" });
+    try {
+      const userId = (req.user as any).claims.sub;
+      const work = await storage.getCopyrightWork(parseInt(req.params.id));
+      if (!work) return res.status(404).json({ message: "Work not found" });
+      if (work.userId !== userId) return res.status(403).json({ message: "Forbidden" });
+      const contributors = await storage.getCopyrightContributors(work.id);
+      const exportData = {
+        title: work.title,
+        alternativeTitles: work.alternativeTitles,
+        workType: work.workType,
+        language: work.language,
+        genre: work.genre,
+        copyrightDate: work.copyrightDate,
+        copyrightYear: work.copyrightYear,
+        duration: work.duration,
+        isrc: work.isrc,
+        iswc: work.iswc,
+        upc: work.upc,
+        hfaSongCode: work.hfaSongCode,
+        publisher: {
+          name: work.publisherName,
+          ipi: work.publisherIpi,
+          share: work.publisherShare,
+        },
+        writers: contributors.map(c => ({
+          name: c.name,
+          role: c.role,
+          ipiNumber: c.ipiNumber,
+          pro: c.proEntity,
+          share: c.share,
+          email: c.email,
+          publisher: c.publisherName,
+          controlled: c.isControlled,
+        })),
+        proEntity: work.proEntity,
+        status: work.status,
+        externalRegistrationId: work.externalRegistrationId,
+      };
+      res.json(exportData);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/copyright/publishers", async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: "Not authenticated" });
+    try {
+      const publishers = await storage.getPublisherEntities();
+      res.json(publishers);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/copyright/publishers/default", async (req, res) => {
+    try {
+      const publisher = await storage.getDefaultPublisher();
+      res.json(publisher || { name: "DGB Publishing", isDefault: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/copyright/songs", async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: "Not authenticated" });
+    try {
+      const userId = (req.user as any).claims.sub;
+      const userSongs = await storage.getUserSongs(userId);
+      const songsWithRegistrations = await Promise.all(
+        userSongs.filter(s => s.status === "completed" && s.audioUrl).map(async (song) => {
+          const registrations = await storage.getCopyrightWorksBySong(song.id);
+          return { ...song, copyrightRegistered: registrations.length > 0 };
+        })
+      );
+      res.json(songsWithRegistrations);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.use((err: any, _req: any, res: any, next: any) => {
     if (err instanceof multer.MulterError) {
       if (err.code === "LIMIT_FILE_SIZE") {

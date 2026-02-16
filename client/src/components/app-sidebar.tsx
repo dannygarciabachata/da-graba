@@ -36,6 +36,7 @@ import {
   Palette,
   Globe,
   Crown,
+  Shield,
 } from "lucide-react";
 import { useAdminCheck } from "@/hooks/use-admin";
 import { useCredits } from "@/hooks/use-credits";
@@ -52,6 +53,7 @@ const NAV_ITEMS = [
 
 const ARTIST_ITEMS = [
   { titleKey: "nav.artistDashboard", url: "/artist-dashboard", icon: Crown },
+  { titleKey: "nav.copyright", url: "/copyright", icon: Shield },
 ];
 
 const TOOLS_ITEMS = [

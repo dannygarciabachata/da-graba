@@ -1288,3 +1288,117 @@ export const insertArtistProfileShareSchema = createInsertSchema(artistProfileSh
 
 export type ArtistProfileShare = typeof artistProfileShares.$inferSelect;
 export type InsertArtistProfileShare = z.infer<typeof insertArtistProfileShareSchema>;
+
+// === COPYRIGHT & PUBLISHING HUB ===
+
+export const WORK_TYPES = ["composition", "sound_recording", "both"] as const;
+export type WorkType = typeof WORK_TYPES[number];
+
+export const REGISTRATION_STATUSES = ["draft", "pending", "submitted", "registered", "rejected"] as const;
+export type RegistrationStatus = typeof REGISTRATION_STATUSES[number];
+
+export const CONTRIBUTOR_ROLES = ["writer", "composer", "lyricist", "arranger", "publisher", "admin_publisher"] as const;
+export type ContributorRole = typeof CONTRIBUTOR_ROLES[number];
+
+export const copyrightWorks = pgTable("copyright_works", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  songId: integer("song_id").references(() => songs.id, { onDelete: "set null" }),
+  artistProfileId: integer("artist_profile_id").references(() => artistProfiles.id, { onDelete: "set null" }),
+  workType: text("work_type").notNull().default("both"),
+  title: text("title").notNull(),
+  alternativeTitles: text("alternative_titles"),
+  language: text("language").default("es"),
+  genre: text("genre"),
+  copyrightDate: timestamp("copyright_date"),
+  copyrightYear: integer("copyright_year"),
+  duration: integer("duration"),
+  isrc: text("isrc"),
+  iswc: text("iswc"),
+  upc: text("upc"),
+  hfaSongCode: text("hfa_song_code"),
+  status: text("status").notNull().default("draft"),
+  proEntity: text("pro_entity"),
+  externalRegistrationId: text("external_registration_id"),
+  publisherName: text("publisher_name").default("DGB Publishing"),
+  publisherIpi: text("publisher_ipi"),
+  publisherShare: real("publisher_share").default(50),
+  notes: text("notes"),
+  exportData: jsonb("export_data").$type<Record<string, any>>(),
+  submittedAt: timestamp("submitted_at"),
+  registeredAt: timestamp("registered_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const copyrightWorksRelations = relations(copyrightWorks, ({ one, many }) => ({
+  song: one(songs, {
+    fields: [copyrightWorks.songId],
+    references: [songs.id],
+  }),
+  artist: one(artistProfiles, {
+    fields: [copyrightWorks.artistProfileId],
+    references: [artistProfiles.id],
+  }),
+  contributors: many(copyrightContributors),
+}));
+
+export const insertCopyrightWorkSchema = createInsertSchema(copyrightWorks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type CopyrightWork = typeof copyrightWorks.$inferSelect;
+export type InsertCopyrightWork = z.infer<typeof insertCopyrightWorkSchema>;
+
+export const copyrightContributors = pgTable("copyright_contributors", {
+  id: serial("id").primaryKey(),
+  workId: integer("work_id").notNull().references(() => copyrightWorks.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  role: text("role").notNull().default("writer"),
+  ipiNumber: text("ipi_number"),
+  proEntity: text("pro_entity"),
+  share: real("share").notNull().default(0),
+  isControlled: boolean("is_controlled").default(false),
+  publisherName: text("publisher_name"),
+  email: text("email"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const copyrightContributorsRelations = relations(copyrightContributors, ({ one }) => ({
+  work: one(copyrightWorks, {
+    fields: [copyrightContributors.workId],
+    references: [copyrightWorks.id],
+  }),
+}));
+
+export const insertCopyrightContributorSchema = createInsertSchema(copyrightContributors).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type CopyrightContributor = typeof copyrightContributors.$inferSelect;
+export type InsertCopyrightContributor = z.infer<typeof insertCopyrightContributorSchema>;
+
+export const publisherEntities = pgTable("publisher_entities", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  ipiNumber: text("ipi_number"),
+  proEntity: text("pro_entity"),
+  isDefault: boolean("is_default").default(false),
+  contactEmail: text("contact_email"),
+  website: text("website"),
+  address: text("address"),
+  country: text("country"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPublisherEntitySchema = createInsertSchema(publisherEntities).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type PublisherEntity = typeof publisherEntities.$inferSelect;
+export type InsertPublisherEntity = z.infer<typeof insertPublisherEntitySchema>;

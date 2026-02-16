@@ -11,6 +11,7 @@ import {
   discographyAlbums, discographyTracks,
   artistGifts, artistWallets, walletTransactions,
   artistProfileLikes, artistProfileComments, artistProfileShares,
+  copyrightWorks, copyrightContributors, publisherEntities,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
@@ -49,6 +50,9 @@ import {
   type ArtistProfileLike, type InsertArtistProfileLike,
   type ArtistProfileComment, type InsertArtistProfileComment,
   type ArtistProfileShare, type InsertArtistProfileShare,
+  type CopyrightWork, type InsertCopyrightWork,
+  type CopyrightContributor, type InsertCopyrightContributor,
+  type PublisherEntity, type InsertPublisherEntity,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -284,6 +288,25 @@ export interface IStorage {
 
   createWalletTransaction(tx: InsertWalletTransaction): Promise<WalletTransaction>;
   getWalletTransactions(artistId: number, limit?: number): Promise<WalletTransaction[]>;
+
+  getCopyrightWorks(userId: string): Promise<CopyrightWork[]>;
+  getCopyrightWork(id: number): Promise<CopyrightWork | undefined>;
+  getCopyrightWorksBySong(songId: number): Promise<CopyrightWork[]>;
+  createCopyrightWork(work: InsertCopyrightWork): Promise<CopyrightWork>;
+  updateCopyrightWork(id: number, data: Partial<CopyrightWork>): Promise<CopyrightWork>;
+  deleteCopyrightWork(id: number): Promise<void>;
+
+  getCopyrightContributors(workId: number): Promise<CopyrightContributor[]>;
+  createCopyrightContributor(contributor: InsertCopyrightContributor): Promise<CopyrightContributor>;
+  updateCopyrightContributor(id: number, data: Partial<CopyrightContributor>): Promise<CopyrightContributor>;
+  deleteCopyrightContributor(id: number): Promise<void>;
+  deleteCopyrightContributorsByWork(workId: number): Promise<void>;
+
+  getPublisherEntities(): Promise<PublisherEntity[]>;
+  getPublisherEntity(id: number): Promise<PublisherEntity | undefined>;
+  getDefaultPublisher(): Promise<PublisherEntity | undefined>;
+  createPublisherEntity(publisher: InsertPublisherEntity): Promise<PublisherEntity>;
+  updatePublisherEntity(id: number, data: Partial<PublisherEntity>): Promise<PublisherEntity>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1702,6 +1725,79 @@ export class DatabaseStorage implements IStorage {
   async getArtistProfileShareCount(artistId: number): Promise<number> {
     const shares = await db.select().from(artistProfileShares).where(eq(artistProfileShares.artistId, artistId));
     return shares.length;
+  }
+
+  async getCopyrightWorks(userId: string): Promise<CopyrightWork[]> {
+    return await db.select().from(copyrightWorks).where(eq(copyrightWorks.userId, userId)).orderBy(desc(copyrightWorks.createdAt));
+  }
+
+  async getCopyrightWork(id: number): Promise<CopyrightWork | undefined> {
+    const [work] = await db.select().from(copyrightWorks).where(eq(copyrightWorks.id, id));
+    return work;
+  }
+
+  async getCopyrightWorksBySong(songId: number): Promise<CopyrightWork[]> {
+    return await db.select().from(copyrightWorks).where(eq(copyrightWorks.songId, songId));
+  }
+
+  async createCopyrightWork(work: InsertCopyrightWork): Promise<CopyrightWork> {
+    const [created] = await db.insert(copyrightWorks).values(work).returning();
+    return created;
+  }
+
+  async updateCopyrightWork(id: number, data: Partial<CopyrightWork>): Promise<CopyrightWork> {
+    const [updated] = await db.update(copyrightWorks).set({ ...data, updatedAt: new Date() }).where(eq(copyrightWorks.id, id)).returning();
+    return updated;
+  }
+
+  async deleteCopyrightWork(id: number): Promise<void> {
+    await db.delete(copyrightWorks).where(eq(copyrightWorks.id, id));
+  }
+
+  async getCopyrightContributors(workId: number): Promise<CopyrightContributor[]> {
+    return await db.select().from(copyrightContributors).where(eq(copyrightContributors.workId, workId));
+  }
+
+  async createCopyrightContributor(contributor: InsertCopyrightContributor): Promise<CopyrightContributor> {
+    const [created] = await db.insert(copyrightContributors).values(contributor).returning();
+    return created;
+  }
+
+  async updateCopyrightContributor(id: number, data: Partial<CopyrightContributor>): Promise<CopyrightContributor> {
+    const [updated] = await db.update(copyrightContributors).set(data).where(eq(copyrightContributors.id, id)).returning();
+    return updated;
+  }
+
+  async deleteCopyrightContributor(id: number): Promise<void> {
+    await db.delete(copyrightContributors).where(eq(copyrightContributors.id, id));
+  }
+
+  async deleteCopyrightContributorsByWork(workId: number): Promise<void> {
+    await db.delete(copyrightContributors).where(eq(copyrightContributors.workId, workId));
+  }
+
+  async getPublisherEntities(): Promise<PublisherEntity[]> {
+    return await db.select().from(publisherEntities).where(eq(publisherEntities.isActive, true));
+  }
+
+  async getPublisherEntity(id: number): Promise<PublisherEntity | undefined> {
+    const [publisher] = await db.select().from(publisherEntities).where(eq(publisherEntities.id, id));
+    return publisher;
+  }
+
+  async getDefaultPublisher(): Promise<PublisherEntity | undefined> {
+    const [publisher] = await db.select().from(publisherEntities).where(eq(publisherEntities.isDefault, true));
+    return publisher;
+  }
+
+  async createPublisherEntity(publisher: InsertPublisherEntity): Promise<PublisherEntity> {
+    const [created] = await db.insert(publisherEntities).values(publisher).returning();
+    return created;
+  }
+
+  async updatePublisherEntity(id: number, data: Partial<PublisherEntity>): Promise<PublisherEntity> {
+    const [updated] = await db.update(publisherEntities).set(data).where(eq(publisherEntities.id, id)).returning();
+    return updated;
   }
 }
 
