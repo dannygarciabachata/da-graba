@@ -64,13 +64,14 @@ interface CoverArtDesignerProps {
   songTitle?: string;
   artistName?: string;
   songId?: number;
+  songGenre?: string;
   existingImageUrl?: string;
   onSave?: (dataUrl: string) => void;
   onApplied?: () => void;
   onClose?: () => void;
 }
 
-export function CoverArtDesigner({ songTitle = "", artistName = "", songId, existingImageUrl, onSave, onApplied, onClose }: CoverArtDesignerProps) {
+export function CoverArtDesigner({ songTitle = "", artistName = "", songId, songGenre, existingImageUrl, onSave, onApplied, onClose }: CoverArtDesignerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -105,7 +106,7 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
   });
 
   const generateCoverMutation = useMutation({
-    mutationFn: async (data: { prompt: string; songId?: number }) => {
+    mutationFn: async (data: { prompt: string; songId?: number; genre?: string; title?: string }) => {
       const res = await apiRequest("POST", "/api/ai/generate-cover", data);
       return res.json();
     },
@@ -545,7 +546,7 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, exis
 
   const handleGenerateAI = () => {
     if (!aiPrompt.trim()) return;
-    generateCoverMutation.mutate({ prompt: aiPrompt, songId });
+    generateCoverMutation.mutate({ prompt: aiPrompt, songId, genre: songGenre, title: songTitle });
   };
 
   const handleSuggestEffects = () => {

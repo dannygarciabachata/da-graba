@@ -246,6 +246,7 @@ export default function LibraryPage() {
                 songTitle={designCoverFor.title || ""}
                 artistName={user?.firstName || ""}
                 songId={designCoverFor.id}
+                songGenre={designCoverFor.genre || ""}
                 existingImageUrl={designCoverFor.imageUrl || undefined}
                 onClose={() => setDesignCoverFor(null)}
                 onApplied={() => setDesignCoverFor(null)}

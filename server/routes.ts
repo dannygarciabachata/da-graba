@@ -309,7 +309,7 @@ export async function registerRoutes(
   // ========== AI COVER ART GENERATION ==========
   app.post("/api/ai/generate-cover", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const { prompt, songId } = req.body;
+    const { prompt, songId, genre, title } = req.body;
     if (!prompt) return res.status(400).json({ message: "Prompt is required" });
     try {
       const OpenAI = (await import("openai")).default;
@@ -317,30 +317,50 @@ export async function registerRoutes(
         apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
         baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
       });
+
+      const genreStyles: Record<string, string> = {
+        Bachata: "tropical Caribbean night, palm trees silhouette, warm golden and deep blue tones, romantic moonlit ambiance, Dominican Republic vibes, sensual dance couple silhouette",
+        Bolero: "vintage romantic atmosphere, rose petals, candlelight, warm sepia tones, classic elegant feel, nostalgic old Havana, soft dreamy lighting",
+        Salsa: "vibrant tropical colors, red orange yellow, energetic dance movement, Latin nightclub neon lights, Fania Records aesthetic, bold and dynamic",
+        Merengue: "colorful carnival energy, Dominican flag colors, festive celebration, bright tropical setting, dynamic and joyful, perico ripiao traditional feel",
+        Reggaeton: "urban neon cityscape at night, purple and cyan lights, modern street art graffiti, bold typography aesthetic, dark moody with vibrant accents",
+        Cumbia: "Colombian countryside sunset, warm earth tones with pops of color, traditional folklore elements, tropical flowers, golden hour lighting",
+        Jazz: "smoky jazz club atmosphere, saxophone silhouette, deep blue and gold tones, noir aesthetic, vintage vinyl record feel, sophisticated mood",
+        "R&B": "luxurious modern aesthetic, soft purple and gold gradients, city skyline at golden hour, smooth and sensual mood, contemporary elegant",
+        "Hip Hop": "urban street culture, graffiti walls, bold contrasting colors, metropolitan skyline, gritty authentic feel, strong visual impact",
+        Pop: "bright colorful modern design, clean and polished, candy-like color palette, trending aesthetic, playful geometric shapes, commercial appeal",
+        EDM: "futuristic digital landscape, neon light trails, cosmic space elements, electric blue and magenta, abstract waveforms, high energy festival vibes",
+        Vallenato: "Colombian Caribbean coast, accordion and guitar, warm sunset colors, romantic countryside, traditional folk art elements",
+      };
+
+      const genreStyle = genreStyles[genre || ""] || "professional music production studio, dramatic lighting, artistic abstract design, bold visual composition";
+
+      const enrichedPrompt = `Professional album cover artwork for a ${genre || "Latin"} music single${title ? ` titled "${title}"` : ""}. User vision: ${prompt}. Visual style: ${genreStyle}. Requirements: Square format 1:1 ratio, NO text or letters or words on the image, cinematic quality, professional music industry standard, high detail, visually striking composition, suitable for streaming platforms like Spotify and Apple Music.`;
+
       const response = await client.images.generate({
-        model: "dall-e-3",
-        prompt: `Album cover art: ${prompt}. High quality, professional album artwork, square format, visually striking.`,
+        model: "gpt-image-1",
+        prompt: enrichedPrompt,
         n: 1,
         size: "1024x1024",
-        quality: "standard",
       });
-      const imageUrl = response.data?.[0]?.url;
-      if (!imageUrl) throw new Error("No image generated");
+
+      const imageBase64 = response.data?.[0]?.b64_json;
+      if (!imageBase64) throw new Error("No image generated");
+
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      const buffer = Buffer.from(imageBase64, "base64");
+      const dir = path.join(process.cwd(), "public", "audio", "covers");
+      await fs.mkdir(dir, { recursive: true });
+      const filename = `cover_ai_${songId || "new"}_${Date.now()}.png`;
+      await fs.writeFile(path.join(dir, filename), buffer);
+      const localUrl = `/audio/covers/${filename}`;
+
       if (songId) {
-        const fs = await import("fs/promises");
-        const path = await import("path");
-        const imgResponse = await fetch(imageUrl);
-        const buffer = Buffer.from(await imgResponse.arrayBuffer());
-        const dir = path.join(process.cwd(), "public", "audio", "covers");
-        await fs.mkdir(dir, { recursive: true });
-        const filename = `cover_${songId}_${Date.now()}.png`;
-        await fs.writeFile(path.join(dir, filename), buffer);
-        const localUrl = `/audio/covers/${filename}`;
         await storage.updateSongImage(Number(songId), localUrl);
-        res.json({ imageUrl: localUrl });
-      } else {
-        res.json({ imageUrl });
       }
+
+      res.json({ imageUrl: localUrl });
     } catch (err: any) {
       console.error("[AI] Cover generation error:", err.message);
       res.status(500).json({ message: "Failed to generate cover art" });
