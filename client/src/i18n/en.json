@@ -1134,5 +1134,122 @@
   "legal": {
     "terms": "Terms",
     "privacy": "Privacy"
+  },
+  "legalPages": {
+    "tabs": {
+      "terms": "Terms",
+      "privacy": "Privacy",
+      "cookies": "Cookies"
+    },
+    "titles": {
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "cookies": "Cookie Policy"
+    },
+    "footer": "All rights reserved.",
+    "terms": {
+      "mainTitle": "TERMS OF SERVICE AND LICENSE AGREEMENT FOR DGB STUDIO CLOUD ENGINE",
+      "lastUpdated": "Last updated: February 16, 2026",
+      "operatedBy": "Operated by: DGB STUDIO & ODGMUSIC LATIN WORLDWIDE PUBLISHING",
+      "intro": "By accessing or using the DGB STUDIO Cloud Engine service, you (the \"User\") agree to be legally bound by the following terms. If you do not agree, do not use the Service.",
+      "section1": {
+        "title": "1. OWNERSHIP AND MEMBERSHIP MODEL (60/40 RULE)",
+        "activeMembership": "Active Membership Users:",
+        "activeMembershipDesc": "Users who maintain a paid subscription have full commercial rights over generated content. Music is \"Royalty Free\" for the user under this plan.",
+        "freePlan": "Non-Member Users (Free Plan):",
+        "freePlanDesc": "To offset the use of our infrastructure and exclusive instrument libraries, the User agrees that DGB STUDIO / ODGMUSIC will automatically retain 60% of the copyright and related rights over each generated work."
+      },
+      "section2": {
+        "title": "2. VOCAL DNA AND RVC MODEL PRIVACY",
+        "privateUse": "Private Use:",
+        "privateUseDesc": "Audio files uploaded for voice training are processed in encrypted form. The resulting voice model belongs to the User and is strictly private.",
+        "thirdParty": "Third-Party Use Prohibition:",
+        "thirdPartyDesc": "DGB STUDIO will not share, give away, or use your vocal DNA for other users without your express consent through the \"Discover\" section."
+      },
+      "section3": {
+        "title": "3. INSTRUMENTATION AND PERFORMANCE DNA (LIMITATION OF LIABILITY)",
+        "originalInstruments": "Original DGB Instruments:",
+        "originalInstrumentsDesc": "The system uses models trained with real instruments recorded by Danny Garcia and Dominican masters.",
+        "thirdPartyInstruments": "Third-Party Instruments:",
+        "thirdPartyInstrumentsDesc": "DGB STUDIO allows the integration of external models. However, the system is not responsible if the generated audio infringes on the \"performance DNA\" of a real musician.",
+        "creatorResponsibility": "Creator Responsibility:",
+        "creatorResponsibilityDesc": "If an artist publishes or distributes a song that generates intellectual property claims due to its performance style, full legal responsibility falls on the Artist/User, exempting DGB STUDIO from any litigation."
+      },
+      "section4": {
+        "title": "4. PUBLISHING AND DISTRIBUTION AGREEMENT (ODGMUSIC)",
+        "designation": "Designation:",
+        "designationDesc": "By selecting the \"Distribute with us\" option, the User designates ODGMUSIC LATIN WORLDWIDE PUBLISHING (affiliated with ASCAP) as their exclusive worldwide publishing administrator.",
+        "royaltySplits": "Royalty Splits:",
+        "royaltySplitsDesc": "An administration contract will apply with a 50% split for the Artist and 50% for the Publisher on net revenues collected from mechanical exploitation, synchronization, and digital sales."
+      },
+      "section5": {
+        "title": "5. PROHIBITED USES",
+        "p1": "The use of automated systems (bots) to massively generate content that saturates the Cloud Engine infrastructure is prohibited.",
+        "p2": "The creation of defamatory, illegal content or content that infringes third-party rights using synthetic voices of public figures without authorization is not permitted."
+      }
+    },
+    "privacy": {
+      "mainTitle": "PRIVACY POLICY",
+      "subtitle": "DGB STUDIO Cloud Engine & ODGMUSIC",
+      "lastUpdated": "Last updated: February 16, 2026",
+      "section1": {
+        "title": "1.1. Information We Collect",
+        "accountData": "Account Data:",
+        "accountDataDesc": "Email, artist name, and login data (Google, Discord, etc.).",
+        "vocalDna": "Vocal DNA (Training Audio):",
+        "vocalDnaDesc": ".wav or .mp3 files you upload to train RVC models.",
+        "usageData": "Usage Data:",
+        "usageDataDesc": "Text prompts, generation logs, and created audio files."
+      },
+      "section2": {
+        "title": "1.2. Data Usage and \"Vocal DNA\"",
+        "privacyByDesign": "Privacy by Design:",
+        "privacyByDesignDesc": "Your training audio files are used exclusively to process your personal model. DGB STUDIO does not sell, give away, or use your voices to train public models without your express permission.",
+        "security": "Security:",
+        "securityDesc": "We use high-level encryption to ensure your voice model is only accessible from your account.",
+        "serviceImprovement": "Service Improvement:",
+        "serviceImprovementDesc": "Usage data (not voices) is analyzed anonymously to optimize our servers and bachata and bolero algorithms."
+      },
+      "section3": {
+        "title": "1.3. Data Sharing",
+        "intro": "We do not share your data with third parties, except:",
+        "item1": "To process payments (Stripe/PayPal).",
+        "item2": "For official Copyright and Publishing registrations with ODGMUSIC / ASCAP (only if you choose to distribute with us).",
+        "item3": "As required by competent legal authorities."
+      },
+      "section4": {
+        "title": "1.4. Your Rights",
+        "intro": "As an artist, you have the right to:",
+        "deleteData": "Delete your data:",
+        "deleteDataDesc": "You can delete your voice models and files at any time.",
+        "portability": "Portability:",
+        "portabilityDesc": "Request a copy of your creations.",
+        "access": "Access:",
+        "accessDesc": "Know exactly what information we have stored."
+      }
+    },
+    "cookies": {
+      "mainTitle": "COOKIE POLICY",
+      "subtitle": "DGB STUDIO Cloud Engine",
+      "section1": {
+        "title": "2.1. What Are Cookies?",
+        "description": "Cookies are small text files that help us make your experience on the DGB STUDIO Cloud Engine smooth and professional."
+      },
+      "section2": {
+        "title": "2.2. Types of Cookies We Use",
+        "essential": "Essential:",
+        "essentialDesc": "Required to keep your session active while training your models or generating music. Without these, the system would not function.",
+        "performance": "Performance:",
+        "performanceDesc": "Help us know if the server is slow or if there are errors in the \"Process Data\" or \"Train\" process.",
+        "functional": "Functional:",
+        "functionalDesc": "Remember your preferences, such as language or the configuration of your favorite AI models.",
+        "analytics": "Analytics:",
+        "analyticsDesc": "Allow us to understand which features are most used by musicians to continue improving the system."
+      },
+      "section3": {
+        "title": "2.3. Cookie Control",
+        "description": "You can disable cookies from your browser settings. However, please note that critical features such as voice training and access to your ODGMUSIC dashboard may be affected."
+      }
+    }
   }
 }

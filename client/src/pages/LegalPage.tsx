@@ -6,56 +6,57 @@ import { Button } from "@/components/ui/button";
 type LegalSection = "terms" | "privacy" | "cookies";
 
 function TermsContent() {
+  const { t } = useTranslation();
   return (
     <div className="space-y-8" data-testid="terms-content">
       <div>
-        <h2 className="text-xl font-bold text-foreground mb-2">TÉRMINOS DE SERVICIO Y ACUERDO DE LICENCIA DE DGB STUDIO CLOUD ENGINE</h2>
-        <p className="text-sm text-muted-foreground">Última actualización: 16 de febrero de 2026</p>
-        <p className="text-sm text-muted-foreground">Operado por: DGB STUDIO & ODGMUSIC LATIN WORLDWIDE PUBLISHING</p>
+        <h2 className="text-xl font-bold text-foreground mb-2">{t('legalPages.terms.mainTitle')}</h2>
+        <p className="text-sm text-muted-foreground">{t('legalPages.terms.lastUpdated')}</p>
+        <p className="text-sm text-muted-foreground">{t('legalPages.terms.operatedBy')}</p>
       </div>
 
       <p className="text-sm text-muted-foreground leading-relaxed">
-        Al acceder o utilizar el servicio DGB STUDIO Cloud Engine, usted (el "Usuario") acepta estar legalmente vinculado por los siguientes términos. Si no está de acuerdo, no utilice el Servicio.
+        {t('legalPages.terms.intro')}
       </p>
 
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-primary">1. MODELO DE PROPIEDAD Y MEMBRESÍA (REGLA 60/40)</h3>
+        <h3 className="text-lg font-semibold text-primary">{t('legalPages.terms.section1.title')}</h3>
         <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-          <p><strong className="text-foreground">Usuarios con Membresía Activa:</strong> Los usuarios que mantengan una suscripción paga tienen plenos derechos comerciales sobre el contenido generado. La música es "Libre de Regalías" (Royalty Free) para el usuario bajo este plan.</p>
-          <p><strong className="text-foreground">Usuarios sin Membresía (Plan Free):</strong> Para compensar el uso de nuestra infraestructura y librerías de instrumentos exclusivos, el Usuario acepta que DGB STUDIO / ODGMUSIC retendrá automáticamente el 60% de los derechos de autor y derechos conexos sobre cada obra generada.</p>
+          <p><strong className="text-foreground">{t('legalPages.terms.section1.activeMembership')}</strong> {t('legalPages.terms.section1.activeMembershipDesc')}</p>
+          <p><strong className="text-foreground">{t('legalPages.terms.section1.freePlan')}</strong> {t('legalPages.terms.section1.freePlanDesc')}</p>
         </div>
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-primary">2. PRIVACIDAD DEL ADN VOCAL Y MODELOS RVC</h3>
+        <h3 className="text-lg font-semibold text-primary">{t('legalPages.terms.section2.title')}</h3>
         <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-          <p><strong className="text-foreground">Uso Privado:</strong> Los audios subidos para entrenar voces son procesados de forma encriptada. El modelo de voz resultante pertenece al Usuario y es estrictamente privado.</p>
-          <p><strong className="text-foreground">Prohibición de Uso por Terceros:</strong> DGB STUDIO no compartirá, regalará ni utilizará su ADN vocal para otros usuarios sin su consentimiento expreso a través de la sección "Discover".</p>
+          <p><strong className="text-foreground">{t('legalPages.terms.section2.privateUse')}</strong> {t('legalPages.terms.section2.privateUseDesc')}</p>
+          <p><strong className="text-foreground">{t('legalPages.terms.section2.thirdParty')}</strong> {t('legalPages.terms.section2.thirdPartyDesc')}</p>
         </div>
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-primary">3. INSTRUMENTACIÓN Y ADN DE EJECUCIÓN (LÍMITE DE RESPONSABILIDAD)</h3>
+        <h3 className="text-lg font-semibold text-primary">{t('legalPages.terms.section3.title')}</h3>
         <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-          <p><strong className="text-foreground">Instrumentos Originales DGB:</strong> El sistema utiliza modelos entrenados con instrumentos reales grabados por Danny Garcia y maestros dominicanos.</p>
-          <p><strong className="text-foreground">Instrumentos de Terceros:</strong> DGB STUDIO permite la integración de modelos externos. Sin embargo, el sistema no se responsabiliza si el audio generado infringe el "ADN de ejecución" de un músico real.</p>
-          <p><strong className="text-foreground">Responsabilidad del Creador:</strong> Si un artista publica o distribuye una canción que genere reclamos de propiedad intelectual por su estilo de ejecución, la responsabilidad legal recae íntegramente sobre el Artista/Usuario, deslindando a DGB STUDIO de cualquier litigio.</p>
+          <p><strong className="text-foreground">{t('legalPages.terms.section3.originalInstruments')}</strong> {t('legalPages.terms.section3.originalInstrumentsDesc')}</p>
+          <p><strong className="text-foreground">{t('legalPages.terms.section3.thirdPartyInstruments')}</strong> {t('legalPages.terms.section3.thirdPartyInstrumentsDesc')}</p>
+          <p><strong className="text-foreground">{t('legalPages.terms.section3.creatorResponsibility')}</strong> {t('legalPages.terms.section3.creatorResponsibilityDesc')}</p>
         </div>
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-primary">4. ACUERDO DE PUBLISHING Y DISTRIBUCIÓN (ODGMUSIC)</h3>
+        <h3 className="text-lg font-semibold text-primary">{t('legalPages.terms.section4.title')}</h3>
         <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-          <p><strong className="text-foreground">Designación:</strong> Al seleccionar la opción de "Distribución con nosotros", el Usuario designa a ODGMUSIC LATIN WORLDWIDE PUBLISHING (afiliada a ASCAP) como su administrador editorial exclusivo a nivel mundial.</p>
-          <p><strong className="text-foreground">Reparto de Regalías (Splits):</strong> Se aplicará un contrato de administración con un reparto de 50% para el Artista y 50% para la Editora sobre los ingresos netos recaudados por explotación mecánica, sincronización y ventas digitales.</p>
+          <p><strong className="text-foreground">{t('legalPages.terms.section4.designation')}</strong> {t('legalPages.terms.section4.designationDesc')}</p>
+          <p><strong className="text-foreground">{t('legalPages.terms.section4.royaltySplits')}</strong> {t('legalPages.terms.section4.royaltySplitsDesc')}</p>
         </div>
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-primary">5. USOS PROHIBIDOS</h3>
+        <h3 className="text-lg font-semibold text-primary">{t('legalPages.terms.section5.title')}</h3>
         <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-          <p>Queda prohibido el uso de sistemas automatizados (bots) para generar contenido de forma masiva que sature la infraestructura del Cloud Engine.</p>
-          <p>No se permite la creación de contenido difamatorio, ilegal o que infrinja derechos de terceros utilizando voces sintéticas de figuras públicas sin autorización.</p>
+          <p>{t('legalPages.terms.section5.p1')}</p>
+          <p>{t('legalPages.terms.section5.p2')}</p>
         </div>
       </section>
     </div>
@@ -63,52 +64,53 @@ function TermsContent() {
 }
 
 function PrivacyContent() {
+  const { t } = useTranslation();
   return (
     <div className="space-y-8" data-testid="privacy-content">
       <div>
-        <h2 className="text-xl font-bold text-foreground mb-2">POLÍTICA DE PRIVACIDAD</h2>
-        <p className="text-sm text-muted-foreground">DGB STUDIO Cloud Engine & ODGMUSIC</p>
-        <p className="text-sm text-muted-foreground">Última actualización: 16 de febrero de 2026</p>
+        <h2 className="text-xl font-bold text-foreground mb-2">{t('legalPages.privacy.mainTitle')}</h2>
+        <p className="text-sm text-muted-foreground">{t('legalPages.privacy.subtitle')}</p>
+        <p className="text-sm text-muted-foreground">{t('legalPages.privacy.lastUpdated')}</p>
       </div>
 
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-primary">1.1. Información que Recopilamos</h3>
+        <h3 className="text-lg font-semibold text-primary">{t('legalPages.privacy.section1.title')}</h3>
         <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-          <p><strong className="text-foreground">Datos de Cuenta:</strong> Correo electrónico, nombre artístico y datos de inicio de sesión (Google, Discord, etc.).</p>
-          <p><strong className="text-foreground">ADN Vocal (Audios de Entrenamiento):</strong> Archivos .wav o .mp3 que subes para entrenar modelos RVC.</p>
-          <p><strong className="text-foreground">Datos de Uso:</strong> Prompts de texto, registros de generación y archivos de audio creados.</p>
+          <p><strong className="text-foreground">{t('legalPages.privacy.section1.accountData')}</strong> {t('legalPages.privacy.section1.accountDataDesc')}</p>
+          <p><strong className="text-foreground">{t('legalPages.privacy.section1.vocalDna')}</strong> {t('legalPages.privacy.section1.vocalDnaDesc')}</p>
+          <p><strong className="text-foreground">{t('legalPages.privacy.section1.usageData')}</strong> {t('legalPages.privacy.section1.usageDataDesc')}</p>
         </div>
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-primary">1.2. Uso de los Datos y "ADN Vocal"</h3>
+        <h3 className="text-lg font-semibold text-primary">{t('legalPages.privacy.section2.title')}</h3>
         <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-          <p><strong className="text-foreground">Privacidad por Diseño:</strong> Tus audios de entrenamiento se utilizan exclusivamente para procesar tu modelo personal. DGB STUDIO no vende, regala ni utiliza tus voces para entrenar modelos públicos sin tu permiso expreso.</p>
-          <p><strong className="text-foreground">Seguridad:</strong> Utilizamos cifrado de alto nivel para asegurar que tu modelo de voz solo sea accesible desde tu cuenta.</p>
-          <p><strong className="text-foreground">Mejora del Servicio:</strong> Los datos de uso (no las voces) se analizan de forma anónima para optimizar nuestros servidores y algoritmos de bachata y bolero.</p>
+          <p><strong className="text-foreground">{t('legalPages.privacy.section2.privacyByDesign')}</strong> {t('legalPages.privacy.section2.privacyByDesignDesc')}</p>
+          <p><strong className="text-foreground">{t('legalPages.privacy.section2.security')}</strong> {t('legalPages.privacy.section2.securityDesc')}</p>
+          <p><strong className="text-foreground">{t('legalPages.privacy.section2.serviceImprovement')}</strong> {t('legalPages.privacy.section2.serviceImprovementDesc')}</p>
         </div>
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-primary">1.3. Compartición de Datos</h3>
+        <h3 className="text-lg font-semibold text-primary">{t('legalPages.privacy.section3.title')}</h3>
         <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-          <p>No compartimos tus datos con terceros, excepto:</p>
+          <p>{t('legalPages.privacy.section3.intro')}</p>
           <ul className="list-disc pl-5 space-y-1">
-            <li>Para procesar pagos (Stripe/PayPal).</li>
-            <li>Para registros oficiales de Copyright y Publishing con ODGMUSIC / ASCAP (solo si eliges distribuir con nosotros).</li>
-            <li>Por requerimiento legal de autoridades competentes.</li>
+            <li>{t('legalPages.privacy.section3.item1')}</li>
+            <li>{t('legalPages.privacy.section3.item2')}</li>
+            <li>{t('legalPages.privacy.section3.item3')}</li>
           </ul>
         </div>
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-primary">1.4. Tus Derechos</h3>
+        <h3 className="text-lg font-semibold text-primary">{t('legalPages.privacy.section4.title')}</h3>
         <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-          <p>Como artista, tienes derecho a:</p>
+          <p>{t('legalPages.privacy.section4.intro')}</p>
           <ul className="list-disc pl-5 space-y-1">
-            <li><strong className="text-foreground">Eliminar tus datos:</strong> Puedes borrar tus modelos de voz y archivos en cualquier momento.</li>
-            <li><strong className="text-foreground">Portabilidad:</strong> Solicitar una copia de tus creaciones.</li>
-            <li><strong className="text-foreground">Acceso:</strong> Saber exactamente qué información tenemos almacenada.</li>
+            <li><strong className="text-foreground">{t('legalPages.privacy.section4.deleteData')}</strong> {t('legalPages.privacy.section4.deleteDataDesc')}</li>
+            <li><strong className="text-foreground">{t('legalPages.privacy.section4.portability')}</strong> {t('legalPages.privacy.section4.portabilityDesc')}</li>
+            <li><strong className="text-foreground">{t('legalPages.privacy.section4.access')}</strong> {t('legalPages.privacy.section4.accessDesc')}</li>
           </ul>
         </div>
       </section>
@@ -117,50 +119,50 @@ function PrivacyContent() {
 }
 
 function CookiesContent() {
+  const { t } = useTranslation();
   return (
     <div className="space-y-8" data-testid="cookies-content">
       <div>
-        <h2 className="text-xl font-bold text-foreground mb-2">POLÍTICA DE COOKIES</h2>
-        <p className="text-sm text-muted-foreground">DGB STUDIO Cloud Engine</p>
+        <h2 className="text-xl font-bold text-foreground mb-2">{t('legalPages.cookies.mainTitle')}</h2>
+        <p className="text-sm text-muted-foreground">{t('legalPages.cookies.subtitle')}</p>
       </div>
 
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-primary">2.1. ¿Qué son las Cookies?</h3>
+        <h3 className="text-lg font-semibold text-primary">{t('legalPages.cookies.section1.title')}</h3>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Las cookies son pequeños archivos de texto que nos ayudan a que tu experiencia en el DGB STUDIO Cloud Engine sea fluida y profesional.
+          {t('legalPages.cookies.section1.description')}
         </p>
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-primary">2.2. Tipos de Cookies que Utilizamos</h3>
+        <h3 className="text-lg font-semibold text-primary">{t('legalPages.cookies.section2.title')}</h3>
         <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-          <p><strong className="text-foreground">Esenciales:</strong> Necesarias para que mantengas tu sesión abierta mientras entrenas tus modelos o generas música. Sin estas, el sistema no funcionaría.</p>
-          <p><strong className="text-foreground">De Rendimiento:</strong> Nos ayudan a saber si el servidor está lento o si hay errores en el proceso de "Process Data" o "Train".</p>
-          <p><strong className="text-foreground">Funcionales:</strong> Recuerdan tus preferencias, como el idioma o la configuración de tus modelos de IA favoritos.</p>
-          <p><strong className="text-foreground">Analíticas:</strong> Nos permiten entender qué funciones son las más usadas por los bachateros para seguir mejorando el sistema.</p>
+          <p><strong className="text-foreground">{t('legalPages.cookies.section2.essential')}</strong> {t('legalPages.cookies.section2.essentialDesc')}</p>
+          <p><strong className="text-foreground">{t('legalPages.cookies.section2.performance')}</strong> {t('legalPages.cookies.section2.performanceDesc')}</p>
+          <p><strong className="text-foreground">{t('legalPages.cookies.section2.functional')}</strong> {t('legalPages.cookies.section2.functionalDesc')}</p>
+          <p><strong className="text-foreground">{t('legalPages.cookies.section2.analytics')}</strong> {t('legalPages.cookies.section2.analyticsDesc')}</p>
         </div>
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-primary">2.3. Control de Cookies</h3>
+        <h3 className="text-lg font-semibold text-primary">{t('legalPages.cookies.section3.title')}</h3>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Puedes desactivar las cookies desde la configuración de tu navegador. Sin embargo, ten en cuenta que funciones críticas como el entrenamiento de voces y el acceso a tu panel de ODGMUSIC podrían verse afectadas.
+          {t('legalPages.cookies.section3.description')}
         </p>
       </section>
     </div>
   );
 }
 
-const SECTION_CONFIG: Record<LegalSection, { icon: typeof Shield; titleKey: string }> = {
-  terms: { icon: FileText, titleKey: "Términos de Servicio" },
-  privacy: { icon: Lock, titleKey: "Política de Privacidad" },
-  cookies: { icon: Cookie, titleKey: "Política de Cookies" },
+const SECTION_ICONS: Record<LegalSection, typeof Shield> = {
+  terms: FileText,
+  privacy: Lock,
+  cookies: Cookie,
 };
 
 export default function LegalPage({ section = "terms" }: { section?: LegalSection }) {
   const { t } = useTranslation();
-  const config = SECTION_CONFIG[section];
-  const Icon = config.icon;
+  const Icon = SECTION_ICONS[section];
 
   return (
     <div className="min-h-screen bg-background">
@@ -178,23 +180,23 @@ export default function LegalPage({ section = "terms" }: { section?: LegalSectio
           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
             <Icon className="w-5 h-5 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">{config.titleKey}</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t(`legalPages.titles.${section}`)}</h1>
         </div>
 
         <div className="flex gap-2 mb-8">
           <Link href="/terms">
             <Button variant={section === "terms" ? "default" : "outline"} size="sm" data-testid="button-tab-terms">
-              <FileText className="w-3 h-3 mr-1" /> Términos
+              <FileText className="w-3 h-3 mr-1" /> {t('legalPages.tabs.terms')}
             </Button>
           </Link>
           <Link href="/privacy">
             <Button variant={section === "privacy" ? "default" : "outline"} size="sm" data-testid="button-tab-privacy">
-              <Lock className="w-3 h-3 mr-1" /> Privacidad
+              <Lock className="w-3 h-3 mr-1" /> {t('legalPages.tabs.privacy')}
             </Button>
           </Link>
           <Link href="/cookies">
             <Button variant={section === "cookies" ? "default" : "outline"} size="sm" data-testid="button-tab-cookies">
-              <Cookie className="w-3 h-3 mr-1" /> Cookies
+              <Cookie className="w-3 h-3 mr-1" /> {t('legalPages.tabs.cookies')}
             </Button>
           </Link>
         </div>
@@ -206,7 +208,7 @@ export default function LegalPage({ section = "terms" }: { section?: LegalSectio
         </div>
 
         <div className="mt-8 text-center text-xs text-muted-foreground">
-          &copy; {new Date().getFullYear()} DGB STUDIO & ODGMUSIC LATIN WORLDWIDE PUBLISHING. Todos los derechos reservados.
+          &copy; {new Date().getFullYear()} DGB STUDIO & ODGMUSIC LATIN WORLDWIDE PUBLISHING. {t('legalPages.footer')}
         </div>
       </div>
     </div>
