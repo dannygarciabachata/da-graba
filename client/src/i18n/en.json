@@ -1130,5 +1130,9 @@
       "publisher": "Publisher",
       "admin_publisher": "Admin Publisher"
     }
+  },
+  "legal": {
+    "terms": "Terms",
+    "privacy": "Privacy"
   }
 }

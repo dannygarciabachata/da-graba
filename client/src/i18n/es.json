@@ -1130,5 +1130,9 @@
       "publisher": "Editor",
       "admin_publisher": "Editor Administrador"
     }
+  },
+  "legal": {
+    "terms": "Términos",
+    "privacy": "Privacidad"
   }
 }

@@ -37,6 +37,8 @@ import {
   Globe,
   Crown,
   Shield,
+  FileText,
+  Lock,
 } from "lucide-react";
 import { useAdminCheck } from "@/hooks/use-admin";
 import { useCredits } from "@/hooks/use-credits";
@@ -285,6 +287,27 @@ export function AppSidebar() {
             >
               <LogOut className="h-3.5 w-3.5" />
             </Button>
+          </div>
+          <div className="flex items-center justify-center gap-3 px-2 pt-1">
+            <a
+              href="/terms"
+              onClick={(e) => { e.preventDefault(); setLocation("/terms"); }}
+              className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-[#00C8FF] transition-colors"
+              data-testid="link-sidebar-terms"
+            >
+              <FileText className="h-3 w-3" />
+              <span>{t("legal.terms")}</span>
+            </a>
+            <span className="text-muted-foreground/30 text-[10px]">|</span>
+            <a
+              href="/privacy"
+              onClick={(e) => { e.preventDefault(); setLocation("/privacy"); }}
+              className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-[#00C8FF] transition-colors"
+              data-testid="link-sidebar-privacy"
+            >
+              <Lock className="h-3 w-3" />
+              <span>{t("legal.privacy")}</span>
+            </a>
           </div>
         </SidebarFooter>
       )}
