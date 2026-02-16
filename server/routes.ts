@@ -2919,16 +2919,19 @@ export async function registerRoutes(
 
       console.log(`[SAO Pipeline] Admin Kit ${kitId}: analysis started for ${withAudio.length} instruments`);
 
-      if (isRunPodConfigured()) {
-        const protocol = req.headers["x-forwarded-proto"] || "https";
-        const host = req.headers["host"] || "localhost:5000";
-        const analysisWebhookUrl = `${protocol}://${host}/api/analysis/webhook`;
+      const protocol = req.headers["x-forwarded-proto"] || "https";
+      const hostHeader = req.headers["host"] || "localhost:5000";
+      const analysisWebhookUrl = `${protocol}://${hostHeader}/api/dgb-cloud/webhook`;
+      const runpodAnalysisWebhookUrl = `${protocol}://${hostHeader}/api/analysis/webhook`;
 
+      let gpuAnalysisSubmitted = false;
+
+      if (isRunPodConfigured()) {
         let submittedCount = 0;
         for (const instr of withAudio) {
           if (!instr.audioUrl) continue;
           await storage.updateStyleKitInstrument(instr.id, { analysisStatus: "analyzing" });
-          const result = await submitAnalysisJob(instr.id, instr.audioUrl, instr.name, analysisWebhookUrl);
+          const result = await submitAnalysisJob(instr.id, instr.audioUrl, instr.name, runpodAnalysisWebhookUrl);
           if (result.success) {
             submittedCount++;
             console.log(`[SAO Pipeline] Analysis job submitted for instrument ${instr.id}: ${result.jobId}`);
@@ -2939,16 +2942,47 @@ export async function registerRoutes(
             });
           }
         }
+        if (submittedCount > 0) gpuAnalysisSubmitted = true;
+        console.log(`[SAO Pipeline] Kit ${kitId}: ${submittedCount}/${withAudio.length} analysis jobs sent to RunPod`);
+      }
 
-        console.log(`[SAO Pipeline] Kit ${kitId}: ${submittedCount}/${withAudio.length} analysis jobs sent to cloud GPU`);
+      if (!gpuAnalysisSubmitted) {
+        const cloudServer = await getActiveServer(storage, "instrument_processing");
+        if (cloudServer) {
+          let submittedCount = 0;
+          for (const instr of withAudio) {
+            if (!instr.audioUrl) continue;
+            try {
+              await storage.updateStyleKitInstrument(instr.id, { analysisStatus: "analyzing" });
+              const uploadResult = await uploadInstrumentToCloud(
+                instr.id, kitId, instr.name, instr.audioUrl, analysisWebhookUrl, cloudServer
+              );
+              if (uploadResult.success) {
+                submittedCount++;
+                console.log(`[SAO Pipeline] Instrument ${instr.id} sent to cloud server for analysis`);
+              } else {
+                await storage.updateStyleKitInstrument(instr.id, {
+                  analysisStatus: "failed",
+                  analysisError: `Cloud server upload failed: ${uploadResult.error}`,
+                });
+              }
+            } catch (err: any) {
+              await storage.updateStyleKitInstrument(instr.id, {
+                analysisStatus: "failed",
+                analysisError: `Cloud server error: ${err.message}`,
+              });
+            }
+          }
+          if (submittedCount > 0) gpuAnalysisSubmitted = true;
+          console.log(`[SAO Pipeline] Kit ${kitId}: ${submittedCount}/${withAudio.length} analysis jobs sent to cloud server`);
+        }
+      }
 
+      if (gpuAnalysisSubmitted) {
         res.json({
-          message: submittedCount > 0
-            ? `Analysis submitted to cloud GPU for ${submittedCount} instruments.`
-            : "No instruments could be submitted for analysis.",
+          message: `Analysis submitted to GPU server.`,
           kitId,
           instrumentCount: withAudio.length,
-          submittedCount,
           gpuConnected: true,
         });
       } else {
@@ -3105,32 +3139,76 @@ export async function registerRoutes(
 
       console.log(`[SAO Pipeline] Admin Kit ${kitId} queued for training with ${withPrompts.length} instruments`);
 
-      if (isRunPodConfigured()) {
-        const protocol = req.headers["x-forwarded-proto"] || "https";
-        const host = req.headers["host"] || "localhost:5000";
-        const webhookUrl = `${protocol}://${host}/api/training/webhook`;
+      const protocol = req.headers["x-forwarded-proto"] || "https";
+      const host = req.headers["host"] || "localhost:5000";
+      const webhookUrl = `${protocol}://${host}/api/training/webhook`;
 
+      let gpuSubmitted = false;
+
+      if (isRunPodConfigured()) {
         const result = await submitTrainingJob(kitId, trainingConfig, webhookUrl);
         if (result.success) {
           await storage.updateStyleKit(kitId, {
             trainingStatus: "training",
             trainingJobId: result.jobId || null,
           });
-          console.log(`[SAO Pipeline] Admin training job submitted: ${result.jobId}`);
+          console.log(`[SAO Pipeline] Admin training job submitted to RunPod: ${result.jobId}`);
+          gpuSubmitted = true;
         } else {
-          await storage.updateStyleKit(kitId, {
-            trainingStatus: "failed",
-            trainingError: `Cloud GPU submission failed: ${result.error}`,
-          });
+          console.log(`[SAO Pipeline] RunPod submission failed: ${result.error}, trying cloud servers...`);
         }
       }
 
+      if (!gpuSubmitted) {
+        const cloudServer = await getActiveServer(storage, "training");
+        if (cloudServer) {
+          try {
+            const trainUrl = `${cloudServer.baseUrl}/api/train-kit`;
+            const trainPayload = {
+              kit_id: kitId,
+              training_config: trainingConfig,
+              webhook_url: webhookUrl,
+            };
+            const trainRes = await fetch(trainUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                [cloudServer.authHeaderName]: cloudServer.apiKey,
+              },
+              body: JSON.stringify(trainPayload),
+              signal: AbortSignal.timeout(30000),
+            });
+            if (trainRes.ok) {
+              const trainData = await trainRes.json() as any;
+              await storage.updateStyleKit(kitId, {
+                trainingStatus: "training",
+                trainingJobId: trainData.jobId || `cloud_kit_${kitId}_${Date.now()}`,
+              });
+              console.log(`[SAO Pipeline] Training submitted to cloud server: ${cloudServer.baseUrl}`);
+              gpuSubmitted = true;
+            } else {
+              const errText = await trainRes.text();
+              console.error(`[SAO Pipeline] Cloud server training failed: ${trainRes.status} ${errText}`);
+            }
+          } catch (err: any) {
+            console.error(`[SAO Pipeline] Cloud server training error: ${err.message}`);
+          }
+        }
+      }
+
+      if (!gpuSubmitted) {
+        await storage.updateStyleKit(kitId, {
+          trainingStatus: "queued",
+          trainingError: null,
+        });
+      }
+
       res.json({
-        message: isRunPodConfigured()
-          ? "Training submitted to cloud GPU."
-          : "Training queued. Awaiting cloud GPU connection.",
+        message: gpuSubmitted
+          ? "Training submitted to GPU server."
+          : "Training queued. Connect a GPU server to start training.",
         kitId,
-        status: isRunPodConfigured() ? "training" : "queued",
+        status: gpuSubmitted ? "training" : "queued",
         instrumentCount: withPrompts.length,
         trainingConfig: {
           model_type: trainingConfig.model_type,
@@ -3615,32 +3693,40 @@ export async function registerRoutes(
   app.post("/api/training/webhook", async (req, res) => {
     try {
       const webhookSecret = process.env.TRAINING_WEBHOOK_SECRET;
-      if (webhookSecret) {
-        const authHeader = req.headers["x-webhook-secret"] || req.headers["authorization"];
-        if (authHeader !== webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
+      const authHeader = (req.headers["x-webhook-secret"] || req.headers["x-dgb-api-key"] || req.headers["authorization"] || "") as string;
+      let verified = false;
+      if (webhookSecret && (authHeader === webhookSecret || authHeader === `Bearer ${webhookSecret}`)) {
+        verified = true;
+      }
+      if (!verified) {
+        const cloudVerified = await verifyWebhookFromAnyServer(req.headers as any, storage);
+        if (!cloudVerified && webhookSecret) {
           return res.status(401).json({ message: "Invalid webhook secret" });
         }
       }
 
-      const { kitId, status, modelUrl, error, jobId } = req.body;
+      const { kitId, status, modelUrl, modelPath, error, jobId } = req.body;
       if (!kitId) return res.status(400).json({ message: "kitId required" });
 
       const kit = await storage.getStyleKit(Number(kitId));
       if (!kit) return res.sendStatus(404);
 
-      const updateData: any = { trainingStatus: status || "ready" };
-      if (modelUrl) updateData.trainedModelUrl = modelUrl;
+      const resolvedModelUrl = modelUrl || modelPath;
+      const resolvedStatus = status === "completed" ? "ready" : (status || "ready");
+
+      const updateData: any = { trainingStatus: resolvedStatus };
+      if (resolvedModelUrl) updateData.trainedModelUrl = resolvedModelUrl;
       if (error) updateData.trainingError = error;
       if (jobId) updateData.trainingJobId = jobId;
-      if (status === "ready") {
+      if (resolvedStatus === "ready") {
         updateData.pipelineStep = "ready";
         updateData.lastTrainedAt = new Date();
       }
-      if (status === "failed") updateData.pipelineStep = "train";
+      if (resolvedStatus === "failed") updateData.pipelineStep = "train";
 
       await storage.updateStyleKit(Number(kitId), updateData);
 
-      if (status === "ready") {
+      if (resolvedStatus === "ready") {
         const instruments = await storage.getStyleKitInstruments(Number(kitId));
         for (const instr of instruments) {
           if (instr.audioUrl) {
@@ -3649,7 +3735,7 @@ export async function registerRoutes(
         }
       }
 
-      console.log(`[Training] Webhook received for kit ${kitId}: status=${status}`);
+      console.log(`[Training] Webhook received for kit ${kitId}: status=${status} -> resolved=${resolvedStatus}`);
       res.json({ success: true });
     } catch (err: any) {
       console.error("[Training] Webhook error:", err.message);
