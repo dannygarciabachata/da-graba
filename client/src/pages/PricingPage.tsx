@@ -30,7 +30,7 @@ const FEATURE_COMPARISON = [
   { feature: "Commercial License", free: false, basic: false, pro: false, premium: true },
   { feature: "Priority Support", free: false, basic: false, pro: false, premium: true },
   { feature: "100% Rights (Royalty Free)", free: false, basic: true, pro: true, premium: true },
-  { feature: "Annual Discount", free: "-", basic: "2%", pro: "5%", premium: "10%" },
+  { feature: "Annual Discount", free: "-", basic: "20%", pro: "25%", premium: "30%" },
 ];
 
 const FALLBACK_PLANS = [
@@ -59,7 +59,7 @@ const FALLBACK_PLANS = [
     description: "Essential tools for aspiring music creators. 1,000 credits monthly.",
     tier: "basic",
     price: 699,
-    annualDiscount: 2,
+    annualDiscount: 20,
     priceId: null,
     annualPriceId: null,
     features: [
@@ -80,7 +80,7 @@ const FALLBACK_PLANS = [
     description: "Professional tools for serious music creators. 1,500 credits monthly.",
     tier: "pro",
     price: 1499,
-    annualDiscount: 5,
+    annualDiscount: 25,
     priceId: null,
     annualPriceId: null,
     features: [
@@ -103,7 +103,7 @@ const FALLBACK_PLANS = [
     description: "Full access to every tool. 3,500 credits, custom AI training, commercial license.",
     tier: "premium",
     price: 2999,
-    annualDiscount: 10,
+    annualDiscount: 30,
     priceId: null,
     annualPriceId: null,
     features: [
@@ -147,7 +147,7 @@ function parsePlans(products: any[] | undefined) {
         premium: "text-amber-400",
       };
 
-      const discountMap: Record<string, number> = { free: 0, basic: 2, pro: 5, premium: 10 };
+      const discountMap: Record<string, number> = { free: 0, basic: 20, pro: 25, premium: 30 };
       const annualDiscount = parseInt(product.metadata?.annualDiscount || "0", 10) || discountMap[tier] || (fallback as any)?.annualDiscount || 0;
 
       return {
@@ -228,7 +228,7 @@ export default function PricingPage() {
             data-testid="button-billing-annual"
           >
             {t('pricing.yearly')}
-            <Badge className="ml-1.5 text-[10px] bg-green-500 text-white">{t('landing.save')} 2-10%</Badge>
+            <Badge className="ml-1.5 text-[10px] bg-green-500 text-white">{t('landing.save')} 20-30%</Badge>
           </Button>
         </div>
       </div>

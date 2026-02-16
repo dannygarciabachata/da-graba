@@ -25,9 +25,9 @@ const HOW_IT_WORKS_KEYS = ["step1", "step2", "step3"];
 const PLANS_KEYS = ["free", "basic", "pro", "premium"];
 const PLANS_META = [
   { monthlyPrice: 0, annualDiscount: 0, credits: 12, highlight: false, isOneTime: true },
-  { monthlyPrice: 6.99, annualDiscount: 2, credits: 1000, highlight: false, isOneTime: false },
-  { monthlyPrice: 14.99, annualDiscount: 5, credits: 1500, highlight: false, isOneTime: false },
-  { monthlyPrice: 29.99, annualDiscount: 10, credits: 3500, highlight: true, isOneTime: false },
+  { monthlyPrice: 6.99, annualDiscount: 20, credits: 1000, highlight: false, isOneTime: false },
+  { monthlyPrice: 14.99, annualDiscount: 25, credits: 1500, highlight: false, isOneTime: false },
+  { monthlyPrice: 29.99, annualDiscount: 30, credits: 3500, highlight: true, isOneTime: false },
 ];
 
 const STATS_KEYS = ["genres", "stems", "credits", "apiCosts"];
@@ -671,7 +671,7 @@ export default function Landing() {
               </span>
               {billingAnnual && (
                 <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
-                  {t('landing.save')} 2-10%
+                  {t('landing.save')} 20-30%
                 </Badge>
               )}
             </div>
