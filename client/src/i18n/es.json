@@ -568,6 +568,35 @@
       "removed": "Referencia eliminada",
       "error": "Error al subir la referencia",
       "loaded": "Referencia cargada"
+    },
+    "training": {
+      "title": "Entrenamiento del Modelo",
+      "startTraining": "Iniciar Entrenamiento",
+      "retryTraining": "Reintentar Entrenamiento",
+      "analyzing": "Analizando instrumentos...",
+      "training": "Entrenando modelo IA...",
+      "queued": "En cola de entrenamiento",
+      "ready": "Modelo entrenado exitosamente",
+      "failed": "El entrenamiento falló",
+      "pending": "Pendiente de entrenamiento",
+      "needsAudio": "Sube audio a todos los instrumentos antes de entrenar",
+      "progress": "Progreso",
+      "step": "Paso",
+      "steps": {
+        "upload": "Subir Instrumentos",
+        "analyze": "Analizar Audio",
+        "prompt": "Generar Prompts IA",
+        "train": "Entrenar Modelo",
+        "ready": "Listo"
+      },
+      "errorDetail": "Detalle del error",
+      "gpuConnected": "GPU conectada",
+      "gpuDisconnected": "GPU no conectada",
+      "instrumentsReady": "{{count}} de {{total}} instrumentos con audio",
+      "modelUrl": "URL del modelo entrenado",
+      "lastTrained": "Último entrenamiento",
+      "startedSuccess": "Entrenamiento iniciado correctamente",
+      "startError": "Error al iniciar el entrenamiento"
     }
   },
   "lyricsGenerator": {

@@ -1,15 +1,17 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useStyleKits, useStyleKitMeta } from "@/hooks/use-style-kits";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Music, Play, Pause, Volume2, Filter, Disc,
   Guitar, Drum, Piano, Mic, ChevronDown, Loader2,
   Upload, FileAudio, Trash2, CheckCircle2,
+  Zap, AlertTriangle, CheckCircle, Server, ServerOff, RotateCcw,
 } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { StyleKitInstrument } from "@shared/schema";
@@ -288,6 +290,237 @@ function ReferenceSection({ kit }: { kit: any }) {
   );
 }
 
+const PIPELINE_STEPS = ["upload", "analyze", "prompt", "train", "ready"] as const;
+
+function TrainingSection({ kit }: { kit: any }) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const [isPolling, setIsPolling] = useState(false);
+
+  const { data: trainingStatus, refetch } = useQuery({
+    queryKey: ["/api/style-kits", kit.id, "training-status"],
+    queryFn: async () => {
+      const res = await fetch(`/api/style-kits/${kit.id}/training-status`);
+      if (!res.ok) throw new Error("Failed to fetch training status");
+      return res.json();
+    },
+    refetchInterval: isPolling ? 5000 : false,
+  });
+
+  useEffect(() => {
+    if (trainingStatus) {
+      const active = ["analyzing", "prompting", "queued", "training"].includes(trainingStatus.trainingStatus);
+      setIsPolling(active);
+    }
+  }, [trainingStatus]);
+
+  const { mutate: startTraining, isPending: isStarting } = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/style-kits/${kit.id}/analyze`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setIsPolling(true);
+      queryClient.invalidateQueries({ queryKey: ["/api/style-kits"] });
+      refetch();
+      toast({ title: t("styleKits.training.startedSuccess") });
+    },
+    onError: (err: Error) => {
+      toast({ title: err.message || t("styleKits.training.startError"), variant: "destructive" });
+    },
+  });
+
+  const { mutate: submitTrain, isPending: isSubmitting } = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/style-kits/${kit.id}/train`);
+      return res.json();
+    },
+    onSuccess: () => {
+      setIsPolling(true);
+      queryClient.invalidateQueries({ queryKey: ["/api/style-kits"] });
+      refetch();
+      toast({ title: t("styleKits.training.startedSuccess") });
+    },
+    onError: (err: Error) => {
+      toast({ title: err.message || t("styleKits.training.startError"), variant: "destructive" });
+    },
+  });
+
+  if (!trainingStatus) return null;
+
+  const { progress, pipelineStep, trainingStatus: status, trainingError, instruments, gpuConnected, trainedModelUrl, lastTrainedAt } = trainingStatus;
+  const isActive = ["analyzing", "prompting", "queued", "training"].includes(status);
+  const isReady = pipelineStep === "ready";
+  const isFailed = status === "failed";
+  const canStartAnalysis = instruments.withAudio === instruments.total && instruments.total > 0 && !isActive && pipelineStep === "upload";
+  const canStartTraining = pipelineStep === "train" && !isActive && instruments.withPrompts > 0;
+
+  const getStepStatus = (step: string) => {
+    const stepIdx = PIPELINE_STEPS.indexOf(step as any);
+    const currentIdx = PIPELINE_STEPS.indexOf(pipelineStep as any);
+    if (stepIdx < currentIdx) return "done";
+    if (stepIdx === currentIdx) return isActive ? "active" : (isFailed ? "error" : "current");
+    return "pending";
+  };
+
+  return (
+    <div className="mt-3 p-3 rounded-lg border border-[#D946EF]/20 bg-gradient-to-r from-[#D946EF]/[0.04] to-[#00C8FF]/[0.04]" data-testid={`training-section-${kit.id}`}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Zap className="h-3.5 w-3.5 text-[#D946EF]" />
+          <span className="text-xs font-semibold text-[#D946EF]">{t("styleKits.training.title")}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {gpuConnected ? (
+            <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[9px] px-1.5 py-0" data-testid={`badge-gpu-${kit.id}`}>
+              <Server className="h-2.5 w-2.5 mr-0.5" /> GPU
+            </Badge>
+          ) : (
+            <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[9px] px-1.5 py-0" data-testid={`badge-gpu-${kit.id}`}>
+              <ServerOff className="h-2.5 w-2.5 mr-0.5" /> {t("styleKits.training.gpuDisconnected")}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1 mb-2">
+        {PIPELINE_STEPS.map((step, idx) => {
+          const stepStatus = getStepStatus(step);
+          return (
+            <div key={step} className="flex items-center gap-1 flex-1">
+              <div
+                className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
+                  stepStatus === "done" ? "bg-[#00C8FF]" :
+                  stepStatus === "active" ? "bg-[#D946EF] animate-pulse" :
+                  stepStatus === "error" ? "bg-red-500" :
+                  stepStatus === "current" ? "bg-[#D946EF]/50" :
+                  "bg-white/10"
+                }`}
+                data-testid={`step-${step}-${kit.id}`}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex gap-1">
+          {PIPELINE_STEPS.map((step) => {
+            const stepStatus = getStepStatus(step);
+            return (
+              <span key={step} className={`text-[8px] flex-1 text-center ${
+                stepStatus === "done" ? "text-[#00C8FF]" :
+                stepStatus === "active" || stepStatus === "current" ? "text-[#D946EF]" :
+                stepStatus === "error" ? "text-red-400" :
+                "text-muted-foreground/50"
+              }`}>
+                {t(`styleKits.training.steps.${step}`)}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mb-2">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] text-muted-foreground">
+            {t("styleKits.training.instrumentsReady", { count: instruments.withAudio, total: instruments.total })}
+          </span>
+          <span className="text-[10px] font-mono text-[#00C8FF]">{progress}%</span>
+        </div>
+        <Progress value={progress} className="h-2 bg-white/5" data-testid={`progress-bar-${kit.id}`} />
+      </div>
+
+      {isActive && (
+        <div className="flex items-center gap-2 p-2 rounded bg-[#D946EF]/10 border border-[#D946EF]/20 mb-2" data-testid={`training-active-${kit.id}`}>
+          <Loader2 className="h-3.5 w-3.5 text-[#D946EF] animate-spin flex-shrink-0" />
+          <span className="text-xs text-[#D946EF]">
+            {status === "analyzing" ? t("styleKits.training.analyzing") :
+             status === "training" ? t("styleKits.training.training") :
+             t("styleKits.training.queued")}
+          </span>
+        </div>
+      )}
+
+      {isFailed && trainingError && (
+        <div className="p-2 rounded bg-red-500/10 border border-red-500/20 mb-2" data-testid={`training-error-${kit.id}`}>
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="h-3.5 w-3.5 text-red-400 flex-shrink-0" />
+            <span className="text-xs font-semibold text-red-400">{t("styleKits.training.failed")}</span>
+          </div>
+          <p className="text-[10px] text-red-300/80 break-all">{trainingError}</p>
+        </div>
+      )}
+
+      {isReady && (
+        <div className="p-2 rounded bg-green-500/10 border border-green-500/20 mb-2" data-testid={`training-ready-${kit.id}`}>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-3.5 w-3.5 text-green-400 flex-shrink-0" />
+            <span className="text-xs text-green-400">{t("styleKits.training.ready")}</span>
+          </div>
+          {lastTrainedAt && (
+            <p className="text-[9px] text-muted-foreground mt-1">
+              {t("styleKits.training.lastTrained")}: {new Date(lastTrainedAt).toLocaleDateString()}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        {canStartAnalysis && (
+          <Button
+            size="sm"
+            className="flex-1 h-8 text-xs bg-gradient-to-r from-[#00C8FF] to-[#D946EF] text-white hover:opacity-90"
+            onClick={() => startTraining()}
+            disabled={isStarting}
+            data-testid={`button-start-training-${kit.id}`}
+          >
+            {isStarting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+            ) : (
+              <Zap className="h-3.5 w-3.5 mr-1" />
+            )}
+            {t("styleKits.training.startTraining")}
+          </Button>
+        )}
+        {canStartTraining && (
+          <Button
+            size="sm"
+            className="flex-1 h-8 text-xs bg-gradient-to-r from-[#00C8FF] to-[#D946EF] text-white hover:opacity-90"
+            onClick={() => submitTrain()}
+            disabled={isSubmitting}
+            data-testid={`button-submit-train-${kit.id}`}
+          >
+            {isSubmitting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+            ) : (
+              <Zap className="h-3.5 w-3.5 mr-1" />
+            )}
+            {t("styleKits.train")}
+          </Button>
+        )}
+        {isFailed && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1 h-8 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10"
+            onClick={() => startTraining()}
+            disabled={isStarting}
+            data-testid={`button-retry-training-${kit.id}`}
+          >
+            {isStarting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+            ) : (
+              <RotateCcw className="h-3.5 w-3.5 mr-1" />
+            )}
+            {t("styleKits.training.retryTraining")}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function StyleKitsPage() {
   const { t } = useTranslation();
   const [selectedGenre, setSelectedGenre] = useState<string | undefined>(undefined);
@@ -406,6 +639,7 @@ export default function StyleKitsPage() {
                 )}
 
                 <ReferenceSection kit={kit} />
+                <TrainingSection kit={kit} />
               </CardContent>
             </Card>
           );

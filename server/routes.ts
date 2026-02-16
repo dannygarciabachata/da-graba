@@ -2799,6 +2799,69 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/style-kits/:id/training-status", async (req, res) => {
+    try {
+      const kitId = Number(req.params.id);
+      const kit = await storage.getStyleKit(kitId);
+      if (!kit) return res.sendStatus(404);
+
+      const instruments = await storage.getStyleKitInstruments(kitId);
+      const totalInstruments = instruments.length;
+      const withAudio = instruments.filter(i => i.audioUrl).length;
+      const analyzed = instruments.filter(i => i.analysisStatus === "complete").length;
+      const withPrompts = instruments.filter(i => i.generatedPrompt).length;
+
+      const pipelineSteps = ["upload", "analyze", "prompt", "train", "ready"];
+      const currentStepIndex = pipelineSteps.indexOf(kit.pipelineStep || "upload");
+
+      let progress = 0;
+      if (kit.pipelineStep === "upload") {
+        progress = totalInstruments > 0 ? Math.round((withAudio / totalInstruments) * 20) : 0;
+      } else if (kit.pipelineStep === "analyze") {
+        progress = 20 + Math.round((analyzed / Math.max(withAudio, 1)) * 20);
+      } else if (kit.pipelineStep === "prompt") {
+        progress = 40 + Math.round((withPrompts / Math.max(withAudio, 1)) * 20);
+      } else if (kit.pipelineStep === "train") {
+        if (kit.trainingStatus === "training") progress = 70;
+        else if (kit.trainingStatus === "queued") progress = 62;
+        else progress = 60;
+      } else if (kit.pipelineStep === "ready") {
+        progress = 100;
+      }
+
+      let stepLabel = "";
+      switch (kit.pipelineStep) {
+        case "upload": stepLabel = "Subiendo instrumentos"; break;
+        case "analyze": stepLabel = "Analizando audio"; break;
+        case "prompt": stepLabel = "Generando prompts IA"; break;
+        case "train": stepLabel = kit.trainingStatus === "training" ? "Entrenando modelo..." : "En cola de entrenamiento"; break;
+        case "ready": stepLabel = "Modelo listo"; break;
+        default: stepLabel = kit.pipelineStep || "Pendiente";
+      }
+
+      res.json({
+        kitId,
+        pipelineStep: kit.pipelineStep || "upload",
+        trainingStatus: kit.trainingStatus || "pending",
+        trainingError: kit.trainingError,
+        trainedModelUrl: kit.trainedModelUrl,
+        trainingJobId: kit.trainingJobId,
+        lastTrainedAt: kit.lastTrainedAt,
+        progress,
+        stepLabel,
+        instruments: {
+          total: totalInstruments,
+          withAudio,
+          analyzed,
+          withPrompts,
+        },
+        gpuConnected: isRunPodConfigured(),
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // ========== VOICE MODELS & STYLE REFERENCES ==========
 
   const voiceDir = path.join(process.cwd(), "public", "audio", "voices");

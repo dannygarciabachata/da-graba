@@ -258,7 +258,7 @@ export default function Landing() {
 
       <nav className="relative z-10 container mx-auto px-4 md:px-6 py-4 md:py-6 flex justify-between items-center" data-testid="nav-landing">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-          <img src={dgbLogo} alt="DGB Studio" className="h-12 md:h-16 w-auto drop-shadow-[0_0_15px_rgba(0,200,255,0.3)]" data-testid="img-landing-logo" />
+          <img src={dgbLogo} alt="DGB Studio" className="h-10 sm:h-14 md:h-16 w-auto drop-shadow-[0_0_15px_rgba(0,200,255,0.3)]" data-testid="img-landing-logo" />
         </div>
         <div className="flex items-center gap-3">
           <Button variant="ghost" className="hidden sm:inline-flex text-sm" onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} data-testid="link-features">
@@ -634,9 +634,9 @@ export default function Landing() {
       <footer className="border-t border-white/5 py-8 md:py-12 px-4" data-testid="footer-landing">
         <div className="container mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <img src={dgbLogo} alt="DGB Studio" className="h-10 w-auto drop-shadow-[0_0_10px_rgba(217,70,239,0.3)]" />
+            <div className="col-span-2 md:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <img src={dgbLogo} alt="DGB Studio" className="h-14 sm:h-16 md:h-20 w-auto drop-shadow-[0_0_20px_rgba(217,70,239,0.4)]" />
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {t('landing.footer.footerDescription')}
