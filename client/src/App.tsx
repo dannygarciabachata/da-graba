@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import Landing from "@/pages/Landing";
+import palettaBg from "@assets/palettabg_1771282011333.png";
 import CreatePage from "@/pages/CreatePage";
 import LibraryPage from "@/pages/LibraryPage";
 import LyricsPage from "@/pages/LyricsPage";
@@ -66,7 +67,18 @@ function AuthenticatedLayout() {
           <header className="h-12 flex items-center px-3 border-b border-white/5 bg-background/90 backdrop-blur-md sticky top-0 z-40 lg:hidden">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
           </header>
-          <main className="flex-1 overflow-auto">
+          <main
+            className="flex-1 overflow-auto relative"
+            style={{
+              backgroundImage: `url(${palettaBg})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+              backgroundAttachment: "fixed",
+            }}
+          >
+            <div className="absolute inset-0 bg-background/80 pointer-events-none" />
+            <div className="relative z-10 min-h-full">
             <Switch>
               <Route path="/create" component={CreatePage} />
               <Route path="/dashboard"><Redirect to="/create" /></Route>
@@ -96,6 +108,7 @@ function AuthenticatedLayout() {
               <Route component={NotFound} />
             </Switch>
             <SupportChat serviceContext={serviceContext} />
+            </div>
           </main>
         </div>
       </div>
