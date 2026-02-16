@@ -293,6 +293,22 @@
       "addInstrumentalDesc": "Add instrumental to existing vocals",
       "comingSoon": "Coming soon"
     },
+    "dnaFlow": {
+      "bachataDesc": "Pure Dominican bloodline",
+      "boleroDesc": "Romance and classic ballads",
+      "selectStyle": "Select a style",
+      "styles": {
+        "tradicional": { "label": "Traditional", "desc": "Requinto guitar, bongos, güira" },
+        "moderna": { "label": "Modern", "desc": "R&B and Pop fusion" },
+        "sensual": { "label": "Sensual", "desc": "Romantic with soft melodies" },
+        "urbana": { "label": "Urban", "desc": "Urban beats and trap" },
+        "rosa": { "label": "Rosa", "desc": "Romantic pop bachata" },
+        "romantico": { "label": "Romantic", "desc": "Classic love bolero" },
+        "ranchero": { "label": "Ranchero", "desc": "With mariachi and guitar" },
+        "son": { "label": "Son", "desc": "Cuban son fusion" },
+        "moderno": { "label": "Modern", "desc": "Contemporary bolero" }
+      }
+    },
     "unlockCustomization": "Unlock customization with Pro",
     "genres": {
       "bachata": "Bachata",

@@ -293,6 +293,22 @@
       "addInstrumentalDesc": "Agregar instrumental a vocales existentes",
       "comingSoon": "Próximamente"
     },
+    "dnaFlow": {
+      "bachataDesc": "La pura sangre dominicana",
+      "boleroDesc": "Romance y baladas clásicas",
+      "selectStyle": "Selecciona un estilo",
+      "styles": {
+        "tradicional": { "label": "Tradicional", "desc": "Guitarra requinto, bongó, güira" },
+        "moderna": { "label": "Moderna", "desc": "Fusión con R&B y Pop" },
+        "sensual": { "label": "Sensual", "desc": "Romántica con melodías suaves" },
+        "urbana": { "label": "Urbana", "desc": "Con beats urbanos y trap" },
+        "rosa": { "label": "Rosa", "desc": "Bachata pop romántica" },
+        "romantico": { "label": "Romántico", "desc": "Bolero clásico de amor" },
+        "ranchero": { "label": "Ranchero", "desc": "Con mariachi y guitarra" },
+        "son": { "label": "Son", "desc": "Fusión con son cubano" },
+        "moderno": { "label": "Moderno", "desc": "Bolero contemporáneo" }
+      }
+    },
     "unlockCustomization": "Desbloquea personalización con Pro",
     "genres": {
       "bachata": "Bachata",

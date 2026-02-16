@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useGenerateSong, useSongs } from "@/hooks/use-songs";
 import { useStyleKits } from "@/hooks/use-style-kits";
@@ -126,6 +126,11 @@ const TTS_LANGUAGES = [
   { value: "hi", label: "Hindi" },
 ];
 
+type DnaFlow = "bachata" | "bolero" | null;
+
+const BACHATA_STYLE_KEYS = ["tradicional", "moderna", "sensual", "urbana", "rosa"] as const;
+const BOLERO_STYLE_KEYS = ["romantico", "ranchero", "son", "moderno"] as const;
+
 type CreationMode = "song" | "sound" | "speak";
 
 export default function CreatePage() {
@@ -153,6 +158,9 @@ export default function CreatePage() {
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [attachPopoverOpen, setAttachPopoverOpen] = useState(false);
 
+  const [dnaFlow, setDnaFlow] = useState<DnaFlow>(null);
+  const [selectedSubStyle, setSelectedSubStyle] = useState<string | null>(null);
+
   const [soundPrompt, setSoundPrompt] = useState("");
   const [soundDuration, setSoundDuration] = useState([5]);
 
@@ -167,12 +175,36 @@ export default function CreatePage() {
   const { mutate: deleteSong } = useDeleteSong();
   const { data: styleKits } = useStyleKits();
 
+  const BACHATA_SUGGESTIONS = [
+    "Bachata romántica bajo la luna del Caribe",
+    "Bachata moderna con fusión de R&B",
+    "Bachata sensual con guitarra suave",
+    "Bachata urbana con beats de trap",
+    "Bachata tradicional dominicana con güira",
+    "Bachata rosa sobre primer amor",
+  ];
+  const BOLERO_SUGGESTIONS = [
+    "Bolero romántico de amor eterno",
+    "Bolero con guitarra clásica de nylon",
+    "Bolero ranchero con mariachi",
+    "Bolero moderno con arreglos de cuerdas",
+    "Bolero son con sabor cubano",
+    "Balada bolero de desamor",
+  ];
+
+  const activePromptSuggestions = useMemo(() => {
+    if (dnaFlow === "bachata") return BACHATA_SUGGESTIONS;
+    if (dnaFlow === "bolero") return BOLERO_SUGGESTIONS;
+    return PROMPT_SUGGESTIONS;
+  }, [dnaFlow]);
+
   useEffect(() => {
+    setPlaceholderIdx(0);
     const interval = setInterval(() => {
-      setPlaceholderIdx((prev) => (prev + 1) % PROMPT_SUGGESTIONS.length);
+      setPlaceholderIdx((prev) => (prev + 1) % activePromptSuggestions.length);
     }, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activePromptSuggestions]);
 
   const { mutate: uploadSample, isPending: isUploadPending } = useMutation({
     mutationFn: async (file: File) => {
@@ -311,7 +343,7 @@ export default function CreatePage() {
   };
 
   const handleRandomPrompt = () => {
-    const random = PROMPT_SUGGESTIONS[Math.floor(Math.random() * PROMPT_SUGGESTIONS.length)];
+    const random = activePromptSuggestions[Math.floor(Math.random() * activePromptSuggestions.length)];
     setPrompt(random);
   };
 
@@ -374,6 +406,124 @@ export default function CreatePage() {
             </h1>
           </motion.div>
 
+          <div className="grid grid-cols-2 gap-3 mb-4" data-testid="dna-flows">
+            <button
+              className={cn(
+                "relative overflow-hidden rounded-xl p-4 text-left transition-all border-2",
+                dnaFlow === "bachata"
+                  ? "border-primary bg-gradient-to-br from-primary/15 to-cyan-500/10 shadow-[0_0_20px_rgba(0,200,255,0.15)]"
+                  : "border-white/10 hover:border-primary/30 bg-white/[0.03]"
+              )}
+              onClick={() => {
+                if (dnaFlow === "bachata") {
+                  setDnaFlow(null);
+                  setSelectedSubStyle(null);
+                  setSelectedStyleKit(undefined);
+                } else {
+                  setDnaFlow("bachata");
+                  setSelectedSubStyle(null);
+                  setSelectedGenre("Bachata");
+                  const bachataKit = styleKits?.find(k => k.genre === "bachata");
+                  if (bachataKit) setSelectedStyleKit(bachataKit.id);
+                }
+              }}
+              data-testid="dna-flow-bachata"
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/30 to-cyan-400/20 flex items-center justify-center">
+                  <Guitar className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold">DGB Bachata</div>
+                  <div className="text-[10px] text-muted-foreground">{t('create.dnaFlow.bachataDesc')}</div>
+                </div>
+              </div>
+              {dnaFlow === "bachata" && (
+                <div className="absolute top-2 right-2">
+                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                </div>
+              )}
+            </button>
+
+            <button
+              className={cn(
+                "relative overflow-hidden rounded-xl p-4 text-left transition-all border-2",
+                dnaFlow === "bolero"
+                  ? "border-purple-400 bg-gradient-to-br from-purple-500/15 to-pink-500/10 shadow-[0_0_20px_rgba(168,85,247,0.15)]"
+                  : "border-white/10 hover:border-purple-400/30 bg-white/[0.03]"
+              )}
+              onClick={() => {
+                if (dnaFlow === "bolero") {
+                  setDnaFlow(null);
+                  setSelectedSubStyle(null);
+                  setSelectedStyleKit(undefined);
+                } else {
+                  setDnaFlow("bolero");
+                  setSelectedSubStyle(null);
+                  setSelectedGenre("Bolero");
+                  const boleroKit = styleKits?.find(k => k.genre === "bolero");
+                  if (boleroKit) setSelectedStyleKit(boleroKit.id);
+                }
+              }}
+              data-testid="dna-flow-bolero"
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500/30 to-pink-400/20 flex items-center justify-center">
+                  <Music className="h-4 w-4 text-purple-400" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold">DGB Bolero</div>
+                  <div className="text-[10px] text-muted-foreground">{t('create.dnaFlow.boleroDesc')}</div>
+                </div>
+              </div>
+              {dnaFlow === "bolero" && (
+                <div className="absolute top-2 right-2">
+                  <div className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
+                </div>
+              )}
+            </button>
+          </div>
+
+          <AnimatePresence>
+            {dnaFlow && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden mb-4"
+              >
+                <div className="flex gap-2 overflow-x-auto pb-1" data-testid="sub-styles">
+                  {(dnaFlow === "bachata" ? BACHATA_STYLE_KEYS : BOLERO_STYLE_KEYS).map((styleKey) => (
+                    <button
+                      key={styleKey}
+                      className={cn(
+                        "flex-shrink-0 px-3 py-2 rounded-lg border text-left transition-all min-w-[120px]",
+                        selectedSubStyle === styleKey
+                          ? dnaFlow === "bachata"
+                            ? "border-primary/50 bg-primary/10"
+                            : "border-purple-400/50 bg-purple-500/10"
+                          : "border-white/10 hover:border-white/20 bg-white/[0.02]"
+                      )}
+                      onClick={() => {
+                        setSelectedSubStyle(selectedSubStyle === styleKey ? null : styleKey);
+                        if (selectedSubStyle !== styleKey) {
+                          const genreName = dnaFlow === "bachata" ? "Bachata" : "Bolero";
+                          setSelectedGenre(`${genreName} ${t(`create.dnaFlow.styles.${styleKey}.label`)}`);
+                        } else {
+                          setSelectedGenre(dnaFlow === "bachata" ? "Bachata" : "Bolero");
+                        }
+                      }}
+                      data-testid={`sub-style-${styleKey}`}
+                    >
+                      <div className="text-xs font-medium">{t(`create.dnaFlow.styles.${styleKey}.label`)}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">{t(`create.dnaFlow.styles.${styleKey}.desc`)}</div>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -385,7 +535,7 @@ export default function CreatePage() {
                 {activeCreationMode === "song" && (
                   <div className="relative flex-1">
                     <Textarea
-                      placeholder={PROMPT_SUGGESTIONS[placeholderIdx]}
+                      placeholder={activePromptSuggestions[placeholderIdx % activePromptSuggestions.length]}
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
                       className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[120px] sm:min-h-[160px] resize-none text-base sm:text-lg p-0 placeholder:text-muted-foreground/40 transition-all"
