@@ -295,7 +295,7 @@
     },
     "dnaFlow": {
       "bachataDesc": "Pure Dominican bloodline",
-      "boleroDesc": "Romance and classic ballads",
+      "boleroDesc": "Full orchestra: bongó, conga, güira, timbales, bells, requinto, strings & choirs",
       "selectStyle": "Select a style",
       "styles": {
         "tradicional": { "label": "Traditional", "desc": "Requinto guitar, bongos, güira" },
@@ -303,10 +303,10 @@
         "sensual": { "label": "Sensual", "desc": "Romantic with soft melodies" },
         "urbana": { "label": "Urban", "desc": "Urban beats and trap" },
         "rosa": { "label": "Rosa", "desc": "Romantic pop bachata" },
-        "romantico": { "label": "Romantic", "desc": "Classic love bolero" },
-        "ranchero": { "label": "Ranchero", "desc": "With mariachi and guitar" },
-        "son": { "label": "Son", "desc": "Cuban son fusion" },
-        "moderno": { "label": "Modern", "desc": "Contemporary bolero" }
+        "romantico": { "label": "Romantic", "desc": "Maracas, timbales, pailas, strings" },
+        "ranchero": { "label": "Ranchero", "desc": "Mariachi, maracas, timbales & guitar" },
+        "son": { "label": "Son", "desc": "Cuban son with maracas & timbales" },
+        "moderno": { "label": "Modern", "desc": "Contemporary with maracas & arrangements" }
       }
     },
     "unlockCustomization": "Unlock customization with Pro",

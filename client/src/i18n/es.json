@@ -295,7 +295,7 @@
     },
     "dnaFlow": {
       "bachataDesc": "La pura sangre dominicana",
-      "boleroDesc": "Romance y baladas clásicas",
+      "boleroDesc": "Orquesta completa: bongó, conga, güira, timbal, campanas, requinto, cuerdas y coros",
       "selectStyle": "Selecciona un estilo",
       "styles": {
         "tradicional": { "label": "Tradicional", "desc": "Guitarra requinto, bongó, güira" },
@@ -303,10 +303,10 @@
         "sensual": { "label": "Sensual", "desc": "Romántica con melodías suaves" },
         "urbana": { "label": "Urbana", "desc": "Con beats urbanos y trap" },
         "rosa": { "label": "Rosa", "desc": "Bachata pop romántica" },
-        "romantico": { "label": "Romántico", "desc": "Bolero clásico de amor" },
-        "ranchero": { "label": "Ranchero", "desc": "Con mariachi y guitarra" },
-        "son": { "label": "Son", "desc": "Fusión con son cubano" },
-        "moderno": { "label": "Moderno", "desc": "Bolero contemporáneo" }
+        "romantico": { "label": "Romántico", "desc": "Maracas, timbal, pailas, cuerdas" },
+        "ranchero": { "label": "Ranchero", "desc": "Mariachi, maracas, timbal y guitarra" },
+        "son": { "label": "Son", "desc": "Son cubano con maracas y timbal" },
+        "moderno": { "label": "Moderno", "desc": "Contemporáneo con maracas y arreglos" }
       }
     },
     "unlockCustomization": "Desbloquea personalización con Pro",

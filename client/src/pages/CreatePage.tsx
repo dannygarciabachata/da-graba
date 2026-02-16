@@ -461,8 +461,8 @@ export default function CreatePage() {
                   setDnaFlow("bolero");
                   setSelectedSubStyle(null);
                   setSelectedGenre("Bolero");
-                  const boleroKit = styleKits?.find(k => k.genre === "bolero");
-                  if (boleroKit) setSelectedStyleKit(boleroKit.id);
+                  const dgbBoleroKit = styleKits?.find(k => k.genre === "dgb_bolero");
+                  if (dgbBoleroKit) setSelectedStyleKit(dgbBoleroKit.id);
                 }
               }}
               data-testid="dna-flow-bolero"
@@ -505,12 +505,21 @@ export default function CreatePage() {
                           : "border-white/10 hover:border-white/20 bg-white/[0.02]"
                       )}
                       onClick={() => {
-                        setSelectedSubStyle(selectedSubStyle === styleKey ? null : styleKey);
-                        if (selectedSubStyle !== styleKey) {
+                        const isDeselecting = selectedSubStyle === styleKey;
+                        setSelectedSubStyle(isDeselecting ? null : styleKey);
+                        if (!isDeselecting) {
                           const genreName = dnaFlow === "bachata" ? "Bachata" : "Bolero";
                           setSelectedGenre(`${genreName} ${t(`create.dnaFlow.styles.${styleKey}.label`)}`);
+                          if (dnaFlow === "bolero") {
+                            const normalBoleroKit = styleKits?.find(k => k.genre === "bolero");
+                            if (normalBoleroKit) setSelectedStyleKit(normalBoleroKit.id);
+                          }
                         } else {
                           setSelectedGenre(dnaFlow === "bachata" ? "Bachata" : "Bolero");
+                          if (dnaFlow === "bolero") {
+                            const dgbKit = styleKits?.find(k => k.genre === "dgb_bolero");
+                            if (dgbKit) setSelectedStyleKit(dgbKit.id);
+                          }
                         }
                       }}
                       data-testid={`sub-style-${styleKey}`}

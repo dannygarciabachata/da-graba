@@ -591,9 +591,10 @@ export async function seedTrainingKits(): Promise<void> {
 
   const bachatKit = existingKits.find(k => k.name === "Bachata" && k.genre === "bachata");
   const boleroKit = existingKits.find(k => k.name === "Baladas Boleros" && k.genre === "bolero");
+  const dgbBoleroKit = existingKits.find(k => k.name === "DGB Bolero" && k.genre === "dgb_bolero");
 
-  if (bachatKit && boleroKit) {
-    console.log("[Seed] Training kits (Bachata, Baladas Boleros) already exist, skipping");
+  if (bachatKit && boleroKit && dgbBoleroKit) {
+    console.log("[Seed] Training kits (Bachata, Baladas Boleros, DGB Bolero) already exist, skipping");
     return;
   }
 
@@ -639,5 +640,36 @@ export async function seedTrainingKits(): Promise<void> {
       await storage.createStyleKitInstrument({ kitId: kit.id, ...instr, volume: 100, uploadStatus: "pending", analysisStatus: "pending" });
     }
     console.log(`[Seed] Created Baladas Boleros kit (id=${kit.id}) with ${boleroInstruments.length} instruments`);
+  }
+
+  if (!dgbBoleroKit) {
+    const kit = await storage.createStyleKit({
+      name: "DGB Bolero",
+      genre: "dgb_bolero",
+      description: "Orquesta completa DGB Bolero — el ADN de Danny Garcia: bongó, conga, güira, timbal completo, campanas, segunda guitarra, requinto, bajo, piano, pad, strings, violines, chelos, voz principal, dúo de voz, y coros femenino/masculino con armonías completas.",
+      createdBy: "system",
+    });
+    const dgbBoleroInstruments = [
+      { name: "Bongó", type: "bongo", description: "Bongó — percusión rítmica fundamental del DGB Bolero", position: 1 },
+      { name: "Conga", type: "conga", description: "Conga — golpes y slaps para el groove del bolero DGB", position: 2 },
+      { name: "Güira", type: "guira", description: "Güira metálica — ritmo constante, marca registrada DGB", position: 3 },
+      { name: "Timbal Completo", type: "timbal", description: "Timbal completo con pailas — ritmo y fills del bolero DGB", position: 4 },
+      { name: "Campanas", type: "campana", description: "Campanas de timbal — acentos rítmicos y transiciones", position: 5 },
+      { name: "Requinto", type: "requinto", description: "Requinto — melodía principal y punteos románticos DGB", position: 6 },
+      { name: "Segunda Guitarra", type: "segunda_guitarra", description: "Segunda guitarra — acompañamiento armónico y rasgueo", position: 7 },
+      { name: "Bajo", type: "bass", description: "Bajo eléctrico — línea grave y walking bass del bolero", position: 8 },
+      { name: "Piano", type: "piano", description: "Piano — montunos, acordes y arreglos armónicos", position: 9 },
+      { name: "Pad", type: "pad", description: "Pad sintetizado — colchón armónico y atmósfera", position: 10 },
+      { name: "Strings (Violines)", type: "strings", description: "Sección de violines — arreglos melódicos y contrapuntos", position: 11 },
+      { name: "Strings (Chelos)", type: "strings", description: "Sección de chelos — base armónica y profundidad orquestal", position: 12 },
+      { name: "Voz Principal", type: "vocal", description: "Voz principal — melodía vocal líder del bolero", position: 13 },
+      { name: "Dúo de Voz", type: "vocal", description: "Dúo de voz — armonía vocal a dos voces", position: 14 },
+      { name: "Coro Femenino", type: "choir", description: "Coro femenino — armonías completas de voces femeninas", position: 15 },
+      { name: "Coro Masculino", type: "choir", description: "Coro masculino — armonías completas de voces masculinas", position: 16 },
+    ];
+    for (const instr of dgbBoleroInstruments) {
+      await storage.createStyleKitInstrument({ kitId: kit.id, ...instr, volume: 100, uploadStatus: "pending", analysisStatus: "pending" });
+    }
+    console.log(`[Seed] Created DGB Bolero kit (id=${kit.id}) with ${dgbBoleroInstruments.length} instruments`);
   }
 }
