@@ -62,8 +62,8 @@ async def health_check():
     if gpu_available:
         gpu_info = {
             "name": torch.cuda.get_device_name(0),
-            "vram_total_gb": round(torch.cuda.get_device_properties(0).total_mem / 1024**3, 1),
-            "vram_free_gb": round((torch.cuda.get_device_properties(0).total_mem - torch.cuda.memory_allocated(0)) / 1024**3, 1),
+            "vram_total_gb": round(torch.cuda.get_device_properties(0).total_memory / 1024**3, 1),
+            "vram_free_gb": round((torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)) / 1024**3, 1),
         }
     return {
         "status": "healthy",
@@ -337,7 +337,7 @@ def train_sao_model(
 
         if device == "cuda":
             gpu_name = torch.cuda.get_device_name(0)
-            vram = torch.cuda.get_device_properties(0).total_mem / 1024**3
+            vram = torch.cuda.get_device_properties(0).total_memory / 1024**3
             logger.info(f"GPU: {gpu_name}, VRAM: {vram:.1f} GB")
 
         try:
@@ -554,7 +554,7 @@ if __name__ == "__main__":
 
     if torch.cuda.is_available():
         logger.info(f"GPU: {torch.cuda.get_device_name(0)}")
-        vram = torch.cuda.get_device_properties(0).total_mem / 1024**3
+        vram = torch.cuda.get_device_properties(0).total_memory / 1024**3
         logger.info(f"VRAM: {vram:.1f} GB")
     else:
         logger.warning("No GPU detected! Training will be very slow on CPU.")
