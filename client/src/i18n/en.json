@@ -192,6 +192,17 @@
     },
     "pricingTitle": "Plans for Every Creator",
     "pricingSubtitle": "Start free with 12 credits. Upgrade anytime for more power and features.",
+    "billingMonthly": "Monthly",
+    "billingAnnual": "Annual",
+    "annualDiscount": "{{percent}}% off",
+    "creditsPerMonth": "{{count}} credits/mo",
+    "topUpTitle": "Credit Top-Ups",
+    "topUpDescription": "All paid plans can top up credits. Minimum $10 USD per top-up.",
+    "topUpBase": "$10 = 1,700 credits",
+    "topUpScaling": "Bonus percentage increases with larger top-ups",
+    "topUpMinimum": "Minimum top-up: $10 USD",
+    "perYear": "/year",
+    "save": "Save",
     "ctaTitle": "Ready to Create Your First Track?",
     "ctaSubtitle": "Join DGB AUDIO today and get 12 free credits to start making music with AI. No credit card needed.",
     "ctaButton": "Create Your Free Account",
@@ -200,17 +211,17 @@
         "name": "Free",
         "features": ["12 credits to start", "AI music generation", "Basic stem separation", "AI lyrics generator"]
       },
+      "basic": {
+        "name": "Basic",
+        "features": ["1,000 credits/month", "AI music generation", "Stem separation", "AI lyrics generator", "Credit top-ups available", "100% rights (Royalty Free)"]
+      },
       "pro": {
         "name": "Pro",
-        "features": ["100 credits/month", "Priority processing", "AI mastering & denoise", "Advanced stem separation", "Sample Lab access"]
-      },
-      "producer": {
-        "name": "Producer",
-        "features": ["500 credits/month", "Everything in Pro", "Custom instrument kits", "AI training for your sounds", "Cloud GPU training", "Producer Store access"]
+        "features": ["1,500 credits/month", "Priority processing", "AI mastering & denoise", "Advanced stem separation", "Sample Lab access", "Credit top-ups available", "100% rights (Royalty Free)"]
       },
       "premium": {
         "name": "Premium",
-        "features": ["Unlimited credits", "All AI tools", "Priority support", "Custom voice models", "Commercial license"]
+        "features": ["3,500 credits/month", "All AI tools", "Priority support", "Custom instrument kits", "AI training for your sounds", "Commercial license", "Credit top-ups available", "100% rights (Royalty Free)"]
       }
     },
     "footer": {

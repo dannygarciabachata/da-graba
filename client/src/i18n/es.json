@@ -192,6 +192,17 @@
     },
     "pricingTitle": "Planes Para Cada Creador",
     "pricingSubtitle": "Comienza gratis con 12 créditos. Mejora en cualquier momento para más potencia y funciones.",
+    "billingMonthly": "Mensual",
+    "billingAnnual": "Anual",
+    "annualDiscount": "{{percent}}% descuento",
+    "creditsPerMonth": "{{count}} créditos/mes",
+    "topUpTitle": "Recargas de Créditos",
+    "topUpDescription": "Todos los planes pagos pueden recargar saldo. Mínimo $10 USD por recarga.",
+    "topUpBase": "$10 = 1,700 créditos",
+    "topUpScaling": "El porcentaje de bonificación aumenta con cada recarga mayor",
+    "topUpMinimum": "Recarga mínima: $10 USD",
+    "perYear": "/año",
+    "save": "Ahorras",
     "ctaTitle": "¿Listo Para Crear Tu Primer Track?",
     "ctaSubtitle": "Únete a DGB AUDIO hoy y obtén 12 créditos gratis para empezar a hacer música con IA. Sin tarjeta de crédito.",
     "ctaButton": "Crea Tu Cuenta Gratis",
@@ -200,17 +211,17 @@
         "name": "Gratis",
         "features": ["12 créditos para empezar", "Generación de música con IA", "Separación básica de stems", "Generador de letras con IA"]
       },
+      "basic": {
+        "name": "Básico",
+        "features": ["1,000 créditos/mes", "Generación de música con IA", "Separación de stems", "Generador de letras con IA", "Recarga de créditos disponible", "100% derechos (Royalty Free)"]
+      },
       "pro": {
         "name": "Pro",
-        "features": ["100 créditos/mes", "Procesamiento prioritario", "Masterización y limpieza con IA", "Separación avanzada de stems", "Acceso al Lab de Samples"]
-      },
-      "producer": {
-        "name": "Productor",
-        "features": ["500 créditos/mes", "Todo lo del Pro", "Kits de instrumentos personalizados", "Entrenamiento de IA con tus sonidos", "Entrenamiento en GPU en la nube", "Acceso a la Tienda de Productor"]
+        "features": ["1,500 créditos/mes", "Procesamiento prioritario", "Masterización y limpieza con IA", "Separación avanzada de stems", "Acceso al Lab de Samples", "Recarga de créditos disponible", "100% derechos (Royalty Free)"]
       },
       "premium": {
         "name": "Premium",
-        "features": ["Créditos ilimitados", "Todas las herramientas de IA", "Soporte prioritario", "Modelos de voz personalizados", "Licencia comercial"]
+        "features": ["3,500 créditos/mes", "Todas las herramientas de IA", "Soporte prioritario", "Kits de instrumentos personalizados", "Entrenamiento de IA con tus sonidos", "Licencia comercial", "Recarga de créditos disponible", "100% derechos (Royalty Free)"]
       }
     },
     "footer": {
