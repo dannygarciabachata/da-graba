@@ -5,10 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
   Music,
   ChevronUp,
   ChevronDown,
@@ -44,12 +40,9 @@ function parseLyricsLines(text: string): string[] {
 export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
   const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
   const [showLyrics, setShowLyrics] = useState(true);
-  const [isReady, setIsReady] = useState(false);
   const lyricsRef = useRef<HTMLDivElement>(null);
 
   const lyricsLines = parseLyricsLines(song.lyricsText || "");
@@ -70,28 +63,16 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
     audio.src = song.audioUrl;
     audioRef.current = audio;
 
-    const onCanPlay = () => setIsReady(true);
     const onLoadedMetadata = () => setDuration(audio.duration || 0);
     const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
-    const onEnded = () => setIsPlaying(false);
 
-    audio.addEventListener("canplay", onCanPlay);
     audio.addEventListener("loadedmetadata", onLoadedMetadata);
     audio.addEventListener("timeupdate", onTimeUpdate);
-    audio.addEventListener("play", onPlay);
-    audio.addEventListener("pause", onPause);
-    audio.addEventListener("ended", onEnded);
 
     return () => {
       audio.pause();
-      audio.removeEventListener("canplay", onCanPlay);
       audio.removeEventListener("loadedmetadata", onLoadedMetadata);
       audio.removeEventListener("timeupdate", onTimeUpdate);
-      audio.removeEventListener("play", onPlay);
-      audio.removeEventListener("pause", onPause);
-      audio.removeEventListener("ended", onEnded);
       audio.src = "";
       audioRef.current = null;
     };
@@ -105,22 +86,6 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
       }
     }
   }, [currentLineIndex]);
-
-  const togglePlay = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (audio.paused) {
-      audio.play().catch(console.error);
-    } else {
-      audio.pause();
-    }
-  }, []);
-
-  const handleVolume = useCallback((val: number[]) => {
-    const newVol = val[0];
-    setVolume(newVol);
-    if (audioRef.current) audioRef.current.volume = newVol;
-  }, []);
 
   const handleSeek = useCallback(
     (val: number[]) => {
@@ -218,38 +183,6 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
           <span>-{formatTime(duration - currentTime)}</span>
         </div>
 
-        <div className="flex items-center justify-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              if (volume > 0) {
-                setVolume(0);
-                if (audioRef.current) audioRef.current.volume = 0;
-              } else {
-                setVolume(1);
-                if (audioRef.current) audioRef.current.volume = 1;
-              }
-            }}
-            className="text-muted-foreground"
-            data-testid="button-banner-mute"
-          >
-            {volume === 0 ? (
-              <VolumeX className="h-4 w-4" />
-            ) : (
-              <Volume2 className="h-4 w-4" />
-            )}
-          </Button>
-
-          <Slider
-            value={[volume]}
-            max={1}
-            step={0.01}
-            onValueChange={handleVolume}
-            className="flex-1"
-            data-testid="slider-banner-volume"
-          />
-        </div>
       </div>
 
       <div className="px-4 py-2 border-t border-white/5">
