@@ -225,7 +225,20 @@
       "aiMusicGenerator": "AI Music Generator",
       "stemSeparator": "Stem Separator",
       "aiLyricsWriter": "AI Lyrics Writer",
-      "sampleLab": "Sample Lab"
+      "sampleLab": "Sample Lab",
+      "termsLink": "Terms of Service",
+      "privacyLink": "Privacy Policy",
+      "cookiesLink": "Cookie Policy",
+      "faqTitle": "Frequently Asked Questions",
+      "faq": [
+        {"q": "Who owns the music I generate?", "a": "If you have an active membership, you own 100% of the rights (Royalty Free). Free plan users retain 40%, while DGB Studio/ODGMUSIC retains 60%."},
+        {"q": "Is my voice protected?", "a": "Yes. Your Vocal DNA is processed with encryption and is strictly private. It is never shared without your express consent."},
+        {"q": "How does distribution with ODGMUSIC work?", "a": "When you choose to distribute with us, a 50/50 split on net revenue applies. ODGMUSIC (ASCAP-affiliated) administers your publishing rights worldwide."},
+        {"q": "Can I register my songs with a PRO?", "a": "Yes. From the Copyright Hub you can prepare and export your registrations for ASCAP, BMI, SESAC or other rights organizations."},
+        {"q": "What happens if I cancel my subscription?", "a": "Music generated during your active membership keeps its Royalty Free rights. New creations after canceling are governed by the 60/40 rule."}
+      ],
+      "needHelp": "Need help? Our AI support chat is available for members",
+      "chatSupport": "Log In for Support"
     },
     "demoStems": {
       "vocals": "Vocals",

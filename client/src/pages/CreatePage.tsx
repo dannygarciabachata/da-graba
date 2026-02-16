@@ -420,7 +420,7 @@ export default function CreatePage() {
   return (
     <ScrollArea className="h-full">
       <div className="flex flex-col items-center w-full min-h-full">
-        <div className="w-full max-w-2xl px-4 py-6 md:py-10 mx-auto flex flex-col flex-1">
+        <div className="w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-6 md:py-10 mx-auto flex flex-col flex-1">
 
           <motion.div
             initial={{ opacity: 0, y: 16 }}
