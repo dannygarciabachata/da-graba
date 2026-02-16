@@ -3885,6 +3885,44 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/serverless/test", async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: "Not authenticated" });
+    const dbUser = await storage.getUserByReplitId(req.user.id);
+    if (!dbUser || !["super_admin", "admin"].includes(dbUser.role || "")) {
+      return res.status(403).json({ message: "Admin only" });
+    }
+    try {
+      const { submitJob, isServerlessConfigured, getWebhookUrl } = await import("./core/runpod_serverless");
+      const endpointType = (req.body.type || "music") as "music" | "training" | "stems";
+      if (!isServerlessConfigured(endpointType)) {
+        return res.status(400).json({ message: `Serverless endpoint not configured for: ${endpointType}` });
+      }
+      const result = await submitJob(endpointType, {
+        action: "health_check",
+        test: true,
+        timestamp: Date.now(),
+      });
+      res.json({ success: true, job: result });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/serverless/configure", async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: "Not authenticated" });
+    const dbUser = await storage.getUserByReplitId(req.user.id);
+    if (!dbUser || !["super_admin", "admin"].includes(dbUser.role || "")) {
+      return res.status(403).json({ message: "Admin only" });
+    }
+    const { endpointType, endpointId } = req.body;
+    if (!endpointType || !endpointId) {
+      return res.status(400).json({ message: "endpointType and endpointId required" });
+    }
+    const envKey = `RUNPOD_ENDPOINT_${(endpointType as string).toUpperCase()}`;
+    process.env[envKey] = endpointId;
+    res.json({ success: true, message: `${envKey} set to ${endpointId}` });
+  });
+
   // ========== VOICE MODELS & STYLE REFERENCES ==========
 
   const voiceDir = path.join(process.cwd(), "public", "audio", "voices");

@@ -1,0 +1,59 @@
+Este documento es el que debes entregar a tu equipo de desarrollo para que lo integren en el sistema.
+
+📑 1. El "Escudo Legal" (Términos y Condiciones)
+
+He redactado las cláusulas clave basándome en tus instrucciones sobre el 60%, el ADN de ejecución y la responsabilidad del artista.
+
+Cláusula A: Propiedad y Membresía (Regla del 60/40)
+
+"El acceso a las herramientas de generación de DGB STUDIO está sujeto al nivel de suscripción del usuario. Los Usuarios sin Membresía Activa (Plan Free) aceptan que, a cambio del uso de nuestra tecnología y librerías de instrumentos originales, DGB STUDIO / ODGMUSIC retendrá automáticamente el 60% de los derechos de autor sobre cada obra generada. Para obtener el 100% de los derechos comerciales, el usuario deberá contar con una membresía activa al momento de la creación."
+
+Cláusula B: ADN de Ejecución e Instrumentos de Terceros
+
+"DGB STUDIO provee instrumentos originales de Bachata y Bolero. No obstante, el sistema permite la integración de modelos entrenados por terceros. El Usuario es el único responsable de asegurar que cualquier modelo de voz o instrumento que utilice no infrinja el 'ADN de ejecución' de músicos reales. DGB STUDIO no se responsabiliza por reclamaciones de propiedad intelectual derivadas del uso de modelos no originales de la plataforma."
+
+Cláusula C: Deslinde por Publicación
+
+"Si un artista decide distribuir o publicar una obra creada en nuestro sistema fuera o dentro de la plataforma, asume total responsabilidad legal. En caso de reclamo por parte de terceros sobre la originalidad de las voces o instrumentos, el Artista exonera a DGB STUDIO de toda responsabilidad, recayendo cualquier disputa directamente sobre el creador."
+
+📋 2. El Centro de Ayuda (FAQ - Preguntas Frecuentes)
+
+Estas son las preguntas que tu Chat Inteligente debe dominar:
+
+¿Mi voz es privada?
+
+Respuesta: Sí. Tu ADN Vocal está encriptado y vinculado a tu cuenta. Nadie puede usar tu modelo de voz a menos que tú lo publiques en la sección "Discover".
+
+¿Por qué mi canción dice que pertenece un 60% a DGB STUDIO?
+
+Respuesta: Esto aplica solo para usuarios sin membresía. Es la compensación por usar nuestros instrumentos exclusivos de Danny Garcia. Con una suscripción Pro, el 100% de la creación es tuya.
+
+¿Qué es el reclamo de "ADN de Ejecución"?
+
+Respuesta: Es cuando un músico reclama que el sonido generado imita su estilo único y personal. Como creador, tú eres responsable de lo que publicas; asegúrate de usar nuestros instrumentos originales para evitar conflictos.
+
+🤖 3. Entrenamiento del Asistente Virtual (Prompt de Sistema)
+
+Para configurar tu Chat de IA, usa estas instrucciones:
+
+Identidad: Eres el Asistente de DGB STUDIO Cloud Engine. Hablas de forma profesional pero con sabor dominicano y conocimiento musical.
+
+Seguridad: Nunca reveles datos sensibles de ODGMUSIC (como el IPI o Member ID). Si preguntan, di que esos datos se manejan internamente en los contratos de regalías.
+
+Conversión: Siempre que alguien pregunte por derechos, recuérdales las ventajas de la membresía para liberar sus canciones al 100%.
+
+🇩🇴 4. Página de Historia: "La Pura Sangre"
+
+Esta página debe tener:
+
+Línea del Tiempo: Desde el bolero de los años 50 hasta la evolución del requinto moderno.
+
+El ADN DGB: Explicar que la IA de este sistema "bebe" de la ejecución real de los maestros dominicanos, no es solo matemática, es sentimiento.
+
+🚀 Próximos pasos técnicos (Onboarding):
+
+Pantalla de Registro: Colocar el aviso legal que vincula al usuario con ODGMUSIC si decide distribuir.
+
+Dashboard de Regalías: Crear el panel donde el usuario vea su balance de ASCAP recolectado por tu editora.
+
+Notificación de Generación: Un pequeño aviso cada vez que den al botón "Generar" que diga: "Usando instrumentos originales DGB - ADN Protegido".
