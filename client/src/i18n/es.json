@@ -63,7 +63,9 @@
     "producerStore": "Tienda de Productor",
     "blog": "Blog",
     "discover": "Descubrir",
-    "adminPanel": "Panel Admin"
+    "adminPanel": "Panel Admin",
+    "artist": "Artista",
+    "artistDashboard": "Mi Perfil de Artista"
   },
   "discover": {
     "title": "Descubrir",
@@ -808,5 +810,108 @@
     "label": "Idioma",
     "es": "Español",
     "en": "English"
+  },
+  "artist": {
+    "types": {
+      "independent": "Independiente",
+      "singer": "Cantante",
+      "producer": "Productor",
+      "dj": "DJ",
+      "band": "Banda",
+      "restaurant": "Restaurante",
+      "barbershop": "Barbería",
+      "nightclub": "Club Nocturno",
+      "content_creator": "Creador de Contenido",
+      "hobbyist": "Hobbyista"
+    },
+    "noProfile": {
+      "title": "Conviértete en Artista",
+      "subtitle": "Monetiza tu música, registra tus derechos de autor y construye tu audiencia — todo desde un solo lugar.",
+      "createButton": "Crear Perfil de Artista"
+    },
+    "dashboard": {
+      "viewPublic": "Ver Perfil Público",
+      "editProfile": "Editar Perfil",
+      "totalEarnings": "Ganancias Totales",
+      "platformFee": "{{percent}}% comisión plataforma",
+      "subscribers": "Suscriptores",
+      "followers": "Seguidores",
+      "totalSongs": "Canciones",
+      "totalPlays": "Reproducciones",
+      "upgradePro": "Actualiza a PRO",
+      "upgradeProDesc": "Conserva el 100% de tus ingresos con plan Pro. Sin comisión de plataforma.",
+      "upgradeButton": "Actualizar",
+      "tabs": {
+        "overview": "Vista General",
+        "copyright": "Derechos de Autor",
+        "monetization": "Monetización"
+      },
+      "revenueModel": "Modelo de Ingresos",
+      "howItWorks": {
+        "title": "Ganancias por Suscripción",
+        "desc": "Los fans se suscriben a tu perfil mensualmente. Tú estableces el precio.",
+        "subscribers": "Crece tu Audiencia",
+        "subscribersDesc": "Publica canciones, comparte tu perfil y obtén seguidores y suscriptores.",
+        "proVsBasic": "Pro vs Básico",
+        "proVsBasicDesc": "Usuarios Pro conservan 100% de ingresos. Usuarios Básicos pagan 5% de comisión."
+      },
+      "proStatus": "Estado PRO (Derechos de Autor)",
+      "noProEntity": "Sin registro PRO",
+      "proExplainer": "Registra tus obras en BMI, ASCAP u otra entidad PRO para proteger tus derechos de autor y recibir regalías.",
+      "noRegistrations": "No tienes registros de obras aún",
+      "grossRevenue": "Ingresos Brutos",
+      "platformFeeLabel": "Comisión Plataforma",
+      "pendingPayout": "Pago Pendiente",
+      "subscriptionPrice": "Precio de Suscripción",
+      "subscriptionPriceDesc": "Establece cuánto pagan tus fans al suscribirse mensualmente a tu música.",
+      "perMonth": "mes"
+    },
+    "profile": {
+      "followers": "seguidores",
+      "subscribers": "suscriptores",
+      "songs": "canciones",
+      "follow": "Seguir",
+      "following": "Siguiendo",
+      "subscribe": "Suscribirse",
+      "subscribed": "¡Suscrito exitosamente!",
+      "subscribedBadge": "Suscrito",
+      "notFound": "Artista no encontrado",
+      "discography": "Discografía",
+      "noSongs": "Este artista aún no ha publicado canciones"
+    },
+    "onboarding": {
+      "title": "Crea tu Perfil de Artista",
+      "editTitle": "Editar Perfil de Artista",
+      "subtitle": "Configura tu presencia como artista en DGB Studio",
+      "step1": "Identidad",
+      "step2": "Música",
+      "step3": "Derechos",
+      "step4": "Monetización",
+      "identityTitle": "¿Quién eres?",
+      "artistName": "Nombre Artístico",
+      "artistNamePlaceholder": "Tu nombre artístico o de banda",
+      "artistType": "Tipo de Artista",
+      "bio": "Biografía",
+      "bioPlaceholder": "Cuéntale al mundo sobre ti y tu música...",
+      "musicTitle": "Tu Música",
+      "genre": "Género Principal",
+      "country": "País",
+      "copyrightTitle": "Derechos de Autor",
+      "copyrightDesc": "Si estás registrado en una entidad PRO (BMI, ASCAP, etc.), ingresa tu información para proteger tus obras.",
+      "proEntity": "Entidad PRO",
+      "noPro": "Sin registro PRO",
+      "proMemberId": "ID de Miembro PRO",
+      "proMemberIdPlaceholder": "Tu número de miembro",
+      "ipiNumber": "Número IPI",
+      "ipiNumberPlaceholder": "Tu número IPI/CAE",
+      "monetizationTitle": "Monetización",
+      "monetizationDesc": "Establece el precio mensual que tus fans pagarán para suscribirse a tu música.",
+      "subscriptionPrice": "Precio Mensual",
+      "summaryTitle": "Resumen de tu Perfil",
+      "createButton": "Crear Perfil",
+      "updateButton": "Actualizar Perfil",
+      "created": "¡Perfil de artista creado!",
+      "updated": "¡Perfil actualizado!"
+    }
   }
 }

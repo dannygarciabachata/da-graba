@@ -22,6 +22,9 @@ import BlogPage from "@/pages/BlogPage";
 import CoverDesignerPage from "@/pages/CoverDesignerPage";
 import DiscoverPage from "@/pages/DiscoverPage";
 import PlaylistPage from "@/pages/PlaylistPage";
+import ArtistDashboardPage from "@/pages/ArtistDashboardPage";
+import ArtistProfilePage from "@/pages/ArtistProfilePage";
+import ArtistOnboardingPage from "@/pages/ArtistOnboardingPage";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
 import { useTranslation } from "react-i18next";
@@ -58,6 +61,9 @@ function AuthenticatedLayout() {
               <Route path="/blog/:slug" component={BlogPage} />
               <Route path="/blog" component={BlogPage} />
               <Route path="/cover-designer" component={CoverDesignerPage} />
+              <Route path="/artist-dashboard" component={ArtistDashboardPage} />
+              <Route path="/artist-onboarding" component={ArtistOnboardingPage} />
+              <Route path="/artist/:id" component={ArtistProfilePage} />
               <Route path="/admin" component={AdminPage} />
               <Route component={NotFound} />
             </Switch>

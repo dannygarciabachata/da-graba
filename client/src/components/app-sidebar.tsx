@@ -35,6 +35,7 @@ import {
   BookOpen,
   Palette,
   Globe,
+  Crown,
 } from "lucide-react";
 import { useAdminCheck } from "@/hooks/use-admin";
 import { useCredits } from "@/hooks/use-credits";
@@ -46,6 +47,10 @@ const NAV_ITEMS = [
   { titleKey: "nav.library", url: "/library", icon: Library },
   { titleKey: "nav.lyrics", url: "/lyrics", icon: PenLine },
   { titleKey: "nav.quiz", url: "/quiz", icon: HelpCircle },
+];
+
+const ARTIST_ITEMS = [
+  { titleKey: "nav.artistDashboard", url: "/artist-dashboard", icon: Crown },
 ];
 
 const TOOLS_ITEMS = [
@@ -111,6 +116,40 @@ export function AppSidebar() {
                         }}
                       >
                         <item.icon className={`h-4 w-4 ${isActive ? "text-[#00C8FF]" : "text-[#D946EF]/60"}`} />
+                        <span>{t(item.titleKey)}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <div className="mx-4 h-px bg-gradient-to-r from-transparent via-[#D946EF]/20 to-transparent" />
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[#D946EF]/70 font-semibold uppercase tracking-wider text-[10px]">{t("nav.artist")}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {ARTIST_ITEMS.map((item) => {
+                const isActive = location === item.url;
+                return (
+                  <SidebarMenuItem key={item.titleKey}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      className={isActive ? "bg-gradient-to-r from-[#00C8FF]/15 to-[#D946EF]/15 border-l-2 border-[#D946EF] text-[#D946EF]" : "hover:bg-gradient-to-r hover:from-[#00C8FF]/5 hover:to-[#D946EF]/5 transition-all duration-200"}
+                      data-testid={`link-sidebar-${item.titleKey.split(".").pop()?.toLowerCase()}`}
+                    >
+                      <a
+                        href={item.url}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setLocation(item.url);
+                        }}
+                      >
+                        <item.icon className={`h-4 w-4 ${isActive ? "text-[#D946EF]" : "text-amber-400/70"}`} />
                         <span>{t(item.titleKey)}</span>
                       </a>
                     </SidebarMenuButton>

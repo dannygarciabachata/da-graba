@@ -63,7 +63,9 @@
     "producerStore": "Producer Store",
     "blog": "Blog",
     "discover": "Discover",
-    "adminPanel": "Admin Panel"
+    "adminPanel": "Admin Panel",
+    "artist": "Artist",
+    "artistDashboard": "My Artist Profile"
   },
   "discover": {
     "title": "Discover",
@@ -808,5 +810,108 @@
     "label": "Language",
     "es": "Español",
     "en": "English"
+  },
+  "artist": {
+    "types": {
+      "independent": "Independent",
+      "singer": "Singer",
+      "producer": "Producer",
+      "dj": "DJ",
+      "band": "Band",
+      "restaurant": "Restaurant",
+      "barbershop": "Barbershop",
+      "nightclub": "Nightclub",
+      "content_creator": "Content Creator",
+      "hobbyist": "Hobbyist"
+    },
+    "noProfile": {
+      "title": "Become an Artist",
+      "subtitle": "Monetize your music, register copyrights, and build your audience — all from one place.",
+      "createButton": "Create Artist Profile"
+    },
+    "dashboard": {
+      "viewPublic": "View Public Profile",
+      "editProfile": "Edit Profile",
+      "totalEarnings": "Total Earnings",
+      "platformFee": "{{percent}}% platform fee",
+      "subscribers": "Subscribers",
+      "followers": "Followers",
+      "totalSongs": "Songs",
+      "totalPlays": "Total Plays",
+      "upgradePro": "Upgrade to PRO",
+      "upgradeProDesc": "Keep 100% of your revenue with Pro plan. Zero platform fees.",
+      "upgradeButton": "Upgrade",
+      "tabs": {
+        "overview": "Overview",
+        "copyright": "Copyright",
+        "monetization": "Monetization"
+      },
+      "revenueModel": "Revenue Model",
+      "howItWorks": {
+        "title": "Subscription Earnings",
+        "desc": "Fans subscribe to your profile monthly. You set the price.",
+        "subscribers": "Grow Your Audience",
+        "subscribersDesc": "Publish songs, share your profile, and gain followers and subscribers.",
+        "proVsBasic": "Pro vs Basic",
+        "proVsBasicDesc": "Pro users keep 100% of revenue. Basic users pay 5% platform fee."
+      },
+      "proStatus": "PRO Status (Copyright)",
+      "noProEntity": "No PRO registration",
+      "proExplainer": "Register your works with BMI, ASCAP, or other PRO entities to protect your copyrights and receive royalties.",
+      "noRegistrations": "No work registrations yet",
+      "grossRevenue": "Gross Revenue",
+      "platformFeeLabel": "Platform Fee",
+      "pendingPayout": "Pending Payout",
+      "subscriptionPrice": "Subscription Price",
+      "subscriptionPriceDesc": "Set how much fans pay to subscribe to your music monthly.",
+      "perMonth": "month"
+    },
+    "profile": {
+      "followers": "followers",
+      "subscribers": "subscribers",
+      "songs": "songs",
+      "follow": "Follow",
+      "following": "Following",
+      "subscribe": "Subscribe",
+      "subscribed": "Successfully subscribed!",
+      "subscribedBadge": "Subscribed",
+      "notFound": "Artist not found",
+      "discography": "Discography",
+      "noSongs": "This artist hasn't published any songs yet"
+    },
+    "onboarding": {
+      "title": "Create Your Artist Profile",
+      "editTitle": "Edit Artist Profile",
+      "subtitle": "Set up your artist presence on DGB Studio",
+      "step1": "Identity",
+      "step2": "Music",
+      "step3": "Copyright",
+      "step4": "Monetization",
+      "identityTitle": "Who Are You?",
+      "artistName": "Artist Name",
+      "artistNamePlaceholder": "Your artist or band name",
+      "artistType": "Artist Type",
+      "bio": "Bio",
+      "bioPlaceholder": "Tell the world about you and your music...",
+      "musicTitle": "Your Music",
+      "genre": "Primary Genre",
+      "country": "Country",
+      "copyrightTitle": "Copyright Protection",
+      "copyrightDesc": "If you're registered with a PRO (BMI, ASCAP, etc.), enter your info to protect your works.",
+      "proEntity": "PRO Entity",
+      "noPro": "No PRO registration",
+      "proMemberId": "PRO Member ID",
+      "proMemberIdPlaceholder": "Your member number",
+      "ipiNumber": "IPI Number",
+      "ipiNumberPlaceholder": "Your IPI/CAE number",
+      "monetizationTitle": "Monetization",
+      "monetizationDesc": "Set the monthly price fans will pay to subscribe to your music.",
+      "subscriptionPrice": "Monthly Price",
+      "summaryTitle": "Profile Summary",
+      "createButton": "Create Profile",
+      "updateButton": "Update Profile",
+      "created": "Artist profile created!",
+      "updated": "Profile updated!"
+    }
   }
 }

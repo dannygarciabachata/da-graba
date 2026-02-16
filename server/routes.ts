@@ -362,6 +362,198 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  // ========== ARTIST PROFILES & MONETIZATION ==========
+
+  app.get("/api/artist/profile", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const profile = await storage.getArtistProfile(userId);
+    res.json(profile || null);
+  });
+
+  app.post("/api/artist/profile", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const existing = await storage.getArtistProfile(userId);
+    if (existing) return res.status(409).json({ message: "Profile already exists" });
+    const { artistName, bio, genre, country, artistType, proEntity, proMemberId, ipiNumber, monthlySubscriptionPrice } = req.body;
+    if (!artistName) return res.status(400).json({ message: "Artist name required" });
+    const profile = await storage.createArtistProfile({
+      userId,
+      artistName,
+      bio: bio || null,
+      genre: genre || null,
+      country: country || null,
+      artistType: artistType || "independent",
+      proEntity: proEntity || null,
+      proMemberId: proMemberId || null,
+      ipiNumber: ipiNumber || null,
+      monthlySubscriptionPrice: monthlySubscriptionPrice || 299,
+      onboardingCompleted: true,
+    });
+    res.json(profile);
+  });
+
+  app.patch("/api/artist/profile", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const profile = await storage.getArtistProfile(userId);
+    if (!profile) return res.status(404).json({ message: "No artist profile" });
+    const updated = await storage.updateArtistProfile(profile.id, req.body);
+    res.json(updated);
+  });
+
+  app.get("/api/public/artists", async (req, res) => {
+    const limit = Math.min(Number(req.query.limit) || 50, 100);
+    const artists = await storage.getArtistProfiles(limit);
+    res.json(artists);
+  });
+
+  app.get("/api/public/artists/search", async (req, res) => {
+    const q = String(req.query.q || "");
+    if (!q) return res.json([]);
+    const results = await storage.searchArtists(q);
+    res.json(results);
+  });
+
+  app.get("/api/public/artists/:id", async (req, res) => {
+    const id = Number(req.params.id);
+    const profile = await storage.getArtistProfileById(id);
+    if (!profile) return res.sendStatus(404);
+    const songs = await storage.getArtistSongs(id);
+    const followers = await storage.getFollowerCount(id);
+    const subscribers = await storage.getSubscriberCount(id);
+    let isFollowing = false;
+    let isSubscribed = false;
+    if (req.isAuthenticated()) {
+      const userId = (req.user as any).claims.sub;
+      isFollowing = await storage.isFollowing(userId, id);
+      isSubscribed = await storage.isSubscribed(userId, id);
+    }
+    res.json({ ...profile, songs, followerCount: followers, subscriberCount: subscribers, isFollowing, isSubscribed });
+  });
+
+  app.post("/api/artists/:id/follow", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const artistId = Number(req.params.id);
+    const result = await storage.toggleFollow(userId, artistId);
+    res.json(result);
+  });
+
+  app.post("/api/artists/:id/subscribe", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const artistId = Number(req.params.id);
+    const profile = await storage.getArtistProfileById(artistId);
+    if (!profile) return res.sendStatus(404);
+    const already = await storage.isSubscribed(userId, artistId);
+    if (already) return res.status(409).json({ message: "Already subscribed" });
+    const sub = await storage.createArtistSubscription({
+      subscriberId: userId,
+      artistId,
+      status: "active",
+      priceAtSubscription: profile.monthlySubscriptionPrice || 299,
+    });
+    res.json(sub);
+  });
+
+  app.delete("/api/artists/:id/subscribe", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const artistId = Number(req.params.id);
+    const subs = await storage.getUserSubscriptions(userId);
+    const sub = subs.find(s => s.artistId === artistId);
+    if (!sub) return res.status(404).json({ message: "Not subscribed" });
+    const canceled = await storage.cancelArtistSubscription(sub.id);
+    res.json(canceled);
+  });
+
+  app.get("/api/artist/subscribers", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const profile = await storage.getArtistProfile(userId);
+    if (!profile) return res.json([]);
+    const subs = await storage.getArtistSubscribers(profile.id);
+    res.json(subs);
+  });
+
+  app.get("/api/artist/subscriptions", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const subs = await storage.getUserSubscriptions(userId);
+    res.json(subs);
+  });
+
+  app.get("/api/artist/earnings", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const profile = await storage.getArtistProfile(userId);
+    if (!profile) return res.json({ earnings: [], totals: { gross: 0, net: 0, pending: 0 } });
+    const earnings = await storage.getSongEarnings(profile.id);
+    const totals = await storage.getArtistTotalEarnings(profile.id);
+    const user = await storage.getUser(userId);
+    const isPro = user?.subscriptionTier === "pro" || user?.subscriptionTier === "producer" || user?.subscriptionTier === "premium";
+    const platformFeePercent = isPro ? 0 : 5;
+    res.json({ earnings, totals, platformFeePercent, isPro });
+  });
+
+  app.get("/api/artist/dashboard", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const profile = await storage.getArtistProfile(userId);
+    if (!profile) return res.json(null);
+    const user = await storage.getUser(userId);
+    const isPro = user?.subscriptionTier === "pro" || user?.subscriptionTier === "producer" || user?.subscriptionTier === "premium";
+    const subscribers = await storage.getSubscriberCount(profile.id);
+    const followers = await storage.getFollowerCount(profile.id);
+    const totals = await storage.getArtistTotalEarnings(profile.id);
+    const songs = await storage.getUserSongs(userId);
+    const totalPlays = songs.reduce((s, song) => s + (song.playCount || 0), 0);
+    const registrations = await storage.getProRegistrations(profile.id);
+    res.json({
+      profile,
+      isPro,
+      platformFeePercent: isPro ? 0 : 5,
+      subscribers,
+      followers,
+      totals,
+      totalSongs: songs.length,
+      totalPlays,
+      registrations,
+    });
+  });
+
+  app.get("/api/artist/pro-registrations", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const profile = await storage.getArtistProfile(userId);
+    if (!profile) return res.json([]);
+    const regs = await storage.getProRegistrations(profile.id);
+    res.json(regs);
+  });
+
+  app.post("/api/artist/pro-registrations", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const profile = await storage.getArtistProfile(userId);
+    if (!profile) return res.status(404).json({ message: "Create artist profile first" });
+    const { songId, workTitle, writers, publishers } = req.body;
+    if (!songId || !workTitle) return res.status(400).json({ message: "songId and workTitle required" });
+    const proEntity = profile.proEntity || "none";
+    if (proEntity === "none") return res.status(400).json({ message: "Set your PRO entity (BMI/ASCAP) in your artist profile first" });
+    const reg = await storage.createProRegistration({
+      songId,
+      artistId: profile.id,
+      proEntity,
+      registrationStatus: "pending",
+      workTitle,
+      writers: writers || [{ name: profile.artistName, role: "writer", share: 100 }],
+      publishers: publishers || [],
+    });
+    res.json(reg);
+  });
+
   // ========== AI LYRICS TITLE SUGGESTIONS ==========
   app.post("/api/ai/suggest-titles", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

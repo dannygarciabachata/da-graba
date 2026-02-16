@@ -855,3 +855,191 @@ export type InsertPricingPlan = z.infer<typeof insertPricingPlanSchema>;
 
 export const PLAN_TIERS = ["free", "pro", "producer", "premium"] as const;
 export type PlanTier = typeof PLAN_TIERS[number];
+
+// === ARTIST PROFILES ===
+
+export const artistProfiles = pgTable("artist_profiles", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().unique(),
+  artistName: text("artist_name").notNull(),
+  bio: text("bio"),
+  avatarUrl: text("avatar_url"),
+  bannerUrl: text("banner_url"),
+  genre: text("genre"),
+  country: text("country"),
+  website: text("website"),
+  socialLinks: jsonb("social_links").$type<Record<string, string>>(),
+  proEntity: text("pro_entity"),
+  proMemberId: text("pro_member_id"),
+  ipiNumber: text("ipi_number"),
+  isVerified: boolean("is_verified").default(false),
+  isActive: boolean("is_active").default(true),
+  monthlySubscriptionPrice: integer("monthly_subscription_price").default(299),
+  totalEarnings: integer("total_earnings").default(0),
+  totalSubscribers: integer("total_subscribers").default(0),
+  totalPlays: integer("total_plays").default(0),
+  onboardingCompleted: boolean("onboarding_completed").default(false),
+  artistType: text("artist_type").default("independent"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertArtistProfileSchema = createInsertSchema(artistProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  totalEarnings: true,
+  totalSubscribers: true,
+  totalPlays: true,
+});
+
+export type ArtistProfile = typeof artistProfiles.$inferSelect;
+export type InsertArtistProfile = z.infer<typeof insertArtistProfileSchema>;
+
+export const PRO_ENTITIES = ["bmi", "ascap", "sesac", "socan", "prs", "gema", "sgae", "none"] as const;
+export type ProEntity = typeof PRO_ENTITIES[number];
+
+export const ARTIST_TYPES = [
+  "independent",
+  "singer",
+  "producer",
+  "dj",
+  "band",
+  "restaurant",
+  "barbershop",
+  "nightclub",
+  "content_creator",
+  "hobbyist",
+] as const;
+export type ArtistType = typeof ARTIST_TYPES[number];
+
+// === ARTIST SUBSCRIPTIONS (Listeners subscribe to artists) ===
+
+export const artistSubscriptions = pgTable("artist_subscriptions", {
+  id: serial("id").primaryKey(),
+  subscriberId: text("subscriber_id").notNull(),
+  artistId: integer("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  status: text("status").notNull().default("active"),
+  priceAtSubscription: integer("price_at_subscription").default(299),
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  canceledAt: timestamp("canceled_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const artistSubscriptionsRelations = relations(artistSubscriptions, ({ one }) => ({
+  artist: one(artistProfiles, {
+    fields: [artistSubscriptions.artistId],
+    references: [artistProfiles.id],
+  }),
+}));
+
+export const insertArtistSubscriptionSchema = createInsertSchema(artistSubscriptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ArtistSubscription = typeof artistSubscriptions.$inferSelect;
+export type InsertArtistSubscription = z.infer<typeof insertArtistSubscriptionSchema>;
+
+export const SUBSCRIPTION_STATUSES = ["active", "canceled", "past_due", "expired"] as const;
+
+// === SONG EARNINGS / REVENUE LEDGER ===
+
+export const songEarnings = pgTable("song_earnings", {
+  id: serial("id").primaryKey(),
+  songId: integer("song_id").notNull().references(() => songs.id, { onDelete: "cascade" }),
+  artistId: integer("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  period: text("period").notNull(),
+  totalPlays: integer("total_plays").default(0),
+  grossRevenue: integer("gross_revenue").default(0),
+  platformFee: integer("platform_fee").default(0),
+  netRevenue: integer("net_revenue").default(0),
+  isPaid: boolean("is_paid").default(false),
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const songEarningsRelations = relations(songEarnings, ({ one }) => ({
+  song: one(songs, {
+    fields: [songEarnings.songId],
+    references: [songs.id],
+  }),
+  artist: one(artistProfiles, {
+    fields: [songEarnings.artistId],
+    references: [artistProfiles.id],
+  }),
+}));
+
+export const insertSongEarningSchema = createInsertSchema(songEarnings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type SongEarning = typeof songEarnings.$inferSelect;
+export type InsertSongEarning = z.infer<typeof insertSongEarningSchema>;
+
+// === PRO REGISTRATIONS (BMI/ASCAP song registrations) ===
+
+export const proRegistrations = pgTable("pro_registrations", {
+  id: serial("id").primaryKey(),
+  songId: integer("song_id").notNull().references(() => songs.id, { onDelete: "cascade" }),
+  artistId: integer("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  proEntity: text("pro_entity").notNull(),
+  registrationStatus: text("registration_status").notNull().default("pending"),
+  externalRegistrationId: text("external_registration_id"),
+  workTitle: text("work_title").notNull(),
+  writers: jsonb("writers").$type<Array<{ name: string; role: string; share: number; ipiNumber?: string }>>(),
+  publishers: jsonb("publishers").$type<Array<{ name: string; share: number }>>(),
+  iswcCode: text("iswc_code"),
+  submittedAt: timestamp("submitted_at"),
+  registeredAt: timestamp("registered_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const proRegistrationsRelations = relations(proRegistrations, ({ one }) => ({
+  song: one(songs, {
+    fields: [proRegistrations.songId],
+    references: [songs.id],
+  }),
+  artist: one(artistProfiles, {
+    fields: [proRegistrations.artistId],
+    references: [artistProfiles.id],
+  }),
+}));
+
+export const insertProRegistrationSchema = createInsertSchema(proRegistrations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ProRegistration = typeof proRegistrations.$inferSelect;
+export type InsertProRegistration = z.infer<typeof insertProRegistrationSchema>;
+
+export const PRO_REGISTRATION_STATUSES = ["pending", "submitted", "registered", "rejected"] as const;
+export type ProRegistrationStatus = typeof PRO_REGISTRATION_STATUSES[number];
+
+// === ARTIST FOLLOWERS (free follow, no payment) ===
+
+export const artistFollowers = pgTable("artist_followers", {
+  id: serial("id").primaryKey(),
+  followerId: text("follower_id").notNull(),
+  artistId: integer("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const artistFollowersRelations = relations(artistFollowers, ({ one }) => ({
+  artist: one(artistProfiles, {
+    fields: [artistFollowers.artistId],
+    references: [artistProfiles.id],
+  }),
+}));
+
+export const insertArtistFollowerSchema = createInsertSchema(artistFollowers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ArtistFollower = typeof artistFollowers.$inferSelect;
+export type InsertArtistFollower = z.infer<typeof insertArtistFollowerSchema>;

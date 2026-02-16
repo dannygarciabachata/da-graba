@@ -7,6 +7,7 @@ import {
   platformSettings, supportTickets, supportMessages,
   cloudServers, voiceModels, voiceSamples, styleReferences,
   blogPosts, blogCategories, blogComments, blogLikes, blogStars, blogShares, pricingPlans, coverDesigns, songLikes,
+  artistProfiles, artistSubscriptions, songEarnings, proRegistrations, artistFollowers,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
@@ -32,6 +33,11 @@ import {
   type PricingPlan, type InsertPricingPlan,
   type CoverDesign, type InsertCoverDesign,
   type SongLike, type InsertSongLike,
+  type ArtistProfile, type InsertArtistProfile,
+  type ArtistSubscription, type InsertArtistSubscription,
+  type SongEarning, type InsertSongEarning,
+  type ProRegistration, type InsertProRegistration,
+  type ArtistFollower, type InsertArtistFollower,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -201,6 +207,37 @@ export interface IStorage {
   getSongLikeStatus(songId: number, userId: string): Promise<{ value: number } | null>;
   getSongLikeCounts(songId: number): Promise<{ likes: number; dislikes: number }>;
   getSongLikeCountsBatch(songIds: number[]): Promise<Record<number, number>>;
+
+  getArtistProfile(userId: string): Promise<ArtistProfile | undefined>;
+  getArtistProfileById(id: number): Promise<ArtistProfile | undefined>;
+  getArtistProfiles(limit?: number): Promise<ArtistProfile[]>;
+  createArtistProfile(profile: InsertArtistProfile): Promise<ArtistProfile>;
+  updateArtistProfile(id: number, data: Partial<ArtistProfile>): Promise<ArtistProfile>;
+  searchArtists(query: string): Promise<ArtistProfile[]>;
+
+  getArtistSubscribers(artistId: number): Promise<ArtistSubscription[]>;
+  getSubscriberCount(artistId: number): Promise<number>;
+  getUserSubscriptions(userId: string): Promise<ArtistSubscription[]>;
+  isSubscribed(subscriberId: string, artistId: number): Promise<boolean>;
+  createArtistSubscription(sub: InsertArtistSubscription): Promise<ArtistSubscription>;
+  cancelArtistSubscription(id: number): Promise<ArtistSubscription>;
+
+  getArtistFollowers(artistId: number): Promise<ArtistFollower[]>;
+  getFollowerCount(artistId: number): Promise<number>;
+  isFollowing(followerId: string, artistId: number): Promise<boolean>;
+  toggleFollow(followerId: string, artistId: number): Promise<{ following: boolean; count: number }>;
+
+  getSongEarnings(artistId: number): Promise<SongEarning[]>;
+  getSongEarningsByPeriod(artistId: number, period: string): Promise<SongEarning[]>;
+  createSongEarning(earning: InsertSongEarning): Promise<SongEarning>;
+  getArtistTotalEarnings(artistId: number): Promise<{ gross: number; net: number; pending: number }>;
+
+  getProRegistrations(artistId: number): Promise<ProRegistration[]>;
+  getProRegistration(id: number): Promise<ProRegistration | undefined>;
+  createProRegistration(reg: InsertProRegistration): Promise<ProRegistration>;
+  updateProRegistration(id: number, data: Partial<ProRegistration>): Promise<ProRegistration>;
+
+  getArtistSongs(artistId: number): Promise<Song[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1208,6 +1245,199 @@ export class DatabaseStorage implements IStorage {
     const map: Record<number, number> = {};
     for (const r of results) map[r.songId] = r.count;
     return map;
+  }
+
+  // === ARTIST PROFILES ===
+
+  async getArtistProfile(userId: string): Promise<ArtistProfile | undefined> {
+    const [profile] = await db.select().from(artistProfiles).where(eq(artistProfiles.userId, userId));
+    return profile;
+  }
+
+  async getArtistProfileById(id: number): Promise<ArtistProfile | undefined> {
+    const [profile] = await db.select().from(artistProfiles).where(eq(artistProfiles.id, id));
+    return profile;
+  }
+
+  async getArtistProfiles(limit = 50): Promise<ArtistProfile[]> {
+    return db.select().from(artistProfiles)
+      .where(eq(artistProfiles.isActive, true))
+      .orderBy(desc(artistProfiles.totalSubscribers))
+      .limit(limit);
+  }
+
+  async createArtistProfile(profile: InsertArtistProfile): Promise<ArtistProfile> {
+    const [created] = await db.insert(artistProfiles).values(profile).returning();
+    return created;
+  }
+
+  async updateArtistProfile(id: number, data: Partial<ArtistProfile>): Promise<ArtistProfile> {
+    const [updated] = await db.update(artistProfiles).set({ ...data, updatedAt: new Date() }).where(eq(artistProfiles.id, id)).returning();
+    return updated;
+  }
+
+  async searchArtists(query: string): Promise<ArtistProfile[]> {
+    return db.select().from(artistProfiles)
+      .where(and(
+        eq(artistProfiles.isActive, true),
+        sql`LOWER(${artistProfiles.artistName}) LIKE LOWER(${'%' + query + '%'})`
+      ))
+      .orderBy(desc(artistProfiles.totalSubscribers))
+      .limit(20);
+  }
+
+  // === ARTIST SUBSCRIPTIONS ===
+
+  async getArtistSubscribers(artistId: number): Promise<ArtistSubscription[]> {
+    return db.select().from(artistSubscriptions)
+      .where(and(eq(artistSubscriptions.artistId, artistId), eq(artistSubscriptions.status, "active")))
+      .orderBy(desc(artistSubscriptions.createdAt));
+  }
+
+  async getSubscriberCount(artistId: number): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(artistSubscriptions)
+      .where(and(eq(artistSubscriptions.artistId, artistId), eq(artistSubscriptions.status, "active")));
+    return result?.count || 0;
+  }
+
+  async getUserSubscriptions(userId: string): Promise<ArtistSubscription[]> {
+    return db.select().from(artistSubscriptions)
+      .where(and(eq(artistSubscriptions.subscriberId, userId), eq(artistSubscriptions.status, "active")))
+      .orderBy(desc(artistSubscriptions.createdAt));
+  }
+
+  async isSubscribed(subscriberId: string, artistId: number): Promise<boolean> {
+    const [result] = await db.select({ count: count() }).from(artistSubscriptions)
+      .where(and(
+        eq(artistSubscriptions.subscriberId, subscriberId),
+        eq(artistSubscriptions.artistId, artistId),
+        eq(artistSubscriptions.status, "active")
+      ));
+    return (result?.count || 0) > 0;
+  }
+
+  async createArtistSubscription(sub: InsertArtistSubscription): Promise<ArtistSubscription> {
+    const [created] = await db.insert(artistSubscriptions).values(sub).returning();
+    await db.update(artistProfiles)
+      .set({ totalSubscribers: sql`${artistProfiles.totalSubscribers} + 1` })
+      .where(eq(artistProfiles.id, sub.artistId));
+    return created;
+  }
+
+  async cancelArtistSubscription(id: number): Promise<ArtistSubscription> {
+    const [updated] = await db.update(artistSubscriptions)
+      .set({ status: "canceled", canceledAt: new Date() })
+      .where(eq(artistSubscriptions.id, id))
+      .returning();
+    if (updated) {
+      await db.update(artistProfiles)
+        .set({ totalSubscribers: sql`GREATEST(${artistProfiles.totalSubscribers} - 1, 0)` })
+        .where(eq(artistProfiles.id, updated.artistId));
+    }
+    return updated;
+  }
+
+  // === ARTIST FOLLOWERS ===
+
+  async getArtistFollowers(artistId: number): Promise<ArtistFollower[]> {
+    return db.select().from(artistFollowers)
+      .where(eq(artistFollowers.artistId, artistId))
+      .orderBy(desc(artistFollowers.createdAt));
+  }
+
+  async getFollowerCount(artistId: number): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(artistFollowers)
+      .where(eq(artistFollowers.artistId, artistId));
+    return result?.count || 0;
+  }
+
+  async isFollowing(followerId: string, artistId: number): Promise<boolean> {
+    const [result] = await db.select({ count: count() }).from(artistFollowers)
+      .where(and(eq(artistFollowers.followerId, followerId), eq(artistFollowers.artistId, artistId)));
+    return (result?.count || 0) > 0;
+  }
+
+  async toggleFollow(followerId: string, artistId: number): Promise<{ following: boolean; count: number }> {
+    const existing = await db.select().from(artistFollowers)
+      .where(and(eq(artistFollowers.followerId, followerId), eq(artistFollowers.artistId, artistId)));
+    if (existing.length > 0) {
+      await db.delete(artistFollowers).where(eq(artistFollowers.id, existing[0].id));
+      const cnt = await this.getFollowerCount(artistId);
+      return { following: false, count: cnt };
+    }
+    await db.insert(artistFollowers).values({ followerId, artistId });
+    const cnt = await this.getFollowerCount(artistId);
+    return { following: true, count: cnt };
+  }
+
+  // === SONG EARNINGS ===
+
+  async getSongEarnings(artistId: number): Promise<SongEarning[]> {
+    return db.select().from(songEarnings)
+      .where(eq(songEarnings.artistId, artistId))
+      .orderBy(desc(songEarnings.createdAt));
+  }
+
+  async getSongEarningsByPeriod(artistId: number, period: string): Promise<SongEarning[]> {
+    return db.select().from(songEarnings)
+      .where(and(eq(songEarnings.artistId, artistId), eq(songEarnings.period, period)))
+      .orderBy(desc(songEarnings.netRevenue));
+  }
+
+  async createSongEarning(earning: InsertSongEarning): Promise<SongEarning> {
+    const [created] = await db.insert(songEarnings).values(earning).returning();
+    return created;
+  }
+
+  async getArtistTotalEarnings(artistId: number): Promise<{ gross: number; net: number; pending: number }> {
+    const [totals] = await db.select({
+      gross: sum(songEarnings.grossRevenue),
+      net: sum(songEarnings.netRevenue),
+    }).from(songEarnings).where(eq(songEarnings.artistId, artistId));
+
+    const [pendingResult] = await db.select({
+      pending: sum(songEarnings.netRevenue),
+    }).from(songEarnings)
+      .where(and(eq(songEarnings.artistId, artistId), eq(songEarnings.isPaid, false)));
+
+    return {
+      gross: Number(totals?.gross) || 0,
+      net: Number(totals?.net) || 0,
+      pending: Number(pendingResult?.pending) || 0,
+    };
+  }
+
+  // === PRO REGISTRATIONS ===
+
+  async getProRegistrations(artistId: number): Promise<ProRegistration[]> {
+    return db.select().from(proRegistrations)
+      .where(eq(proRegistrations.artistId, artistId))
+      .orderBy(desc(proRegistrations.createdAt));
+  }
+
+  async getProRegistration(id: number): Promise<ProRegistration | undefined> {
+    const [reg] = await db.select().from(proRegistrations).where(eq(proRegistrations.id, id));
+    return reg;
+  }
+
+  async createProRegistration(reg: InsertProRegistration): Promise<ProRegistration> {
+    const [created] = await db.insert(proRegistrations).values(reg).returning();
+    return created;
+  }
+
+  async updateProRegistration(id: number, data: Partial<ProRegistration>): Promise<ProRegistration> {
+    const [updated] = await db.update(proRegistrations).set(data).where(eq(proRegistrations.id, id)).returning();
+    return updated;
+  }
+
+  // === ARTIST SONGS ===
+
+  async getArtistSongs(artistId: number): Promise<Song[]> {
+    const profile = await this.getArtistProfileById(artistId);
+    if (!profile) return [];
+    return db.select().from(songs)
+      .where(and(eq(songs.userId, profile.userId), eq(songs.isPublic, true)))
+      .orderBy(desc(songs.createdAt));
   }
 }
 
