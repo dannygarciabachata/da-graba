@@ -1,0 +1,59 @@
+TÉRMINOS DE SERVICIO Y ACUERDO DE LICENCIA DE DGB STUDIO CLOUD ENGINE
+Última actualización: 16 de febrero de 2026
+Operado por: DGB STUDIO & ODGMUSIC LATIN WORLDWIDE PUBLISHING
+
+Al acceder o utilizar el servicio DGB STUDIO Cloud Engine, usted (el "Usuario") acepta estar legalmente vinculado por los siguientes términos. Si no está de acuerdo, no utilice el Servicio.
+
+1. MODELO DE PROPIEDAD Y MEMBRESÍA (REGLA 60/40)
+
+Usuarios con Membresía Activa: Los usuarios que mantengan una suscripción paga tienen plenos derechos comerciales sobre el contenido generado. La música es "Libre de Regalías" (Royalty Free) para el usuario bajo este plan.
+
+Usuarios sin Membresía (Plan Free): Para compensar el uso de nuestra infraestructura y librerías de instrumentos exclusivos, el Usuario acepta que DGB STUDIO / ODGMUSIC retendrá automáticamente el 60% de los derechos de autor y derechos conexos sobre cada obra generada.
+
+2. PRIVACIDAD DEL ADN VOCAL Y MODELOS RVC
+
+Uso Privado: Los audios subidos para entrenar voces son procesados de forma encriptada. El modelo de voz resultante pertenece al Usuario y es estrictamente privado.
+
+Prohibición de Uso por Terceros: DGB STUDIO no compartirá, regalará ni utilizará su ADN vocal para otros usuarios sin su consentimiento expreso a través de la sección "Discover".
+
+3. INSTRUMENTACIÓN Y ADN DE EJECUCIÓN (LÍMITE DE RESPONSABILIDAD)
+
+Instrumentos Originales DGB: El sistema utiliza modelos entrenados con instrumentos reales grabados por Danny Garcia y maestros dominicanos.
+
+Instrumentos de Terceros: DGB STUDIO permite la integración de modelos externos. Sin embargo, el sistema no se responsabiliza si el audio generado infringe el "ADN de ejecución" de un músico real.
+
+Responsabilidad del Creador: Si un artista publica o distribuye una canción que genere reclamos de propiedad intelectual por su estilo de ejecución, la responsabilidad legal recae íntegramente sobre el Artista/Usuario, deslindando a DGB STUDIO de cualquier litigio.
+
+4. ACUERDO DE PUBLISHING Y DISTRIBUCIÓN (ODGMUSIC)
+
+Designación: Al seleccionar la opción de "Distribución con nosotros", el Usuario designa a ODGMUSIC LATIN WORLDWIDE PUBLISHING (afiliada a ASCAP) como su administrador editorial exclusivo a nivel mundial.
+
+Reparto de Regalías (Splits): Se aplicará un contrato de administración con un reparto de 50% para el Artista y 50% para la Editora sobre los ingresos netos recaudados por explotación mecánica, sincronización y ventas digitales.
+
+5. USOS PROHIBIDOS
+
+Queda prohibido el uso de sistemas automatizados (bots) para generar contenido de forma masiva que sature la infraestructura del Cloud Engine.
+
+No se permite la creación de contenido difamatorio, ilegal o que infrinja derechos de terceros utilizando voces sintéticas de figuras públicas sin autorización.
+
+PREGUNTAS FRECUENTES (Para tu página de Soporte/FAQ)
+Q: ¿Si no pago membresía, de quién es la canción?
+
+A: La canción es compartida. Tú posees el 40% y DGB STUDIO el 60% por el uso de la tecnología y los instrumentos de Danny Garcia. Si quieres el 100%, activa tu membresía Pro.
+
+Q: ¿Pueden otras personas usar mi voz si la entreno aquí?
+
+A: No. Tu voz es tu ADN. El sistema la bloquea para tu uso exclusivo. Solo si tú la haces pública en "Discover", otros podrán verla.
+
+Q: ¿Qué pasa si un músico me reclama por el "sonido" de la guitarra?
+
+A: Nuestras librerías son originales. Pero si tú usas modelos externos o el sistema genera un estilo muy similar al de un tercero y decides publicarlo, tú eres legalmente responsable de esa decisión de distribución.
+
+INSTRUCCIONES PARA EL CHAT INTELIGENTE (Prompt)
+Identidad: Eres el Asistente Experto de DGB STUDIO.
+
+Misión: Guiar al usuario en la producción y aclarar dudas legales.
+
+Regla de Oro: Si el usuario pregunta por derechos, siempre aclara la diferencia entre Membresía (Dueño Total) y Plan Gratuito (Socio al 60%).
+
+Cultura: Siempre menciona que este sistema tiene la "Pura Sangre" de la Bachata Dominicana.
