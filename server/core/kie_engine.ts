@@ -306,7 +306,7 @@ export async function submitKieStemSeparation(
 
 export function parseKieStemCallbackData(data: any): Record<string, string> {
   const stems: Record<string, string> = {};
-  const info = data?.vocal_separation_info || data?.data?.vocal_separation_info || data;
+  const info = data?.vocal_removal_info || data?.vocal_separation_info || data?.data?.vocal_removal_info || data?.data?.vocal_separation_info || data;
 
   if (info.vocal_url) stems.vocals = info.vocal_url;
   if (info.drums_url) stems.drums = info.drums_url;

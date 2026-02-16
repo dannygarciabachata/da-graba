@@ -10,7 +10,7 @@ import { generateCreativeLyrics } from "./core/antigravity_engine";
 import { buildMusicGenPrompt, buildStyleKitPrompt, PROMPT_VERSIONS } from "./core/prompt_engine";
 import { downloadMusicGPTFile } from "./core/musicgpt_engine";
 import { getRandomQuiz, getQuizByCategory, evaluateQuiz } from "./core/quiz_engine";
-import { processStemSeparation, cancelStemTimeout } from "./core/stems_engine";
+import { processStemSeparation, cancelStemTimeout, getSongIdForStemTask, clearStemTask } from "./core/stems_engine";
 import { saveStemAudio, getStemsWebhookSecret } from "./core/runpod_stems_engine";
 import {
   processHummingToMusic, processKeyBPMDetection, processMastering, processDenoise,
@@ -646,7 +646,17 @@ export async function registerRoutes(
         return res.sendStatus(200);
       }
 
-      const song = await storage.getSongByTaskId(taskId);
+      let song = await storage.getSongByTaskId(taskId);
+
+      if (!song) {
+        const mappedSongId = getSongIdForStemTask(taskId);
+        if (mappedSongId) {
+          song = await storage.getSong(mappedSongId);
+          console.log(`[Kie.ai Stems Callback] Found song ${mappedSongId} via stem task map`);
+          clearStemTask(taskId);
+        }
+      }
+
       if (!song) {
         console.log(`[Kie.ai Stems Callback] No song found for task_id ${taskId}`);
         return res.sendStatus(200);

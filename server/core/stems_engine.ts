@@ -199,6 +199,20 @@ function extractLegacyStems(rawResult: any): Record<string, string> {
 }
 
 const pendingStemTimeouts = new Map<number, NodeJS.Timeout>();
+const stemTaskToSongMap = new Map<string, number>();
+
+export function registerStemTask(stemTaskId: string, songId: number): void {
+  stemTaskToSongMap.set(stemTaskId, songId);
+  console.log(`[Stems] Registered stem task ${stemTaskId} → song ${songId}`);
+}
+
+export function getSongIdForStemTask(stemTaskId: string): number | undefined {
+  return stemTaskToSongMap.get(stemTaskId);
+}
+
+export function clearStemTask(stemTaskId: string): void {
+  stemTaskToSongMap.delete(stemTaskId);
+}
 
 function startStemTimeout(songId: number, fullAudioUrl: string, trackRecords: any[], timeoutMs: number) {
   if (pendingStemTimeouts.has(songId)) {

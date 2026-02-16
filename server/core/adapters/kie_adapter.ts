@@ -5,6 +5,7 @@ import {
   submitKieStemSeparation, pollKieStemTask, boostMusicStyle,
 } from "../kie_engine";
 import { downloadFile } from "../generic_api_engine";
+import { registerStemTask } from "../stems_engine";
 
 const kieMusicAdapter: ProviderAdapter = {
   canUse: (provider: ApiProvider) => {
@@ -95,6 +96,10 @@ const kieStemAdapter: ProviderAdapter = {
     }
 
     const result = await submitKieStemSeparation(kieTaskId, kieAudioId, "split_stem");
+
+    if (input.songId) {
+      registerStemTask(result.taskId, input.songId);
+    }
 
     return {
       success: true,
