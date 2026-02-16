@@ -2143,6 +2143,85 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/style-kits/:id/generate-virtual", async (req, res) => {
+    const adminKey = req.headers["x-admin-key"];
+    if (adminKey !== process.env.SESSION_SECRET) {
+      if (!(await requireRole(req, res, "admin"))) return;
+    }
+    try {
+      const kitId = Number(req.params.id);
+      const kit = await storage.getStyleKit(kitId);
+      if (!kit) return res.sendStatus(404);
+
+      const instruments = await storage.getStyleKitInstruments(kitId);
+      const pending = instruments.filter(i => !i.audioUrl);
+      if (pending.length === 0) {
+        return res.json({ message: "All instruments already have audio.", count: 0 });
+      }
+
+      const { canUseKie, submitKieMusicGeneration, pollKieTask } = await import("./core/kie_engine");
+      if (!canUseKie()) {
+        return res.status(400).json({ message: "Kie.ai API not configured." });
+      }
+
+      const results: { id: number; name: string; status: string; error?: string }[] = [];
+
+      for (const instr of pending) {
+        const prompt = `${instr.name} solo, ${kit.genre} style, instrumental only, studio quality, isolated ${instr.type} sound, professional recording, bolero bachata modern arrangement, no vocals, clean mix`;
+        try {
+          console.log(`[Virtual Instrument] Generating "${instr.name}" for kit ${kitId}`);
+          const { taskId } = await submitKieMusicGeneration(prompt, `${kit.genre} instrumental`, {
+            title: instr.name,
+            instrumental: true,
+          });
+
+          const pollResult = await pollKieTask(taskId, 180000, 8000);
+          if (pollResult.audioUrl) {
+            const https = await import("https");
+            const http = await import("http");
+            const filename = `${uuidv4()}.mp3`;
+            const filePath = path.join("uploads", "audio", filename);
+            await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+
+            await new Promise<void>((resolve, reject) => {
+              const mod = pollResult.audioUrl.startsWith("https") ? https : http;
+              mod.get(pollResult.audioUrl, (response: any) => {
+                if (response.statusCode === 301 || response.statusCode === 302) {
+                  mod.get(response.headers.location!, (r2: any) => {
+                    const ws = fs.createWriteStream(filePath);
+                    r2.pipe(ws);
+                    ws.on("finish", resolve);
+                    ws.on("error", reject);
+                  }).on("error", reject);
+                } else {
+                  const ws = fs.createWriteStream(filePath);
+                  response.pipe(ws);
+                  ws.on("finish", resolve);
+                  ws.on("error", reject);
+                }
+              }).on("error", reject);
+            });
+
+            const audioUrl = `/audio/${filename}`;
+            await storage.updateStyleKitInstrument(instr.id, { audioUrl, uploadStatus: "uploaded" });
+            results.push({ id: instr.id, name: instr.name, status: "generated" });
+            console.log(`[Virtual Instrument] "${instr.name}" saved: ${audioUrl}`);
+          } else {
+            results.push({ id: instr.id, name: instr.name, status: "failed", error: "No audio URL returned" });
+          }
+        } catch (err: any) {
+          console.error(`[Virtual Instrument] Failed for "${instr.name}":`, err.message);
+          results.push({ id: instr.id, name: instr.name, status: "failed", error: err.message });
+        }
+      }
+
+      res.json({ message: "Virtual instrument generation complete", results });
+    } catch (err: any) {
+      console.error("[Virtual Instrument] Error:", err.message);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/style-kits/:id/train", async (req, res) => {
     if (!(await requireRole(req, res, "admin"))) return;
     try {
