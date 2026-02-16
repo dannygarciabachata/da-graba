@@ -224,7 +224,7 @@ function RegisterWizard({ t }: { t: any }) {
     duration: "",
     isrcCode: "",
     iswcCode: "",
-    publisher: "DGB Publishing",
+    publisher: "ODGMUSIC LATIN WORLDWIDE PUBLISHING",
     publisherShare: 50,
     proEntity: "",
   });
@@ -356,7 +356,7 @@ function RegisterWizard({ t }: { t: any }) {
               duration: "",
               isrcCode: "",
               iswcCode: "",
-              publisher: "DGB Publishing",
+              publisher: "ODGMUSIC LATIN WORLDWIDE PUBLISHING",
               publisherShare: 50,
               proEntity: "",
             });

@@ -1320,7 +1320,7 @@ export const copyrightWorks = pgTable("copyright_works", {
   status: text("status").notNull().default("draft"),
   proEntity: text("pro_entity"),
   externalRegistrationId: text("external_registration_id"),
-  publisherName: text("publisher_name").default("DGB Publishing"),
+  publisherName: text("publisher_name").default("ODGMUSIC LATIN WORLDWIDE PUBLISHING"),
   publisherIpi: text("publisher_ipi"),
   publisherShare: real("publisher_share").default(50),
   notes: text("notes"),

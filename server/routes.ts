@@ -5636,7 +5636,7 @@ IMPORTANT GUIDELINES:
   app.get("/api/copyright/publishers/default", async (req, res) => {
     try {
       const publisher = await storage.getDefaultPublisher();
-      res.json(publisher || { name: "DGB Publishing", isDefault: true });
+      res.json(publisher || { name: "ODGMUSIC LATIN WORLDWIDE PUBLISHING", isDefault: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
