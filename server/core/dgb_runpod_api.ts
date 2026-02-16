@@ -35,10 +35,11 @@ function resolveFromCloudServer(server: CloudServer): ResolvedServer {
     url.port = String(server.apiPort);
     baseUrl = url.toString().replace(/\/$/, "");
   }
+  const resolvedApiKey = server.apiKey || process.env.DGB_API_KEY || "";
   return {
     baseUrl,
-    apiKey: server.apiKey || "",
-    webhookSecret: server.webhookSecret || server.apiKey || "",
+    apiKey: resolvedApiKey,
+    webhookSecret: server.webhookSecret || resolvedApiKey,
     authHeaderName: server.authHeaderName || "X-DGB-API-Key",
     webhookHeaderName: server.webhookHeaderName || "X-Webhook-Secret",
     healthEndpoint: server.healthEndpoint || "/api/health",
