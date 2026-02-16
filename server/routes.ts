@@ -18,7 +18,7 @@ import {
   processDeReverb, processTTS, processSoundGeneration, processTranscription,
   processRemix, processSpeedChange,
 } from "./workers/sample_tasks";
-import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider, seedReplicateProvider, seedMurekaProvider, seedKieProvider, seedReplicateStemsProvider, updateProviderPriorities, seedTrainingKits } from "./core/seed_providers";
+import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider, seedReplicateProvider, seedMurekaProvider, seedKieProvider, seedReplicateStemsProvider, updateProviderPriorities, seedTrainingKits, seedDiscography } from "./core/seed_providers";
 import { initializeAdapters } from "./core/adapters";
 import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfig, buildRunPodPayload, GENRE_STYLE_HINTS } from "./core/sao_training_engine";
 import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection, getGpuStatus, resumeGpuPod, stopGpuPod, setupGpuEnvironment } from "./core/runpod_client";
@@ -1767,6 +1767,164 @@ export async function registerRoutes(
   seedTrainingKits().catch((err: any) =>
     console.log("[Seed] Training kits seed error:", err.message?.substring(0, 100))
   );
+
+  seedDiscography().catch((err: any) =>
+    console.log("[Seed] Discography seed error:", err.message?.substring(0, 100))
+  );
+
+  // ========== DISCOGRAPHY ==========
+
+  app.get("/api/public/discography", async (_req, res) => {
+    try {
+      const discography = await storage.getAllDiscographyPublic();
+      res.json(discography);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/public/discography/:artistId", async (req, res) => {
+    try {
+      const artistId = Number(req.params.artistId);
+      const albums = await storage.getArtistDiscographyPublic(artistId);
+      const artist = await storage.getArtistProfileById(artistId);
+      res.json({ artist, albums });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/discography/albums", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    try {
+      const album = await storage.createDiscographyAlbum(req.body);
+      res.json(album);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/discography/albums/:id", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    try {
+      const album = await storage.updateDiscographyAlbum(Number(req.params.id), req.body);
+      res.json(album);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/discography/albums/:id", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    try {
+      await storage.deleteDiscographyAlbum(Number(req.params.id));
+      res.sendStatus(204);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/discography/tracks", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    try {
+      const track = await storage.createDiscographyTrack(req.body);
+      res.json(track);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/discography/tracks/:id", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    try {
+      await storage.deleteDiscographyTrack(Number(req.params.id));
+      res.sendStatus(204);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/discography/import/spotify", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    try {
+      const { artistId, spotifyArtistId } = req.body;
+      if (!artistId || !spotifyArtistId) {
+        return res.status(400).json({ message: "artistId and spotifyArtistId required" });
+      }
+
+      const { getSpotifyClient } = await import("./core/spotify_client");
+      const spotify = await getSpotifyClient();
+
+      const spotifyAlbums = await spotify.artists.albums(spotifyArtistId, "album,single,compilation", undefined, 50);
+
+      const imported: any[] = [];
+      for (const sa of spotifyAlbums.items) {
+        const existing = await storage.getDiscographyAlbums(artistId);
+        if (existing.find(e => e.spotifyAlbumId === sa.id)) continue;
+
+        const album = await storage.createDiscographyAlbum({
+          artistId,
+          title: sa.name,
+          albumType: sa.album_type === "single" ? "single" : sa.album_type === "compilation" ? "compilation" : "album",
+          releaseDate: sa.release_date,
+          coverImageUrl: sa.images?.[0]?.url || null,
+          genre: null,
+          tracksCount: sa.total_tracks,
+          spotifyAlbumId: sa.id,
+          spotifyUrl: sa.external_urls?.spotify || null,
+          isPublished: true,
+        });
+
+        try {
+          const spotifyTracks = await spotify.albums.tracks(sa.id, undefined, 50);
+          const trackInserts = spotifyTracks.items.map((st: any, idx: number) => ({
+            albumId: album.id,
+            title: st.name,
+            trackNumber: st.track_number || idx + 1,
+            durationSeconds: Math.round((st.duration_ms || 0) / 1000),
+            featuring: st.artists?.length > 1 ? st.artists.slice(1).map((a: any) => a.name).join(", ") : null,
+            spotifyTrackId: st.id,
+            previewUrl: st.preview_url || null,
+          }));
+          if (trackInserts.length > 0) {
+            await storage.createDiscographyTracksBulk(trackInserts);
+          }
+        } catch (trackErr: any) {
+          console.log(`[Discography] Failed to fetch tracks for album ${sa.name}: ${trackErr.message}`);
+        }
+
+        imported.push(album);
+      }
+
+      res.json({ imported: imported.length, albums: imported });
+    } catch (err: any) {
+      console.error("[Discography] Spotify import error:", err.message);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/admin/discography/spotify/search", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    try {
+      const q = req.query.q as string;
+      if (!q) return res.status(400).json({ message: "q parameter required" });
+
+      const { getSpotifyClient } = await import("./core/spotify_client");
+      const spotify = await getSpotifyClient();
+      const results = await spotify.search(q, ["artist"], undefined, 10);
+
+      res.json(results.artists?.items?.map(a => ({
+        id: a.id,
+        name: a.name,
+        image: a.images?.[0]?.url,
+        genres: a.genres,
+        followers: a.followers?.total,
+        spotifyUrl: a.external_urls?.spotify,
+      })) || []);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
 
   app.get("/api/admin/check", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

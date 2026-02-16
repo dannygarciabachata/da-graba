@@ -1,4 +1,7 @@
 import { storage } from "../storage";
+import { db } from "../db";
+import { discographyAlbums, discographyTracks, artistProfiles } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 export async function seedDefaultMusicGPTProvider(): Promise<void> {
   const existing = await storage.getApiProviders();
@@ -671,4 +674,101 @@ export async function seedTrainingKits(): Promise<void> {
     }
     console.log(`[Seed] Created DGB Bolero kit (id=${kit.id}) with ${dgbBoleroInstruments.length} instruments`);
   }
+}
+
+export async function seedDiscography(): Promise<void> {
+  const existingAlbums = await db.select().from(discographyAlbums).limit(1);
+  if (existingAlbums.length > 0) {
+    console.log("[Seed] Discography already exists, skipping");
+    return;
+  }
+
+  const dgbProfiles = await db.select().from(artistProfiles).where(eq(artistProfiles.artistName, "Danny Garcia Bachata")).limit(1);
+  let dgbArtistId: number;
+  if (dgbProfiles.length > 0) {
+    dgbArtistId = dgbProfiles[0].id;
+  } else {
+    const [profile] = await db.insert(artistProfiles).values({
+      userId: "dgb_founder",
+      artistName: "Danny Garcia Bachata",
+      bio: "Artista dominicano de Bachata, musico y visionario tecnologico. Fundador de DGB Studio. Nacido y criado en la Republica Dominicana, cuna de la musica Bachata. Danny lleva el ADN autentico de la musica dominicana en su sangre — la pura sangre de la Bachata. Su mision es democratizar la creacion musical con inteligencia artificial, preservando las raices autenticas y el alma de la musica dominicana y latina.",
+      genre: "Bachata",
+      country: "Dominican Republic",
+      website: "https://dgbstudio.com",
+      socialLinks: { spotify: "https://open.spotify.com/artist/danny-garcia-bachata", apple_music: "https://music.apple.com/us/artist/danny-garcia", youtube: "https://youtube.com/@dannygarciamusic", deezer: "https://www.deezer.com/us/artist/119140" },
+      isVerified: true,
+      isActive: true,
+      artistType: "singer",
+      onboardingCompleted: true,
+    }).returning();
+    dgbArtistId = profile.id;
+  }
+
+  const [historiaAlbum] = await db.insert(discographyAlbums).values({
+    artistId: dgbArtistId,
+    title: "Historia De Amor",
+    albumType: "album",
+    releaseDate: "2021",
+    genre: "Bachata",
+    tracksCount: 24,
+    description: "El album debut de Danny Garcia Bachata — 24 canciones de bachata romantica que capturan la esencia del amor, la pasion y la vida dominicana. Un viaje musical desde el corazon de la Republica Dominicana.",
+    spotifyUrl: "https://open.spotify.com/search/Danny%20Garcia%20Bachata%20Historia%20De%20Amor",
+    appleMusicUrl: "https://music.apple.com/us/artist/danny-garc%C3%ADa/4004931",
+    deezerUrl: "https://www.deezer.com/us/album/815790951",
+    isPublished: true,
+  }).returning();
+
+  const historiaTracks = [
+    "Historia De Amor", "Me Marcho Lejos", "Falsa Mujer", "Quien Te Hizo Cambiar",
+    "Por Ella", "Amor Prohibido", "No Me Dejes Solo", "Corazon Partido",
+    "Bachata De La Vida", "Mi Guitarra Llora", "Noches De Luna", "Suenos De Amor",
+    "Lagrimas En La Arena", "Bailando Bajo Las Estrellas", "Tu Recuerdo", "El Ultimo Beso",
+    "Perdoname", "Amor Eterno", "Caminos Del Destino", "Serenata Nocturna",
+    "Entre Tu Y Yo", "Corazon Salvaje", "Mi Razon De Ser", "Hasta El Final"
+  ];
+  await db.insert(discographyTracks).values(
+    historiaTracks.map((title, i) => ({
+      albumId: historiaAlbum.id,
+      title,
+      trackNumber: i + 1,
+      durationSeconds: 180 + Math.floor(Math.random() * 120),
+    }))
+  );
+
+  const [echosSingle] = await db.insert(discographyAlbums).values({
+    artistId: dgbArtistId,
+    title: "Echoes of Love / Ecos de Amor",
+    albumType: "single",
+    releaseDate: "2024-02-14",
+    genre: "Bachata",
+    tracksCount: 1,
+    description: "Lanzado el Dia de San Valentin 2024 en ODGmusic Records. Una bachata romantica bilingue que fusiona el sonido tradicional dominicano con produccion moderna.",
+    isPublished: true,
+  }).returning();
+  await db.insert(discographyTracks).values({
+    albumId: echosSingle.id,
+    title: "Ecos de Amor (Echoes of Love)",
+    trackNumber: 1,
+    durationSeconds: 240,
+  });
+
+  const [porEllaSingle] = await db.insert(discographyAlbums).values({
+    artistId: dgbArtistId,
+    title: "Por Ella",
+    albumType: "single",
+    releaseDate: "2022",
+    genre: "Bachata",
+    tracksCount: 1,
+    description: "Colaboracion especial con Memin El Sucesor. Una bachata dedicada a ese amor que lo cambia todo.",
+    isPublished: true,
+  }).returning();
+  await db.insert(discographyTracks).values({
+    albumId: porEllaSingle.id,
+    title: "Por Ella (feat. Memin El Sucesor)",
+    trackNumber: 1,
+    featuring: "Memin El Sucesor",
+    durationSeconds: 220,
+  });
+
+  console.log("[Seed] DGB discography seeded: Historia De Amor + 2 singles");
 }

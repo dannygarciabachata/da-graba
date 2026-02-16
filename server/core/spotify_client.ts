@@ -57,3 +57,7 @@ export async function getUncachableSpotifyClient() {
 
   return spotify;
 }
+
+export async function getSpotifyClient() {
+  return getUncachableSpotifyClient();
+}

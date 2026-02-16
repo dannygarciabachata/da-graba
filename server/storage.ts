@@ -8,6 +8,7 @@ import {
   cloudServers, voiceModels, voiceSamples, styleReferences,
   blogPosts, blogCategories, blogComments, blogLikes, blogStars, blogShares, pricingPlans, coverDesigns, songLikes,
   artistProfiles, artistSubscriptions, songEarnings, proRegistrations, artistFollowers,
+  discographyAlbums, discographyTracks,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
@@ -38,6 +39,8 @@ import {
   type SongEarning, type InsertSongEarning,
   type ProRegistration, type InsertProRegistration,
   type ArtistFollower, type InsertArtistFollower,
+  type DiscographyAlbum, type InsertDiscographyAlbum,
+  type DiscographyTrack, type InsertDiscographyTrack,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -238,6 +241,18 @@ export interface IStorage {
   updateProRegistration(id: number, data: Partial<ProRegistration>): Promise<ProRegistration>;
 
   getArtistSongs(artistId: number): Promise<Song[]>;
+
+  getDiscographyAlbums(artistId: number): Promise<DiscographyAlbum[]>;
+  getDiscographyAlbum(id: number): Promise<DiscographyAlbum | undefined>;
+  createDiscographyAlbum(album: InsertDiscographyAlbum): Promise<DiscographyAlbum>;
+  updateDiscographyAlbum(id: number, data: Partial<DiscographyAlbum>): Promise<DiscographyAlbum>;
+  deleteDiscographyAlbum(id: number): Promise<void>;
+  getDiscographyTracks(albumId: number): Promise<DiscographyTrack[]>;
+  createDiscographyTrack(track: InsertDiscographyTrack): Promise<DiscographyTrack>;
+  createDiscographyTracksBulk(tracks: InsertDiscographyTrack[]): Promise<DiscographyTrack[]>;
+  deleteDiscographyTrack(id: number): Promise<void>;
+  getArtistDiscographyPublic(artistId: number): Promise<Array<DiscographyAlbum & { tracks: DiscographyTrack[] }>>;
+  getAllDiscographyPublic(): Promise<Array<DiscographyAlbum & { artist: ArtistProfile; tracks: DiscographyTrack[] }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1438,6 +1453,86 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(songs)
       .where(and(eq(songs.userId, profile.userId), eq(songs.isPublic, true)))
       .orderBy(desc(songs.createdAt));
+  }
+
+  // === DISCOGRAPHY ===
+
+  async getDiscographyAlbums(artistId: number): Promise<DiscographyAlbum[]> {
+    return db.select().from(discographyAlbums)
+      .where(eq(discographyAlbums.artistId, artistId))
+      .orderBy(desc(discographyAlbums.releaseDate));
+  }
+
+  async getDiscographyAlbum(id: number): Promise<DiscographyAlbum | undefined> {
+    const [album] = await db.select().from(discographyAlbums).where(eq(discographyAlbums.id, id));
+    return album;
+  }
+
+  async createDiscographyAlbum(album: InsertDiscographyAlbum): Promise<DiscographyAlbum> {
+    const [created] = await db.insert(discographyAlbums).values(album).returning();
+    return created;
+  }
+
+  async updateDiscographyAlbum(id: number, data: Partial<DiscographyAlbum>): Promise<DiscographyAlbum> {
+    const [updated] = await db.update(discographyAlbums).set(data).where(eq(discographyAlbums.id, id)).returning();
+    return updated;
+  }
+
+  async deleteDiscographyAlbum(id: number): Promise<void> {
+    await db.delete(discographyTracks).where(eq(discographyTracks.albumId, id));
+    await db.delete(discographyAlbums).where(eq(discographyAlbums.id, id));
+  }
+
+  async getDiscographyTracks(albumId: number): Promise<DiscographyTrack[]> {
+    return db.select().from(discographyTracks)
+      .where(eq(discographyTracks.albumId, albumId))
+      .orderBy(discographyTracks.trackNumber);
+  }
+
+  async createDiscographyTrack(track: InsertDiscographyTrack): Promise<DiscographyTrack> {
+    const [created] = await db.insert(discographyTracks).values(track).returning();
+    return created;
+  }
+
+  async createDiscographyTracksBulk(tracks: InsertDiscographyTrack[]): Promise<DiscographyTrack[]> {
+    if (tracks.length === 0) return [];
+    return db.insert(discographyTracks).values(tracks).returning();
+  }
+
+  async deleteDiscographyTrack(id: number): Promise<void> {
+    await db.delete(discographyTracks).where(eq(discographyTracks.id, id));
+  }
+
+  async getArtistDiscographyPublic(artistId: number): Promise<Array<DiscographyAlbum & { tracks: DiscographyTrack[] }>> {
+    const albums = await db.select().from(discographyAlbums)
+      .where(and(eq(discographyAlbums.artistId, artistId), eq(discographyAlbums.isPublished, true)))
+      .orderBy(desc(discographyAlbums.releaseDate));
+
+    const result: Array<DiscographyAlbum & { tracks: DiscographyTrack[] }> = [];
+    for (const album of albums) {
+      const albumTracks = await db.select().from(discographyTracks)
+        .where(eq(discographyTracks.albumId, album.id))
+        .orderBy(discographyTracks.trackNumber);
+      result.push({ ...album, tracks: albumTracks });
+    }
+    return result;
+  }
+
+  async getAllDiscographyPublic(): Promise<Array<DiscographyAlbum & { artist: ArtistProfile; tracks: DiscographyTrack[] }>> {
+    const albums = await db.select().from(discographyAlbums)
+      .where(eq(discographyAlbums.isPublished, true))
+      .orderBy(desc(discographyAlbums.releaseDate));
+
+    const result: Array<DiscographyAlbum & { artist: ArtistProfile; tracks: DiscographyTrack[] }> = [];
+    for (const album of albums) {
+      const [artist] = await db.select().from(artistProfiles).where(eq(artistProfiles.id, album.artistId));
+      if (!artist) continue;
+      const albumTracks = await db.select().from(discographyTracks)
+        .where(eq(discographyTracks.albumId, album.id))
+        .orderBy(discographyTracks.trackNumber);
+      result.push({ ...album, artist, tracks: albumTracks });
+    }
+    return result;
   }
 }
 

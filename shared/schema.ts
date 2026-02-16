@@ -1068,3 +1068,75 @@ export const insertArtistFollowerSchema = createInsertSchema(artistFollowers).om
 
 export type ArtistFollower = typeof artistFollowers.$inferSelect;
 export type InsertArtistFollower = z.infer<typeof insertArtistFollowerSchema>;
+
+// === DISCOGRAPHY ALBUMS ===
+
+export const discographyAlbums = pgTable("discography_albums", {
+  id: serial("id").primaryKey(),
+  artistId: integer("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  albumType: text("album_type").notNull().default("album"),
+  releaseDate: text("release_date"),
+  coverImageUrl: text("cover_image_url"),
+  description: text("description"),
+  genre: text("genre"),
+  tracksCount: integer("tracks_count").default(0),
+  spotifyAlbumId: text("spotify_album_id"),
+  spotifyUrl: text("spotify_url"),
+  appleMusicUrl: text("apple_music_url"),
+  amazonMusicUrl: text("amazon_music_url"),
+  youtubeMusicUrl: text("youtube_music_url"),
+  deezerUrl: text("deezer_url"),
+  tidalUrl: text("tidal_url"),
+  isPublished: boolean("is_published").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const discographyAlbumsRelations = relations(discographyAlbums, ({ one, many }) => ({
+  artist: one(artistProfiles, {
+    fields: [discographyAlbums.artistId],
+    references: [artistProfiles.id],
+  }),
+  tracks: many(discographyTracks),
+}));
+
+export const insertDiscographyAlbumSchema = createInsertSchema(discographyAlbums).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type DiscographyAlbum = typeof discographyAlbums.$inferSelect;
+export type InsertDiscographyAlbum = z.infer<typeof insertDiscographyAlbumSchema>;
+
+export const ALBUM_TYPES = ["album", "single", "ep", "compilation"] as const;
+export type AlbumType = typeof ALBUM_TYPES[number];
+
+// === DISCOGRAPHY TRACKS ===
+
+export const discographyTracks = pgTable("discography_tracks", {
+  id: serial("id").primaryKey(),
+  albumId: integer("album_id").notNull().references(() => discographyAlbums.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  trackNumber: integer("track_number").default(1),
+  durationSeconds: integer("duration_seconds"),
+  featuring: text("featuring"),
+  spotifyTrackId: text("spotify_track_id"),
+  previewUrl: text("preview_url"),
+  isrcCode: text("isrc_code"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const discographyTracksRelations = relations(discographyTracks, ({ one }) => ({
+  album: one(discographyAlbums, {
+    fields: [discographyTracks.albumId],
+    references: [discographyAlbums.id],
+  }),
+}));
+
+export const insertDiscographyTrackSchema = createInsertSchema(discographyTracks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type DiscographyTrack = typeof discographyTracks.$inferSelect;
+export type InsertDiscographyTrack = z.infer<typeof insertDiscographyTrackSchema>;
