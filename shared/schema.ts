@@ -905,6 +905,8 @@ export const artistProfiles = pgTable("artist_profiles", {
   totalPlays: integer("total_plays").default(0),
   onboardingCompleted: boolean("onboarding_completed").default(false),
   artistType: text("artist_type").default("independent"),
+  youtubeUrls: jsonb("youtube_urls").$type<string[]>().default([]),
+  spotifyArtistId: text("spotify_artist_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1237,3 +1239,52 @@ export type InsertWalletTransaction = z.infer<typeof insertWalletTransactionSche
 
 export const TRANSACTION_TYPES = ["gift_received", "subscription_income", "payout", "platform_fee", "adjustment"] as const;
 export type TransactionType = typeof TRANSACTION_TYPES[number];
+
+export const artistProfileLikes = pgTable("artist_profile_likes", {
+  id: serial("id").primaryKey(),
+  artistId: integer("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertArtistProfileLikeSchema = createInsertSchema(artistProfileLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ArtistProfileLike = typeof artistProfileLikes.$inferSelect;
+export type InsertArtistProfileLike = z.infer<typeof insertArtistProfileLikeSchema>;
+
+export const artistProfileComments = pgTable("artist_profile_comments", {
+  id: serial("id").primaryKey(),
+  artistId: integer("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
+  userName: text("user_name").default("Fan"),
+  userAvatarUrl: text("user_avatar_url"),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertArtistProfileCommentSchema = createInsertSchema(artistProfileComments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ArtistProfileComment = typeof artistProfileComments.$inferSelect;
+export type InsertArtistProfileComment = z.infer<typeof insertArtistProfileCommentSchema>;
+
+export const artistProfileShares = pgTable("artist_profile_shares", {
+  id: serial("id").primaryKey(),
+  artistId: integer("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  userId: text("user_id"),
+  platform: text("platform").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertArtistProfileShareSchema = createInsertSchema(artistProfileShares).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ArtistProfileShare = typeof artistProfileShares.$inferSelect;
+export type InsertArtistProfileShare = z.infer<typeof insertArtistProfileShareSchema>;

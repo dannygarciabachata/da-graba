@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -30,7 +31,14 @@ import {
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
+  Disc,
+  Search,
+  Upload,
+  Trash2,
+  Loader2,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
@@ -62,6 +70,10 @@ export default function ArtistDashboardPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("overview");
+  const [spotifySearch, setSpotifySearch] = useState("");
+  const [importingSpotify, setImportingSpotify] = useState(false);
+  const [showAddAlbum, setShowAddAlbum] = useState(false);
+  const [newAlbum, setNewAlbum] = useState({ title: "", albumType: "album", releaseDate: "", coverImageUrl: "", genre: "" });
 
   const { data: dashboard, isLoading } = useQuery<any>({
     queryKey: ["/api/artist/dashboard"],
@@ -73,6 +85,49 @@ export default function ArtistDashboardPage() {
 
   const { data: giftsData } = useQuery<any>({
     queryKey: ["/api/artist/gifts"],
+  });
+
+  const { data: albums, isLoading: albumsLoading } = useQuery<any[]>({
+    queryKey: ["/api/artist/discography"],
+  });
+
+  const createAlbumMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", "/api/artist/discography/albums", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/artist/discography"] });
+      setShowAddAlbum(false);
+      setNewAlbum({ title: "", albumType: "album", releaseDate: "", coverImageUrl: "", genre: "" });
+      toast({ title: t('artist.discography.albumCreated') });
+    },
+  });
+
+  const deleteAlbumMutation = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/artist/discography/albums/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/artist/discography"] });
+      toast({ title: t('artist.discography.albumDeleted') });
+    },
+  });
+
+  const spotifySearchMutation = useMutation({
+    mutationFn: async (query: string) => {
+      const res = await apiRequest("GET", `/api/artist/discography/spotify/search?q=${encodeURIComponent(query)}`);
+      return res.json();
+    },
+  });
+
+  const spotifyImportMutation = useMutation({
+    mutationFn: async (spotifyArtistId: string) => {
+      setImportingSpotify(true);
+      const res = await apiRequest("POST", "/api/artist/discography/import/spotify", { spotifyArtistId });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      setImportingSpotify(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/artist/discography"] });
+      toast({ title: t('artist.discography.importSuccess'), description: `${data.count} albums imported` });
+    },
+    onError: () => setImportingSpotify(false),
   });
 
   if (isLoading) {
@@ -243,6 +298,9 @@ export default function ArtistDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="monetization" data-testid="tab-monetization">
               <DollarSign className="h-4 w-4 mr-1" /> {t('artist.dashboard.tabs.monetization')}
+            </TabsTrigger>
+            <TabsTrigger value="discography" data-testid="tab-discography">
+              <Disc className="h-4 w-4 mr-1" /> {t('artist.dashboard.tabs.discography')}
             </TabsTrigger>
           </TabsList>
 
@@ -485,6 +543,197 @@ export default function ArtistDashboardPage() {
                 <span className="text-2xl font-bold text-primary">{formatCents(profile.monthlySubscriptionPrice || 299)}</span>
                 <span className="text-muted-foreground text-sm">/ {t('artist.dashboard.perMonth')}</span>
               </div>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="discography" className="space-y-4 mt-4">
+            <Card className="bg-gradient-to-r from-green-500/10 to-emerald-600/10 border-green-500/20 p-5">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Search className="h-4 w-4 text-green-400" />
+                {t('artist.discography.importFromSpotify')}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                {t('artist.discography.importDescription')}
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder={t('artist.discography.searchArtist')}
+                  value={spotifySearch}
+                  onChange={(e) => setSpotifySearch(e.target.value)}
+                  className="bg-white/[0.05] border-white/10"
+                  data-testid="input-spotify-search"
+                />
+                <Button
+                  onClick={() => spotifySearchMutation.mutate(spotifySearch)}
+                  disabled={!spotifySearch.trim() || spotifySearchMutation.isPending}
+                  variant="default"
+                  data-testid="button-spotify-search"
+                >
+                  {spotifySearchMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+              
+              {spotifySearchMutation.data && (
+                <div className="mt-3 space-y-2 max-h-60 overflow-y-auto">
+                  {(spotifySearchMutation.data as any[]).map((artist: any) => (
+                    <div key={artist.id} className="flex items-center justify-between bg-white/[0.03] rounded-lg p-3" data-testid={`spotify-artist-${artist.id}`}>
+                      <div className="flex items-center gap-3">
+                        {artist.imageUrl ? (
+                          <img src={artist.imageUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                            <Music className="h-5 w-5 text-green-400" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium text-sm">{artist.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {artist.genres?.slice(0, 3).join(", ")}
+                            {artist.followers > 0 && ` · ${formatCount(artist.followers)} ${t('artist.profile.followers')}`}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => spotifyImportMutation.mutate(artist.id)}
+                        disabled={importingSpotify}
+                        variant="default"
+                        data-testid={`button-import-${artist.id}`}
+                      >
+                        {importingSpotify ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Upload className="h-3 w-3 mr-1" />}
+                        {t('artist.discography.import')}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            <Card className="bg-white/[0.03] border-white/[0.06] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Disc className="h-4 w-4 text-primary" />
+                  {t('artist.discography.yourAlbums')}
+                </h3>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowAddAlbum(!showAddAlbum)}
+                  data-testid="button-add-album"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  {t('artist.discography.addAlbum')}
+                </Button>
+              </div>
+              
+              {showAddAlbum && (
+                <div className="bg-white/[0.02] rounded-lg p-4 mb-4 space-y-3" data-testid="form-add-album">
+                  <Input
+                    placeholder={t('artist.discography.albumTitle')}
+                    value={newAlbum.title}
+                    onChange={(e) => setNewAlbum({...newAlbum, title: e.target.value})}
+                    className="bg-white/[0.05] border-white/10"
+                    data-testid="input-album-title"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select value={newAlbum.albumType} onValueChange={(val) => setNewAlbum({...newAlbum, albumType: val})} data-testid="select-album-type">
+                      <SelectTrigger data-testid="select-album-type-trigger">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="album" data-testid="select-album-type-album">Album</SelectItem>
+                        <SelectItem value="single" data-testid="select-album-type-single">Single</SelectItem>
+                        <SelectItem value="ep" data-testid="select-album-type-ep">EP</SelectItem>
+                        <SelectItem value="compilation" data-testid="select-album-type-compilation">Compilation</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="date"
+                      value={newAlbum.releaseDate}
+                      onChange={(e) => setNewAlbum({...newAlbum, releaseDate: e.target.value})}
+                      className="bg-white/[0.05] border-white/10"
+                      data-testid="input-release-date"
+                    />
+                  </div>
+                  <Input
+                    placeholder={t('artist.discography.coverImageUrl')}
+                    value={newAlbum.coverImageUrl}
+                    onChange={(e) => setNewAlbum({...newAlbum, coverImageUrl: e.target.value})}
+                    className="bg-white/[0.05] border-white/10"
+                    data-testid="input-cover-url"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => setShowAddAlbum(false)} data-testid="button-cancel-album">
+                      {t('common.cancel')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => createAlbumMutation.mutate(newAlbum)}
+                      disabled={!newAlbum.title.trim() || createAlbumMutation.isPending}
+                      data-testid="button-save-album"
+                    >
+                      {createAlbumMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                      {t('common.save')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              {albumsLoading ? (
+                <div className="text-center py-6">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+                </div>
+              ) : albums && albums.length > 0 ? (
+                <div className="space-y-3">
+                  {albums.map((album: any) => (
+                    <div key={album.id} className="flex items-center gap-4 bg-white/[0.02] rounded-lg p-3" data-testid={`album-row-${album.id}`}>
+                      {album.coverImageUrl ? (
+                        <img src={album.coverImageUrl} alt="" className="w-14 h-14 rounded object-cover" />
+                      ) : (
+                        <div className="w-14 h-14 rounded bg-white/[0.05] flex items-center justify-center">
+                          <Disc className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{album.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {album.albumType} · {album.releaseDate || t('artist.discography.noDate')}
+                          {album.tracksCount > 0 && ` · ${album.tracksCount} ${t('discography.tracks')}`}
+                        </p>
+                        {album.spotifyAlbumId && (
+                          <Badge variant="outline" className="text-[10px] text-green-400 border-green-400/30 mt-1">
+                            Spotify
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        {album.spotifyUrl && (
+                          <Button variant="ghost" size="sm" asChild>
+                            <a href={album.spotifyUrl} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteAlbumMutation.mutate(album.id)}
+                          className="text-destructive"
+                          data-testid={`button-delete-album-${album.id}`}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Disc className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">{t('artist.discography.noAlbums')}</p>
+                  <p className="text-xs mt-1">{t('artist.discography.noAlbumsDesc')}</p>
+                </div>
+              )}
             </Card>
           </TabsContent>
         </Tabs>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -30,6 +31,13 @@ import {
   Loader2,
   X,
   CreditCard,
+  MessageCircle,
+  ThumbsUp,
+  Send,
+  Youtube,
+  Disc,
+  ExternalLink,
+  Trash2,
 } from "lucide-react";
 
 function formatCount(n: number): string {
@@ -78,6 +86,10 @@ export default function ArtistProfilePage() {
   const cardElementRef = useRef<StripeCardElement | null>(null);
   const cardContainerRef = useRef<HTMLDivElement | null>(null);
   const [cardReady, setCardReady] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [showComments, setShowComments] = useState(false);
+  const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const { data: artist, isLoading } = useQuery<any>({
     queryKey: ["/api/public/artists", artistId],
@@ -94,6 +106,44 @@ export default function ArtistProfilePage() {
     queryFn: async () => {
       const res = await fetch(`/api/public/artists/${artistId}/gifts-summary`);
       return res.json();
+    },
+    enabled: !!artistId,
+  });
+
+  const { data: likesData } = useQuery<any>({
+    queryKey: ["/api/public/artists", artistId, "likes"],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/artists/${artistId}/likes`);
+      return res.json();
+    },
+    enabled: !!artistId,
+  });
+
+  const { data: comments, refetch: refetchComments } = useQuery<any[]>({
+    queryKey: ["/api/public/artists", artistId, "comments"],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/artists/${artistId}/comments`);
+      return res.json();
+    },
+    enabled: !!artistId,
+  });
+
+  const { data: sharesData } = useQuery<any>({
+    queryKey: ["/api/public/artists", artistId, "shares"],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/artists/${artistId}/shares`);
+      return res.json();
+    },
+    enabled: !!artistId,
+  });
+
+  const { data: discographyAlbums } = useQuery<any[]>({
+    queryKey: ["/api/public/discography", artistId],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/discography/${artistId}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.albums || [];
     },
     enabled: !!artistId,
   });
@@ -199,6 +249,75 @@ export default function ArtistProfilePage() {
     },
   });
 
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", `/api/artists/${artistId}/like`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/public/artists", artistId, "likes"] });
+    },
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", `/api/artists/${artistId}/comments`, { content: commentText });
+    },
+    onSuccess: () => {
+      setCommentText("");
+      queryClient.invalidateQueries({ queryKey: ["/api/public/artists", artistId, "comments"] });
+    },
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (commentId: number) => {
+      await apiRequest("DELETE", `/api/artists/${artistId}/comments/${commentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/public/artists", artistId, "comments"] });
+    },
+  });
+
+  const shareMutation = useMutation({
+    mutationFn: async (platform: string) => {
+      await apiRequest("POST", `/api/artists/${artistId}/share`, { platform });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/public/artists", artistId, "shares"] });
+    },
+  });
+
+  const handleShare = (platform: string) => {
+    const url = window.location.href;
+    const text = `Check out ${artist?.artistName} on DGB Studio!`;
+    
+    if (platform === "twitter") {
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, "_blank");
+    } else if (platform === "facebook") {
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, "_blank");
+    } else if (platform === "whatsapp") {
+      window.open(`https://wa.me/?text=${encodeURIComponent(text + " " + url)}`, "_blank");
+    } else {
+      navigator.clipboard.writeText(url);
+      toast({ title: t('artist.profile.linkCopied') });
+    }
+    shareMutation.mutate(platform);
+  };
+
+  const handlePreviewTrack = (track: any) => {
+    if (!track.previewUrl) return;
+    if (playingTrackId === track.spotifyTrackId) {
+      previewAudioRef.current?.pause();
+      setPlayingTrackId(null);
+      return;
+    }
+    if (previewAudioRef.current) previewAudioRef.current.pause();
+    const audio = new Audio(track.previewUrl);
+    audio.play();
+    previewAudioRef.current = audio;
+    setPlayingTrackId(track.spotifyTrackId);
+    audio.addEventListener("ended", () => setPlayingTrackId(null));
+  };
+
   const handlePlay = (song: any) => {
     if (!song.audioUrl) return;
     if (currentSong?.id === song.id) {
@@ -294,11 +413,48 @@ export default function ArtistProfilePage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex flex-wrap items-center gap-3 mb-6">
           <div className="flex items-center gap-4 text-sm text-muted-foreground mr-auto">
             <span data-testid="text-follower-count"><strong className="text-foreground">{formatCount(artist.followerCount || 0)}</strong> {t('artist.profile.followers')}</span>
             <span data-testid="text-subscriber-count"><strong className="text-foreground">{formatCount(artist.subscriberCount || 0)}</strong> {t('artist.profile.subscribers')}</span>
             <span><strong className="text-foreground">{artist.songs?.length || 0}</strong> {t('artist.profile.songs')}</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => user ? likeMutation.mutate() : toast({ title: t('artist.profile.loginToLike'), variant: "destructive" })}
+              className={`gap-1 ${likesData?.userIds?.includes(user?.id) ? "text-pink-400" : ""}`}
+              data-testid="button-like-profile"
+            >
+              <ThumbsUp className={`h-4 w-4 ${likesData?.userIds?.includes(user?.id) ? "fill-pink-400" : ""}`} />
+              {likesData?.count || 0}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowComments(!showComments)}
+              className="gap-1"
+              data-testid="button-toggle-comments"
+            >
+              <MessageCircle className="h-4 w-4" />
+              {comments?.length || 0}
+            </Button>
+
+            <div className="flex items-center">
+              <Button variant="ghost" size="sm" onClick={() => handleShare("twitter")} className="px-2" data-testid="button-share-twitter">
+                <Share2 className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => handleShare("whatsapp")} className="px-2" data-testid="button-share-whatsapp">
+                <Globe className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => handleShare("link")} className="px-2" data-testid="button-share-link">
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+              <span className="text-xs text-muted-foreground ml-1">{sharesData?.count || 0}</span>
+            </div>
           </div>
 
           <Button
@@ -476,6 +632,100 @@ export default function ArtistProfilePage() {
           <p className="text-sm text-muted-foreground mb-6 max-w-2xl">{artist.bio}</p>
         )}
 
+        {showComments && (
+          <Card className="bg-white/[0.03] border-white/[0.06] p-5 mb-6" data-testid="comments-section">
+            <h3 className="font-semibold flex items-center gap-2 mb-4">
+              <MessageCircle className="h-4 w-4 text-primary" />
+              {t('artist.profile.comments')} ({comments?.length || 0})
+            </h3>
+            
+            {user && (
+              <div className="flex gap-2 mb-4">
+                <Textarea
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder={t('artist.profile.writeComment')}
+                  className="bg-white/[0.05] border-white/10 min-h-[60px] resize-none"
+                  maxLength={500}
+                  data-testid="input-comment"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => commentMutation.mutate()}
+                  disabled={!commentText.trim() || commentMutation.isPending}
+                  className="self-end"
+                  data-testid="button-post-comment"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            
+            {comments && comments.length > 0 ? (
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {comments.map((c: any) => (
+                  <div key={c.id} className="flex gap-3" data-testid={`comment-${c.id}`}>
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {c.userAvatarUrl ? (
+                        <img src={c.userAvatarUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs font-bold text-primary">{(c.userName || "F")[0].toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{c.userName || "Fan"}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : ""}
+                        </span>
+                        {user && (c.userId === user.id) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 p-0 text-red-400"
+                            onClick={() => deleteCommentMutation.mutate(c.id)}
+                            data-testid={`button-delete-comment-${c.id}`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{c.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">{t('artist.profile.noComments')}</p>
+            )}
+          </Card>
+        )}
+
+        {artist.youtubeUrls && artist.youtubeUrls.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-bold flex items-center gap-2 mb-3" data-testid="text-youtube-title">
+              <Youtube className="h-5 w-5 text-red-500" />
+              Videos
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {artist.youtubeUrls.map((url: string, idx: number) => {
+                const videoId = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([^&?/]+)/)?.[1];
+                if (!videoId) return null;
+                return (
+                  <div key={idx} className="aspect-video rounded-lg overflow-hidden bg-black" data-testid={`youtube-embed-${idx}`}>
+                    <iframe
+                      src={`https://www.youtube.com/embed/${videoId}`}
+                      className="w-full h-full"
+                      allowFullScreen
+                      title={`Video ${idx + 1}`}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="mb-4">
           <h2 className="text-lg font-bold flex items-center gap-2 mb-3" data-testid="text-songs-title">
             <Music className="h-5 w-5 text-primary" />
@@ -527,6 +777,63 @@ export default function ArtistProfilePage() {
           <div className="text-center py-12 text-muted-foreground">
             <Music className="h-10 w-10 mx-auto mb-2 opacity-40" />
             <p className="text-sm">{t('artist.profile.noSongs')}</p>
+          </div>
+        )}
+
+        {discographyAlbums && discographyAlbums.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-bold flex items-center gap-2 mb-3" data-testid="text-albums-title">
+              <Disc className="h-5 w-5 text-primary" />
+              {t('artist.profile.albums')}
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {discographyAlbums.map((album: any) => (
+                <Card key={album.id} className="bg-white/[0.03] border-white/[0.06] overflow-hidden group" data-testid={`album-card-${album.id}`}>
+                  <div className="aspect-square relative overflow-hidden">
+                    {album.coverImageUrl ? (
+                      <img src={album.coverImageUrl} alt={album.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
+                        <Disc className="h-10 w-10 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <h3 className="font-medium text-sm truncate">{album.title}</h3>
+                    <p className="text-xs text-muted-foreground">{album.releaseDate?.split("-")[0] || ""} · {album.albumType}</p>
+                    {album.spotifyUrl && (
+                      <a href={album.spotifyUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-green-400 hover:underline mt-1 inline-flex items-center gap-1">
+                        <ExternalLink className="h-3 w-3" /> Spotify
+                      </a>
+                    )}
+                  </div>
+                  {album.tracks && album.tracks.length > 0 && (
+                    <div className="border-t border-white/[0.06] px-3 py-2 space-y-1 max-h-40 overflow-y-auto">
+                      {album.tracks.map((track: any) => (
+                        <div
+                          key={track.id}
+                          className={`flex items-center gap-2 text-xs py-1 cursor-pointer hover:text-primary transition-colors ${playingTrackId === track.spotifyTrackId ? "text-primary" : "text-muted-foreground"}`}
+                          onClick={() => handlePreviewTrack(track)}
+                          data-testid={`track-row-${track.id}`}
+                        >
+                          <span className="w-4 text-right">{track.trackNumber}</span>
+                          {track.previewUrl ? (
+                            playingTrackId === track.spotifyTrackId ? (
+                              <Pause className="h-3 w-3 flex-shrink-0" />
+                            ) : (
+                              <Play className="h-3 w-3 flex-shrink-0" />
+                            )
+                          ) : (
+                            <Music className="h-3 w-3 flex-shrink-0 opacity-30" />
+                          )}
+                          <span className="truncate flex-1">{track.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
           </div>
         )}
       </div>

@@ -10,6 +10,7 @@ import {
   artistProfiles, artistSubscriptions, songEarnings, proRegistrations, artistFollowers,
   discographyAlbums, discographyTracks,
   artistGifts, artistWallets, walletTransactions,
+  artistProfileLikes, artistProfileComments, artistProfileShares,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
@@ -45,6 +46,9 @@ import {
   type ArtistGift, type InsertArtistGift,
   type ArtistWallet, type InsertArtistWallet,
   type WalletTransaction, type InsertWalletTransaction,
+  type ArtistProfileLike, type InsertArtistProfileLike,
+  type ArtistProfileComment, type InsertArtistProfileComment,
+  type ArtistProfileShare, type InsertArtistProfileShare,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -257,6 +261,15 @@ export interface IStorage {
   deleteDiscographyTrack(id: number): Promise<void>;
   getArtistDiscographyPublic(artistId: number): Promise<Array<DiscographyAlbum & { tracks: DiscographyTrack[] }>>;
   getAllDiscographyPublic(): Promise<Array<DiscographyAlbum & { artist: ArtistProfile; tracks: DiscographyTrack[] }>>;
+
+  getArtistProfileLikes(artistId: number): Promise<ArtistProfileLike[]>;
+  getArtistProfileLikeByUser(artistId: number, userId: string): Promise<ArtistProfileLike | undefined>;
+  toggleArtistProfileLike(artistId: number, userId: string): Promise<{ liked: boolean; count: number }>;
+  getArtistProfileComments(artistId: number): Promise<ArtistProfileComment[]>;
+  createArtistProfileComment(data: InsertArtistProfileComment): Promise<ArtistProfileComment>;
+  deleteArtistProfileComment(id: number): Promise<void>;
+  createArtistProfileShare(data: InsertArtistProfileShare): Promise<ArtistProfileShare>;
+  getArtistProfileShareCount(artistId: number): Promise<number>;
 
   createArtistGift(gift: InsertArtistGift): Promise<ArtistGift>;
   getArtistGift(id: number): Promise<ArtistGift | undefined>;
@@ -1643,6 +1656,52 @@ export class DatabaseStorage implements IStorage {
       .where(eq(walletTransactions.artistId, artistId))
       .orderBy(desc(walletTransactions.createdAt))
       .limit(limit);
+  }
+
+  async getArtistProfileLikes(artistId: number): Promise<ArtistProfileLike[]> {
+    return db.select().from(artistProfileLikes).where(eq(artistProfileLikes.artistId, artistId));
+  }
+
+  async getArtistProfileLikeByUser(artistId: number, userId: string): Promise<ArtistProfileLike | undefined> {
+    const [like] = await db.select().from(artistProfileLikes)
+      .where(and(eq(artistProfileLikes.artistId, artistId), eq(artistProfileLikes.userId, userId)));
+    return like;
+  }
+
+  async toggleArtistProfileLike(artistId: number, userId: string): Promise<{ liked: boolean; count: number }> {
+    const existing = await this.getArtistProfileLikeByUser(artistId, userId);
+    if (existing) {
+      await db.delete(artistProfileLikes).where(eq(artistProfileLikes.id, existing.id));
+    } else {
+      await db.insert(artistProfileLikes).values({ artistId, userId });
+    }
+    const likes = await this.getArtistProfileLikes(artistId);
+    return { liked: !existing, count: likes.length };
+  }
+
+  async getArtistProfileComments(artistId: number): Promise<ArtistProfileComment[]> {
+    return db.select().from(artistProfileComments)
+      .where(eq(artistProfileComments.artistId, artistId))
+      .orderBy(desc(artistProfileComments.createdAt));
+  }
+
+  async createArtistProfileComment(data: InsertArtistProfileComment): Promise<ArtistProfileComment> {
+    const [comment] = await db.insert(artistProfileComments).values(data).returning();
+    return comment;
+  }
+
+  async deleteArtistProfileComment(id: number): Promise<void> {
+    await db.delete(artistProfileComments).where(eq(artistProfileComments.id, id));
+  }
+
+  async createArtistProfileShare(data: InsertArtistProfileShare): Promise<ArtistProfileShare> {
+    const [share] = await db.insert(artistProfileShares).values(data).returning();
+    return share;
+  }
+
+  async getArtistProfileShareCount(artistId: number): Promise<number> {
+    const shares = await db.select().from(artistProfileShares).where(eq(artistProfileShares.artistId, artistId));
+    return shares.length;
   }
 }
 

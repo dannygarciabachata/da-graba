@@ -1926,6 +1926,278 @@ export async function registerRoutes(
     }
   });
 
+  // ========== ARTIST-OWNED DISCOGRAPHY ==========
+
+  app.get("/api/artist/discography", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const userId = (req.user as any).claims.sub;
+      const profile = await storage.getArtistProfile(userId);
+      if (!profile) return res.status(404).json({ message: "Artist profile not found" });
+      const albums = await storage.getDiscographyAlbums(profile.id);
+      res.json(albums);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/artist/discography/albums", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const userId = (req.user as any).claims.sub;
+      const profile = await storage.getArtistProfile(userId);
+      if (!profile) return res.status(404).json({ message: "Artist profile not found" });
+      const album = await storage.createDiscographyAlbum({ ...req.body, artistId: profile.id });
+      res.json(album);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/artist/discography/albums/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const userId = (req.user as any).claims.sub;
+      const profile = await storage.getArtistProfile(userId);
+      if (!profile) return res.status(404).json({ message: "Artist profile not found" });
+      const albums = await storage.getDiscographyAlbums(profile.id);
+      const album = albums.find(a => a.id === Number(req.params.id));
+      if (!album) return res.status(403).json({ message: "Not your album" });
+      const updated = await storage.updateDiscographyAlbum(Number(req.params.id), req.body);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/artist/discography/albums/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const userId = (req.user as any).claims.sub;
+      const profile = await storage.getArtistProfile(userId);
+      if (!profile) return res.status(404).json({ message: "Artist profile not found" });
+      const albums = await storage.getDiscographyAlbums(profile.id);
+      const album = albums.find(a => a.id === Number(req.params.id));
+      if (!album) return res.status(403).json({ message: "Not your album" });
+      await storage.deleteDiscographyAlbum(Number(req.params.id));
+      res.sendStatus(204);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/artist/discography/tracks", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const userId = (req.user as any).claims.sub;
+      const profile = await storage.getArtistProfile(userId);
+      if (!profile) return res.status(404).json({ message: "Artist profile not found" });
+      const albums = await storage.getDiscographyAlbums(profile.id);
+      const album = albums.find(a => a.id === Number(req.body.albumId));
+      if (!album) return res.status(403).json({ message: "Not your album" });
+      const track = await storage.createDiscographyTrack(req.body);
+      res.json(track);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/artist/discography/tracks/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const userId = (req.user as any).claims.sub;
+      const profile = await storage.getArtistProfile(userId);
+      if (!profile) return res.status(404).json({ message: "Artist profile not found" });
+      await storage.deleteDiscographyTrack(Number(req.params.id));
+      res.sendStatus(204);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/artist/discography/spotify/search", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const query = req.query.q as string;
+      if (!query) return res.status(400).json({ message: "Search query required" });
+      const { getSpotifyClient } = await import("./core/spotify_client");
+      const spotify = await getSpotifyClient();
+      const results = await spotify.search(query, ["artist"], undefined, 10);
+      const artists = results.artists?.items?.map((a: any) => ({
+        id: a.id,
+        name: a.name,
+        genres: a.genres,
+        imageUrl: a.images?.[0]?.url,
+        followers: a.followers?.total,
+        popularity: a.popularity,
+        spotifyUrl: a.external_urls?.spotify,
+      })) || [];
+      res.json(artists);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/artist/discography/import/spotify", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const userId = (req.user as any).claims.sub;
+      const profile = await storage.getArtistProfile(userId);
+      if (!profile) return res.status(404).json({ message: "Artist profile not found" });
+      
+      const { spotifyArtistId } = req.body;
+      if (!spotifyArtistId) return res.status(400).json({ message: "spotifyArtistId required" });
+      
+      await storage.updateArtistProfile(userId, { spotifyArtistId } as any);
+      
+      const { getSpotifyClient } = await import("./core/spotify_client");
+      const spotify = await getSpotifyClient();
+      const spotifyAlbums = await spotify.artists.albums(spotifyArtistId, "album,single,compilation", undefined, 50);
+      
+      const imported: any[] = [];
+      for (const sa of spotifyAlbums.items) {
+        const existing = await storage.getDiscographyAlbums(profile.id);
+        if (existing.find(e => e.spotifyAlbumId === sa.id)) continue;
+        
+        const album = await storage.createDiscographyAlbum({
+          artistId: profile.id,
+          title: sa.name,
+          albumType: sa.album_type || "album",
+          releaseDate: sa.release_date,
+          coverImageUrl: sa.images?.[0]?.url || null,
+          spotifyAlbumId: sa.id,
+          spotifyUrl: sa.external_urls?.spotify || null,
+          tracksCount: sa.total_tracks || 0,
+          genre: profile.genre || null,
+        });
+        
+        try {
+          const spotifyTracks = await spotify.albums.tracks(sa.id, undefined, 50);
+          for (const st of spotifyTracks.items) {
+            await storage.createDiscographyTrack({
+              albumId: album.id,
+              title: st.name,
+              trackNumber: st.track_number,
+              durationSeconds: Math.round(st.duration_ms / 1000),
+              featuring: st.artists?.slice(1).map((a: any) => a.name).join(", ") || null,
+              spotifyTrackId: st.id,
+              previewUrl: st.preview_url || null,
+            });
+          }
+        } catch (trackErr: any) {
+          console.error(`[Spotify Import] Track import failed for album ${sa.name}:`, trackErr.message);
+        }
+        
+        imported.push({ id: album.id, title: album.title, tracks: sa.total_tracks });
+      }
+      
+      res.json({ imported, count: imported.length });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ========== PROFILE SOCIAL INTERACTIONS ==========
+
+  app.post("/api/artists/:id/like", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const artistId = Number(req.params.id);
+      const userId = (req.user as any).claims.sub;
+      const result = await storage.toggleArtistProfileLike(artistId, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/public/artists/:id/likes", async (req, res) => {
+    try {
+      const artistId = Number(req.params.id);
+      const likes = await storage.getArtistProfileLikes(artistId);
+      res.json({ count: likes.length, userIds: likes.map(l => l.userId) });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/public/artists/:id/comments", async (req, res) => {
+    try {
+      const artistId = Number(req.params.id);
+      const comments = await storage.getArtistProfileComments(artistId);
+      res.json(comments);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/artists/:id/comments", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const artistId = Number(req.params.id);
+      const userId = (req.user as any).claims.sub;
+      const { content } = req.body;
+      if (!content || content.trim().length === 0) return res.status(400).json({ message: "Content required" });
+      
+      const user = await storage.getUser(userId);
+      const comment = await storage.createArtistProfileComment({
+        artistId,
+        userId,
+        userName: user?.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : "Fan",
+        userAvatarUrl: user?.profileImageUrl || null,
+        content: content.trim(),
+      });
+      res.json(comment);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/artists/:id/comments/:commentId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const userId = (req.user as any).claims.sub;
+      const commentId = Number(req.params.commentId);
+      const artistId = Number(req.params.id);
+      const comments = await storage.getArtistProfileComments(artistId);
+      const comment = comments.find(c => c.id === commentId);
+      if (!comment) return res.status(404).json({ message: "Comment not found" });
+      
+      const profile = await storage.getArtistProfile(userId);
+      if (comment.userId !== userId && (!profile || profile.id !== artistId)) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      
+      await storage.deleteArtistProfileComment(commentId);
+      res.sendStatus(204);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/artists/:id/share", async (req, res) => {
+    try {
+      const artistId = Number(req.params.id);
+      const userId = req.isAuthenticated() ? (req.user as any).claims.sub : null;
+      const { platform } = req.body;
+      await storage.createArtistProfileShare({ artistId, userId, platform: platform || "link" });
+      const count = await storage.getArtistProfileShareCount(artistId);
+      res.json({ count });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/public/artists/:id/shares", async (req, res) => {
+    try {
+      const artistId = Number(req.params.id);
+      const count = await storage.getArtistProfileShareCount(artistId);
+      res.json({ count });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // ========== ARTIST GIFTS / DONATIONS ==========
 
   app.post("/api/artists/:id/gift", async (req, res) => {

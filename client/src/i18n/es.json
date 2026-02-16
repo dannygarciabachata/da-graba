@@ -883,7 +883,8 @@
         "overview": "Vista General",
         "gifts": "Regalos & Billetera",
         "copyright": "Derechos de Autor",
-        "monetization": "Monetización"
+        "monetization": "Monetización",
+        "discography": "Discografía"
       },
       "revenueModel": "Modelo de Ingresos",
       "howItWorks": {
@@ -918,7 +919,13 @@
       "subscribedBadge": "Suscrito",
       "notFound": "Artista no encontrado",
       "discography": "Discografía",
-      "noSongs": "Este artista aún no ha publicado canciones"
+      "noSongs": "Este artista aún no ha publicado canciones",
+      "albums": "Álbumes",
+      "comments": "Comentarios",
+      "linkCopied": "¡Enlace copiado!",
+      "loginToLike": "Inicia sesión para dar me gusta",
+      "noComments": "Aún no hay comentarios. ¡Sé el primero!",
+      "writeComment": "Escribe un comentario..."
     },
     "gift": {
       "sendGift": "Enviar Regalo",
@@ -983,6 +990,22 @@
       "updateButton": "Actualizar Perfil",
       "created": "¡Perfil de artista creado!",
       "updated": "¡Perfil actualizado!"
+    },
+    "discography": {
+      "addAlbum": "Agregar Álbum",
+      "albumCreated": "¡Álbum creado!",
+      "albumDeleted": "Álbum eliminado",
+      "albumTitle": "Título del álbum",
+      "coverImageUrl": "URL de imagen de portada",
+      "import": "Importar",
+      "importDescription": "Busca tu nombre artístico en Spotify para importar toda tu discografía automáticamente.",
+      "importFromSpotify": "Importar desde Spotify",
+      "importSuccess": "¡Importación exitosa!",
+      "noAlbums": "No hay álbumes todavía",
+      "noAlbumsDesc": "Importa desde Spotify o agrega álbumes manualmente",
+      "noDate": "Sin fecha",
+      "searchArtist": "Buscar artista en Spotify...",
+      "yourAlbums": "Tus Álbumes"
     }
   },
   "discography": {
