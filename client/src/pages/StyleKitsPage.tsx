@@ -346,10 +346,25 @@ function TrainingSection({ kit }: { kit: any }) {
     },
   });
 
+  const { mutate: resetTraining, isPending: isResetting } = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/admin/style-kits/${kit.id}/reset-training`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/style-kits"] });
+      refetch();
+      toast({ title: t("styleKits.training.resetSuccess", "Entrenamiento reiniciado") });
+    },
+    onError: (err: Error) => {
+      toast({ title: err.message || "Error resetting training", variant: "destructive" });
+    },
+  });
+
   if (!trainingStatus) return null;
 
-  const { progress, pipelineStep, trainingStatus: status, trainingError, instruments, gpuConnected, trainedModelUrl, lastTrainedAt } = trainingStatus;
-  const isActive = ["analyzing", "prompting", "queued", "training"].includes(status);
+  const { progress, pipelineStep, trainingStatus: status, trainingError, instruments, gpuConnected, trainedModelUrl, lastTrainedAt, isStuck } = trainingStatus;
+  const isActive = ["analyzing", "prompting", "queued", "training"].includes(status) && !isStuck;
   const isReady = pipelineStep === "ready";
   const isFailed = status === "failed";
   const canStartAnalysis = instruments.withAudio === instruments.total && instruments.total > 0 && !isActive && pipelineStep === "upload";
@@ -442,6 +457,16 @@ function TrainingSection({ kit }: { kit: any }) {
         </div>
       )}
 
+      {isStuck && (
+        <div className="p-2 rounded bg-yellow-500/10 border border-yellow-500/20 mb-2" data-testid={`training-stuck-${kit.id}`}>
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="h-3.5 w-3.5 text-yellow-400 flex-shrink-0" />
+            <span className="text-xs font-semibold text-yellow-400">{t("styleKits.training.stuck", "Entrenamiento detenido")}</span>
+          </div>
+          <p className="text-[10px] text-yellow-300/80">{t("styleKits.training.stuckDesc", "El servidor GPU no respondió. Puedes reintentar el entrenamiento.")}</p>
+        </div>
+      )}
+
       {isFailed && trainingError && (
         <div className="p-2 rounded bg-red-500/10 border border-red-500/20 mb-2" data-testid={`training-error-${kit.id}`}>
           <div className="flex items-center gap-2 mb-1">
@@ -514,6 +539,23 @@ function TrainingSection({ kit }: { kit: any }) {
               <RotateCcw className="h-3.5 w-3.5 mr-1" />
             )}
             {t("styleKits.training.retryTraining")}
+          </Button>
+        )}
+        {isStuck && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1 h-8 text-xs border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+            onClick={() => resetTraining()}
+            disabled={isResetting}
+            data-testid={`button-reset-training-${kit.id}`}
+          >
+            {isResetting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+            ) : (
+              <RotateCcw className="h-3.5 w-3.5 mr-1" />
+            )}
+            {t("styleKits.training.resetTraining", "Reiniciar Entrenamiento")}
           </Button>
         )}
       </div>

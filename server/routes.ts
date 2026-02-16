@@ -3711,6 +3711,11 @@ export async function registerRoutes(
       const kit = await storage.getStyleKit(Number(kitId));
       if (!kit) return res.sendStatus(404);
 
+      if (kit.trainingJobId && jobId && kit.trainingJobId !== jobId) {
+        console.log(`[Training] Ignoring stale webhook for kit ${kitId}: expected job ${kit.trainingJobId}, got ${jobId}`);
+        return res.json({ success: true, ignored: true });
+      }
+
       const resolvedModelUrl = modelUrl || modelPath;
       const resolvedStatus = status === "completed" ? "ready" : (status || "ready");
 
@@ -3743,6 +3748,38 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/style-kits/:id/reset-training", async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: "Not authenticated" });
+    try {
+      const userId = (req.user as any).claims.sub;
+      const userRecord = await storage.getUser(userId);
+      if (!userRecord || !["super_admin", "admin"].includes(userRecord.role || "")) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const kitId = Number(req.params.id);
+      const kit = await storage.getStyleKit(kitId);
+      if (!kit) return res.sendStatus(404);
+
+      const instruments = await storage.getStyleKitInstruments(kitId);
+      const withPrompts = instruments.filter(i => i.generatedPrompt).length;
+
+      const resetStep = withPrompts > 0 ? "prompt" : "upload";
+
+      await storage.updateStyleKit(kitId, {
+        trainingStatus: "pending",
+        trainingError: null,
+        trainingJobId: null,
+        pipelineStep: resetStep,
+      });
+
+      console.log(`[Training] Admin ${userId} reset kit ${kitId} training to step: ${resetStep}`);
+      res.json({ success: true, kitId, resetTo: resetStep });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/style-kits/:id/training-status", async (req, res) => {
     try {
       const kitId = Number(req.params.id);
@@ -3757,6 +3794,26 @@ export async function registerRoutes(
 
       const pipelineSteps = ["upload", "analyze", "prompt", "train", "ready"];
       const currentStepIndex = pipelineSteps.indexOf(kit.pipelineStep || "upload");
+
+      let isStuck = false;
+      if (kit.pipelineStep === "train" && kit.trainingStatus === "training") {
+        let jobStartTime: number | null = null;
+        if (kit.trainingJobId) {
+          const jobTimestampMatch = kit.trainingJobId.match(/_(\d+)$/);
+          if (jobTimestampMatch) {
+            jobStartTime = Number(jobTimestampMatch[1]);
+          }
+        }
+        if (!jobStartTime && kit.createdAt) {
+          jobStartTime = new Date(kit.createdAt).getTime();
+        }
+        if (jobStartTime) {
+          const minutesSinceStart = (Date.now() - jobStartTime) / (1000 * 60);
+          if (minutesSinceStart > 30) {
+            isStuck = true;
+          }
+        }
+      }
 
       let progress = 0;
       if (kit.pipelineStep === "upload") {
@@ -3778,7 +3835,10 @@ export async function registerRoutes(
         case "upload": stepLabel = "Subiendo instrumentos"; break;
         case "analyze": stepLabel = "Analizando audio"; break;
         case "prompt": stepLabel = "Generando prompts IA"; break;
-        case "train": stepLabel = kit.trainingStatus === "training" ? "Entrenando modelo..." : "En cola de entrenamiento"; break;
+        case "train":
+          if (isStuck) stepLabel = "Entrenamiento detenido - Reintentar";
+          else stepLabel = kit.trainingStatus === "training" ? "Entrenando modelo..." : "En cola de entrenamiento";
+          break;
         case "ready": stepLabel = "Modelo listo"; break;
         default: stepLabel = kit.pipelineStep || "Pendiente";
       }
@@ -3793,6 +3853,7 @@ export async function registerRoutes(
         lastTrainedAt: kit.lastTrainedAt,
         progress,
         stepLabel,
+        isStuck,
         instruments: {
           total: totalInstruments,
           withAudio,
