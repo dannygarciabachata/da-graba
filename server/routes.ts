@@ -3830,17 +3830,14 @@ export async function registerRoutes(
       if (currentPipelineStep === "train" && kit.trainingStatus === "training") {
         let jobStartTime: number | null = null;
         if (kit.trainingJobId) {
-          const jobTimestampMatch = kit.trainingJobId.match(/_(\d+)$/);
+          const jobTimestampMatch = kit.trainingJobId.match(/cloud_kit_\d+_(\d{13,})$/);
           if (jobTimestampMatch) {
             jobStartTime = Number(jobTimestampMatch[1]);
           }
         }
-        if (!jobStartTime && kit.createdAt) {
-          jobStartTime = new Date(kit.createdAt).getTime();
-        }
         if (jobStartTime) {
           const minutesSinceStart = (Date.now() - jobStartTime) / (1000 * 60);
-          if (minutesSinceStart > 30) {
+          if (minutesSinceStart > 60) {
             isStuck = true;
           }
         }
