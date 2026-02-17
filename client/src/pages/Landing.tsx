@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import dgbLogo from "@assets/DAGRABA2_1771364648913.png";
-import dagrabLargoLogo from "@assets/DAGRABALARGO_1771365853236.png";
+import dagrabTranspLogo from "@assets/DAGRABATRANSP_1771365853236.png";
 import palettaBg from "@assets/palettabg_1771282011333.png";
 import {
   Play, Pause, Mic2, Wand2, Music, Headphones, Sparkles, Scissors, Zap,
@@ -345,7 +345,7 @@ export default function Landing() {
       <nav className="relative z-20 border-b border-white/[0.06] backdrop-blur-xl bg-background/70 sticky top-0" data-testid="nav-landing">
         <div className="container mx-auto px-4 md:px-6 py-3 flex justify-between items-center">
           <div className="flex items-center cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-            <img src={dagrabLargoLogo} alt="DAGRABA Studio" className="h-10 sm:h-12 object-contain drop-shadow-[0_0_15px_rgba(0,200,255,0.3)]" data-testid="img-landing-logo" />
+            <img src={dagrabTranspLogo} alt="DAGRABA Studio" className="h-10 sm:h-12 object-contain drop-shadow-[0_0_15px_rgba(0,200,255,0.3)]" data-testid="img-landing-logo" />
           </div>
 
           <div className="hidden md:flex items-center gap-1">
@@ -909,7 +909,7 @@ export default function Landing() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
             <div className="col-span-2 md:col-span-1">
               <div className="mb-4">
-                <img src={dagrabLargoLogo} alt="DAGRABA Studio" className="h-10 object-contain drop-shadow-[0_0_12px_rgba(0,200,255,0.25)]" data-testid="img-footer-logo" />
+                <img src={dagrabTranspLogo} alt="DAGRABA Studio" className="h-10 object-contain drop-shadow-[0_0_12px_rgba(0,200,255,0.25)]" data-testid="img-footer-logo" />
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {t('landing.footer.footerDescription')}
