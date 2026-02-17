@@ -1,7 +1,8 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
-import dgbLogo from "@assets/DAGRABA_1771364648910.png";
+import dgbLogo from "@assets/DAGRABA2_1771364648913.png";
+import sidebarBg from "@assets/DAGRABABAG_1771365063394.png";
 import {
   Sidebar,
   SidebarContent,
@@ -84,8 +85,16 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar>
-      <SidebarHeader className="p-4 pb-2">
+    <Sidebar
+      className="relative overflow-hidden"
+      style={{
+        backgroundImage: `url(${sidebarBg})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      <div className="absolute inset-0 bg-black/30 pointer-events-none" />
+      <SidebarHeader className="relative z-10 p-4 pb-2">
         <div
           className="flex items-center justify-center cursor-pointer group"
           onClick={() => setLocation("/create")}
@@ -94,13 +103,13 @@ export function AppSidebar() {
           <img
             src={dgbLogo}
             alt="DAGRABA Studio"
-            className="h-20 w-20 rounded-full drop-shadow-[0_0_20px_rgba(0,200,255,0.4)] group-hover:drop-shadow-[0_0_30px_rgba(51,102,255,0.5)] transition-all duration-300"
+            className="h-20 w-20 rounded-md drop-shadow-[0_0_20px_rgba(0,200,255,0.4)] group-hover:drop-shadow-[0_0_30px_rgba(51,102,255,0.5)] transition-all duration-300 object-contain"
           />
         </div>
         <div className="h-px mt-2 bg-gradient-to-r from-transparent via-[#3366FF]/40 to-transparent" />
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="relative z-10">
         <SidebarGroup>
           <SidebarGroupLabel className="text-[#3366FF]/70 font-semibold uppercase tracking-wider text-[10px]">{t("nav.music")}</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -234,7 +243,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       {user && (
-        <SidebarFooter className="p-3 space-y-2">
+        <SidebarFooter className="relative z-10 p-3 space-y-2">
           <div
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-[#3366FF]/5 transition-colors"
             onClick={toggleLanguage}
