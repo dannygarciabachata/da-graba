@@ -3633,16 +3633,18 @@ export async function registerRoutes(
       }
 
       if (!gpuSubmitted) {
+        const errorMsg = "No GPU server available. Connect a GPU server or check server status.";
         await storage.updateStyleKit(kitId, {
           trainingStatus: "queued",
-          trainingError: null,
+          trainingError: errorMsg,
         });
+        console.error(`[SAO Pipeline] Kit ${kitId} training: no GPU servers available`);
       }
 
       res.json({
         message: gpuSubmitted
           ? "Training submitted to GPU server. Your kit is being fine-tuned with the SAO pipeline."
-          : "Training queued. Your kit will be fine-tuned using the SAO pipeline with AI-generated prompts.",
+          : "Training queued. No GPU server responded. You can retry when a server is available.",
         kitId,
         instrumentCount: withPrompts.length,
         status: gpuSubmitted ? "training" : "queued",
