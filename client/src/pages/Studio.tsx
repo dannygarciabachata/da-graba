@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSongs } from "@/hooks/use-songs";
 
 const GENRE_DISPLAY: Record<string, string> = {
-  Bachata: "DAGRACHATA",
+  Bachata: "DAGRABACHATA",
   Bolero: "DAGRABOLERO",
 };
 import { useSongTracks, useSeparateStems, useUpdateTrack, useMasterSong, useDenoiseSong, useCoverSong, useTrimSong } from "@/hooks/use-tracks";
@@ -474,7 +474,7 @@ export default function StudioPage() {
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-medium truncate">{song.title}</h4>
                         <p className="text-[10px] text-muted-foreground">
-                          {GENRE_DISPLAY[song.genre || ""] || song.genre || "DAGRACHATA"} · {song.mode === "aggregate" ? "Quick" : "Custom"}
+                          {GENRE_DISPLAY[song.genre || ""] || song.genre || "DAGRABACHATA"} · {song.mode === "aggregate" ? "Quick" : "Custom"}
                         </p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -516,7 +516,7 @@ export default function StudioPage() {
                     {selectedSong.title}
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    {GENRE_DISPLAY[selectedSong.genre || ""] || selectedSong.genre || "DAGRACHATA"} · Stem Separation
+                    {GENRE_DISPLAY[selectedSong.genre || ""] || selectedSong.genre || "DAGRABACHATA"} · Stem Separation
                   </p>
                 </div>
 

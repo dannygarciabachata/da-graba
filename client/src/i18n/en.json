@@ -420,7 +420,7 @@
     },
     "unlockCustomization": "Unlock customization with Pro",
     "genres": {
-      "bachata": "DAGRACHATA",
+      "bachata": "DAGRABACHATA",
       "bolero": "DAGRABOLERO",
       "salsa": "Salsa",
       "merengue": "Merengue",
@@ -709,14 +709,14 @@
     "addLyrics": "Add Lyrics",
     "hideLyrics": "Hide",
     "stylePreset": "Style Preset",
-    "bachataMode": "DAGRACHATA Mode",
+    "bachataMode": "DAGRABACHATA Mode",
     "forceDominican": "Force Dominican instruments",
     "noCreditsTitle": "No credits remaining",
     "noCreditsSubtitle": "Upgrade your plan to keep creating music"
   },
   "quiz": {
-    "title": "DAGRACHATA Quiz",
-    "subtitle": "Test your knowledge of DAGRACHATA history, artists, and culture",
+    "title": "DAGRABACHATA Quiz",
+    "subtitle": "Test your knowledge of DAGRABACHATA history, artists, and culture",
     "question": "Question",
     "of": "of",
     "score": "Score",

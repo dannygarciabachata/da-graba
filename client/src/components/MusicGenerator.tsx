@@ -15,15 +15,15 @@ import { useLocation } from "wouter";
 
 const STYLE_OPTIONS = [
   { value: "heart-mula", labelKey: "common.engineSignature" },
-  { value: "bachata-romantic", label: "Romantic DAGRACHATA" },
-  { value: "bachata-dance", label: "Dance DAGRACHATA" },
-  { value: "bachata-bolero", label: "DAGRACHATA DAGRABOLERO" },
+  { value: "bachata-romantic", label: "Romantic DAGRABACHATA" },
+  { value: "bachata-dance", label: "Dance DAGRABACHATA" },
+  { value: "bachata-bolero", label: "DAGRABACHATA DAGRABOLERO" },
   { value: "trio-serenade", label: "Trio Serenade" },
-  { value: "bachata-urbana", label: "DAGRACHATA Urbana" },
+  { value: "bachata-urbana", label: "DAGRABACHATA Urbana" },
 ];
 
 const GENRE_OPTIONS = [
-  { value: "Bachata", label: "DAGRACHATA" },
+  { value: "Bachata", label: "DAGRABACHATA" },
   { value: "Merengue", label: "Merengue" },
   { value: "Salsa", label: "Salsa" },
   { value: "Reggaeton", label: "Reggaeton" },
@@ -257,7 +257,7 @@ export function MusicGenerator() {
                   data-testid="input-music-lyrics"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Leave empty for auto-generated DAGRACHATA lyrics
+                  Leave empty for auto-generated DAGRABACHATA lyrics
                 </p>
               </motion.div>
             )}

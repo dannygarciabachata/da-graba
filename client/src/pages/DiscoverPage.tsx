@@ -111,7 +111,7 @@ function GenreCarousel() {
       <div ref={scrollRef} className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 snap-x snap-mandatory">
         {allPlaylists.map((p) => {
           const isTop100 = p.genre === "top100";
-          const label = isTop100 ? "Top 100" : p.genre === "Bachata" ? "DAGRACHATA" : p.genre === "Bolero" ? "DAGRABOLERO" : p.genre;
+          const label = isTop100 ? "Top 100" : p.genre === "Bachata" ? "DAGRABACHATA" : p.genre === "Bolero" ? "DAGRABOLERO" : p.genre;
           const gradient = isTop100 ? "from-primary to-purple-700" : getGenreColor(p.genre);
           return (
             <div

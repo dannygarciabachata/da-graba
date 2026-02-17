@@ -420,7 +420,7 @@
     },
     "unlockCustomization": "Desbloquea personalización con Pro",
     "genres": {
-      "bachata": "DAGRACHATA",
+      "bachata": "DAGRABACHATA",
       "bolero": "DAGRABOLERO",
       "salsa": "Salsa",
       "merengue": "Merengue",
@@ -709,14 +709,14 @@
     "addLyrics": "Agregar Letras",
     "hideLyrics": "Ocultar",
     "stylePreset": "Preset de Estilo",
-    "bachataMode": "Modo DAGRACHATA",
+    "bachataMode": "Modo DAGRABACHATA",
     "forceDominican": "Forzar instrumentos dominicanos",
     "noCreditsTitle": "Sin créditos restantes",
     "noCreditsSubtitle": "Mejora tu plan para seguir creando música"
   },
   "quiz": {
-    "title": "Quiz de DAGRACHATA",
-    "subtitle": "Pon a prueba tu conocimiento de la historia, artistas y cultura de la DAGRACHATA",
+    "title": "Quiz de DAGRABACHATA",
+    "subtitle": "Pon a prueba tu conocimiento de la historia, artistas y cultura de la DAGRABACHATA",
     "question": "Pregunta",
     "of": "de",
     "score": "Puntuación",

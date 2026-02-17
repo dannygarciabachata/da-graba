@@ -54,7 +54,7 @@ function Users2Icon(props: any) {
 const PRO_ENTITIES = ["none", "bmi", "ascap", "sesac", "socan", "prs", "gema", "sgae"];
 
 const GENRES = [
-  { value: "Bachata", label: "DAGRACHATA" },
+  { value: "Bachata", label: "DAGRABACHATA" },
   { value: "Bolero", label: "DAGRABOLERO" },
   { value: "Salsa", label: "Salsa" },
   { value: "Merengue", label: "Merengue" },

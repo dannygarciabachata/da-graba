@@ -79,7 +79,7 @@ import { useToast } from "@/hooks/use-toast";
 
 
 const GENRE_CARDS = [
-  { value: "Bachata", label: "DAGRACHATA", likes: "97K" },
+  { value: "Bachata", label: "DAGRABACHATA", likes: "97K" },
   { value: "Salsa", label: "Salsa", likes: "72K" },
   { value: "Merengue", label: "Merengue", likes: "58K" },
   { value: "Cumbia", label: "Cumbia", likes: "54K" },
@@ -460,7 +460,7 @@ export default function CreatePage() {
                   <Guitar className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold">DAGRACHATA</div>
+                  <div className="text-sm font-bold">DAGRABACHATA</div>
                   <div className="text-[10px] text-muted-foreground">{t('create.dnaFlow.bachataDesc')}</div>
                 </div>
               </div>
