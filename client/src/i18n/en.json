@@ -243,7 +243,7 @@
       "cookiesLink": "Cookie Policy",
       "faqTitle": "Frequently Asked Questions",
       "faq": [
-        {"q": "Who owns the music I generate?", "a": "If you have an active membership, you own 100% of the rights (Royalty Free). Free plan users retain 40%, while DGB Studio/ODGMUSIC retains 60%."},
+        {"q": "Who owns the music I generate?", "a": "If you have an active membership, you own 100% of the rights (Royalty Free). Free plan users retain 40%, while DAGRABA Studio/ODGMUSIC retains 60%."},
         {"q": "Is my voice protected?", "a": "Yes. Your Vocal DNA is processed with encryption and is strictly private. It is never shared without your express consent."},
         {"q": "How does distribution with ODGMUSIC work?", "a": "When you choose to distribute with us, a 50/50 split on net revenue applies. ODGMUSIC (ASCAP-affiliated) administers your publishing rights worldwide."},
         {"q": "Can I register my songs with a PRO?", "a": "Yes. From the Copyright Hub you can prepare and export your registrations for ASCAP, BMI, SESAC or other rights organizations."},
@@ -995,7 +995,7 @@
     "onboarding": {
       "title": "Create Your Artist Profile",
       "editTitle": "Edit Artist Profile",
-      "subtitle": "Set up your artist presence on DGB Studio",
+      "subtitle": "Set up your artist presence on DAGRABA Studio",
       "step1": "Identity",
       "step2": "Music",
       "step3": "Copyright",
@@ -1118,7 +1118,7 @@
     },
     "success": {
       "title": "Work Registered Successfully!",
-      "description": "Your work has been registered in DGB Studio. Follow these steps to complete the registration:",
+      "description": "Your work has been registered in DAGRABA Studio. Follow these steps to complete the registration:",
       "nextSteps": "Next Steps",
       "step1": "Download the registration data using the 'Export' button",
       "step2": "Log in to your PRO portal (ASCAP, BMI, etc.)",
@@ -1211,32 +1211,32 @@
     },
     "footer": "All rights reserved.",
     "terms": {
-      "mainTitle": "TERMS OF SERVICE AND LICENSE AGREEMENT FOR DGB STUDIO CLOUD ENGINE",
+      "mainTitle": "TERMS OF SERVICE AND LICENSE AGREEMENT FOR DAGRABA STUDIO CLOUD ENGINE",
       "lastUpdated": "Last updated: February 16, 2026",
-      "operatedBy": "Operated by: DGB STUDIO & ODGMUSIC LATIN WORLDWIDE PUBLISHING",
-      "intro": "By accessing or using the DGB STUDIO Cloud Engine service, you (the \"User\") agree to be legally bound by the following terms. If you do not agree, do not use the Service.",
+      "operatedBy": "Operated by: DAGRABA STUDIO & ODGMUSIC LATIN WORLDWIDE PUBLISHING",
+      "intro": "By accessing or using the DAGRABA STUDIO Cloud Engine service, you (the \"User\") agree to be legally bound by the following terms. If you do not agree, do not use the Service.",
       "section1": {
         "title": "1. OWNERSHIP AND MEMBERSHIP MODEL (60/40 RULE)",
         "activeMembership": "Active Membership Users:",
         "activeMembershipDesc": "Users who maintain a paid subscription have full commercial rights over generated content. Music is \"Royalty Free\" for the user under this plan.",
         "freePlan": "Non-Member Users (Free Plan):",
-        "freePlanDesc": "To offset the use of our infrastructure and exclusive instrument libraries, the User agrees that DGB STUDIO / ODGMUSIC will automatically retain 60% of the copyright and related rights over each generated work."
+        "freePlanDesc": "To offset the use of our infrastructure and exclusive instrument libraries, the User agrees that DAGRABA STUDIO / ODGMUSIC will automatically retain 60% of the copyright and related rights over each generated work."
       },
       "section2": {
         "title": "2. VOCAL DNA AND RVC MODEL PRIVACY",
         "privateUse": "Private Use:",
         "privateUseDesc": "Audio files uploaded for voice training are processed in encrypted form. The resulting voice model belongs to the User and is strictly private.",
         "thirdParty": "Third-Party Use Prohibition:",
-        "thirdPartyDesc": "DGB STUDIO will not share, give away, or use your vocal DNA for other users without your express consent through the \"Discover\" section."
+        "thirdPartyDesc": "DAGRABA STUDIO will not share, give away, or use your vocal DNA for other users without your express consent through the \"Discover\" section."
       },
       "section3": {
         "title": "3. INSTRUMENTATION AND PERFORMANCE DNA (LIMITATION OF LIABILITY)",
         "originalInstruments": "Original DGB Instruments:",
         "originalInstrumentsDesc": "The system uses models trained with real instruments recorded by Danny Garcia and Dominican masters.",
         "thirdPartyInstruments": "Third-Party Instruments:",
-        "thirdPartyInstrumentsDesc": "DGB STUDIO allows the integration of external models. However, the system is not responsible if the generated audio infringes on the \"performance DNA\" of a real musician.",
+        "thirdPartyInstrumentsDesc": "DAGRABA STUDIO allows the integration of external models. However, the system is not responsible if the generated audio infringes on the \"performance DNA\" of a real musician.",
         "creatorResponsibility": "Creator Responsibility:",
-        "creatorResponsibilityDesc": "If an artist publishes or distributes a song that generates intellectual property claims due to its performance style, full legal responsibility falls on the Artist/User, exempting DGB STUDIO from any litigation."
+        "creatorResponsibilityDesc": "If an artist publishes or distributes a song that generates intellectual property claims due to its performance style, full legal responsibility falls on the Artist/User, exempting DAGRABA STUDIO from any litigation."
       },
       "section4": {
         "title": "4. PUBLISHING AND DISTRIBUTION AGREEMENT (ODGMUSIC)",
@@ -1253,7 +1253,7 @@
     },
     "privacy": {
       "mainTitle": "PRIVACY POLICY",
-      "subtitle": "DGB STUDIO Cloud Engine & ODGMUSIC",
+      "subtitle": "DAGRABA STUDIO Cloud Engine & ODGMUSIC",
       "lastUpdated": "Last updated: February 16, 2026",
       "section1": {
         "title": "1.1. Information We Collect",
@@ -1267,7 +1267,7 @@
       "section2": {
         "title": "1.2. Data Usage and \"Vocal DNA\"",
         "privacyByDesign": "Privacy by Design:",
-        "privacyByDesignDesc": "Your training audio files are used exclusively to process your personal model. DGB STUDIO does not sell, give away, or use your voices to train public models without your express permission.",
+        "privacyByDesignDesc": "Your training audio files are used exclusively to process your personal model. DAGRABA STUDIO does not sell, give away, or use your voices to train public models without your express permission.",
         "security": "Security:",
         "securityDesc": "We use high-level encryption to ensure your voice model is only accessible from your account.",
         "serviceImprovement": "Service Improvement:",
@@ -1293,10 +1293,10 @@
     },
     "cookies": {
       "mainTitle": "COOKIE POLICY",
-      "subtitle": "DGB STUDIO Cloud Engine",
+      "subtitle": "DAGRABA STUDIO Cloud Engine",
       "section1": {
         "title": "2.1. What Are Cookies?",
-        "description": "Cookies are small text files that help us make your experience on the DGB STUDIO Cloud Engine smooth and professional."
+        "description": "Cookies are small text files that help us make your experience on the DAGRABA STUDIO Cloud Engine smooth and professional."
       },
       "section2": {
         "title": "2.2. Types of Cookies We Use",

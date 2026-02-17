@@ -1,17 +1,17 @@
-# DGB Studio
+# DAGRABA Studio
 
 ## Overview
-DGB Studio is an AI-powered SaaS platform for music generation, specializing in "Bachata" music. It uses a dual-engine system, HeartMuLa for vocal tracks (with native Spanish support) and Stable Audio Open for instrumental tracks, leveraging RunPod Serverless GPU infrastructure. Key features include custom model fine-tuning via "Style Kits," comprehensive subscription management through Stripe, an admin dashboard, and an AI-driven support chatbot. The platform aims to be "La Pura Sangre de la Bachata con el ADN de Danny Garcia y los Grandes Musicos Dominicanos," offering advanced music creation, artist monetization, and a rich user experience.
+DAGRABA Studio (formerly DGB Studio) is an AI-powered SaaS platform for music generation, specializing in "Bachata" music. The name DAGRABA stands for DA(nny) GRA(garcia) BA(chata) — with the R of Requinto woven in. Domain: dagraba.studio. It uses a dual-engine system, HeartMuLa for vocal tracks (with native Spanish support) and Stable Audio Open for instrumental tracks, leveraging RunPod Serverless GPU infrastructure. Key features include custom model fine-tuning via "Style Kits," comprehensive subscription management through Stripe, an admin dashboard, and an AI-driven support chatbot. The platform aims to be "La Pura Sangre de la Bachata con el ADN de Danny Garcia y los Grandes Musicos Dominicanos," offering advanced music creation, artist monetization, and a rich user experience.
 
 ## User Preferences
 I prefer clear and concise communication. For coding, I favor modular and maintainable solutions. I appreciate an iterative development approach with regular updates. Before implementing significant architectural changes or new external dependencies, please ask for my approval. I expect the agent to prioritize secure and scalable solutions.
 
 ## System Architecture
-DGB Studio employs a microservices-oriented architecture with a clear separation between frontend and backend.
+DAGRABA Studio employs a microservices-oriented architecture with a clear separation between frontend and backend.
 
 **Frontend:**
 - **Technology Stack:** React, Vite, TailwindCSS, Shadcn UI.
-- **UI/UX Design:** Dark mode with deep purple background, neon cyan primary accents, and magenta/pink secondary accents. Features cyan-to-magenta gradients, a transparent DGB Studio 2 logo with glow effects, and uses Inter and JetBrains Mono fonts. Designed with a mobile-first, responsive approach.
+- **UI/UX Design:** Dark mode with deep purple background, neon cyan primary accents, and magenta/pink secondary accents. Features cyan-to-magenta gradients, a transparent DAGRABA Studio logo with glow effects, and uses Inter and JetBrains Mono fonts. Designed with a mobile-first, responsive approach.
 - **Layout:** Utilizes a left sidebar for navigation and controls, with a dynamic full-width main content area.
 - **Key UI Components:** CreatePage for music generation, LibraryPage for user song management, Studio for multitrack editing and AI tools (stem separation, controls), Sample Lab for audio recording/upload and AI remixing, AdminPage for platform management, and Producer Store/Style Kits for instrument kit browsing/upload. Also includes Discography, Artist Dashboard, Copyright Hub, Discover pages, MyPlaylistsPage for user-created playlists, and PublicPlaylistViewPage for public playlist browsing.
 - **Streaming/Social:** Spotify-like streaming model. Songs on Discover are playable/likeable/shareable but NOT downloadable by non-owners. Artists can create public playlists. Artist profiles require registration to view and track profile views. Annual pricing discounts: Basic 20%, Pro 25%, Premium 30%.

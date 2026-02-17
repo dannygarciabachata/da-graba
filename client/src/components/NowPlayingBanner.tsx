@@ -159,7 +159,7 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
     const shareUrl = window.location.href;
     if (navigator.share) {
       try {
-        await navigator.share({ title: `${song.title} - DGB Studio`, url: shareUrl });
+        await navigator.share({ title: `${song.title} - DAGRABA Studio`, url: shareUrl });
       } catch {}
     } else {
       await navigator.clipboard.writeText(shareUrl);
@@ -177,7 +177,7 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
   if (!song.audioUrl) return null;
 
   const artistDisplay = song.artistName || "Unknown Artist";
-  const copyrightDisplay = song.copyrightHolder || "DGB Studio";
+  const copyrightDisplay = song.copyrightHolder || "DAGRABA Studio";
 
   return (
     <motion.div

@@ -288,7 +288,7 @@ export default function ArtistProfilePage() {
 
   const handleShare = (platform: string) => {
     const url = window.location.href;
-    const text = `Check out ${artist?.artistName} on DGB Studio!`;
+    const text = `Check out ${artist?.artistName} on DAGRABA Studio!`;
     
     if (platform === "twitter") {
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, "_blank");

@@ -93,7 +93,7 @@ export function AppSidebar() {
         >
           <img
             src={dgbLogo}
-            alt="DGB Studio"
+            alt="DAGRABA Studio"
             className="h-20 w-20 rounded-full drop-shadow-[0_0_20px_rgba(0,200,255,0.4)] group-hover:drop-shadow-[0_0_30px_rgba(217,70,239,0.5)] transition-all duration-300"
           />
         </div>

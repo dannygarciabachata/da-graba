@@ -208,7 +208,7 @@ export default function LegalPage({ section = "terms" }: { section?: LegalSectio
         </div>
 
         <div className="mt-8 text-center text-xs text-muted-foreground">
-          &copy; {new Date().getFullYear()} DGB STUDIO & ODGMUSIC LATIN WORLDWIDE PUBLISHING. {t('legalPages.footer')}
+          &copy; {new Date().getFullYear()} DAGRABA STUDIO & ODGMUSIC LATIN WORLDWIDE PUBLISHING. {t('legalPages.footer')}
         </div>
       </div>
     </div>

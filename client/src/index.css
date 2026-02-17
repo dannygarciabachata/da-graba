@@ -4,7 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* DGB Studio - Premium Dark Mode Theme */
+/* DAGRABA Studio - Premium Dark Mode Theme */
 /* Neon Cyan #00C8FF, Magenta/Pink #D946EF, Blue gradient, Dark Navy */
 
 :root {
@@ -92,7 +92,7 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
-/* Dark mode is our only mode for DGB Studio */
+/* Dark mode is our only mode for DAGRABA Studio */
 .dark {
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);

@@ -778,10 +778,10 @@ export async function seedDiscography(): Promise<void> {
     const [profile] = await db.insert(artistProfiles).values({
       userId: "dgb_founder",
       artistName: "Danny Garcia Bachata",
-      bio: "Artista dominicano de Bachata, musico y visionario tecnologico. Fundador de DGB Studio. Nacido y criado en la Republica Dominicana, cuna de la musica Bachata. Danny lleva el ADN autentico de la musica dominicana en su sangre — la pura sangre de la Bachata. Su mision es democratizar la creacion musical con inteligencia artificial, preservando las raices autenticas y el alma de la musica dominicana y latina.",
+      bio: "Artista dominicano de Bachata, musico y visionario tecnologico. Fundador de DAGRABA Studio. Nacido y criado en la Republica Dominicana, cuna de la musica Bachata. Danny lleva el ADN autentico de la musica dominicana en su sangre — la pura sangre de la Bachata. Su mision es democratizar la creacion musical con inteligencia artificial, preservando las raices autenticas y el alma de la musica dominicana y latina.",
       genre: "Bachata",
       country: "Dominican Republic",
-      website: "https://dgbstudio.com",
+      website: "https://dagraba.studio",
       socialLinks: { spotify: "https://open.spotify.com/artist/danny-garcia-bachata", apple_music: "https://music.apple.com/us/artist/danny-garcia", youtube: "https://youtube.com/@dannygarciamusic", deezer: "https://www.deezer.com/us/artist/119140" },
       isVerified: true,
       isActive: true,
