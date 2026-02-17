@@ -3188,32 +3188,17 @@ export async function registerRoutes(
         }
       }
 
-      if (!gpuSubmitted && isRunPodConfigured()) {
-        console.log(`[SAO Pipeline] Cloud server unavailable, trying RunPod fallback...`);
-        const result = await submitTrainingJob(kitId, trainingConfig, webhookUrl);
-        if (result.success) {
-          await storage.updateStyleKit(kitId, {
-            trainingStatus: "training",
-            trainingJobId: result.jobId || null,
-          });
-          console.log(`[SAO Pipeline] Admin training job submitted to RunPod: ${result.jobId}`);
-          gpuSubmitted = true;
-        } else {
-          console.error(`[SAO Pipeline] RunPod submission also failed: ${result.error}`);
-        }
-      }
-
       if (!gpuSubmitted) {
         await storage.updateStyleKit(kitId, {
           trainingStatus: "queued",
-          trainingError: "No GPU server available. Check server status.",
+          trainingError: "No DigitalOcean GPU server available. Check server status.",
         });
       }
 
       res.json({
         message: gpuSubmitted
-          ? "Training submitted to GPU server."
-          : "Training queued. Connect a GPU server to start training.",
+          ? "Training submitted to DigitalOcean GPU server."
+          : "Training queued. No DigitalOcean GPU server available.",
         kitId,
         status: gpuSubmitted ? "training" : "queued",
         instrumentCount: withPrompts.length,
@@ -3623,34 +3608,19 @@ export async function registerRoutes(
         }
       }
 
-      if (!gpuSubmitted && isRunPodConfigured()) {
-        console.log(`[SAO Pipeline] Cloud server unavailable, trying RunPod fallback...`);
-        const result = await submitTrainingJob(kitId, trainingConfig, webhookUrl);
-        if (result.success) {
-          await storage.updateStyleKit(kitId, {
-            trainingStatus: "training",
-            trainingJobId: result.jobId || null,
-          });
-          console.log(`[SAO Pipeline] Job submitted to RunPod GPU: ${result.jobId}`);
-          gpuSubmitted = true;
-        } else {
-          console.error(`[SAO Pipeline] RunPod submission also failed: ${result.error}`);
-        }
-      }
-
       if (!gpuSubmitted) {
-        const errorMsg = "No GPU server available. Connect a GPU server or check server status.";
+        const errorMsg = "No DigitalOcean GPU server available. Check server status.";
         await storage.updateStyleKit(kitId, {
           trainingStatus: "queued",
           trainingError: errorMsg,
         });
-        console.error(`[SAO Pipeline] Kit ${kitId} training: no GPU servers available`);
+        console.error(`[SAO Pipeline] Kit ${kitId} training: no DigitalOcean GPU servers available`);
       }
 
       res.json({
         message: gpuSubmitted
-          ? "Training submitted to GPU server. Your kit is being fine-tuned with the SAO pipeline."
-          : "Training queued. No GPU server responded. You can retry when a server is available.",
+          ? "Training submitted to DigitalOcean GPU server."
+          : "Training queued. No DigitalOcean GPU server available.",
         kitId,
         instrumentCount: withPrompts.length,
         status: gpuSubmitted ? "training" : "queued",
