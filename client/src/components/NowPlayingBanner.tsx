@@ -16,6 +16,9 @@ import {
   Heart,
   ThumbsDown,
   Share2,
+  Download,
+  Globe,
+  Lock,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -30,8 +33,13 @@ interface NowPlayingBannerProps {
     copyrightHolder?: string | null;
     lyricsText?: string | null;
     duration?: number | null;
+    isPublic?: boolean;
+    prompt?: string | null;
+    variationLabel?: string | null;
   };
   onClose?: () => void;
+  onTogglePublish?: (id: number) => void;
+  onDownload?: (id: number, format: string) => void;
 }
 
 function parseLyricsLines(text: string): string[] {
@@ -42,7 +50,7 @@ function parseLyricsLines(text: string): string[] {
     .filter((line) => line.length > 0);
 }
 
-export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
+export function NowPlayingBanner({ song, onClose, onTogglePublish, onDownload }: NowPlayingBannerProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -164,6 +172,20 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
     } else {
       await navigator.clipboard.writeText(shareUrl);
       toast({ title: "Link copied", description: "Share link copied to clipboard" });
+    }
+  };
+
+  const handleDownload = (format: string) => {
+    if (onDownload) {
+      onDownload(song.id, format);
+    } else {
+      const songTitle = song.variationLabel
+        ? `${song.title || song.prompt || "track"} (${song.variationLabel})`
+        : (song.title || song.prompt || "track");
+      const a = document.createElement("a");
+      a.href = `/api/songs/${song.id}/download?format=${format}`;
+      a.download = `${songTitle.replace(/\s+/g, "_")}.${format}`;
+      a.click();
     }
   };
 
@@ -342,6 +364,38 @@ export function NowPlayingBanner({ song, onClose }: NowPlayingBannerProps) {
           <Copyright className="h-3 w-3" />
           {copyrightDisplay}
         </span>
+      </div>
+
+      <div className="px-4 py-2 flex items-center gap-2 border-t border-white/5">
+        <Button
+          variant="outline"
+          onClick={() => handleDownload("mp3")}
+          className="flex-1 gap-1.5"
+          data-testid="button-banner-download"
+        >
+          <Download className="h-3.5 w-3.5" />
+          {t('songMenu.download')}
+        </Button>
+        {onTogglePublish && (
+          <Button
+            variant={song.isPublic ? "default" : "outline"}
+            onClick={() => onTogglePublish(song.id)}
+            className="flex-1 gap-1.5"
+            data-testid="button-banner-publish"
+          >
+            {song.isPublic ? (
+              <>
+                <Globe className="h-3.5 w-3.5" />
+                {t('songMenu.public')}
+              </>
+            ) : (
+              <>
+                <Lock className="h-3.5 w-3.5" />
+                {t('songMenu.private')}
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       <div className="flex-1 overflow-hidden border-t border-white/5">

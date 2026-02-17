@@ -182,6 +182,16 @@ export default function LibraryPage() {
           <NowPlayingBanner
             song={activeSong}
             onClose={() => setCurrentSong(null)}
+            onTogglePublish={(id) => togglePublish.mutate(id)}
+            onDownload={(id, format) => {
+              const songTitle = activeSong.variationLabel
+                ? `${activeSong.title || activeSong.prompt || "track"} (${activeSong.variationLabel})`
+                : (activeSong.title || activeSong.prompt || "track");
+              const a = document.createElement("a");
+              a.href = `/api/songs/${id}/download?format=${format}`;
+              a.download = `${songTitle.replace(/\s+/g, "_")}.${format}`;
+              a.click();
+            }}
           />
         )}
       </AnimatePresence>
