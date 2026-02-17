@@ -131,7 +131,7 @@ export default function LibraryPage() {
                         <span>
                           {song.createdAt && formatDistanceToNow(new Date(song.createdAt), { addSuffix: true })}
                         </span>
-                        {song.genre && <span>{song.genre}</span>}
+                        {song.genre && <span>{song.genre === "Bachata" ? "DAGRACHATA" : song.genre === "Bolero" ? "DAGRABOLERO" : song.genre}</span>}
                         {song.duration && <span>{Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}</span>}
                         {song.isPublic && (
                           <span className="text-primary text-[10px] font-medium">{t('songMenu.public')}</span>

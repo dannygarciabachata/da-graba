@@ -54,8 +54,20 @@ function Users2Icon(props: any) {
 const PRO_ENTITIES = ["none", "bmi", "ascap", "sesac", "socan", "prs", "gema", "sgae"];
 
 const GENRES = [
-  "DAGRACHATA", "DAGRABOLERO", "Salsa", "Merengue", "Reggaeton", "Latin Pop",
-  "R&B", "Hip Hop", "Pop", "EDM", "Rock", "Jazz", "Classical", "Other",
+  { value: "Bachata", label: "DAGRACHATA" },
+  { value: "Bolero", label: "DAGRABOLERO" },
+  { value: "Salsa", label: "Salsa" },
+  { value: "Merengue", label: "Merengue" },
+  { value: "Reggaeton", label: "Reggaeton" },
+  { value: "Latin Pop", label: "Latin Pop" },
+  { value: "R&B", label: "R&B" },
+  { value: "Hip Hop", label: "Hip Hop" },
+  { value: "Pop", label: "Pop" },
+  { value: "EDM", label: "EDM" },
+  { value: "Rock", label: "Rock" },
+  { value: "Jazz", label: "Jazz" },
+  { value: "Classical", label: "Classical" },
+  { value: "Other", label: "Other" },
 ];
 
 const COUNTRIES = [
@@ -225,7 +237,7 @@ export default function ArtistOnboardingPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {GENRES.map((g) => (
-                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                      <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
