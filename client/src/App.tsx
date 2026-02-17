@@ -29,6 +29,9 @@ import ArtistOnboardingPage from "@/pages/ArtistOnboardingPage";
 import DiscographyPage from "@/pages/DiscographyPage";
 import CopyrightHubPage from "@/pages/CopyrightHubPage";
 import LegalPage from "@/pages/LegalPage";
+import MyPlaylistsPage from "@/pages/MyPlaylistsPage";
+import MyPlaylistDetailPage from "@/pages/MyPlaylistDetailPage";
+import PublicPlaylistViewPage from "@/pages/PublicPlaylistViewPage";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
 import { useTranslation } from "react-i18next";
@@ -38,6 +41,7 @@ function useServiceContext(): string | undefined {
   const [location] = useWouterLocation();
   if (location.startsWith("/create")) return "create";
   if (location.startsWith("/library")) return "library";
+  if (location.startsWith("/my-playlists")) return "my-playlists";
   if (location.startsWith("/studio")) return "studio";
   if (location.startsWith("/sample-lab")) return "sample_lab";
   if (location.startsWith("/artist-dashboard")) return "artist_dashboard";
@@ -85,6 +89,8 @@ function AuthenticatedLayout() {
               <Route path="/discover/:genre" component={PlaylistPage} />
               <Route path="/discover" component={DiscoverPage} />
               <Route path="/library" component={LibraryPage} />
+              <Route path="/my-playlists/:id" component={MyPlaylistDetailPage} />
+              <Route path="/my-playlists" component={MyPlaylistsPage} />
               <Route path="/lyrics" component={LyricsPage} />
               <Route path="/quiz" component={QuizPage} />
               <Route path="/studio" component={StudioPage} />
@@ -100,6 +106,7 @@ function AuthenticatedLayout() {
               <Route path="/artist-dashboard" component={ArtistDashboardPage} />
               <Route path="/artist-onboarding" component={ArtistOnboardingPage} />
               <Route path="/discography" component={DiscographyPage} />
+              <Route path="/playlist/:id" component={PublicPlaylistViewPage} />
               <Route path="/artist/:id" component={ArtistProfilePage} />
               <Route path="/admin" component={AdminPage} />
               <Route path="/terms">{() => <LegalPage section="terms" />}</Route>
@@ -134,6 +141,7 @@ function Router() {
         <Route path="/" component={Landing} />
         <Route path="/discover/:genre" component={PlaylistPage} />
         <Route path="/discover" component={DiscoverPage} />
+        <Route path="/playlist/:id" component={PublicPlaylistViewPage} />
         <Route path="/blog/:slug" component={BlogPage} />
         <Route path="/blog" component={BlogPage} />
         <Route path="/discography" component={DiscographyPage} />

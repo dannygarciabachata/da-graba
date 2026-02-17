@@ -67,7 +67,8 @@
     "artist": "Artist",
     "artistDashboard": "My Artist Profile",
     "discography": "Discography",
-    "copyright": "Copyright & Publishing"
+    "copyright": "Copyright & Publishing",
+    "playlists": "My Playlists"
   },
   "discover": {
     "title": "Discover",
@@ -1019,7 +1020,9 @@
       "createButton": "Create Profile",
       "updateButton": "Update Profile",
       "created": "Artist profile created!",
-      "updated": "Profile updated!"
+      "updated": "Profile updated!",
+      "loginRequired": "Registration Required",
+      "loginRequiredDesc": "Register to view artist profiles, listen to music, and follow your favorites."
     },
     "discography": {
       "addAlbum": "Add Album",
@@ -1154,6 +1157,38 @@
       "publisher": "Publisher",
       "admin_publisher": "Admin Publisher"
     }
+  },
+  "playlists": {
+    "title": "My Playlists",
+    "subtitle": "Create and organize your playlists",
+    "create": "Create Playlist",
+    "createNew": "Create New Playlist",
+    "createFirst": "Create your first playlist to organize your music.",
+    "created": "Playlist created",
+    "updated": "Playlist updated",
+    "deleted": "Playlist deleted",
+    "name": "Name",
+    "namePlaceholder": "My bachata playlist...",
+    "description": "Description",
+    "descriptionPlaceholder": "The best bachata tracks...",
+    "makePublic": "Make public",
+    "public": "Public",
+    "private": "Private",
+    "publicPlaylist": "Public Playlist",
+    "songs": "songs",
+    "empty": "You don't have any playlists yet",
+    "notFound": "Playlist not found",
+    "addSongs": "Add Songs",
+    "add": "Add",
+    "added": "Added to playlist",
+    "songAdded": "Song added",
+    "addToPlaylist": "Add to Playlist",
+    "noPlaylistsYet": "No playlists yet. Create one first.",
+    "noSongsInPlaylist": "No songs in this playlist",
+    "noSongsAvailable": "No songs available",
+    "searchSongs": "Search songs...",
+    "editPlaylist": "Edit Playlist",
+    "backToPlaylists": "My Playlists"
   },
   "legal": {
     "terms": "Terms",

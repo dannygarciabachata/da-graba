@@ -39,6 +39,7 @@ import {
   Shield,
   FileText,
   Lock,
+  ListMusic,
 } from "lucide-react";
 import { useAdminCheck } from "@/hooks/use-admin";
 import { useCredits } from "@/hooks/use-credits";
@@ -49,6 +50,7 @@ const NAV_ITEMS = [
   { titleKey: "nav.discover", url: "/discover", icon: Disc },
   { titleKey: "nav.discography", url: "/discography", icon: Music },
   { titleKey: "nav.library", url: "/library", icon: Library },
+  { titleKey: "nav.playlists", url: "/my-playlists", icon: ListMusic },
   { titleKey: "nav.lyrics", url: "/lyrics", icon: PenLine },
   { titleKey: "nav.quiz", url: "/quiz", icon: HelpCircle },
 ];

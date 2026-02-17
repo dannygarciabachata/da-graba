@@ -903,6 +903,7 @@ export const artistProfiles = pgTable("artist_profiles", {
   totalEarnings: integer("total_earnings").default(0),
   totalSubscribers: integer("total_subscribers").default(0),
   totalPlays: integer("total_plays").default(0),
+  profileViews: integer("profile_views").default(0),
   onboardingCompleted: boolean("onboarding_completed").default(false),
   artistType: text("artist_type").default("independent"),
   youtubeUrls: jsonb("youtube_urls").$type<string[]>().default([]),
@@ -1402,3 +1403,57 @@ export const insertPublisherEntitySchema = createInsertSchema(publisherEntities)
 
 export type PublisherEntity = typeof publisherEntities.$inferSelect;
 export type InsertPublisherEntity = z.infer<typeof insertPublisherEntitySchema>;
+
+// === USER PLAYLISTS ===
+
+export const userPlaylists = pgTable("user_playlists", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  isPublic: boolean("is_public").default(true),
+  playCount: integer("play_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const userPlaylistSongs = pgTable("user_playlist_songs", {
+  id: serial("id").primaryKey(),
+  playlistId: integer("playlist_id").notNull().references(() => userPlaylists.id, { onDelete: "cascade" }),
+  songId: integer("song_id").notNull().references(() => songs.id, { onDelete: "cascade" }),
+  position: integer("position").default(0),
+  addedAt: timestamp("added_at").defaultNow(),
+});
+
+export const userPlaylistsRelations = relations(userPlaylists, ({ many }) => ({
+  songs: many(userPlaylistSongs),
+}));
+
+export const userPlaylistSongsRelations = relations(userPlaylistSongs, ({ one }) => ({
+  playlist: one(userPlaylists, {
+    fields: [userPlaylistSongs.playlistId],
+    references: [userPlaylists.id],
+  }),
+  song: one(songs, {
+    fields: [userPlaylistSongs.songId],
+    references: [songs.id],
+  }),
+}));
+
+export const insertUserPlaylistSchema = createInsertSchema(userPlaylists).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  playCount: true,
+});
+
+export const insertUserPlaylistSongSchema = createInsertSchema(userPlaylistSongs).omit({
+  id: true,
+  addedAt: true,
+});
+
+export type UserPlaylist = typeof userPlaylists.$inferSelect;
+export type InsertUserPlaylist = z.infer<typeof insertUserPlaylistSchema>;
+export type UserPlaylistSong = typeof userPlaylistSongs.$inferSelect;
+export type InsertUserPlaylistSong = z.infer<typeof insertUserPlaylistSongSchema>;

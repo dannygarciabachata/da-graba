@@ -24,7 +24,7 @@ import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfi
 import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection, getGpuStatus, resumeGpuPod, stopGpuPod, setupGpuEnvironment } from "./core/runpod_client";
 import { isCloudConfigured, getActiveServer, checkCloudHealth, checkDgbCloudHealth, uploadInstrumentToCloud, saveMidiFile, verifyWebhookFromAnyServer } from "./core/dgb_runpod_api";
 import { isServerlessConfigured as isServerlessAvailable } from "./core/runpod_serverless";
-import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, STYLE_KIT_GENRES, INSTRUMENT_TYPES, SETTING_CATEGORIES, TICKET_STATUSES, TICKET_PRIORITIES, insertApiProviderSchema, insertApiEndpointSchema, insertStyleKitSchema, insertStyleKitInstrumentSchema, insertPlatformSettingSchema } from "@shared/schema";
+import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, STYLE_KIT_GENRES, INSTRUMENT_TYPES, SETTING_CATEGORIES, TICKET_STATUSES, TICKET_PRIORITIES, insertApiProviderSchema, insertApiEndpointSchema, insertStyleKitSchema, insertStyleKitInstrumentSchema, insertPlatformSettingSchema, insertUserPlaylistSchema } from "@shared/schema";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
 import path from "path";
@@ -421,19 +421,19 @@ export async function registerRoutes(
   });
 
   app.get("/api/public/artists/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Registration required to view artist profiles" });
+    }
     const id = Number(req.params.id);
     const profile = await storage.getArtistProfileById(id);
     if (!profile) return res.sendStatus(404);
+    await storage.incrementProfileViews(id);
     const songs = await storage.getArtistSongs(id);
     const followers = await storage.getFollowerCount(id);
     const subscribers = await storage.getSubscriberCount(id);
-    let isFollowing = false;
-    let isSubscribed = false;
-    if (req.isAuthenticated()) {
-      const userId = (req.user as any).claims.sub;
-      isFollowing = await storage.isFollowing(userId, id);
-      isSubscribed = await storage.isSubscribed(userId, id);
-    }
+    const userId = (req.user as any).claims.sub;
+    const isFollowing = await storage.isFollowing(userId, id);
+    const isSubscribed = await storage.isSubscribed(userId, id);
     res.json({ ...profile, songs, followerCount: followers, subscriberCount: subscribers, isFollowing, isSubscribed });
   });
 
@@ -5803,6 +5803,105 @@ IMPORTANT GUIDELINES:
       res.json(songsWithRegistrations);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ========== USER PLAYLISTS ==========
+
+  app.get("/api/playlists", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const playlists = await storage.getUserPlaylists(userId);
+    res.json(playlists);
+  });
+
+  app.post("/api/playlists", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const data = insertUserPlaylistSchema.parse({ ...req.body, userId });
+      const playlist = await storage.createPlaylist(data);
+      res.status(201).json(playlist);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      res.status(500).json({ message: (err as any).message });
+    }
+  });
+
+  app.patch("/api/playlists/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const playlist = await storage.getPlaylist(Number(req.params.id));
+    if (!playlist) return res.sendStatus(404);
+    if (playlist.userId !== userId) return res.sendStatus(403);
+    const { name, description, isPublic, imageUrl } = req.body;
+    const updated = await storage.updatePlaylist(playlist.id, { name, description, isPublic, imageUrl });
+    res.json(updated);
+  });
+
+  app.delete("/api/playlists/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const playlist = await storage.getPlaylist(Number(req.params.id));
+    if (!playlist) return res.sendStatus(404);
+    if (playlist.userId !== userId) return res.sendStatus(403);
+    await storage.deletePlaylist(playlist.id);
+    res.sendStatus(204);
+  });
+
+  app.get("/api/playlists/:id/songs", async (req, res) => {
+    const playlist = await storage.getPlaylist(Number(req.params.id));
+    if (!playlist) return res.sendStatus(404);
+    if (!playlist.isPublic) {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      const userId = (req.user as any).claims.sub;
+      if (playlist.userId !== userId) return res.sendStatus(403);
+    }
+    const songs = await storage.getPlaylistSongs(playlist.id);
+    res.json(songs);
+  });
+
+  app.post("/api/playlists/:id/songs", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const playlist = await storage.getPlaylist(Number(req.params.id));
+    if (!playlist) return res.sendStatus(404);
+    if (playlist.userId !== userId) return res.sendStatus(403);
+    const { songId, position } = req.body;
+    if (!songId) return res.status(400).json({ message: "songId required" });
+    const entry = await storage.addSongToPlaylist(playlist.id, Number(songId), position);
+    res.status(201).json(entry);
+  });
+
+  app.delete("/api/playlists/:id/songs/:songId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const playlist = await storage.getPlaylist(Number(req.params.id));
+    if (!playlist) return res.sendStatus(404);
+    if (playlist.userId !== userId) return res.sendStatus(403);
+    await storage.removeSongFromPlaylist(playlist.id, Number(req.params.songId));
+    res.sendStatus(204);
+  });
+
+  app.get("/api/public/user-playlists", async (req, res) => {
+    try {
+      const limit = req.query.limit ? Math.min(Number(req.query.limit), 100) : 50;
+      const playlists = await storage.getPublicPlaylists(limit);
+      res.json(playlists);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/public/user-playlists/:id", async (req, res) => {
+    try {
+      const playlist = await storage.getPlaylist(Number(req.params.id));
+      if (!playlist) return res.sendStatus(404);
+      if (!playlist.isPublic) return res.sendStatus(404);
+      const songs = await storage.getPlaylistSongs(playlist.id);
+      res.json({ ...playlist, songs });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
     }
   });
 

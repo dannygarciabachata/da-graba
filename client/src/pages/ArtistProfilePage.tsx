@@ -341,6 +341,21 @@ export default function ArtistProfilePage() {
     audio.addEventListener("ended", () => setIsPlaying(false));
   };
 
+  if (!user) {
+    return (
+      <div className="h-full overflow-auto flex items-center justify-center">
+        <div className="text-center text-muted-foreground max-w-md px-6">
+          <Users className="h-16 w-16 mx-auto mb-4 opacity-40" />
+          <h2 className="text-xl font-semibold text-white mb-2">{t('artist.profile.loginRequired', 'Registro Requerido')}</h2>
+          <p className="mb-4">{t('artist.profile.loginRequiredDesc', 'Regístrate para ver perfiles de artistas, escuchar música y seguir a tus favoritos.')}</p>
+          <Button variant="ghost" onClick={() => setLocation("/discover")} className="mt-2">
+            <ArrowLeft className="h-4 w-4 mr-1" /> {t('discover.backToDiscover')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="h-full overflow-auto">

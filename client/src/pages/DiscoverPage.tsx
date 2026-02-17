@@ -10,6 +10,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Play,
   Pause,
   Heart,
@@ -24,6 +29,9 @@ import {
   Compass,
   Volume2,
   VolumeX,
+  ListPlus,
+  ListMusic,
+  Loader2,
 } from "lucide-react";
 
 const GENRE_COLORS: Record<string, string> = {
@@ -142,6 +150,74 @@ interface SongCardProps {
   isPlaying: boolean;
 }
 
+function AddToPlaylistButton({ songId }: { songId: number }) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+
+  const { data: playlists } = useQuery<any[]>({
+    queryKey: ["/api/playlists"],
+    enabled: open,
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async (playlistId: number) => {
+      await apiRequest("POST", `/api/playlists/${playlistId}/songs`, { songId });
+    },
+    onSuccess: () => {
+      toast({ title: t("playlists.songAdded") });
+      setOpen(false);
+    },
+    onError: (err: Error) => {
+      toast({ title: err.message, variant: "destructive" });
+    },
+  });
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={(e) => e.stopPropagation()}
+          data-testid={`button-add-to-playlist-${songId}`}
+        >
+          <ListPlus className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-56 p-2 bg-[#0d0d18] border-white/[0.06]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-xs font-medium text-muted-foreground px-2 py-1">
+          {t("playlists.addToPlaylist")}
+        </p>
+        {!playlists?.length ? (
+          <p className="text-xs text-muted-foreground px-2 py-3 text-center">
+            {t("playlists.noPlaylistsYet")}
+          </p>
+        ) : (
+          <div className="space-y-0.5 max-h-48 overflow-auto">
+            {playlists.map((pl: any) => (
+              <button
+                key={pl.id}
+                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm hover:bg-white/5 transition-colors text-left"
+                onClick={() => addMutation.mutate(pl.id)}
+                disabled={addMutation.isPending}
+                data-testid={`button-select-playlist-${pl.id}`}
+              >
+                <ListMusic className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                <span className="truncate">{pl.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function SongCard({ song, rank, onPlay, currentSongId, isPlaying }: SongCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -216,7 +292,8 @@ function SongCard({ song, rank, onPlay, currentSongId, isPlaying }: SongCardProp
           >
             <Heart className="h-4 w-4" />
           </Button>
-          {song.audioUrl && (
+          {user && <AddToPlaylistButton songId={song.id} />}
+          {song.audioUrl && user && song.userId === (user as any).claims?.sub && (
             <Button
               variant="ghost"
               size="icon"

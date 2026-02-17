@@ -12,6 +12,7 @@ import {
   artistGifts, artistWallets, walletTransactions,
   artistProfileLikes, artistProfileComments, artistProfileShares,
   copyrightWorks, copyrightContributors, publisherEntities,
+  userPlaylists, userPlaylistSongs,
   type Song, type InsertSong, 
   type Lyric, type InsertLyric,
   type QuizResult, type InsertQuizResult,
@@ -53,6 +54,8 @@ import {
   type CopyrightWork, type InsertCopyrightWork,
   type CopyrightContributor, type InsertCopyrightContributor,
   type PublisherEntity, type InsertPublisherEntity,
+  type UserPlaylist, type InsertUserPlaylist,
+  type UserPlaylistSong, type InsertUserPlaylistSong,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -218,6 +221,7 @@ export interface IStorage {
   getTopSongsByGenre(genre: string, limit: number): Promise<Song[]>;
   getGenrePlaylistSummaries(): Promise<Array<{ genre: string; songCount: number; totalPlays: number; totalLikes: number }>>;
   incrementPlayCount(songId: number): Promise<void>;
+  incrementProfileViews(artistId: number): Promise<void>;
   toggleSongLike(songId: number, userId: string, value: number): Promise<{ liked: boolean; value: number; likes: number; dislikes: number }>;
   getSongLikeStatus(songId: number, userId: string): Promise<{ value: number } | null>;
   getSongLikeCounts(songId: number): Promise<{ likes: number; dislikes: number }>;
@@ -307,6 +311,16 @@ export interface IStorage {
   getDefaultPublisher(): Promise<PublisherEntity | undefined>;
   createPublisherEntity(publisher: InsertPublisherEntity): Promise<PublisherEntity>;
   updatePublisherEntity(id: number, data: Partial<PublisherEntity>): Promise<PublisherEntity>;
+
+  getUserPlaylists(userId: string): Promise<UserPlaylist[]>;
+  getPlaylist(id: number): Promise<UserPlaylist | undefined>;
+  createPlaylist(playlist: InsertUserPlaylist): Promise<UserPlaylist>;
+  updatePlaylist(id: number, data: Partial<InsertUserPlaylist>): Promise<UserPlaylist | undefined>;
+  deletePlaylist(id: number): Promise<void>;
+  addSongToPlaylist(playlistId: number, songId: number, position?: number): Promise<UserPlaylistSong>;
+  removeSongFromPlaylist(playlistId: number, songId: number): Promise<void>;
+  getPlaylistSongs(playlistId: number): Promise<any[]>;
+  getPublicPlaylists(limit?: number): Promise<UserPlaylist[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1303,6 +1317,10 @@ export class DatabaseStorage implements IStorage {
     await db.update(songs).set({ playCount: sql`${songs.playCount} + 1` }).where(eq(songs.id, songId));
   }
 
+  async incrementProfileViews(artistId: number): Promise<void> {
+    await db.update(artistProfiles).set({ profileViews: sql`COALESCE(${artistProfiles.profileViews}, 0) + 1` }).where(eq(artistProfiles.id, artistId));
+  }
+
   async getSongLikeCountsBatch(songIds: number[]): Promise<Record<number, number>> {
     if (songIds.length === 0) return {};
     const results = await db.select({
@@ -1798,6 +1816,72 @@ export class DatabaseStorage implements IStorage {
   async updatePublisherEntity(id: number, data: Partial<PublisherEntity>): Promise<PublisherEntity> {
     const [updated] = await db.update(publisherEntities).set(data).where(eq(publisherEntities.id, id)).returning();
     return updated;
+  }
+
+  async getUserPlaylists(userId: string): Promise<UserPlaylist[]> {
+    return await db.select().from(userPlaylists).where(eq(userPlaylists.userId, userId)).orderBy(desc(userPlaylists.createdAt));
+  }
+
+  async getPlaylist(id: number): Promise<UserPlaylist | undefined> {
+    const [playlist] = await db.select().from(userPlaylists).where(eq(userPlaylists.id, id));
+    return playlist;
+  }
+
+  async createPlaylist(playlist: InsertUserPlaylist): Promise<UserPlaylist> {
+    const [created] = await db.insert(userPlaylists).values(playlist).returning();
+    return created;
+  }
+
+  async updatePlaylist(id: number, data: Partial<InsertUserPlaylist>): Promise<UserPlaylist | undefined> {
+    const [updated] = await db.update(userPlaylists).set({ ...data, updatedAt: new Date() }).where(eq(userPlaylists.id, id)).returning();
+    return updated;
+  }
+
+  async deletePlaylist(id: number): Promise<void> {
+    await db.delete(userPlaylists).where(eq(userPlaylists.id, id));
+  }
+
+  async addSongToPlaylist(playlistId: number, songId: number, position?: number): Promise<UserPlaylistSong> {
+    const pos = position ?? 0;
+    const [entry] = await db.insert(userPlaylistSongs).values({ playlistId, songId, position: pos }).returning();
+    return entry;
+  }
+
+  async removeSongFromPlaylist(playlistId: number, songId: number): Promise<void> {
+    await db.delete(userPlaylistSongs).where(and(eq(userPlaylistSongs.playlistId, playlistId), eq(userPlaylistSongs.songId, songId)));
+  }
+
+  async getPlaylistSongs(playlistId: number): Promise<any[]> {
+    const rows = await db
+      .select({
+        entryId: userPlaylistSongs.id,
+        position: userPlaylistSongs.position,
+        addedAt: userPlaylistSongs.addedAt,
+        song: songs,
+      })
+      .from(userPlaylistSongs)
+      .innerJoin(songs, eq(userPlaylistSongs.songId, songs.id))
+      .where(eq(userPlaylistSongs.playlistId, playlistId))
+      .orderBy(userPlaylistSongs.position);
+
+    const songIds = rows.map(r => r.song.id);
+    const likesMap = songIds.length > 0 ? await this.getSongLikeCountsBatch(songIds) : {};
+
+    return rows.map(r => ({
+      ...r.song,
+      entryId: r.entryId,
+      position: r.position,
+      addedAt: r.addedAt,
+      likes: likesMap[r.song.id] || 0,
+    }));
+  }
+
+  async getPublicPlaylists(limit?: number): Promise<UserPlaylist[]> {
+    const q = db.select().from(userPlaylists).where(eq(userPlaylists.isPublic, true)).orderBy(desc(userPlaylists.createdAt));
+    if (limit) {
+      return await q.limit(limit);
+    }
+    return await q;
   }
 }
 

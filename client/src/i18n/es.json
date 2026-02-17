@@ -67,7 +67,8 @@
     "artist": "Artista",
     "artistDashboard": "Mi Perfil de Artista",
     "discography": "Discografía",
-    "copyright": "Copyright & Publishing"
+    "copyright": "Copyright & Publishing",
+    "playlists": "Mis Playlists"
   },
   "discover": {
     "title": "Descubrir",
@@ -1019,7 +1020,9 @@
       "createButton": "Crear Perfil",
       "updateButton": "Actualizar Perfil",
       "created": "¡Perfil de artista creado!",
-      "updated": "¡Perfil actualizado!"
+      "updated": "¡Perfil actualizado!",
+      "loginRequired": "Registro Requerido",
+      "loginRequiredDesc": "Regístrate para ver perfiles de artistas, escuchar música y seguir a tus favoritos."
     },
     "discography": {
       "addAlbum": "Agregar Álbum",
@@ -1154,6 +1157,38 @@
       "publisher": "Editor",
       "admin_publisher": "Editor Administrador"
     }
+  },
+  "playlists": {
+    "title": "Mis Playlists",
+    "subtitle": "Crea y organiza tus listas de reproducción",
+    "create": "Crear Playlist",
+    "createNew": "Crear Nueva Playlist",
+    "createFirst": "Crea tu primera playlist para organizar tu música.",
+    "created": "Playlist creada",
+    "updated": "Playlist actualizada",
+    "deleted": "Playlist eliminada",
+    "name": "Nombre",
+    "namePlaceholder": "Mi playlist de bachata...",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Los mejores temas de bachata...",
+    "makePublic": "Hacer pública",
+    "public": "Pública",
+    "private": "Privada",
+    "publicPlaylist": "Playlist Pública",
+    "songs": "canciones",
+    "empty": "No tienes playlists todavía",
+    "notFound": "Playlist no encontrada",
+    "addSongs": "Agregar Canciones",
+    "add": "Agregar",
+    "added": "Agregado a playlist",
+    "songAdded": "Canción agregada",
+    "addToPlaylist": "Agregar a Playlist",
+    "noPlaylistsYet": "No tienes playlists. Crea una primero.",
+    "noSongsInPlaylist": "No hay canciones en esta playlist",
+    "noSongsAvailable": "No hay canciones disponibles",
+    "searchSongs": "Buscar canciones...",
+    "editPlaylist": "Editar Playlist",
+    "backToPlaylists": "Mis Playlists"
   },
   "legal": {
     "terms": "Términos",
