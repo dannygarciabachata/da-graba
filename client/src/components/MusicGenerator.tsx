@@ -15,19 +15,19 @@ import { useLocation } from "wouter";
 
 const STYLE_OPTIONS = [
   { value: "heart-mula", labelKey: "common.engineSignature" },
-  { value: "bachata-romantic", label: "Romantic Bachata" },
-  { value: "bachata-dance", label: "Dance Bachata" },
-  { value: "bachata-bolero", label: "Bachata Bolero" },
+  { value: "bachata-romantic", label: "Romantic DAGRACHATA" },
+  { value: "bachata-dance", label: "Dance DAGRACHATA" },
+  { value: "bachata-bolero", label: "DAGRACHATA DAGRABOLERO" },
   { value: "trio-serenade", label: "Trio Serenade" },
-  { value: "bachata-urbana", label: "Bachata Urbana" },
+  { value: "bachata-urbana", label: "DAGRACHATA Urbana" },
 ];
 
 const GENRE_OPTIONS = [
-  { value: "Bachata", label: "Bachata" },
+  { value: "Bachata", label: "DAGRACHATA" },
   { value: "Merengue", label: "Merengue" },
   { value: "Salsa", label: "Salsa" },
   { value: "Reggaeton", label: "Reggaeton" },
-  { value: "Bolero", label: "Bolero" },
+  { value: "Bolero", label: "DAGRABOLERO" },
   { value: "Cumbia", label: "Cumbia" },
   { value: "Latin Pop", label: "Latin Pop" },
   { value: "R&B Latino", label: "R&B Latino" },
@@ -257,7 +257,7 @@ export function MusicGenerator() {
                   data-testid="input-music-lyrics"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Leave empty for auto-generated Bachata lyrics
+                  Leave empty for auto-generated DAGRACHATA lyrics
                 </p>
               </motion.div>
             )}

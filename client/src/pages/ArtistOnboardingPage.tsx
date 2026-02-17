@@ -54,7 +54,7 @@ function Users2Icon(props: any) {
 const PRO_ENTITIES = ["none", "bmi", "ascap", "sesac", "socan", "prs", "gema", "sgae"];
 
 const GENRES = [
-  "Bachata", "Bolero", "Salsa", "Merengue", "Reggaeton", "Latin Pop",
+  "DAGRACHATA", "DAGRABOLERO", "Salsa", "Merengue", "Reggaeton", "Latin Pop",
   "R&B", "Hip Hop", "Pop", "EDM", "Rock", "Jazz", "Classical", "Other",
 ];
 

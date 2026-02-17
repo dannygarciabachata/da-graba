@@ -17,9 +17,9 @@ import { useToast } from "@/hooks/use-toast";
 import type { StyleKitInstrument } from "@shared/schema";
 
 const GENRE_LABELS: Record<string, string> = {
-  bachata: "Bachata",
-  bolero: "Bolero",
-  dgb_bolero: "DGB Bolero",
+  bachata: "DAGRACHATA",
+  bolero: "DAGRABOLERO",
+  dgb_bolero: "DAGRABOLERO",
   latin_pop: "Latin Pop",
   merengue: "Merengue",
   salsa: "Salsa",

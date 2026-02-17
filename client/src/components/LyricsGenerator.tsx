@@ -16,14 +16,14 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 const STYLE_OPTIONS = [
-  { value: "romantic", label: "Romantic", genre: "Bachata" },
-  { value: "dance", label: "Dance / Party", genre: "Reggaeton" },
-  { value: "heartbreak", label: "Heartbreak", genre: "Bolero" },
-  { value: "empowerment", label: "Empowerment", genre: "Pop" },
-  { value: "storytelling", label: "Storytelling", genre: "R&B" },
-  { value: "celebration", label: "Celebration", genre: "Latin Pop" },
-  { value: "seduction", label: "Seduction", genre: "Bachata" },
-  { value: "nostalgia", label: "Nostalgia", genre: "Bolero" },
+  { value: "romantic", label: "Romantic", genre: "Bachata", genreLabel: "DAGRACHATA" },
+  { value: "dance", label: "Dance / Party", genre: "Reggaeton", genreLabel: "Reggaeton" },
+  { value: "heartbreak", label: "Heartbreak", genre: "Bolero", genreLabel: "DAGRABOLERO" },
+  { value: "empowerment", label: "Empowerment", genre: "Pop", genreLabel: "Pop" },
+  { value: "storytelling", label: "Storytelling", genre: "R&B", genreLabel: "R&B" },
+  { value: "celebration", label: "Celebration", genre: "Latin Pop", genreLabel: "Latin Pop" },
+  { value: "seduction", label: "Seduction", genre: "Bachata", genreLabel: "DAGRACHATA" },
+  { value: "nostalgia", label: "Nostalgia", genre: "Bolero", genreLabel: "DAGRABOLERO" },
 ];
 
 export function LyricsGenerator() {

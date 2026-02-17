@@ -469,7 +469,7 @@ export default function StudioPage() {
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-medium truncate">{song.title}</h4>
                         <p className="text-[10px] text-muted-foreground">
-                          {song.genre || "Bachata"} · {song.mode === "aggregate" ? "Quick" : "Custom"}
+                          {song.genre || "DAGRACHATA"} · {song.mode === "aggregate" ? "Quick" : "Custom"}
                         </p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -511,7 +511,7 @@ export default function StudioPage() {
                     {selectedSong.title}
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    {selectedSong.genre || "Bachata"} · Stem Separation
+                    {selectedSong.genre || "DAGRACHATA"} · Stem Separation
                   </p>
                 </div>
 

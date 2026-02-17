@@ -79,41 +79,41 @@ import { useToast } from "@/hooks/use-toast";
 
 
 const GENRE_CARDS = [
-  { value: "Bachata", likes: "97K" },
-  { value: "Salsa", likes: "72K" },
-  { value: "Merengue", likes: "58K" },
-  { value: "Cumbia", likes: "54K" },
-  { value: "Bolero", likes: "42K" },
-  { value: "Vallenato", likes: "36K" },
-  { value: "Reggaeton", likes: "65K" },
-  { value: "Latin Pop", likes: "34K" },
-  { value: "Son", likes: "22K" },
-  { value: "Mambo", likes: "28K" },
-  { value: "Cha-Cha-Chá", likes: "24K" },
-  { value: "Guaracha", likes: "19K" },
-  { value: "Dembow", likes: "31K" },
-  { value: "Plena", likes: "15K" },
-  { value: "Bomba", likes: "14K" },
-  { value: "Punta", likes: "11K" },
-  { value: "Champeta", likes: "13K" },
-  { value: "Tropical", likes: "26K" },
-  { value: "R&B", likes: "48K" },
-  { value: "Hip Hop", likes: "45K" },
-  { value: "Pop", likes: "32K" },
-  { value: "EDM", likes: "31K" },
-  { value: "K-pop", likes: "38K" },
-  { value: "Afrobeat", likes: "41K" },
-  { value: "Jazz", likes: "13K" },
-  { value: "Rock", likes: "25K" },
-  { value: "Synthwave", likes: "27K" },
-  { value: "House", likes: "18K" },
-  { value: "Soul", likes: "23K" },
-  { value: "Country", likes: "15K" },
-  { value: "Blues", likes: "12K" },
-  { value: "Indie", likes: "21K" },
-  { value: "Classical", likes: "9K" },
-  { value: "Funk", likes: "17K" },
-  { value: "Drum & Bass", likes: "14K" },
+  { value: "Bachata", label: "DAGRACHATA", likes: "97K" },
+  { value: "Salsa", label: "Salsa", likes: "72K" },
+  { value: "Merengue", label: "Merengue", likes: "58K" },
+  { value: "Cumbia", label: "Cumbia", likes: "54K" },
+  { value: "Bolero", label: "DAGRABOLERO", likes: "42K" },
+  { value: "Vallenato", label: "Vallenato", likes: "36K" },
+  { value: "Reggaeton", label: "Reggaeton", likes: "65K" },
+  { value: "Latin Pop", label: "Latin Pop", likes: "34K" },
+  { value: "Son", label: "Son", likes: "22K" },
+  { value: "Mambo", label: "Mambo", likes: "28K" },
+  { value: "Cha-Cha-Chá", label: "Cha-Cha-Chá", likes: "24K" },
+  { value: "Guaracha", label: "Guaracha", likes: "19K" },
+  { value: "Dembow", label: "Dembow", likes: "31K" },
+  { value: "Plena", label: "Plena", likes: "15K" },
+  { value: "Bomba", label: "Bomba", likes: "14K" },
+  { value: "Punta", label: "Punta", likes: "11K" },
+  { value: "Champeta", label: "Champeta", likes: "13K" },
+  { value: "Tropical", label: "Tropical", likes: "26K" },
+  { value: "R&B", label: "R&B", likes: "48K" },
+  { value: "Hip Hop", label: "Hip Hop", likes: "45K" },
+  { value: "Pop", label: "Pop", likes: "32K" },
+  { value: "EDM", label: "EDM", likes: "31K" },
+  { value: "K-pop", label: "K-pop", likes: "38K" },
+  { value: "Afrobeat", label: "Afrobeat", likes: "41K" },
+  { value: "Jazz", label: "Jazz", likes: "13K" },
+  { value: "Rock", label: "Rock", likes: "25K" },
+  { value: "Synthwave", label: "Synthwave", likes: "27K" },
+  { value: "House", label: "House", likes: "18K" },
+  { value: "Soul", label: "Soul", likes: "23K" },
+  { value: "Country", label: "Country", likes: "15K" },
+  { value: "Blues", label: "Blues", likes: "12K" },
+  { value: "Indie", label: "Indie", likes: "21K" },
+  { value: "Classical", label: "Classical", likes: "9K" },
+  { value: "Funk", label: "Funk", likes: "17K" },
+  { value: "Drum & Bass", label: "Drum & Bass", likes: "14K" },
 ];
 
 const PROMPT_SUGGESTIONS = [
@@ -460,7 +460,7 @@ export default function CreatePage() {
                   <Guitar className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold">DGB Bachata</div>
+                  <div className="text-sm font-bold">DAGRACHATA</div>
                   <div className="text-[10px] text-muted-foreground">{t('create.dnaFlow.bachataDesc')}</div>
                 </div>
               </div>
@@ -498,7 +498,7 @@ export default function CreatePage() {
                   <Music className="h-4 w-4 text-purple-400" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold">DGB Bolero</div>
+                  <div className="text-sm font-bold">DAGRABOLERO</div>
                   <div className="text-[10px] text-muted-foreground">{t('create.dnaFlow.boleroDesc')}</div>
                 </div>
               </div>
@@ -1223,7 +1223,7 @@ export default function CreatePage() {
                       onClick={() => setSelectedGenre(genre.value)}
                       data-testid={`card-genre-${genre.value}`}
                     >
-                      <div className="text-sm font-medium mb-1 line-clamp-1">{genre.value}</div>
+                      <div className="text-sm font-medium mb-1 line-clamp-1">{genre.label || genre.value}</div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <ThumbsUp className="h-3 w-3" />
                         {genre.likes}

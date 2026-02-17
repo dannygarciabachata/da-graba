@@ -396,7 +396,7 @@
         "moderno": { "label": "Moderno", "desc": "Contemporáneo con maracas y arreglos" }
       },
       "orchestration": {
-        "title": "Orquestación DGB Bolero",
+        "title": "Orquestación DAGRABOLERO",
         "baseLabel": "Base (siempre incluidos)",
         "extrasLabel": "Adornos y orquestación (opcional)",
         "instruments": {
@@ -420,8 +420,8 @@
     },
     "unlockCustomization": "Desbloquea personalización con Pro",
     "genres": {
-      "bachata": "Bachata",
-      "bolero": "Bolero",
+      "bachata": "DAGRACHATA",
+      "bolero": "DAGRABOLERO",
       "salsa": "Salsa",
       "merengue": "Merengue",
       "cumbia": "Cumbia",
@@ -501,7 +501,7 @@
       "signature": "DGB AUDIO Firma",
       "romantic": "Romántica",
       "dance": "Bailable",
-      "bolero": "Bolero",
+      "bolero": "DAGRABOLERO",
       "urbana": "Urbana",
       "serenade": "Serenata"
     }
@@ -709,14 +709,14 @@
     "addLyrics": "Agregar Letras",
     "hideLyrics": "Ocultar",
     "stylePreset": "Preset de Estilo",
-    "bachataMode": "Modo Bachata",
+    "bachataMode": "Modo DAGRACHATA",
     "forceDominican": "Forzar instrumentos dominicanos",
     "noCreditsTitle": "Sin créditos restantes",
     "noCreditsSubtitle": "Mejora tu plan para seguir creando música"
   },
   "quiz": {
-    "title": "Quiz de Bachata",
-    "subtitle": "Pon a prueba tu conocimiento de la historia, artistas y cultura de la Bachata",
+    "title": "Quiz de DAGRACHATA",
+    "subtitle": "Pon a prueba tu conocimiento de la historia, artistas y cultura de la DAGRACHATA",
     "question": "Pregunta",
     "of": "de",
     "score": "Puntuación",
