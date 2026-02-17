@@ -3814,6 +3814,7 @@ export async function registerRoutes(
       const withPrompts = instruments.filter(i => i.generatedPrompt).length;
 
       let currentPipelineStep = kit.pipelineStep || "upload";
+      if (currentPipelineStep === "complete") currentPipelineStep = "ready";
       if (currentPipelineStep === "prompt" && withAudio > 0 && withPrompts >= withAudio) {
         await storage.updateStyleKit(kitId, { pipelineStep: "train", trainingStatus: "pending" });
         currentPipelineStep = "train";

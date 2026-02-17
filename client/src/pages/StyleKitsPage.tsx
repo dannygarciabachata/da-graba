@@ -291,6 +291,7 @@ function ReferenceSection({ kit }: { kit: any }) {
 }
 
 const PIPELINE_STEPS = ["upload", "analyze", "prompt", "train", "ready"] as const;
+const READY_STATES = ["ready", "complete"];
 
 function TrainingSection({ kit }: { kit: any }) {
   const { t } = useTranslation();
@@ -365,14 +366,15 @@ function TrainingSection({ kit }: { kit: any }) {
 
   const { progress, pipelineStep, trainingStatus: status, trainingError, instruments, gpuConnected, trainedModelUrl, lastTrainedAt, isStuck } = trainingStatus;
   const isActive = ["analyzing", "prompting", "queued", "training"].includes(status) && !isStuck;
-  const isReady = pipelineStep === "ready";
+  const isReady = READY_STATES.includes(pipelineStep);
   const isFailed = status === "failed";
   const canStartAnalysis = instruments.withAudio === instruments.total && instruments.total > 0 && !isActive && pipelineStep === "upload";
   const canStartTraining = pipelineStep === "train" && !isActive && instruments.withPrompts > 0;
 
   const getStepStatus = (step: string) => {
     const stepIdx = PIPELINE_STEPS.indexOf(step as any);
-    const currentIdx = PIPELINE_STEPS.indexOf(pipelineStep as any);
+    const normalizedStep = READY_STATES.includes(pipelineStep) ? "ready" : pipelineStep;
+    const currentIdx = PIPELINE_STEPS.indexOf(normalizedStep as any);
     if (stepIdx < currentIdx) return "done";
     if (stepIdx === currentIdx) return isActive ? "active" : (isFailed ? "error" : "current");
     return "pending";
