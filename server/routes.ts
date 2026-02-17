@@ -161,8 +161,10 @@ export async function registerRoutes(
             input.prompt || songTitle,
             kit.name,
             kit.genre,
-            instruments
+            instruments,
+            { trainingPrompt: kit.trainingPrompt, description: kit.description }
           );
+          console.log(`[StyleKit] Kit ${kit.id} "${kit.name}" prompt (${finalPrompt.length} chars): ${finalPrompt.substring(0, 200)}...`);
         } else {
           songTitle = (input.title || input.prompt || "Untitled").trim();
           finalPrompt = `${songTitle}, ${genre || style} style, high fidelity, studio quality`;
