@@ -307,7 +307,7 @@ export function startRunPodWatchdog(songId: number, jobId: string, timeoutMs: nu
       }
 
       if (checks >= maxChecks) {
-        console.log(`[RunPod Watchdog] Song ${songId} timed out after ${timeoutMs / 1000}s, attempting fallback...`);
+        console.log(`[RunPod Watchdog] Song ${songId} timed out after ${timeoutMs / 1000}s, attempting fallback (skipping RunPod)...`);
         clearInterval(timer);
 
         try {
@@ -315,7 +315,7 @@ export function startRunPodWatchdog(songId: number, jobId: string, timeoutMs: nu
             prompt: song.prompt || "",
             style: song.genre || "Bachata",
             duration: 180,
-          });
+          }, { excludeAdapters: ["runpod_music"] });
 
           if (submitResult.taskId) {
             await storage.updateSongTaskId(songId, submitResult.taskId);
@@ -384,14 +384,14 @@ export function startRunPodTimeout(songId: number, timeoutMs: number) {
     try {
       const song = await storage.getSong(songId);
       if (song && song.status === "processing") {
-        console.log(`[RunPod Music] Song ${songId} timed out after ${timeoutMs / 1000}s, attempting pipeline fallback...`);
+        console.log(`[RunPod Music] Song ${songId} timed out after ${timeoutMs / 1000}s, attempting pipeline fallback (skipping RunPod)...`);
 
         try {
           const submitResult = await executeOperation("music_generation", {
             prompt: song.prompt || "",
             style: song.genre || "Bachata",
             duration: 180,
-          });
+          }, { excludeAdapters: ["runpod_music"] });
 
           if (submitResult.taskId) {
             await storage.updateSongTaskId(songId, submitResult.taskId);

@@ -127,8 +127,18 @@ async function getProviderEndpoints(
 export async function executeOperation(
   operationType: OperationType,
   input: ProviderInput,
+  options?: { excludeAdapters?: string[] },
 ): Promise<ProviderResult> {
-  const endpoints = await getProviderEndpoints(operationType);
+  let endpoints = await getProviderEndpoints(operationType);
+  const excludeAdapters = options?.excludeAdapters || [];
+
+  if (excludeAdapters.length > 0) {
+    endpoints = endpoints.filter(ep => {
+      const resolvedKey = resolveAdapterKey(ep.provider, operationType);
+      return !resolvedKey || !excludeAdapters.includes(resolvedKey);
+    });
+    console.log(`[Pipeline:${operationType}] Excluding adapters: ${excludeAdapters.join(", ")}`);
+  }
 
   if (endpoints.length === 0) {
     throw new Error(`NO_PROVIDER: No active provider configured for "${operationType}"`);
