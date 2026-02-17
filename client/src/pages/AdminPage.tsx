@@ -536,6 +536,23 @@ function ProvidersTab({
   const updateProvider = useUpdateProvider();
   const deleteProvider = useDeleteProvider();
   const { toast } = useToast();
+  const [testingId, setTestingId] = useState<number | null>(null);
+
+  const handleTestConnection = async (id: number) => {
+    setTestingId(id);
+    try {
+      const res = await fetch(`/api/admin/providers/${id}/test`, { method: "POST", credentials: "include" });
+      const result = await res.json();
+      toast({
+        title: result.success ? "Connection OK" : "Connection Failed",
+        description: `${result.message}${result.hasApiKey ? " (API key found)" : " (no API key)"}`,
+        variant: result.success ? "default" : "destructive",
+      });
+    } catch (err: any) {
+      toast({ title: "Test failed", description: err.message, variant: "destructive" });
+    }
+    setTestingId(null);
+  };
 
   const handleSave = async () => {
     if (!editing) return;
@@ -628,7 +645,28 @@ function ProvidersTab({
                 onChange={e => onEdit({ ...editing, apiKeyEnvVar: e.target.value })}
                 data-testid="input-env-var"
               />
+              <Input
+                placeholder="API Key Value (direct key — overrides env var)"
+                type="password"
+                value={editing.apiKeyValue || ""}
+                onChange={e => onEdit({ ...editing, apiKeyValue: e.target.value })}
+                data-testid="input-api-key-value"
+              />
+              <Input
+                placeholder="Priority (lower = higher priority, default 50)"
+                type="number"
+                value={editing.priority ?? 50}
+                onChange={e => onEdit({ ...editing, priority: parseInt(e.target.value) || 50 })}
+                data-testid="input-provider-priority"
+              />
+              <Input
+                placeholder="Adapter Key (e.g. runpod_music)"
+                value={editing.adapterKey || ""}
+                onChange={e => onEdit({ ...editing, adapterKey: e.target.value })}
+                data-testid="input-adapter-key"
+              />
             </div>
+            <p className="text-[10px] text-muted-foreground">API Key: Enter the key directly above, or provide an env variable name. Direct key takes priority. Keys are stored securely and never shown again.</p>
             <Textarea
               placeholder="Description"
               value={editing.description || ""}
@@ -667,18 +705,39 @@ function ProvidersTab({
                   {provider.description && (
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{provider.description}</p>
                   )}
-                  {provider.apiKeyEnvVar && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <Key className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-[10px] text-muted-foreground font-mono">{provider.apiKeyEnvVar}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {provider.apiKeyValue && (
+                      <div className="flex items-center gap-1">
+                        <Key className="h-3 w-3 text-green-500" />
+                        <span className="text-[10px] text-green-500 font-mono">Key configured</span>
+                      </div>
+                    )}
+                    {provider.apiKeyEnvVar && (
+                      <div className="flex items-center gap-1">
+                        <Key className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-[10px] text-muted-foreground font-mono">{provider.apiKeyEnvVar}</span>
+                      </div>
+                    )}
+                    {provider.adapterKey && (
+                      <Badge variant="outline" className="text-[10px]">adapter: {provider.adapterKey}</Badge>
+                    )}
+                    <Badge variant="outline" className="text-[10px]">priority: {provider.priority}</Badge>
+                  </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-7 w-7"
+                    onClick={() => handleTestConnection(provider.id)}
+                    disabled={testingId === provider.id}
+                    data-testid={`button-test-provider-${provider.id}`}
+                    title="Test Connection"
+                  >
+                    {testingId === provider.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5" />}
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
                     onClick={() => onViewEndpoints(provider.id)}
                     data-testid={`button-view-endpoints-${provider.id}`}
                     title="View Endpoints"
@@ -688,7 +747,6 @@ function ProvidersTab({
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-7 w-7"
                     onClick={() => onEdit(provider)}
                     data-testid={`button-edit-provider-${provider.id}`}
                   >
@@ -697,7 +755,7 @@ function ProvidersTab({
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-7 w-7 text-destructive"
+                    className="text-destructive"
                     onClick={() => handleDelete(provider.id)}
                     data-testid={`button-delete-provider-${provider.id}`}
                   >

@@ -2363,17 +2363,24 @@ export async function registerRoutes(
     });
   });
 
+  function maskProviderKey(provider: any) {
+    return {
+      ...provider,
+      apiKeyValue: provider.apiKeyValue ? "••••••••" : null,
+    };
+  }
+
   app.get("/api/admin/providers", async (req, res) => {
     if (!(await requireRole(req, res, "super_admin"))) return;
     const providers = await storage.getApiProviders();
-    res.json(providers);
+    res.json(providers.map(maskProviderKey));
   });
 
   app.get("/api/admin/providers/:id", async (req, res) => {
     if (!(await requireRole(req, res, "super_admin"))) return;
     const provider = await storage.getApiProvider(Number(req.params.id));
     if (!provider) return res.sendStatus(404);
-    res.json(provider);
+    res.json(maskProviderKey(provider));
   });
 
   app.post("/api/admin/providers", async (req, res) => {
@@ -2381,7 +2388,7 @@ export async function registerRoutes(
     try {
       const data = insertApiProviderSchema.parse(req.body);
       const provider = await storage.createApiProvider(data);
-      res.status(201).json(provider);
+      res.status(201).json(maskProviderKey(provider));
     } catch (err) {
       if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
       res.status(500).json({ message: "Failed to create provider" });
@@ -2399,6 +2406,8 @@ export async function registerRoutes(
     isActive: z.boolean().optional(),
     defaultHeaders: z.record(z.string()).optional().nullable(),
     description: z.string().optional().nullable(),
+    priority: z.number().optional(),
+    adapterKey: z.string().optional().nullable(),
   });
 
   app.patch("/api/admin/providers/:id", async (req, res) => {
@@ -2408,8 +2417,11 @@ export async function registerRoutes(
     if (!existing) return res.sendStatus(404);
     try {
       const data = updateProviderSchema.parse(req.body);
+      if (data.apiKeyValue === "••••••••" || data.apiKeyValue === "") {
+        delete data.apiKeyValue;
+      }
       const updated = await storage.updateApiProvider(id, data);
-      res.json(updated);
+      res.json(maskProviderKey(updated));
     } catch (err) {
       if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
       res.status(500).json({ message: "Failed to update provider" });
@@ -2423,6 +2435,50 @@ export async function registerRoutes(
     if (!existing) return res.sendStatus(404);
     await storage.deleteApiProvider(id);
     res.sendStatus(204);
+  });
+
+  app.post("/api/admin/providers/:id/test", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    const provider = await storage.getApiProvider(Number(req.params.id));
+    if (!provider) return res.sendStatus(404);
+
+    try {
+      const apiKey = provider.apiKeyValue || (provider.apiKeyEnvVar ? process.env[provider.apiKeyEnvVar] : null);
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+
+      if (apiKey && provider.authType !== "none") {
+        const headerName = provider.authHeaderName || "Authorization";
+        switch (provider.authType) {
+          case "bearer": headers[headerName] = `Bearer ${apiKey}`; break;
+          case "raw": case "header": headers[headerName] = apiKey; break;
+        }
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const testUrl = provider.baseUrl.replace(/\/$/, "") + "/health";
+      const response = await fetch(testUrl, { headers, signal: controller.signal }).catch(() => null);
+      clearTimeout(timeout);
+
+      if (response) {
+        res.json({
+          success: response.ok,
+          status: response.status,
+          message: response.ok ? "Connection successful" : `HTTP ${response.status}`,
+          hasApiKey: !!apiKey,
+        });
+      } else {
+        const response2 = await fetch(provider.baseUrl, { method: "GET", headers, signal: AbortSignal.timeout(10000) }).catch(() => null);
+        res.json({
+          success: !!response2?.ok,
+          status: response2?.status || 0,
+          message: response2 ? (response2.ok ? "Connection successful" : `HTTP ${response2.status}`) : "Connection failed — could not reach server",
+          hasApiKey: !!apiKey,
+        });
+      }
+    } catch (err: any) {
+      res.json({ success: false, message: err.message || "Connection test failed", hasApiKey: false });
+    }
   });
 
   app.get("/api/admin/endpoints", async (req, res) => {
@@ -2501,7 +2557,7 @@ export async function registerRoutes(
     if (!provider) return res.status(400).json({ message: "Provider not found" });
 
     try {
-      const apiKey = provider.apiKeyEnvVar ? process.env[provider.apiKeyEnvVar] : provider.apiKeyValue;
+      const apiKey = provider.apiKeyValue || (provider.apiKeyEnvVar ? process.env[provider.apiKeyEnvVar] : null);
       if (!apiKey) {
         return res.json({ success: false, message: "No API key configured" });
       }

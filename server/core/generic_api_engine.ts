@@ -34,11 +34,11 @@ export interface GenericPollResult {
 }
 
 function resolveApiKey(provider: ApiProvider): string {
+  if (provider.apiKeyValue) return provider.apiKeyValue;
   if (provider.apiKeyEnvVar) {
     const envVal = process.env[provider.apiKeyEnvVar];
     if (envVal) return envVal;
   }
-  if (provider.apiKeyValue) return provider.apiKeyValue;
   throw new Error(`No API key configured for provider "${provider.name}"`);
 }
 
