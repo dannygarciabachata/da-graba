@@ -224,10 +224,10 @@ function ReferenceSection({ kit }: { kit: any }) {
   };
 
   return (
-    <div className="mt-3 p-3 rounded-lg border border-dashed border-purple-400/30 bg-purple-500/[0.04]" data-testid={`reference-section-${kit.id}`}>
+    <div className="mt-3 p-3 rounded-lg border border-dashed border-blue-400/30 bg-blue-500/[0.04]" data-testid={`reference-section-${kit.id}`}>
       <div className="flex items-center gap-2 mb-2">
-        <FileAudio className="h-3.5 w-3.5 text-purple-400" />
-        <span className="text-xs font-semibold text-purple-300">{t('styleKits.reference.title')}</span>
+        <FileAudio className="h-3.5 w-3.5 text-blue-400" />
+        <span className="text-xs font-semibold text-blue-300">{t('styleKits.reference.title')}</span>
       </div>
       <p className="text-[10px] text-muted-foreground mb-2">{t('styleKits.reference.desc')}</p>
 
@@ -272,7 +272,7 @@ function ReferenceSection({ kit }: { kit: any }) {
           <Button
             variant="outline"
             size="sm"
-            className="w-full h-8 text-xs border-dashed border-purple-400/30"
+            className="w-full h-8 text-xs border-dashed border-blue-400/30"
             onClick={() => fileInputRef.current?.click()}
             disabled={isPending}
             data-testid={`button-upload-reference-${kit.id}`}
@@ -381,11 +381,11 @@ function TrainingSection({ kit }: { kit: any }) {
   };
 
   return (
-    <div className="mt-3 p-3 rounded-lg border border-[#D946EF]/20 bg-gradient-to-r from-[#D946EF]/[0.04] to-[#00C8FF]/[0.04]" data-testid={`training-section-${kit.id}`}>
+    <div className="mt-3 p-3 rounded-lg border border-[#3366FF]/20 bg-gradient-to-r from-[#3366FF]/[0.04] to-[#00C8FF]/[0.04]" data-testid={`training-section-${kit.id}`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Zap className="h-3.5 w-3.5 text-[#D946EF]" />
-          <span className="text-xs font-semibold text-[#D946EF]">{t("styleKits.training.title")}</span>
+          <Zap className="h-3.5 w-3.5 text-[#3366FF]" />
+          <span className="text-xs font-semibold text-[#3366FF]">{t("styleKits.training.title")}</span>
         </div>
         <div className="flex items-center gap-1.5">
           {gpuConnected ? (
@@ -408,9 +408,9 @@ function TrainingSection({ kit }: { kit: any }) {
               <div
                 className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
                   stepStatus === "done" ? "bg-[#00C8FF]" :
-                  stepStatus === "active" ? "bg-[#D946EF] animate-pulse" :
+                  stepStatus === "active" ? "bg-[#3366FF] animate-pulse" :
                   stepStatus === "error" ? "bg-red-500" :
-                  stepStatus === "current" ? "bg-[#D946EF]/50" :
+                  stepStatus === "current" ? "bg-[#3366FF]/50" :
                   "bg-white/10"
                 }`}
                 data-testid={`step-${step}-${kit.id}`}
@@ -427,7 +427,7 @@ function TrainingSection({ kit }: { kit: any }) {
             return (
               <span key={step} className={`text-[8px] flex-1 text-center ${
                 stepStatus === "done" ? "text-[#00C8FF]" :
-                stepStatus === "active" || stepStatus === "current" ? "text-[#D946EF]" :
+                stepStatus === "active" || stepStatus === "current" ? "text-[#3366FF]" :
                 stepStatus === "error" ? "text-red-400" :
                 "text-muted-foreground/50"
               }`}>
@@ -449,9 +449,9 @@ function TrainingSection({ kit }: { kit: any }) {
       </div>
 
       {isActive && (
-        <div className="flex items-center gap-2 p-2 rounded bg-[#D946EF]/10 border border-[#D946EF]/20 mb-2" data-testid={`training-active-${kit.id}`}>
-          <Loader2 className="h-3.5 w-3.5 text-[#D946EF] animate-spin flex-shrink-0" />
-          <span className="text-xs text-[#D946EF]">
+        <div className="flex items-center gap-2 p-2 rounded bg-[#3366FF]/10 border border-[#3366FF]/20 mb-2" data-testid={`training-active-${kit.id}`}>
+          <Loader2 className="h-3.5 w-3.5 text-[#3366FF] animate-spin flex-shrink-0" />
+          <span className="text-xs text-[#3366FF]">
             {status === "analyzing" ? t("styleKits.training.analyzing") :
              status === "training" ? t("styleKits.training.training") :
              t("styleKits.training.queued")}
@@ -497,7 +497,7 @@ function TrainingSection({ kit }: { kit: any }) {
         {canStartAnalysis && (
           <Button
             size="sm"
-            className="flex-1 h-8 text-xs bg-gradient-to-r from-[#00C8FF] to-[#D946EF] text-white hover:opacity-90"
+            className="flex-1 h-8 text-xs bg-gradient-to-r from-[#00C8FF] to-[#3366FF] text-white hover:opacity-90"
             onClick={() => startTraining()}
             disabled={isStarting}
             data-testid={`button-start-training-${kit.id}`}
@@ -513,7 +513,7 @@ function TrainingSection({ kit }: { kit: any }) {
         {canStartTraining && (
           <Button
             size="sm"
-            className="flex-1 h-8 text-xs bg-gradient-to-r from-[#00C8FF] to-[#D946EF] text-white hover:opacity-90"
+            className="flex-1 h-8 text-xs bg-gradient-to-r from-[#00C8FF] to-[#3366FF] text-white hover:opacity-90"
             onClick={() => submitTrain()}
             disabled={isSubmitting}
             data-testid={`button-submit-train-${kit.id}`}

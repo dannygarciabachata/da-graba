@@ -475,8 +475,8 @@ export default function CreatePage() {
               className={cn(
                 "relative overflow-hidden rounded-xl p-4 text-left transition-all border-2",
                 dnaFlow === "bolero"
-                  ? "border-purple-400 bg-gradient-to-br from-purple-500/15 to-pink-500/10 shadow-[0_0_20px_rgba(168,85,247,0.15)]"
-                  : "border-white/10 hover:border-purple-400/30 bg-white/[0.03]"
+                  ? "border-blue-400 bg-gradient-to-br from-blue-500/15 to-pink-500/10 shadow-[0_0_20px_rgba(168,85,247,0.15)]"
+                  : "border-white/10 hover:border-blue-400/30 bg-white/[0.03]"
               )}
               onClick={() => {
                 if (dnaFlow === "bolero") {
@@ -494,8 +494,8 @@ export default function CreatePage() {
               data-testid="dna-flow-bolero"
             >
               <div className="flex items-center gap-2 mb-1.5">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500/30 to-pink-400/20 flex items-center justify-center">
-                  <Music className="h-4 w-4 text-purple-400" />
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/30 to-pink-400/20 flex items-center justify-center">
+                  <Music className="h-4 w-4 text-blue-400" />
                 </div>
                 <div>
                   <div className="text-sm font-bold">DAGRABOLERO</div>
@@ -504,7 +504,7 @@ export default function CreatePage() {
               </div>
               {dnaFlow === "bolero" && (
                 <div className="absolute top-2 right-2">
-                  <div className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
+                  <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
                 </div>
               )}
             </button>
@@ -527,7 +527,7 @@ export default function CreatePage() {
                         selectedSubStyle === styleKey
                           ? dnaFlow === "bachata"
                             ? "border-primary/50 bg-primary/10"
-                            : "border-purple-400/50 bg-purple-500/10"
+                            : "border-blue-400/50 bg-blue-500/10"
                           : "border-white/10 hover:border-white/20 bg-white/[0.02]"
                       )}
                       onClick={() => {
@@ -567,10 +567,10 @@ export default function CreatePage() {
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden mb-4"
               >
-                <div className="rounded-xl border border-purple-400/20 bg-purple-500/[0.04] p-3" data-testid="orchestration-panel">
+                <div className="rounded-xl border border-blue-400/20 bg-blue-500/[0.04] p-3" data-testid="orchestration-panel">
                   <div className="flex items-center gap-2 mb-2.5">
-                    <SlidersHorizontal className="h-3.5 w-3.5 text-purple-400" />
-                    <span className="text-xs font-semibold text-purple-300">{t('create.dnaFlow.orchestration.title')}</span>
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-blue-400" />
+                    <span className="text-xs font-semibold text-blue-300">{t('create.dnaFlow.orchestration.title')}</span>
                   </div>
 
                   <div className="mb-2">
@@ -579,7 +579,7 @@ export default function CreatePage() {
                       {DGB_BOLERO_BASE_INSTRUMENTS.map((instr) => (
                         <span
                           key={instr}
-                          className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-400/20 text-[10px] text-purple-300"
+                          className="px-2 py-0.5 rounded-md bg-blue-500/15 border border-blue-400/20 text-[10px] text-blue-300"
                           data-testid={`base-instr-${instr}`}
                         >
                           {t(`create.dnaFlow.orchestration.instruments.${instr}`)}
@@ -599,8 +599,8 @@ export default function CreatePage() {
                             className={cn(
                               "px-2.5 py-1 rounded-lg border text-[11px] transition-all",
                               isSelected
-                                ? "border-purple-400/50 bg-purple-500/20 text-purple-200 shadow-[0_0_8px_rgba(168,85,247,0.15)]"
-                                : "border-white/10 text-muted-foreground hover:border-purple-400/30 hover:text-purple-300"
+                                ? "border-blue-400/50 bg-blue-500/20 text-blue-200 shadow-[0_0_8px_rgba(168,85,247,0.15)]"
+                                : "border-white/10 text-muted-foreground hover:border-blue-400/30 hover:text-blue-300"
                             )}
                             onClick={() => {
                               const next = new Set(selectedOrchestration);
@@ -1010,7 +1010,7 @@ export default function CreatePage() {
                   onClick={() => setActiveCreationMode(activeCreationMode === "sound" ? "song" : "sound")}
                   data-testid="chip-create-sound"
                 >
-                  <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+                  <Sparkles className="h-3.5 w-3.5 text-blue-400" />
                   {t('create.modes.sound')}
                 </button>
                 <button
@@ -1217,7 +1217,7 @@ export default function CreatePage() {
                       className={cn(
                         "p-3 cursor-pointer transition-all flex-shrink-0 w-[120px] sm:w-[130px]",
                         selectedGenre === genre.value
-                          ? "border-primary/50 bg-gradient-to-br from-primary/10 to-purple-500/10"
+                          ? "border-primary/50 bg-gradient-to-br from-primary/10 to-blue-500/10"
                           : "border-white/5 hover:border-white/15"
                       )}
                       onClick={() => setSelectedGenre(genre.value)}

@@ -11,7 +11,7 @@ DAGRABA Studio employs a microservices-oriented architecture with a clear separa
 
 **Frontend:**
 - **Technology Stack:** React, Vite, TailwindCSS, Shadcn UI.
-- **UI/UX Design:** Dark mode with deep purple background, neon cyan primary accents, and magenta/pink secondary accents. Features cyan-to-magenta gradients, a transparent DAGRABA Studio logo with glow effects, and uses Inter and JetBrains Mono fonts. Designed with a mobile-first, responsive approach.
+- **UI/UX Design:** Dark mode with dark navy background, neon cyan primary accents (#00C8FF), and royal blue secondary accents (#3366FF). Features cyan-to-blue gradients, a transparent DAGRABA logo with glow effects, and uses Inter and JetBrains Mono fonts. Designed with a mobile-first, responsive approach.
 - **Layout:** Utilizes a left sidebar for navigation and controls, with a dynamic full-width main content area.
 - **Key UI Components:** CreatePage for music generation, LibraryPage for user song management, Studio for multitrack editing and AI tools (stem separation, controls), Sample Lab for audio recording/upload and AI remixing, AdminPage for platform management, and Producer Store/Style Kits for instrument kit browsing/upload. Also includes Discography, Artist Dashboard, Copyright Hub, Discover pages, MyPlaylistsPage for user-created playlists, and PublicPlaylistViewPage for public playlist browsing.
 - **Streaming/Social:** Spotify-like streaming model. Songs on Discover are playable/likeable/shareable but NOT downloadable by non-owners. Artists can create public playlists. Artist profiles require registration to view and track profile views. Annual pricing discounts: Basic 20%, Pro 25%, Premium 30%.

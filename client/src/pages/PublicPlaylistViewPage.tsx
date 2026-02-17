@@ -210,7 +210,7 @@ export default function PublicPlaylistViewPage() {
         </div>
       ) : (
         <>
-          <div className="relative bg-gradient-to-br from-primary/40 to-purple-900/60 px-4 md:px-6 py-8">
+          <div className="relative bg-gradient-to-br from-primary/40 to-blue-900/60 px-4 md:px-6 py-8">
             <div className="absolute inset-0 bg-black/30" />
             <div className="relative max-w-5xl mx-auto">
               <Button

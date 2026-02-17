@@ -109,8 +109,8 @@ export function LyricsGenerator() {
       className="glass-panel rounded-2xl p-6 h-full flex flex-col"
     >
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-purple-500/10 rounded-lg">
-          <Mic2 className="w-6 h-6 text-purple-400" />
+        <div className="p-2 bg-blue-500/10 rounded-lg">
+          <Mic2 className="w-6 h-6 text-blue-400" />
         </div>
         <div>
           <h2 className="text-xl font-bold font-display">{t('lyricsGenerator.title')}</h2>
@@ -165,7 +165,7 @@ export function LyricsGenerator() {
       <Button
         onClick={handleGenerate}
         disabled={isPending || (!theme.trim() && !description.trim())}
-        className="w-full mb-4 bg-purple-600 hover:bg-purple-500 text-white"
+        className="w-full mb-4 bg-blue-600 hover:bg-blue-500 text-white"
         data-testid="button-generate-lyrics"
       >
         {isPending ? (
@@ -223,7 +223,7 @@ export function LyricsGenerator() {
                 size="sm"
                 onClick={handleSuggestTitles}
                 disabled={suggestTitlesMutation.isPending}
-                className="gap-1.5 text-xs border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                className="gap-1.5 text-xs border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
                 data-testid="button-suggest-titles"
               >
                 {suggestTitlesMutation.isPending ? (

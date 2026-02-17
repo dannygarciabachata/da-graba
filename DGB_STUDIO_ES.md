@@ -25,9 +25,9 @@ DGB Studio es una plataforma SaaS de inteligencia artificial para la creacion de
 
 ### Frontend
 - **Stack:** React + Vite + TailwindCSS + Shadcn UI
-- **Tema:** Modo oscuro con fondo purpura profundo (`hsl 270 30% 7%`), cyan primario (`#00C8FF`), acentos magenta (`#D946EF`)
+- **Tema:** Modo oscuro con fondo navy oscuro (`hsl 230 30% 6%`), cyan primario (`#00C8FF`), acentos azul royal (`#3366FF`)
 - **Fuentes:** Inter (texto), JetBrains Mono (codigo)
-- **Logo:** DGB Studio 2 transparente con efectos glow cyan/magenta
+- **Logo:** DAGRABA transparente con efectos glow cyan/azul
 - **i18n:** Espanol (por defecto) e Ingles con react-i18next
 
 ### Backend

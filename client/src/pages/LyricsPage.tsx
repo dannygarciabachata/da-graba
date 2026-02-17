@@ -13,7 +13,7 @@ export default function LyricsPage() {
       <div className="px-4 md:px-6 py-6 border-b border-white/5">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center gap-3 mb-1">
-            <PenLine className="h-5 w-5 text-purple-400" />
+            <PenLine className="h-5 w-5 text-blue-400" />
             <h1 className="text-xl font-bold" data-testid="text-lyrics-title">{t('lyricsGenerator.title')}</h1>
           </div>
           <p className="text-sm text-muted-foreground pl-8">

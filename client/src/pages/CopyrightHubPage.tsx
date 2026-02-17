@@ -69,8 +69,8 @@ const STATUS_STYLES: Record<string, string> = {
 
 const WORK_TYPE_STYLES: Record<string, string> = {
   composition: "bg-[#00C8FF]/20 text-[#00C8FF] border-[#00C8FF]/30",
-  sound_recording: "bg-[#D946EF]/20 text-[#D946EF] border-[#D946EF]/30",
-  both: "bg-gradient-to-r from-[#00C8FF]/20 to-[#D946EF]/20 text-white border-[#D946EF]/30",
+  sound_recording: "bg-[#3366FF]/20 text-[#3366FF] border-[#3366FF]/30",
+  both: "bg-gradient-to-r from-[#00C8FF]/20 to-[#3366FF]/20 text-white border-[#3366FF]/30",
 };
 
 function formatDate(dateStr: string): string {
@@ -156,7 +156,7 @@ function DashboardTab({ t }: { t: any }) {
   if (!works || works.length === 0) {
     return (
       <div className="text-center py-16">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#00C8FF]/20 to-[#D946EF]/20 mx-auto flex items-center justify-center mb-4">
+        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#00C8FF]/20 to-[#3366FF]/20 mx-auto flex items-center justify-center mb-4">
           <Shield className="h-8 w-8 text-[#00C8FF]/60" />
         </div>
         <h3 className="text-lg font-semibold mb-2" data-testid="text-empty-state">{t("copyright.emptyState.title")}</h3>
@@ -423,7 +423,7 @@ function RegisterWizard({ t }: { t: any }) {
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-md bg-gradient-to-br from-[#00C8FF]/20 to-[#D946EF]/20 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-md bg-gradient-to-br from-[#00C8FF]/20 to-[#3366FF]/20 flex items-center justify-center flex-shrink-0">
                           <Music className="h-5 w-5 text-[#00C8FF]" />
                         </div>
                         <div className="min-w-0">
@@ -769,7 +769,7 @@ function RegisterWizard({ t }: { t: any }) {
 
           <Card className="bg-white/[0.03] border-white/[0.06] p-4">
             <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <Users className="h-4 w-4 text-[#D946EF]" />
+              <Users className="h-4 w-4 text-[#3366FF]" />
               {t("copyright.step3.title")} ({contributors.length})
             </h4>
             <div className="space-y-2">
@@ -798,7 +798,7 @@ function RegisterWizard({ t }: { t: any }) {
               <Button
                 onClick={handleSubmit}
                 disabled={createMutation.isPending || !workDetails.title.trim()}
-                className="bg-gradient-to-r from-[#00C8FF] to-[#D946EF] text-white border-0"
+                className="bg-gradient-to-r from-[#00C8FF] to-[#3366FF] text-white border-0"
                 data-testid="button-submit-work"
               >
                 {createMutation.isPending ? (
@@ -824,7 +824,7 @@ export default function CopyrightHubPage() {
     <div className="h-full overflow-auto">
       <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-6">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#00C8FF] to-[#D946EF] flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#00C8FF] to-[#3366FF] flex items-center justify-center">
             <Shield className="h-6 w-6 text-white" />
           </div>
           <div>

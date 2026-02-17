@@ -152,7 +152,7 @@ function BlogList() {
                         className="overflow-hidden border-white/5 cursor-pointer group transition-all duration-300 hover:border-primary/30"
                         data-testid={`card-blog-post-${post.id}`}
                       >
-                        <div className="aspect-video overflow-hidden bg-gradient-to-br from-primary/10 to-purple-600/10">
+                        <div className="aspect-video overflow-hidden bg-gradient-to-br from-primary/10 to-blue-600/10">
                           {post.featuredImageUrl ? (
                             <img
                               src={post.featuredImageUrl}

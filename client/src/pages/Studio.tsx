@@ -729,8 +729,8 @@ export default function StudioPage() {
 
                           <Card className="p-3 border-white/5">
                             <div className="flex items-center gap-2 mb-2">
-                              <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                                <MicVocal className="w-4 h-4 text-purple-400" />
+                              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                <MicVocal className="w-4 h-4 text-blue-400" />
                               </div>
                               <div>
                                 <p className="text-sm font-medium">AI Cover</p>

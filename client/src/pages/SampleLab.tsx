@@ -258,7 +258,7 @@ function SampleCard({
           className={cn(
             "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
             sample.sourceType === "recording" ? "bg-red-500/10" :
-            sample.sourceType === "ai-transform" ? "bg-purple-500/10" :
+            sample.sourceType === "ai-transform" ? "bg-blue-500/10" :
             "bg-primary/10"
           )}
         >
@@ -267,7 +267,7 @@ function SampleCard({
           ) : sample.sourceType === "recording" ? (
             <Mic className="h-4 w-4 text-red-400" />
           ) : sample.sourceType === "ai-transform" ? (
-            <Wand2 className="h-4 w-4 text-purple-400" />
+            <Wand2 className="h-4 w-4 text-blue-400" />
           ) : (
             <FileAudio className="h-4 w-4 text-primary" />
           )}
@@ -368,7 +368,7 @@ function ClipTimeline({ samples, selectedId }: { samples: Sample[]; selectedId: 
                 const pos = (sample.position || 0);
                 const width = dur * pixelsPerSecond;
                 const left = pos * pixelsPerSecond;
-                const colors = ["bg-primary/20 border-primary/30", "bg-purple-500/20 border-purple-500/30", "bg-red-500/20 border-red-500/30", "bg-emerald-500/20 border-emerald-500/30"];
+                const colors = ["bg-primary/20 border-primary/30", "bg-blue-500/20 border-blue-500/30", "bg-red-500/20 border-red-500/30", "bg-emerald-500/20 border-emerald-500/30"];
                 return (
                   <div
                     key={sample.id}
@@ -470,11 +470,11 @@ export default function SampleLab() {
     <div className="h-full bg-background text-foreground flex flex-col font-sans overflow-hidden">
       <div className="px-4 md:px-6 py-4 border-b border-white/5">
         <div className="flex items-center gap-3">
-          <Music className="h-5 w-5 text-purple-400" />
+          <Music className="h-5 w-5 text-blue-400" />
           <div>
             <h1 className="text-lg font-bold" data-testid="text-samplelab-title">
               {t('sampleLab.title')}
-              <span className="text-purple-400 text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 ml-1.5">{t('common.beta')}</span>
+              <span className="text-blue-400 text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 ml-1.5">{t('common.beta')}</span>
             </h1>
             <p className="text-xs text-muted-foreground">Record, upload & transform audio with AI</p>
           </div>
@@ -878,16 +878,16 @@ export default function SampleLab() {
                 onClick={() => setActiveTab(item.id)}
                 className={cn(
                   "relative flex flex-col items-center gap-0.5 py-2 px-3 rounded-xl transition-all min-w-[60px]",
-                  isActive ? "text-purple-400" : "text-muted-foreground"
+                  isActive ? "text-blue-400" : "text-muted-foreground"
                 )}
                 data-testid={`button-mobile-tab-${item.id}`}
               >
                 <item.icon className={cn("h-5 w-5", isActive && "drop-shadow-[0_0_6px_rgba(168,85,247,0.5)]")} />
-                <span className={cn("text-[10px] font-medium", isActive && "text-purple-400")}>{item.label}</span>
+                <span className={cn("text-[10px] font-medium", isActive && "text-blue-400")}>{item.label}</span>
                 {isActive && (
                   <motion.div
                     layoutId="samplelab-tab-indicator"
-                    className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-purple-400 rounded-full"
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-blue-400 rounded-full"
                   />
                 )}
               </button>

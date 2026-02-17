@@ -218,7 +218,7 @@ export function NowPlayingBanner({ song, onClose, onTogglePublish, onDownload }:
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-blue-600/20 flex items-center justify-center">
               <Music className="h-20 w-20 text-primary/30" />
             </div>
           )}

@@ -25,9 +25,9 @@ DGB Studio is an AI-powered SaaS platform for music creation, specializing in Ba
 
 ### Frontend
 - **Stack:** React + Vite + TailwindCSS + Shadcn UI
-- **Theme:** Dark mode with deep purple background (`hsl 270 30% 7%`), cyan primary (`#00C8FF`), magenta accents (`#D946EF`)
+- **Theme:** Dark mode with dark navy background (`hsl 230 30% 6%`), cyan primary (`#00C8FF`), royal blue accents (`#3366FF`)
 - **Fonts:** Inter (text), JetBrains Mono (code)
-- **Logo:** Transparent DGB Studio 2 with cyan/magenta glow effects
+- **Logo:** DAGRABA transparent logo with cyan/blue glow effects
 - **i18n:** Spanish (default) and English with react-i18next
 
 ### Backend

@@ -84,7 +84,7 @@ function StreamingLinks({ album }: { album: DiscographyAlbum }) {
     { url: album.appleMusicUrl, icon: SiApplemusic, label: "Apple Music", color: "hover:text-pink-400" },
     { url: album.amazonMusicUrl, icon: SiAmazon, label: "Amazon Music", color: "hover:text-orange-400" },
     { url: album.youtubeMusicUrl, icon: SiYoutube, label: "YouTube Music", color: "hover:text-red-400" },
-    { url: album.deezerUrl, icon: Music, label: "Deezer", color: "hover:text-purple-400" },
+    { url: album.deezerUrl, icon: Music, label: "Deezer", color: "hover:text-blue-400" },
     { url: album.tidalUrl, icon: SiTidal, label: "Tidal", color: "hover:text-cyan-300" },
   ].filter(l => l.url);
 
@@ -131,7 +131,7 @@ function AlbumCard({ album, defaultExpanded }: { album: DiscographyAlbum; defaul
             data-testid={`img-album-cover-${album.id}`}
           />
         ) : (
-          <div className="w-full sm:w-40 h-40 rounded-lg bg-gradient-to-br from-[#00C8FF]/20 to-[#D946EF]/20 flex items-center justify-center flex-shrink-0">
+          <div className="w-full sm:w-40 h-40 rounded-lg bg-gradient-to-br from-[#00C8FF]/20 to-[#3366FF]/20 flex items-center justify-center flex-shrink-0">
             <Disc3 className="w-16 h-16 text-[#00C8FF]/40" />
           </div>
         )}
@@ -153,7 +153,7 @@ function AlbumCard({ album, defaultExpanded }: { album: DiscographyAlbum; defaul
                   </span>
                 )}
                 {album.genre && (
-                  <Badge variant="secondary" className="text-[10px] bg-[#D946EF]/10 text-[#D946EF]/70">
+                  <Badge variant="secondary" className="text-[10px] bg-[#3366FF]/10 text-[#3366FF]/70">
                     {album.genre}
                   </Badge>
                 )}
@@ -267,7 +267,7 @@ export default function DiscographyPage() {
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8 max-w-5xl mx-auto" data-testid="page-discography">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#00C8FF] to-[#D946EF] bg-clip-text text-transparent" data-testid="text-discography-title">
+        <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#00C8FF] to-[#3366FF] bg-clip-text text-transparent" data-testid="text-discography-title">
           {t("discography.title")}
         </h1>
         <p className="text-white/50 mt-2 text-sm">{t("discography.subtitle")}</p>
@@ -290,7 +290,7 @@ export default function DiscographyPage() {
                     className="w-16 h-16 rounded-full object-cover border-2 border-[#00C8FF]/30"
                   />
                 ) : (
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#00C8FF]/20 to-[#D946EF]/20 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#00C8FF]/20 to-[#3366FF]/20 flex items-center justify-center">
                     <User className="w-8 h-8 text-[#00C8FF]/50" />
                   </div>
                 )}
@@ -335,7 +335,7 @@ export default function DiscographyPage() {
             )}
 
             <div className="flex items-center gap-2 mb-4">
-              <Disc3 className="w-5 h-5 text-[#D946EF]" />
+              <Disc3 className="w-5 h-5 text-[#3366FF]" />
               <h3 className="text-lg font-semibold text-white/80">
                 {entry.albums?.length || 0} {entry.albums?.length === 1 ? t("discography.release") : t("discography.releases")}
               </h3>

@@ -3,7 +3,7 @@ import { Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import dgbLogo from "@assets/DGB_studio_transparente_1771220431451.png";
+import dgbLogo from "@assets/DAGRABA2_1771364648913.png";
 import palettaBg from "@assets/palettabg_1771282011333.png";
 import {
   Play, Pause, Mic2, Wand2, Music, Headphones, Sparkles, Scissors, Zap,
@@ -173,7 +173,7 @@ function HeroSongCarousel({ songs }: { songs: any[] }) {
                   data-testid="img-hero-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-primary/30 to-purple-600/30 flex items-center justify-center">
+                <div className="w-full h-full bg-gradient-to-br from-primary/30 to-blue-600/30 flex items-center justify-center">
                   <Music className="h-20 w-20 text-primary/40" />
                 </div>
               )}
@@ -216,7 +216,7 @@ function HeroSongCarousel({ songs }: { songs: any[] }) {
                 >
                   <div className="h-1.5 w-full bg-white/10 rounded-full pointer-events-none">
                     <div
-                      className="h-full bg-gradient-to-r from-primary via-blue-400 to-purple-500 rounded-full relative transition-all duration-100"
+                      className="h-full bg-gradient-to-r from-primary via-blue-400 to-blue-500 rounded-full relative transition-all duration-100"
                       style={{ width: `${progress}%` }}
                     >
                       <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" />
@@ -271,8 +271,8 @@ function HeroSongCarousel({ songs }: { songs: any[] }) {
             </Button>
           </div>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500/20 rounded-lg">
-              <Mic2 className="w-5 h-5 text-purple-400" />
+            <div className="p-2 bg-blue-500/20 rounded-lg">
+              <Mic2 className="w-5 h-5 text-blue-400" />
             </div>
             <div className="text-left">
               <p className="text-xs text-muted-foreground">{t('common.poweredBy')}</p>
@@ -285,8 +285,8 @@ function HeroSongCarousel({ songs }: { songs: any[] }) {
       {songs.length <= 1 && (
         <div className="mt-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500/20 rounded-lg">
-              <Mic2 className="w-5 h-5 text-purple-400" />
+            <div className="p-2 bg-blue-500/20 rounded-lg">
+              <Mic2 className="w-5 h-5 text-blue-400" />
             </div>
             <div className="text-left">
               <p className="text-xs text-muted-foreground">{t('common.poweredBy')}</p>
@@ -338,8 +338,8 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-500/8 via-background to-background z-0" />
-      <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-primary/5 via-purple-500/3 to-transparent z-0" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500/8 via-background to-background z-0" />
+      <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-primary/5 via-blue-500/3 to-transparent z-0" />
 
       <nav className="relative z-20 border-b border-white/[0.06] backdrop-blur-xl bg-background/70 sticky top-0" data-testid="nav-landing">
         <div className="container mx-auto px-4 md:px-6 py-3 flex justify-between items-center">
@@ -348,7 +348,7 @@ export default function Landing() {
               <img src={dgbLogo} alt="DAGRABA Studio" className="w-[150%] h-[150%] object-contain" data-testid="img-landing-logo" />
             </div>
             <span className="text-lg sm:text-xl font-bold tracking-tight">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">DAGRABA</span>{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">DAGRABA</span>{" "}
               <span className="text-white/90">Studio</span>
             </span>
           </div>
@@ -447,7 +447,7 @@ export default function Landing() {
 
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight leading-tight" data-testid="text-hero-title">
                 {t('landing.heroTitle')}{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-400 to-purple-500">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-400 to-blue-500">
                   {t('landing.heroTitleHighlight')}
                 </span>
               </h1>
@@ -518,11 +518,11 @@ export default function Landing() {
         <section id="about" className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp}>
             <div className="relative rounded-2xl overflow-hidden border border-white/10">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-primary/5 to-blue-600/5" />
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-primary/5 to-blue-600/5" />
               <div className="relative p-6 sm:p-8 md:p-16">
                 <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
                   <div className="flex-shrink-0">
-                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-purple-500/20 border border-primary/20 flex items-center justify-center">
+                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-blue-500/20 border border-primary/20 flex items-center justify-center">
                       <Heart className="w-10 h-10 md:w-12 md:h-12 text-primary" />
                     </div>
                   </div>
@@ -542,7 +542,7 @@ export default function Landing() {
 
         <section id="use-cases" className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp} className="text-center mb-12 md:mb-16">
-            <Badge className="mb-4 bg-gradient-to-r from-primary/20 to-purple-500/20 text-primary border-primary/20">
+            <Badge className="mb-4 bg-gradient-to-r from-primary/20 to-blue-500/20 text-primary border-primary/20">
               <Sparkles className="h-3 w-3 mr-1" />
               {t('landing.useCases.title')}
             </Badge>
@@ -559,17 +559,17 @@ export default function Landing() {
               const Icon = USE_CASE_ICONS[i];
               const gradients = [
                 "from-amber-500/10 to-yellow-600/10 border-amber-500/20",
-                "from-pink-500/10 to-rose-600/10 border-pink-500/20",
+                "from-blue-400/10 to-blue-600/10 border-blue-400/20",
                 "from-green-500/10 to-emerald-600/10 border-green-500/20",
                 "from-blue-500/10 to-indigo-600/10 border-blue-500/20",
                 "from-orange-500/10 to-red-600/10 border-orange-500/20",
-                "from-red-500/10 to-pink-600/10 border-red-500/20",
-                "from-violet-500/10 to-purple-600/10 border-violet-500/20",
+                "from-red-500/10 to-blue-500/10 border-red-500/20",
+                "from-indigo-500/10 to-indigo-600/10 border-indigo-500/20",
                 "from-cyan-500/10 to-teal-600/10 border-cyan-500/20",
               ];
               const iconColors = [
-                "text-amber-400", "text-pink-400", "text-green-400", "text-blue-400",
-                "text-orange-400", "text-red-400", "text-violet-400", "text-cyan-400"
+                "text-amber-400", "text-blue-400", "text-green-400", "text-blue-400",
+                "text-orange-400", "text-red-400", "text-indigo-400", "text-cyan-400"
               ];
               return (
                 <motion.div key={i} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.06 }}>
@@ -760,7 +760,7 @@ export default function Landing() {
 
           <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.4 }}>
             <div className="mt-8 md:mt-12 max-w-2xl mx-auto">
-              <Card className="bg-gradient-to-r from-primary/5 via-blue-600/5 to-purple-500/5 border-primary/20" data-testid="card-topup-info">
+              <Card className="bg-gradient-to-r from-primary/5 via-blue-600/5 to-blue-500/5 border-primary/20" data-testid="card-topup-info">
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start gap-3">
                     <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 shrink-0">
@@ -787,7 +787,7 @@ export default function Landing() {
 
         <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp} className="text-center mb-12 md:mb-16">
-            <Badge className="mb-4 bg-purple-500/10 text-purple-400 border-purple-500/20">
+            <Badge className="mb-4 bg-blue-500/10 text-blue-400 border-blue-500/20">
               <Clock className="h-3 w-3 mr-1" />
               {t('landing.comingSoonTitle')}
             </Badge>
@@ -797,16 +797,16 @@ export default function Landing() {
           </motion.div>
 
           <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.15 }}>
-            <Card className="bg-white/[0.02] border-white/5 hover:border-purple-500/20 transition-colors max-w-2xl mx-auto" data-testid="card-coming-soon-genre">
+            <Card className="bg-white/[0.02] border-white/5 hover:border-blue-500/20 transition-colors max-w-2xl mx-auto" data-testid="card-coming-soon-genre">
               <CardContent className="p-6 md:p-8">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 shrink-0">
-                    <BookOpen className="h-6 w-6 text-purple-400" />
+                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 shrink-0">
+                    <BookOpen className="h-6 w-6 text-blue-400" />
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <h3 className="font-bold text-lg">{t('landing.comingSoonGenreHistory')}</h3>
-                      <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[10px]">{t('landing.comingSoonTitle')}</Badge>
+                      <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px]">{t('landing.comingSoonTitle')}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       {t('landing.comingSoonGenreHistoryDesc')}
@@ -846,7 +846,7 @@ export default function Landing() {
                       {song.imageUrl ? (
                         <img src={song.imageUrl} alt={song.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
+                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-blue-600/20 flex items-center justify-center">
                           <Music className="h-12 w-12 text-primary/30" />
                         </div>
                       )}
@@ -877,7 +877,7 @@ export default function Landing() {
         <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp}>
             <div className="relative rounded-2xl overflow-hidden border border-white/10">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-blue-600/10 to-purple-500/10" />
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-blue-600/10 to-blue-500/10" />
               <div className="relative p-6 sm:p-8 md:p-16 text-center space-y-4 sm:space-y-6">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-cta-title">
                   {t('landing.ctaTitle')}
@@ -918,7 +918,7 @@ export default function Landing() {
                   <img src={dgbLogo} alt="DAGRABA Studio" className="w-[150%] h-[150%] object-contain" />
                 </div>
                 <span className="font-bold text-lg">
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">DAGRABA</span>{" "}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">DAGRABA</span>{" "}
                   <span className="text-white/80">Studio</span>
                 </span>
               </div>

@@ -180,7 +180,7 @@ function DashboardTab() {
   const statCards = [
     { label: t('admin.stats.totalUsers'), value: stats?.totalUsers || 0, icon: Users, color: "text-blue-400" },
     { label: t('admin.stats.totalSongs'), value: stats?.totalSongs || 0, icon: Music, color: "text-green-400" },
-    { label: t('admin.stats.totalSamples'), value: stats?.totalSamples || 0, icon: Mic, color: "text-purple-400" },
+    { label: t('admin.stats.totalSamples'), value: stats?.totalSamples || 0, icon: Mic, color: "text-blue-400" },
     { label: t('admin.stats.totalLyrics'), value: stats?.totalLyrics || 0, icon: FileText, color: "text-yellow-400" },
     { label: t('admin.stats.activeSubscriptions'), value: stats?.activeSubscriptions || 0, icon: CreditCard, color: "text-primary" },
     { label: t('admin.stats.totalSubscriptions'), value: stats?.totalSubscriptions || 0, icon: BarChart3, color: "text-orange-400" },
@@ -1788,7 +1788,7 @@ function StyleKitsAdminTab() {
     const colors: Record<string, string> = {
       pending: "bg-gray-500/20 text-gray-400",
       analyzing: "bg-blue-500/20 text-blue-400",
-      prompting: "bg-purple-500/20 text-purple-400",
+      prompting: "bg-blue-500/20 text-blue-400",
       queued: "bg-yellow-500/20 text-yellow-400",
       training: "bg-orange-500/20 text-orange-400",
       ready: "bg-green-500/20 text-green-400",

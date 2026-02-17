@@ -365,7 +365,7 @@ export default function ArtistOnboardingPage() {
               <Button
                 onClick={() => createMutation.mutate()}
                 disabled={createMutation.isPending || !canNext()}
-                className="bg-gradient-to-r from-primary to-purple-600"
+                className="bg-gradient-to-r from-primary to-blue-600"
                 data-testid="button-submit"
               >
                 {createMutation.isPending ? t('common.loading') : isEditing ? t('artist.onboarding.updateButton') : t('artist.onboarding.createButton')}

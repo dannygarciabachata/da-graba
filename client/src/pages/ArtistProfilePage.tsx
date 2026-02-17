@@ -385,7 +385,7 @@ export default function ArtistProfilePage() {
 
   return (
     <div className="h-full overflow-auto">
-      <div className="relative h-48 bg-gradient-to-br from-primary/30 to-purple-600/30 overflow-hidden">
+      <div className="relative h-48 bg-gradient-to-br from-primary/30 to-blue-600/30 overflow-hidden">
         {artist.bannerUrl && (
           <img src={artist.bannerUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
         )}
@@ -400,7 +400,7 @@ export default function ArtistProfilePage() {
 
       <div className="max-w-4xl mx-auto px-4 md:px-6 -mt-16 relative z-10">
         <div className="flex items-end gap-5 mb-6">
-          <div className="w-28 h-28 rounded-full bg-gradient-to-br from-primary to-purple-600 border-4 border-background flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div className="w-28 h-28 rounded-full bg-gradient-to-br from-primary to-blue-600 border-4 border-background flex items-center justify-center overflow-hidden flex-shrink-0">
             {artist.avatarUrl ? (
               <img src={artist.avatarUrl} alt="" className="w-full h-full object-cover" />
             ) : (
@@ -498,7 +498,7 @@ export default function ArtistProfilePage() {
               {!artist.isSubscribed ? (
                 <Button
                   size="sm"
-                  className="bg-gradient-to-r from-primary to-purple-600"
+                  className="bg-gradient-to-r from-primary to-blue-600"
                   onClick={() => subscribeMutation.mutate()}
                   disabled={subscribeMutation.isPending}
                   data-testid="button-subscribe"
@@ -517,7 +517,7 @@ export default function ArtistProfilePage() {
         </div>
 
         {showGiftForm && (
-          <Card className="bg-gradient-to-br from-pink-500/10 to-purple-600/10 border-pink-500/20 p-5 mb-6" data-testid="gift-form">
+          <Card className="bg-gradient-to-br from-pink-500/10 to-blue-600/10 border-pink-500/20 p-5 mb-6" data-testid="gift-form">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold flex items-center gap-2">
                 <Gift className="h-5 w-5 text-pink-400" />
@@ -601,7 +601,7 @@ export default function ArtistProfilePage() {
                 </span>
               </div>
               <Button
-                className="bg-gradient-to-r from-pink-500 to-purple-600 text-white"
+                className="bg-gradient-to-r from-pink-500 to-blue-600 text-white"
                 onClick={() => giftMutation.mutate()}
                 disabled={giftMutation.isPending || activeAmount < 100 || activeAmount > 100000 || !cardReady}
                 data-testid="button-confirm-gift"
@@ -808,7 +808,7 @@ export default function ArtistProfilePage() {
                     {album.coverImageUrl ? (
                       <img src={album.coverImageUrl} alt={album.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
+                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-blue-600/20 flex items-center justify-center">
                         <Disc className="h-10 w-10 text-muted-foreground" />
                       </div>
                     )}

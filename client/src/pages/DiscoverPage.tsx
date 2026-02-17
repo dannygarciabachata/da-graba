@@ -35,14 +35,14 @@ import {
 } from "lucide-react";
 
 const GENRE_COLORS: Record<string, string> = {
-  bachata: "from-pink-600 to-purple-800",
+  bachata: "from-pink-600 to-blue-800",
   bolero: "from-amber-700 to-red-900",
   "dgb_bachata": "from-cyan-500 to-blue-800",
   "dgb_bolero": "from-amber-500 to-rose-800",
   "hip-hop": "from-orange-600 to-red-700",
   pop: "from-green-500 to-teal-700",
   "r&b": "from-violet-600 to-indigo-800",
-  edm: "from-blue-500 to-purple-700",
+  edm: "from-blue-500 to-blue-700",
   reggaeton: "from-yellow-500 to-orange-700",
   salsa: "from-red-500 to-pink-700",
   merengue: "from-green-600 to-emerald-800",
@@ -112,7 +112,7 @@ function GenreCarousel() {
         {allPlaylists.map((p) => {
           const isTop100 = p.genre === "top100";
           const label = isTop100 ? "Top 100" : p.genre === "Bachata" ? "DAGRABACHATA" : p.genre === "Bolero" ? "DAGRABOLERO" : p.genre;
-          const gradient = isTop100 ? "from-primary to-purple-700" : getGenreColor(p.genre);
+          const gradient = isTop100 ? "from-primary to-blue-700" : getGenreColor(p.genre);
           return (
             <div
               key={p.genre}

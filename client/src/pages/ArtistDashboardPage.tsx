@@ -146,7 +146,7 @@ export default function ArtistDashboardPage() {
     return (
       <div className="h-full overflow-auto">
         <div className="max-w-3xl mx-auto px-4 py-12 text-center space-y-6">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-purple-600 mx-auto flex items-center justify-center">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-blue-600 mx-auto flex items-center justify-center">
             <Music className="h-10 w-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold" data-testid="text-no-profile-title">
@@ -164,7 +164,7 @@ export default function ArtistDashboardPage() {
           </div>
           <Button
             size="lg"
-            className="rounded-full px-8 bg-gradient-to-r from-primary to-purple-600"
+            className="rounded-full px-8 bg-gradient-to-r from-primary to-blue-600"
             onClick={() => setLocation("/artist-onboarding")}
             data-testid="button-create-profile"
           >
@@ -186,7 +186,7 @@ export default function ArtistDashboardPage() {
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center overflow-hidden">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center overflow-hidden">
               {profile.avatarUrl ? (
                 <img src={profile.avatarUrl} alt="" className="w-full h-full object-cover" />
               ) : (
@@ -353,7 +353,7 @@ export default function ArtistDashboardPage() {
 
           <TabsContent value="gifts" className="space-y-4 mt-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Card className="bg-gradient-to-br from-pink-500/10 to-purple-600/10 border-pink-500/20 p-4">
+              <Card className="bg-gradient-to-br from-pink-500/10 to-blue-600/10 border-pink-500/20 p-4">
                 <div className="flex items-center gap-2 text-pink-400 text-xs mb-1">
                   <Wallet className="h-3.5 w-3.5" />
                   {t('artist.wallet.availableBalance')}
