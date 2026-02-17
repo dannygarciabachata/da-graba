@@ -3145,7 +3145,43 @@ export async function registerRoutes(
 
       let gpuSubmitted = false;
 
-      if (isRunPodConfigured()) {
+      const cloudServer = await getActiveServer(storage, "training");
+      if (cloudServer) {
+        try {
+          const trainUrl = `${cloudServer.baseUrl}/api/train-kit`;
+          const trainPayload = {
+            kit_id: kitId,
+            training_config: trainingConfig,
+            webhook_url: webhookUrl,
+          };
+          const trainRes = await fetch(trainUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              [cloudServer.authHeaderName]: cloudServer.apiKey,
+            },
+            body: JSON.stringify(trainPayload),
+            signal: AbortSignal.timeout(30000),
+          });
+          if (trainRes.ok) {
+            const trainData = await trainRes.json() as any;
+            await storage.updateStyleKit(kitId, {
+              trainingStatus: "training",
+              trainingJobId: trainData.jobId || `cloud_kit_${kitId}_${Date.now()}`,
+            });
+            console.log(`[SAO Pipeline] Admin training submitted to cloud server: ${cloudServer.baseUrl}`);
+            gpuSubmitted = true;
+          } else {
+            const errText = await trainRes.text();
+            console.error(`[SAO Pipeline] Cloud server training failed: ${trainRes.status} ${errText}`);
+          }
+        } catch (err: any) {
+          console.error(`[SAO Pipeline] Cloud server training error: ${err.message}`);
+        }
+      }
+
+      if (!gpuSubmitted && isRunPodConfigured()) {
+        console.log(`[SAO Pipeline] Cloud server unavailable, trying RunPod fallback...`);
         const result = await submitTrainingJob(kitId, trainingConfig, webhookUrl);
         if (result.success) {
           await storage.updateStyleKit(kitId, {
@@ -3155,51 +3191,14 @@ export async function registerRoutes(
           console.log(`[SAO Pipeline] Admin training job submitted to RunPod: ${result.jobId}`);
           gpuSubmitted = true;
         } else {
-          console.log(`[SAO Pipeline] RunPod submission failed: ${result.error}, trying cloud servers...`);
-        }
-      }
-
-      if (!gpuSubmitted) {
-        const cloudServer = await getActiveServer(storage, "training");
-        if (cloudServer) {
-          try {
-            const trainUrl = `${cloudServer.baseUrl}/api/train-kit`;
-            const trainPayload = {
-              kit_id: kitId,
-              training_config: trainingConfig,
-              webhook_url: webhookUrl,
-            };
-            const trainRes = await fetch(trainUrl, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                [cloudServer.authHeaderName]: cloudServer.apiKey,
-              },
-              body: JSON.stringify(trainPayload),
-              signal: AbortSignal.timeout(30000),
-            });
-            if (trainRes.ok) {
-              const trainData = await trainRes.json() as any;
-              await storage.updateStyleKit(kitId, {
-                trainingStatus: "training",
-                trainingJobId: trainData.jobId || `cloud_kit_${kitId}_${Date.now()}`,
-              });
-              console.log(`[SAO Pipeline] Training submitted to cloud server: ${cloudServer.baseUrl}`);
-              gpuSubmitted = true;
-            } else {
-              const errText = await trainRes.text();
-              console.error(`[SAO Pipeline] Cloud server training failed: ${trainRes.status} ${errText}`);
-            }
-          } catch (err: any) {
-            console.error(`[SAO Pipeline] Cloud server training error: ${err.message}`);
-          }
+          console.error(`[SAO Pipeline] RunPod submission also failed: ${result.error}`);
         }
       }
 
       if (!gpuSubmitted) {
         await storage.updateStyleKit(kitId, {
           trainingStatus: "queued",
-          trainingError: null,
+          trainingError: "No GPU server available. Check server status.",
         });
       }
 
@@ -3581,7 +3580,43 @@ export async function registerRoutes(
 
       let gpuSubmitted = false;
 
-      if (isRunPodConfigured()) {
+      const cloudServer = await getActiveServer(storage, "training");
+      if (cloudServer) {
+        try {
+          const trainUrl = `${cloudServer.baseUrl}/api/train-kit`;
+          const trainPayload = {
+            kit_id: kitId,
+            training_config: trainingConfig,
+            webhook_url: webhookUrl,
+          };
+          const trainRes = await fetch(trainUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              [cloudServer.authHeaderName]: cloudServer.apiKey,
+            },
+            body: JSON.stringify(trainPayload),
+            signal: AbortSignal.timeout(30000),
+          });
+          if (trainRes.ok) {
+            const trainData = await trainRes.json() as any;
+            await storage.updateStyleKit(kitId, {
+              trainingStatus: "training",
+              trainingJobId: trainData.jobId || `cloud_kit_${kitId}_${Date.now()}`,
+            });
+            console.log(`[SAO Pipeline] Training submitted to cloud server: ${cloudServer.baseUrl}`);
+            gpuSubmitted = true;
+          } else {
+            const errText = await trainRes.text();
+            console.error(`[SAO Pipeline] Cloud server training failed: ${trainRes.status} ${errText}`);
+          }
+        } catch (err: any) {
+          console.error(`[SAO Pipeline] Cloud server training error: ${err.message}`);
+        }
+      }
+
+      if (!gpuSubmitted && isRunPodConfigured()) {
+        console.log(`[SAO Pipeline] Cloud server unavailable, trying RunPod fallback...`);
         const result = await submitTrainingJob(kitId, trainingConfig, webhookUrl);
         if (result.success) {
           await storage.updateStyleKit(kitId, {
@@ -3591,44 +3626,7 @@ export async function registerRoutes(
           console.log(`[SAO Pipeline] Job submitted to RunPod GPU: ${result.jobId}`);
           gpuSubmitted = true;
         } else {
-          console.log(`[SAO Pipeline] RunPod submission failed: ${result.error}, trying cloud servers...`);
-        }
-      }
-
-      if (!gpuSubmitted) {
-        const cloudServer = await getActiveServer(storage, "training");
-        if (cloudServer) {
-          try {
-            const trainUrl = `${cloudServer.baseUrl}/api/train-kit`;
-            const trainPayload = {
-              kit_id: kitId,
-              training_config: trainingConfig,
-              webhook_url: webhookUrl,
-            };
-            const trainRes = await fetch(trainUrl, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                [cloudServer.authHeaderName]: cloudServer.apiKey,
-              },
-              body: JSON.stringify(trainPayload),
-              signal: AbortSignal.timeout(30000),
-            });
-            if (trainRes.ok) {
-              const trainData = await trainRes.json() as any;
-              await storage.updateStyleKit(kitId, {
-                trainingStatus: "training",
-                trainingJobId: trainData.jobId || `cloud_kit_${kitId}_${Date.now()}`,
-              });
-              console.log(`[SAO Pipeline] Training submitted to cloud server: ${cloudServer.baseUrl}`);
-              gpuSubmitted = true;
-            } else {
-              const errText = await trainRes.text();
-              console.error(`[SAO Pipeline] Cloud server training failed: ${trainRes.status} ${errText}`);
-            }
-          } catch (err: any) {
-            console.error(`[SAO Pipeline] Cloud server training error: ${err.message}`);
-          }
+          console.error(`[SAO Pipeline] RunPod submission also failed: ${result.error}`);
         }
       }
 
