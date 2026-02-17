@@ -16,8 +16,7 @@ const FEATURE_COMPARISON = [
   { feature: "AI Music Generation", free: true, basic: true, pro: true, premium: true },
   { feature: "Credits per month", free: "12 (one-time)", basic: "1,000", pro: "1,500", premium: "3,500" },
   { feature: "AI Lyrics Generator", free: true, basic: true, pro: true, premium: true },
-  { feature: "Basic Stem Separation", free: true, basic: true, pro: true, premium: true },
-  { feature: "Advanced Stem Separation (Demucs)", free: false, basic: false, pro: true, premium: true },
+  { feature: "Stem Separation (AI)", free: false, basic: false, pro: true, premium: true },
   { feature: "AI Mastering", free: false, basic: false, pro: true, premium: true },
   { feature: "AI Denoise", free: false, basic: false, pro: true, premium: true },
   { feature: "Sample Lab", free: false, basic: false, pro: true, premium: true },
@@ -45,7 +44,6 @@ const FALLBACK_PLANS = [
     features: [
       "12 credits (one-time)",
       "AI music generation",
-      "Basic stem separation",
       "AI lyrics generator",
       "Audio trimming",
     ],
@@ -65,7 +63,6 @@ const FALLBACK_PLANS = [
     features: [
       "1,000 credits/month",
       "AI music generation",
-      "Stem separation",
       "AI lyrics generator",
       "Credit top-ups available",
       "100% rights (Royalty Free)",
@@ -86,7 +83,7 @@ const FALLBACK_PLANS = [
     features: [
       "1,500 credits/month",
       "Everything in Basic",
-      "Advanced stem separation (Demucs AI)",
+      "Stem separation (AI)",
       "AI mastering & denoise",
       "Sample Lab (record, upload, remix)",
       "Priority processing",

@@ -470,6 +470,10 @@
     "denoiseTrack": "Denoise Track",
     "createCover": "Create Cover",
     "trimAudio": "Trim Audio",
+    "separateTracks": "Separate Tracks",
+    "upgradeForStems": "Upgrade to Pro or Premium to use AI stem separation",
+    "separateDescription": "Click \"Separate Tracks\" to use AI to split this song into Vocals, Drums, Bass, and Melody stems.",
+    "stemsProOnly": "AI stem separation is available for Pro and Premium users.",
     "tracks": {
       "vocals": "Vocals",
       "drums": "Drums",

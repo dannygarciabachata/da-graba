@@ -19,6 +19,7 @@ import type { Track } from "@shared/schema";
 import WaveSurfer from "wavesurfer.js";
 import JSZip from "jszip";
 import { useTranslation } from "react-i18next";
+import { useStripeSubscription } from "@/hooks/use-stripe";
 
 const STEM_ICONS: Record<string, typeof Mic> = {
   vocals: Mic,
@@ -243,6 +244,9 @@ export default function StudioPage() {
   const { mutate: denoiseSong, isPending: isDenoising } = useDenoiseSong();
   const { mutate: coverSong, isPending: isCovering } = useCoverSong();
   const { mutate: trimSong, isPending: isTrimming } = useTrimSong();
+  const { data: subData } = useStripeSubscription();
+  const userTier = subData?.tier || "free";
+  const canUseStemSeparation = userTier === "pro" || userTier === "premium" || userTier === "producer" || user?.role === "super_admin" || user?.role === "admin";
   const [showTools, setShowTools] = useState(false);
   const [coverVoice, setCoverVoice] = useState("");
   const [trimStart, setTrimStart] = useState("");
@@ -511,7 +515,7 @@ export default function StudioPage() {
                   </p>
                 </div>
 
-                {!hasTracks && (
+                {!hasTracks && canUseStemSeparation && (
                   <Button
                     onClick={handleSeparate}
                     disabled={isSeparating}
@@ -523,7 +527,18 @@ export default function StudioPage() {
                     ) : (
                       <Scissors className="w-4 h-4" />
                     )}
-                    Separate Tracks
+                    {t('studio.separateTracks')}
+                  </Button>
+                )}
+                {!hasTracks && !canUseStemSeparation && (
+                  <Button
+                    onClick={() => setLocation("/pricing")}
+                    variant="outline"
+                    className="gap-2 border-cyan-500/30 text-cyan-400"
+                    data-testid="button-upgrade-stems"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {t('studio.upgradeForStems')}
                   </Button>
                 )}
 
@@ -590,7 +605,9 @@ export default function StudioPage() {
                       ))}
                     </div>
                     <p className="text-sm text-muted-foreground max-w-sm">
-                      Click "Separate Tracks" to use AI to split this song into Vocals, Drums, Bass, and Melody stems.
+                      {canUseStemSeparation
+                        ? t('studio.separateDescription')
+                        : t('studio.stemsProOnly')}
                     </p>
                   </motion.div>
                 ) : (

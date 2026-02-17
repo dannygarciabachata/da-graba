@@ -470,6 +470,10 @@
     "denoiseTrack": "Limpiar Ruido",
     "createCover": "Crear Portada",
     "trimAudio": "Cortar Audio",
+    "separateTracks": "Separar Pistas",
+    "upgradeForStems": "Actualiza a Pro o Premium para separar stems con IA",
+    "separateDescription": "Haz clic en \"Separar Pistas\" para usar IA y dividir esta canción en Voces, Batería, Bajo y Melodía.",
+    "stemsProOnly": "La separación de stems por IA está disponible para usuarios Pro y Premium.",
     "tracks": {
       "vocals": "Voces",
       "drums": "Batería",

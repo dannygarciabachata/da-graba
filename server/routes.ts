@@ -1088,6 +1088,14 @@ export async function registerRoutes(
   app.post("/api/songs/:id/stems", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = (req.user as any).claims.sub;
+
+    const user = await storage.getUser(userId);
+    const tier = user?.subscriptionTier || "free";
+    const isAdminUser = user?.role === "super_admin" || user?.role === "admin";
+    if (!isAdminUser && tier !== "pro" && tier !== "premium" && tier !== "producer") {
+      return res.status(403).json({ message: "Stem separation requires a Pro or Premium subscription. Upgrade your plan to access this feature." });
+    }
+
     const songId = Number(req.params.id);
     const song = await storage.getSong(songId);
     if (!song) return res.sendStatus(404);
