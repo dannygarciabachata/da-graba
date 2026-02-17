@@ -3891,7 +3891,7 @@ export async function registerRoutes(
           analyzed,
           withPrompts,
         },
-        gpuConnected: isRunPodConfigured() || isServerlessAvailable("training"),
+        gpuConnected: !!(await getActiveServer(storage, "training")),
         serverless: isServerlessAvailable("training"),
       });
     } catch (err: any) {
