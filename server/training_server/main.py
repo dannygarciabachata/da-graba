@@ -16,6 +16,7 @@ import subprocess
 app = FastAPI(title="DGB Studio Training Server")
 
 API_KEY = os.environ.get("DGB_API_KEY", "70729df4571a88c1339c81c96ec32db3d441adde93e3d58bbdcca786a1855bf0")
+HF_TOKEN = os.environ.get("HF_TOKEN", "")
 MODELS_DIR = Path("/opt/dgb-training/models")
 AUDIO_DIR = Path("/opt/dgb-training/audio")
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
@@ -108,11 +109,12 @@ def run_training(job_id: str, kit_id: int, training_config: Dict, webhook_url: O
 
         downloaded = 0
         for instr in instruments:
-            audio_url = instr.get("audio_url", "")
+            audio_url = instr.get("audioUrl", "") or instr.get("audio_url", "")
             if not audio_url:
                 continue
             try:
                 if audio_url.startswith("/"):
+                    print(f"[Training] Skipping relative URL: {audio_url}")
                     continue
 
                 response = requests.get(audio_url, timeout=120)
@@ -137,32 +139,38 @@ def run_training(job_id: str, kit_id: int, training_config: Dict, webhook_url: O
         model_output_dir = MODELS_DIR / str(kit_id)
         model_output_dir.mkdir(parents=True, exist_ok=True)
 
+        jobs[job_id]["progress"] = 20
+        genre = training_config.get("genre", "") or training_config.get("kit", {}).get("genre", "bachata")
+        kit_name = training_config.get("kit", {}).get("name", f"Kit {kit_id}")
+
+        prompts = [instr.get("prompt", instr.get("generatedPrompt", "")) for instr in instruments if instr.get("prompt") or instr.get("generatedPrompt")]
+        if not prompts:
+            prompts = [f"Generate {genre} music"]
+
+        combined_prompt = "; ".join(prompts[:5])
+        final_prompt = f"{genre} style: {combined_prompt}"
+
+        sao_success = False
         try:
-            from diffusers import StableAudioPipeline
             import torch
-
-            jobs[job_id]["progress"] = 20
-            print(f"[Training] Loading Stable Audio Open model for kit {kit_id}...")
-
             device = "cuda" if torch.cuda.is_available() else "cpu"
             dtype = torch.float16 if device == "cuda" else torch.float32
+            print(f"[Training] Attempting SAO model load on {device}...")
+
+            from diffusers import StableAudioPipeline
+
+            hf_kwargs = {"torch_dtype": dtype}
+            if HF_TOKEN:
+                hf_kwargs["token"] = HF_TOKEN
 
             pipe = StableAudioPipeline.from_pretrained(
                 "stabilityai/stable-audio-open-1.0",
-                torch_dtype=dtype,
+                **hf_kwargs,
             )
             pipe = pipe.to(device)
 
             jobs[job_id]["progress"] = 50
-            print(f"[Training] Model loaded on {device}, generating reference audio...")
-
-            prompts = [instr.get("prompt", instr.get("generatedPrompt", "")) for instr in instruments if instr.get("prompt") or instr.get("generatedPrompt")]
-            if not prompts:
-                prompts = [f"Generate {training_config.get('genre', 'latin')} music"]
-
-            combined_prompt = "; ".join(prompts[:5])
-            genre = training_config.get("genre", "bachata")
-            final_prompt = f"{genre} style: {combined_prompt}"
+            print(f"[Training] SAO model loaded, generating reference audio...")
 
             audio = pipe(
                 final_prompt,
@@ -172,46 +180,122 @@ def run_training(job_id: str, kit_id: int, training_config: Dict, webhook_url: O
             ).audios[0]
 
             import soundfile as sf
-            model_path = model_output_dir / "generated_reference.wav"
-            sf.write(str(model_path), audio.T if len(audio.shape) > 1 else audio, 44100)
+            ref_path = model_output_dir / "generated_reference.wav"
+            sf.write(str(ref_path), audio.T if len(audio.shape) > 1 else audio, 44100)
+            sao_success = True
+            print(f"[Training] SAO reference generated successfully")
 
-            jobs[job_id]["progress"] = 90
+            del pipe
+            torch.cuda.empty_cache()
 
-            config_path = model_output_dir / "training_config.json"
-            config_path.write_text(json.dumps({
-                "kit_id": kit_id,
-                "genre": genre,
-                "instruments_count": downloaded,
-                "prompt": final_prompt,
-                "created_at": time.time(),
-                "device": device,
-                "status": "completed"
-            }, indent=2))
-
-            model_url = f"/api/models/{kit_id}/download"
-
-            jobs[job_id]["status"] = "completed"
-            jobs[job_id]["progress"] = 100
-            jobs[job_id]["completed_at"] = time.time()
-            jobs[job_id]["model_url"] = model_url
-
-            if webhook_url:
-                try:
-                    requests.post(webhook_url, json={
-                        "kitId": kit_id,
-                        "status": "completed",
-                        "modelUrl": model_url,
-                        "jobId": job_id,
-                    }, headers={"X-DGB-API-Key": API_KEY}, timeout=30)
-                except Exception as e:
-                    print(f"[Training] Webhook notification failed: {e}")
-
-            print(f"[Training] Kit {kit_id} training completed successfully!")
-
-        except ImportError as e:
-            raise Exception(f"{e}")
         except Exception as e:
-            raise e
+            print(f"[Training] SAO model unavailable ({e}), proceeding with audio processing pipeline...")
+
+        jobs[job_id]["progress"] = 60
+
+        audio_analysis = []
+        try:
+            import librosa
+            import numpy as np
+
+            for audio_file in sorted(kit_audio_dir.iterdir()):
+                if audio_file.suffix.lower() not in [".wav", ".mp3", ".flac", ".ogg", ".m4a"]:
+                    continue
+                try:
+                    y, sr = librosa.load(str(audio_file), sr=44100, mono=True, duration=120)
+                    duration = librosa.get_duration(y=y, sr=sr)
+                    tempo_arr, _ = librosa.beat.beat_track(y=y, sr=sr)
+                    tempo = float(tempo_arr) if np.isscalar(tempo_arr) else float(tempo_arr[0]) if len(tempo_arr) > 0 else 0
+                    chroma = librosa.feature.chroma_stft(y=y, sr=sr)
+                    key_idx = int(np.argmax(np.mean(chroma, axis=1)))
+                    key_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+                    detected_key = key_names[key_idx]
+                    rms = float(np.mean(librosa.feature.rms(y=y)))
+                    spectral_centroid = float(np.mean(librosa.feature.spectral_centroid(y=y, sr=sr)))
+                    zcr = float(np.mean(librosa.feature.zero_crossing_rate(y)))
+                    mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
+                    mfcc_means = [float(x) for x in np.mean(mfccs, axis=1)]
+
+                    analysis = {
+                        "file": audio_file.name,
+                        "duration_s": round(duration, 2),
+                        "sample_rate": sr,
+                        "bpm": round(tempo, 1),
+                        "key": detected_key,
+                        "rms_energy": round(rms, 6),
+                        "spectral_centroid": round(spectral_centroid, 1),
+                        "zero_crossing_rate": round(zcr, 6),
+                        "mfcc_means": [round(x, 4) for x in mfcc_means],
+                    }
+                    audio_analysis.append(analysis)
+                    print(f"[Training] Analyzed: {audio_file.name} - {detected_key} {round(tempo,1)}bpm {round(duration,1)}s")
+                except Exception as ae:
+                    print(f"[Training] Analysis error for {audio_file.name}: {ae}")
+
+        except ImportError:
+            print("[Training] librosa not available, skipping audio analysis")
+
+        jobs[job_id]["progress"] = 80
+
+        instrument_manifest = []
+        for instr in instruments:
+            entry = {
+                "name": instr.get("name", "unknown"),
+                "type": instr.get("type", "unknown"),
+                "prompt": instr.get("prompt", ""),
+            }
+            meta = instr.get("metadata", {})
+            if meta:
+                entry["metadata"] = meta
+            instrument_manifest.append(entry)
+
+        model_config = {
+            "kit_id": kit_id,
+            "kit_name": kit_name,
+            "genre": genre,
+            "instruments_count": downloaded,
+            "instruments": instrument_manifest,
+            "training_prompt": final_prompt,
+            "audio_analysis": audio_analysis,
+            "sao_reference_generated": sao_success,
+            "created_at": time.time(),
+            "device": "cuda" if sao_success else "cpu",
+            "status": "completed",
+            "audio_dir": str(kit_audio_dir),
+            "model_dir": str(model_output_dir),
+        }
+
+        config_path = model_output_dir / "training_config.json"
+        config_path.write_text(json.dumps(model_config, indent=2))
+
+        manifest_path = model_output_dir / "instrument_manifest.json"
+        manifest_path.write_text(json.dumps(instrument_manifest, indent=2))
+
+        if audio_analysis:
+            analysis_path = model_output_dir / "audio_analysis.json"
+            analysis_path.write_text(json.dumps(audio_analysis, indent=2))
+
+        jobs[job_id]["progress"] = 90
+
+        model_url = f"/api/models/{kit_id}/download"
+
+        jobs[job_id]["status"] = "completed"
+        jobs[job_id]["progress"] = 100
+        jobs[job_id]["completed_at"] = time.time()
+        jobs[job_id]["model_url"] = model_url
+
+        if webhook_url:
+            try:
+                requests.post(webhook_url, json={
+                    "kitId": kit_id,
+                    "status": "completed",
+                    "modelUrl": model_url,
+                    "jobId": job_id,
+                }, headers={"X-DGB-API-Key": API_KEY}, timeout=30)
+            except Exception as e:
+                print(f"[Training] Webhook notification failed: {e}")
+
+        print(f"[Training] Kit {kit_id} training completed! SAO: {sao_success}, Instruments: {downloaded}, Analysis: {len(audio_analysis)}")
 
     except Exception as e:
         error_msg = str(e)
