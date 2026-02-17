@@ -199,7 +199,7 @@ export async function processMusicGeneration(
     if (submitResult.taskId && !submitResult.needsPolling && !submitResult.audioUrl) {
       console.log(`[Worker] ${submitResult.providerName} job ${submitResult.taskId} submitted for song ${songId} (webhook-based, awaiting callback)`);
       generateSongCoverImage(songId, safePrompt, style).catch(() => {});
-      startRunPodWatchdog(songId, submitResult.taskId, 600000);
+      startRunPodWatchdog(songId, submitResult.taskId, 300000);
       return;
     }
 
@@ -307,8 +307,16 @@ export function startRunPodWatchdog(songId: number, jobId: string, timeoutMs: nu
       }
 
       if (checks >= maxChecks) {
-        console.log(`[RunPod Watchdog] Song ${songId} timed out after ${timeoutMs / 1000}s, attempting fallback (skipping RunPod)...`);
+        console.log(`[RunPod Watchdog] Song ${songId} timed out after ${timeoutMs / 1000}s, cancelling job and attempting fallback...`);
         clearInterval(timer);
+
+        try {
+          const { cancelJob } = await import("../core/runpod_serverless");
+          await cancelJob("music", jobId);
+          console.log(`[RunPod Watchdog] Cancelled RunPod job ${jobId} to stop GPU billing`);
+        } catch (cancelErr: any) {
+          console.log(`[RunPod Watchdog] Could not cancel job ${jobId}: ${cancelErr.message?.substring(0, 80)}`);
+        }
 
         try {
           const submitResult = await executeOperation("music_generation", {

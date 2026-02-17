@@ -2481,6 +2481,25 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/runpod-health", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    try {
+      const { checkHealth, isServerlessConfigured } = await import("./core/runpod_serverless");
+      const types = ["music", "training", "stems"] as const;
+      const results: Record<string, any> = {};
+      for (const t of types) {
+        if (isServerlessConfigured(t)) {
+          results[t] = await checkHealth(t);
+        } else {
+          results[t] = { connected: false, workers: 0, queued: 0, error: "Not configured" };
+        }
+      }
+      res.json(results);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/api/admin/endpoints", async (req, res) => {
     if (!(await requireRole(req, res, "super_admin"))) return;
     const providerId = req.query.providerId ? Number(req.query.providerId) : undefined;
