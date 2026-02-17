@@ -1,0 +1,17 @@
+CONTAINER START COMMAND FOR RUNPOD
+===================================
+
+Docker Image: runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04
+Idle Timeout: 60 seconds
+HF_TOKEN: must be set in Environment Variables
+
+Copy the command below (between the === markers):
+
+===
+bash -c 'apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get -y -qq install ffmpeg git > /dev/null 2>&1; pip install -q runpod torchaudio einops huggingface_hub pedalboard && git clone --depth 1 https://github.com/Stability-AI/stable-audio-tools /tmp/sat && cd /tmp/sat && sed -i "s/pedalboard==0.7.4/pedalboard/g" setup.py && sed -i "s/pedalboard==0.7.4/pedalboard/g" pyproject.toml 2>/dev/null; pip install -q /tmp/sat && python3 -c "import zlib,base64;exec(zlib.decompress(base64.b64decode('"'"'eNqNVUtv2zgQvudX8EYJoBln002xCnhos3kUbRJgm56CQKClkc1WfJSkbKeG//sOJceKgy2wOkjgcN7zzSelnfWR+M44W7NofbUY3rKrlWUzGeDsHbOBRaWBhW7mvK0ghKNbcWcNnF/0n6MaGtLqLC+OCD7z1s5kS27ZRX9UDbklKhBjI0nahYfYebO/d16ZmNHHrx/un8gXK2tl5pxzmve3iyhs4GCWylvD54CaN1flw/3nyzvK6E4JQyziEDw9o8Ejvfl2ff3p7rq8+nBxWd58+7gzfRKLuNeP/nk0Tk/jrSaLbj7HVBpZQbnoZkQNvWotSg+0e0kW7Q8w6DU/uDso7uaK3H+mowKsK3CxcBIbug8bopy1UPYDKKO1bXiJjMWXDpvnpTJQl9rW0PZ2mlXivy4zmpypVsVnqY4Hx5Pe8cQ6MJMTPt1lUwtadbWkqZP9/Hk6chVKuZSqTYZZTqANQGjlOtob3QrNo83qHGFQvRplsyv3H5D1M7GGbOrtLs6r0SfMLLLvO8wo8X0YrjKui5Rttvm5E2qQIei0i/24z2uhsdlNa2XMdtd152VU1pSBsjciyk6neZ6zd+/3QEkwdDsMbih4bz0t6J0luyjbXjG8xA7WzEtVY+Qo0hLw9MoGbwe4+c3wuDINeDAVoD8DQ1rjRHsJlLVqmi6kGipraiIDme8dp+mm5TpfCgPrmGnupJcaIviQ5TmvYakqGMEv5plmIYLDGsy+Sb2AspMp9oNVzbwMlWxBHDRyL6bsfdLCVFRKF7dAPG5exlA4RgOky1BivR4l01ESbZQtLertEzMwx2qXUP7OEf1iV+RnJxNA6f90GqR22OGgfoGoHumrI8VLNdeyRICIKT99Ocm1+HM63Rn6Mj47ELR22rnJqZ6EGqsdWiiWOQ8/O4BfkE1zjjjPxl1diYYeR+2ON6mpMd/ylVzS85EseZBLyFbMsjGtNFv6NBrRTqy4B9cip2S098Ao1+4U4dXoKGiS7LW9GAmXI0Vnj7RptIM5Gk0UZSv8zAqJp5O//viRhNhF7Z5YJR2iG0rbRVwm8eA76Akcz+JsOqaD2+D5sAkV8oUQ06LPIiU0khQufZESH1uh4oIkAsk0QsHPaJ4A2xQzMfwv+OzsHfQeswbdy3pAaS8YgzfWkzVR5nGVcj7k37RYSOIetMWerg8p9S1r9rLXuzmJ54dE9Df+dcgGCn7SbMMr/n0hgX5+H/vcaTFjw/nKei0RhtgR1rPAp5oWge2p5euATUQlo+NmP2AG+xtvO1NnwE7ygVSGzMll/0k0gG2D9VsuCtFnsM5fBd0eDT9oHsAvwbcJD/2SZBu6kKZGWNNisc2P/gWb1noX'"'"')))"'
+===
+
+WHY THIS FIXES EXIT CODE 2:
+- stable-audio-tools requires pedalboard==0.7.4 which was REMOVED from PyPI
+- This command clones the repo from GitHub and patches setup.py to remove the version pin
+- pedalboard (latest) is pre-installed before the patched stable-audio-tools
