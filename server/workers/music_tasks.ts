@@ -196,6 +196,13 @@ export async function processMusicGeneration(
       return;
     }
 
+    if (submitResult.taskId && !submitResult.needsPolling && !submitResult.audioUrl) {
+      console.log(`[Worker] ${submitResult.providerName} job ${submitResult.taskId} submitted for song ${songId} (webhook-based, awaiting callback)`);
+      generateSongCoverImage(songId, safePrompt, style).catch(() => {});
+      startRunPodWatchdog(songId, submitResult.taskId, 600000);
+      return;
+    }
+
     throw new Error("Provider returned no audio and no polling config");
   } catch (err: any) {
     const msg = err.message || "";
@@ -282,6 +289,94 @@ function startUnifiedPoller(
       console.log(`[Worker] Poll error for song ${songId}: ${err.message?.substring(0, 80)}`);
     }
   }, checkInterval);
+}
+
+export function startRunPodWatchdog(songId: number, jobId: string, timeoutMs: number) {
+  const checkInterval = 30000;
+  const maxChecks = Math.floor(timeoutMs / checkInterval);
+  let checks = 0;
+
+  const timer = setInterval(async () => {
+    checks++;
+    try {
+      const song = await storage.getSong(songId);
+      if (!song || song.status === "completed" || song.status === "failed") {
+        clearInterval(timer);
+        pendingRunPodSongs.delete(songId);
+        return;
+      }
+
+      if (checks >= maxChecks) {
+        console.log(`[RunPod Watchdog] Song ${songId} timed out after ${timeoutMs / 1000}s, attempting fallback...`);
+        clearInterval(timer);
+
+        try {
+          const submitResult = await executeOperation("music_generation", {
+            prompt: song.prompt || "",
+            style: song.genre || "Bachata",
+            duration: 180,
+          });
+
+          if (submitResult.taskId) {
+            await storage.updateSongTaskId(songId, submitResult.taskId);
+            await storage.updateSongStatus(songId, "processing", undefined, "GPU timed out, trying backup engine...");
+            if (submitResult.pollConfig) {
+              startUnifiedPoller(songId, submitResult.pollConfig, { prompt: song.prompt || "", genre: song.genre || "Bachata" });
+            }
+            pendingRunPodSongs.delete(songId);
+            return;
+          }
+        } catch (fallbackErr: any) {
+          console.log(`[RunPod Watchdog] Pipeline fallback failed: ${fallbackErr.message}`);
+        }
+
+        await storage.updateSongStatus(songId, "failed", undefined, "La generación tardó demasiado. Intenta de nuevo.");
+        pendingRunPodSongs.delete(songId);
+        return;
+      }
+
+      try {
+        const { getJobStatus } = await import("../core/runpod_serverless");
+        const status = await getJobStatus("music", jobId);
+        console.log(`[RunPod Watchdog] Check ${checks}/${maxChecks} for song ${songId}: job ${jobId} = ${status.status}`);
+
+        if (status.status === "COMPLETED" && status.output) {
+          const output = status.output;
+          if (output.audioBase64) {
+            const { saveRunPodAudio } = await import("../core/runpod_music_engine");
+            const audioFormat = output.audioFormat || "mp3";
+            const localUrl = await saveRunPodAudio(output.audioBase64, songId, audioFormat);
+            await storage.updateSongStatus(songId, "completed", localUrl);
+            console.log(`[RunPod Watchdog] Song ${songId} completed via status poll (webhook missed): ${localUrl}`);
+          } else if (output.audioUrl || output.audio_url) {
+            const audioUrl = output.audioUrl || output.audio_url;
+            const { downloadFile } = await import("../core/generic_api_engine");
+            const localUrl = await downloadFile(audioUrl, "songs", "song");
+            await storage.updateSongStatus(songId, "completed", localUrl);
+            console.log(`[RunPod Watchdog] Song ${songId} completed via status poll (URL): ${localUrl}`);
+          }
+          clearInterval(timer);
+          pendingRunPodSongs.delete(songId);
+          return;
+        }
+
+        if (status.status === "FAILED" || status.status === "CANCELLED" || status.status === "TIMED_OUT") {
+          const errorMsg = status.error || `RunPod job ${status.status}`;
+          console.log(`[RunPod Watchdog] Song ${songId} failed: ${errorMsg}`);
+          await storage.updateSongStatus(songId, "failed", undefined, errorMsg.substring(0, 300));
+          clearInterval(timer);
+          pendingRunPodSongs.delete(songId);
+          return;
+        }
+      } catch (pollErr: any) {
+        console.log(`[RunPod Watchdog] Status check error for song ${songId}: ${pollErr.message?.substring(0, 80)}`);
+      }
+    } catch (err: any) {
+      console.log(`[RunPod Watchdog] Error checking song ${songId}: ${err.message?.substring(0, 80)}`);
+    }
+  }, checkInterval);
+
+  pendingRunPodSongs.set(songId, timer as any);
 }
 
 export function startRunPodTimeout(songId: number, timeoutMs: number) {

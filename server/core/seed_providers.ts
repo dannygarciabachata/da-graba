@@ -559,31 +559,118 @@ export async function seedReplicateStemsProvider(): Promise<void> {
   console.log("[Seed] Replicate Stems provider seeded");
 }
 
+export async function seedRunPodServerlessProvider(): Promise<void> {
+  const existing = await storage.getApiProviders();
+  const hasRunPodServerless = existing.some(p =>
+    p.name === "RunPod Serverless" || p.name === "RunPod Serverless GPU"
+  );
+  if (hasRunPodServerless) {
+    console.log("[Seed] RunPod Serverless provider already exists, skipping");
+    return;
+  }
+
+  if (!process.env.RUNPOD_API_KEY || !process.env.RUNPOD_ENDPOINT_MUSIC) {
+    console.log("[Seed] RUNPOD_API_KEY or RUNPOD_ENDPOINT_MUSIC not set, skipping RunPod Serverless seed");
+    return;
+  }
+
+  console.log("[Seed] Seeding RunPod Serverless GPU provider...");
+
+  const provider = await storage.createApiProvider({
+    name: "RunPod Serverless",
+    baseUrl: "https://api.runpod.ai/v2",
+    authType: "bearer",
+    authHeaderName: "Authorization",
+    apiKeyEnvVar: "RUNPOD_API_KEY",
+    category: "music",
+    isActive: true,
+    description: "Private GPU serverless infrastructure for music generation using Stable Audio Open and HeartMuLa engines. No third-party API costs.",
+    priority: 5,
+    adapterKey: "runpod_music",
+  });
+
+  await storage.createApiEndpoint({
+    providerId: provider.id,
+    name: "Music Generation (RunPod SAO/HeartMuLa)",
+    operationType: "music_generation",
+    path: "/run",
+    method: "POST",
+    contentType: "json",
+    requestMapping: {
+      "input.action": "generate_music",
+      "input.engine": "sao",
+      "input.prompt": "$prompt",
+      "input.duration_seconds": "$duration",
+      "input.lyrics": "$lyrics",
+      "input.tags": "$tags",
+      "input.song_id": "$songId",
+      "input.genre": "$style",
+    },
+    responseMapping: { taskId: "id", status: "status" },
+    asyncPattern: "webhook",
+    webhookSupported: true,
+    callbackUrlTemplate: "https://{domain}/api/webhooks/runpod-serverless",
+    successStatuses: ["COMPLETED"],
+    failStatuses: ["FAILED", "CANCELLED", "TIMED_OUT"],
+    description: "Generate music on private RunPod GPU using Stable Audio Open. Webhook delivers base64 audio. Zero third-party API cost.",
+  } as any);
+
+  console.log("[Seed] RunPod Serverless GPU provider seeded");
+}
+
+export async function deactivateReplicateMurekaMusic(): Promise<void> {
+  const providers = await storage.getApiProviders();
+  const deactivateNames = [
+    "replicate", "replicate ai", "mureka", "mureka ai",
+  ];
+
+  for (const provider of providers) {
+    const nameLC = provider.name.toLowerCase();
+    const isReplicateStems = nameLC.includes("replicate") && nameLC.includes("stem");
+    if (isReplicateStems) continue;
+
+    const shouldDeactivate = deactivateNames.some(n => nameLC === n || nameLC.includes(n));
+    if (shouldDeactivate && provider.isActive) {
+      try {
+        await storage.updateApiProvider(provider.id, { isActive: false });
+        console.log(`[Seed] Deactivated ${provider.name} (music generation removed from pipeline)`);
+      } catch {
+        console.log(`[Seed] Could not deactivate ${provider.name}`);
+      }
+    }
+  }
+}
+
 export async function updateProviderPriorities(): Promise<void> {
   const providers = await storage.getApiProviders();
 
-  const priorityMap: Record<string, { priority: number; adapterKey?: string }> = {
+  const priorityMap: Record<string, { priority: number; adapterKey?: string; isActive?: boolean }> = {
+    "RunPod Serverless": { priority: 5, adapterKey: "runpod_music" },
     "Kie.ai": { priority: 10, adapterKey: "kie_music" },
     "Kie AI": { priority: 10, adapterKey: "kie_music" },
     "Replicate Stems": { priority: 30, adapterKey: "replicate_stems" },
-    "Replicate": { priority: 40 },
-    "Replicate AI": { priority: 40 },
-    "Mureka AI": { priority: 60 },
+    "Replicate": { priority: 999, isActive: false },
+    "Replicate AI": { priority: 999, isActive: false },
+    "Mureka AI": { priority: 999, isActive: false },
     "DGB AUDIO Audio Engine": { priority: 80 },
     "DGB AUDIO Cloud Engine": { priority: 50 },
   };
 
   for (const provider of providers) {
     const config = priorityMap[provider.name];
-    if (config && (provider.priority !== config.priority || provider.adapterKey !== config.adapterKey)) {
-      try {
-        await storage.updateApiProvider(provider.id, {
-          priority: config.priority,
-          adapterKey: config.adapterKey || provider.adapterKey,
-        });
-        console.log(`[Seed] Updated ${provider.name}: priority=${config.priority}, adapter=${config.adapterKey || "none"}`);
-      } catch {
-        console.log(`[Seed] Could not update priority for ${provider.name}`);
+    if (config) {
+      const updates: Record<string, any> = {};
+      if (provider.priority !== config.priority) updates.priority = config.priority;
+      if (config.adapterKey && provider.adapterKey !== config.adapterKey) updates.adapterKey = config.adapterKey;
+      if (config.isActive !== undefined && provider.isActive !== config.isActive) updates.isActive = config.isActive;
+
+      if (Object.keys(updates).length > 0) {
+        try {
+          await storage.updateApiProvider(provider.id, updates);
+          console.log(`[Seed] Updated ${provider.name}: ${JSON.stringify(updates)}`);
+        } catch {
+          console.log(`[Seed] Could not update ${provider.name}`);
+        }
       }
     }
   }

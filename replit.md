@@ -23,11 +23,11 @@ DGB Studio employs a microservices-oriented architecture with a clear separation
 - **Admin Role System:** Role-based access control (`super_admin`, `admin`, `moderator`, `user`).
 - **Payments:** Stripe integration for subscriptions, fan gifts, and artist monetization.
 - **Generic API Provider System:** An API-agnostic engine for dynamic configuration of various API providers, including fallback mechanisms.
-- **AI Engines:**
-    - **HeartMuLa (Primary):** 3B parameter model for full songs with vocals/lyrics (Spanish support), running on private RunPod GPU.
-    - **Stable Audio Open (Instrumental):** For instrumental generation and fine-tuned models from Style Kits, running on private RunPod GPU.
-    - **Kie.ai:** Suno V5 integration for high-quality music generation with vocals, serving as a Priority 3 fallback.
-    - **DGB AUDIO Audio Engine:** MusicGPT-based fallback.
+- **AI Engines (Music Generation Pipeline - priority order):**
+    - **RunPod Serverless GPU (Priority 1):** Primary engine using Stable Audio Open + HeartMuLa on private GPU. Zero third-party API cost. Requires `RUNPOD_ENDPOINT_MUSIC` env var. Webhook-based delivery.
+    - **Kie.ai (Priority 2):** Suno V5 integration for high-quality music generation with vocals. Fallback when RunPod unavailable.
+    - **DGB AUDIO Audio Engine (Priority 3):** MusicGPT-based last resort fallback.
+    - **Replicate/Mureka:** Deactivated. No longer part of music generation pipeline.
     - **OpenAI Integration:** Used for lyrics generation (GPT-5.1), support chatbot, instrument prompt generation, and prompt enrichment via the Antigravity Engine.
     - **SAO Training Pipeline:** Fine-tuning custom instrument kits using OpenAI and cloud GPU.
 - **Stem Separation Engine:** Multi-tier fallback system (Private Cloud GPU, Replicate serverless, Generic API, MusicGPT) producing vocal, drum, bass, and melody stems.

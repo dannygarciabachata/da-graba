@@ -18,7 +18,7 @@ import {
   processDeReverb, processTTS, processSoundGeneration, processTranscription,
   processRemix, processSpeedChange,
 } from "./workers/sample_tasks";
-import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider, seedReplicateProvider, seedMurekaProvider, seedKieProvider, seedReplicateStemsProvider, updateProviderPriorities, seedTrainingKits, seedDiscography } from "./core/seed_providers";
+import { seedDefaultMusicGPTProvider, seedDgbRunPodProvider, seedKieProvider, seedReplicateStemsProvider, seedRunPodServerlessProvider, deactivateReplicateMurekaMusic, updateProviderPriorities, seedTrainingKits, seedDiscography } from "./core/seed_providers";
 import { initializeAdapters } from "./core/adapters";
 import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfig, buildRunPodPayload, GENRE_STYLE_HINTS } from "./core/sao_training_engine";
 import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection, getGpuStatus, resumeGpuPod, stopGpuPod, setupGpuEnvironment } from "./core/runpod_client";
@@ -1754,12 +1754,8 @@ export async function registerRoutes(
     console.log("[Seed] DGB Cloud seed error:", err.message?.substring(0, 100))
   );
 
-  seedReplicateProvider().catch((err: any) =>
-    console.log("[Seed] Replicate seed error:", err.message?.substring(0, 100))
-  );
-
-  seedMurekaProvider().catch((err: any) =>
-    console.log("[Seed] Mureka seed error:", err.message?.substring(0, 100))
+  seedRunPodServerlessProvider().catch((err: any) =>
+    console.log("[Seed] RunPod Serverless seed error:", err.message?.substring(0, 100))
   );
 
   seedKieProvider().catch((err: any) =>
@@ -1768,6 +1764,10 @@ export async function registerRoutes(
 
   seedReplicateStemsProvider().catch((err: any) =>
     console.log("[Seed] Replicate Stems seed error:", err.message?.substring(0, 100))
+  );
+
+  deactivateReplicateMurekaMusic().catch((err: any) =>
+    console.log("[Seed] Deactivation error:", err.message?.substring(0, 100))
   );
 
   updateProviderPriorities().catch((err: any) =>
