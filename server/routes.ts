@@ -3575,35 +3575,78 @@ export async function registerRoutes(
       console.log(`[SAO Pipeline] Kit ${kitId} queued for training with ${withPrompts.length} instruments (SAO config generated)`);
       console.log(`[SAO Pipeline] Training config: model_type=${trainingConfig.model_type}, sample_rate=${trainingConfig.sample_rate}, instruments=${trainingConfig.dataset.instruments.length}`);
 
-      if (isRunPodConfigured()) {
-        const protocol = req.headers["x-forwarded-proto"] || "https";
-        const host = req.headers["host"] || "localhost:5000";
-        const webhookUrl = `${protocol}://${host}/api/training/webhook`;
+      const protocol = req.headers["x-forwarded-proto"] || "https";
+      const host = req.headers["host"] || "localhost:5000";
+      const webhookUrl = `${protocol}://${host}/api/training/webhook`;
 
+      let gpuSubmitted = false;
+
+      if (isRunPodConfigured()) {
         const result = await submitTrainingJob(kitId, trainingConfig, webhookUrl);
         if (result.success) {
           await storage.updateStyleKit(kitId, {
             trainingStatus: "training",
             trainingJobId: result.jobId || null,
           });
-          console.log(`[SAO Pipeline] Job submitted to cloud GPU: ${result.jobId}`);
+          console.log(`[SAO Pipeline] Job submitted to RunPod GPU: ${result.jobId}`);
+          gpuSubmitted = true;
         } else {
-          await storage.updateStyleKit(kitId, {
-            trainingStatus: "failed",
-            trainingError: `Cloud GPU submission failed: ${result.error}`,
-          });
-          console.error(`[SAO Pipeline] Cloud GPU submission failed: ${result.error}`);
+          console.log(`[SAO Pipeline] RunPod submission failed: ${result.error}, trying cloud servers...`);
         }
       }
 
+      if (!gpuSubmitted) {
+        const cloudServer = await getActiveServer(storage, "training");
+        if (cloudServer) {
+          try {
+            const trainUrl = `${cloudServer.baseUrl}/api/train-kit`;
+            const trainPayload = {
+              kit_id: kitId,
+              training_config: trainingConfig,
+              webhook_url: webhookUrl,
+            };
+            const trainRes = await fetch(trainUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                [cloudServer.authHeaderName]: cloudServer.apiKey,
+              },
+              body: JSON.stringify(trainPayload),
+              signal: AbortSignal.timeout(30000),
+            });
+            if (trainRes.ok) {
+              const trainData = await trainRes.json() as any;
+              await storage.updateStyleKit(kitId, {
+                trainingStatus: "training",
+                trainingJobId: trainData.jobId || `cloud_kit_${kitId}_${Date.now()}`,
+              });
+              console.log(`[SAO Pipeline] Training submitted to cloud server: ${cloudServer.baseUrl}`);
+              gpuSubmitted = true;
+            } else {
+              const errText = await trainRes.text();
+              console.error(`[SAO Pipeline] Cloud server training failed: ${trainRes.status} ${errText}`);
+            }
+          } catch (err: any) {
+            console.error(`[SAO Pipeline] Cloud server training error: ${err.message}`);
+          }
+        }
+      }
+
+      if (!gpuSubmitted) {
+        await storage.updateStyleKit(kitId, {
+          trainingStatus: "queued",
+          trainingError: null,
+        });
+      }
+
       res.json({
-        message: isRunPodConfigured()
-          ? "Training submitted to cloud GPU. Your kit is being fine-tuned with the SAO pipeline."
+        message: gpuSubmitted
+          ? "Training submitted to GPU server. Your kit is being fine-tuned with the SAO pipeline."
           : "Training queued. Your kit will be fine-tuned using the SAO pipeline with AI-generated prompts.",
         kitId,
         instrumentCount: withPrompts.length,
-        status: isRunPodConfigured() ? "training" : "queued",
-        gpuConnected: isRunPodConfigured(),
+        status: gpuSubmitted ? "training" : "queued",
+        gpuConnected: gpuSubmitted,
         trainingConfig: {
           model_type: trainingConfig.model_type,
           sample_rate: trainingConfig.sample_rate,
