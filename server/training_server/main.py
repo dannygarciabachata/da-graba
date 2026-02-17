@@ -22,6 +22,10 @@ AUDIO_DIR = Path("/opt/dgb-training/audio")
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
+if HF_TOKEN:
+    os.environ["HF_TOKEN"] = HF_TOKEN
+    os.environ["HUGGING_FACE_HUB_TOKEN"] = HF_TOKEN
+
 jobs: Dict[str, Dict[str, Any]] = {}
 
 
@@ -52,6 +56,15 @@ class UploadInstrumentRequest(BaseModel):
     type: str
 
 
+class GenerateRequest(BaseModel):
+    prompt: str
+    negative_prompt: Optional[str] = "Low quality."
+    duration_s: Optional[float] = 30.0
+    steps: Optional[int] = 100
+    cfg_scale: Optional[float] = 7.0
+    kit_id: Optional[int] = None
+
+
 @app.get("/api/health")
 async def health():
     gpu_available = False
@@ -65,10 +78,19 @@ async def health():
     except Exception:
         pass
 
+    sat_available = False
+    try:
+        import stable_audio_tools
+        sat_available = True
+    except ImportError:
+        pass
+
     return {
         "status": "healthy",
         "gpu_available": gpu_available,
         "gpu_info": gpu_info,
+        "stable_audio_tools": sat_available,
+        "hf_token_set": bool(HF_TOKEN),
         "active_jobs": len([j for j in jobs.values() if j.get("status") == "running"]),
         "total_jobs": len(jobs),
         "models_dir": str(MODELS_DIR),
@@ -96,6 +118,179 @@ async def upload_instrument(req: UploadInstrumentRequest,
         raise HTTPException(status_code=500, detail=f"Failed to download: {str(e)}")
 
 
+def download_instruments(kit_id: int, instruments: List[Dict], kit_audio_dir: Path) -> int:
+    downloaded = 0
+    for instr in instruments:
+        audio_url = instr.get("audioUrl", "") or instr.get("audio_url", "")
+        if not audio_url:
+            continue
+        try:
+            if audio_url.startswith("/"):
+                print(f"[Training] Skipping relative URL: {audio_url}")
+                continue
+
+            response = requests.get(audio_url, timeout=120)
+            response.raise_for_status()
+            ext = audio_url.rsplit(".", 1)[-1].split("?")[0] if "." in audio_url else "wav"
+            if ext not in ["wav", "mp3", "flac", "ogg", "m4a"]:
+                ext = "wav"
+            name = instr.get("name", f"instrument_{instr.get('id', downloaded)}")
+            name = "".join(c if c.isalnum() or c in "._- " else "_" for c in name)
+            filepath = kit_audio_dir / f"{name}.{ext}"
+            filepath.write_bytes(response.content)
+            downloaded += 1
+            print(f"[Training] Downloaded: {name}.{ext} ({len(response.content)} bytes)")
+        except Exception as e:
+            print(f"[Training] Failed to download {audio_url}: {e}")
+
+    return downloaded
+
+
+def analyze_audio_files(kit_audio_dir: Path) -> List[Dict]:
+    audio_analysis = []
+    try:
+        import librosa
+        import numpy as np
+
+        for audio_file in sorted(kit_audio_dir.iterdir()):
+            if audio_file.suffix.lower() not in [".wav", ".mp3", ".flac", ".ogg", ".m4a"]:
+                continue
+            try:
+                y, sr = librosa.load(str(audio_file), sr=44100, mono=True, duration=120)
+                duration = librosa.get_duration(y=y, sr=sr)
+                tempo_arr, _ = librosa.beat.beat_track(y=y, sr=sr)
+                tempo = float(tempo_arr) if np.isscalar(tempo_arr) else float(tempo_arr[0]) if len(tempo_arr) > 0 else 0
+                chroma = librosa.feature.chroma_stft(y=y, sr=sr)
+                key_idx = int(np.argmax(np.mean(chroma, axis=1)))
+                key_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+                detected_key = key_names[key_idx]
+                rms = float(np.mean(librosa.feature.rms(y=y)))
+                spectral_centroid = float(np.mean(librosa.feature.spectral_centroid(y=y, sr=sr)))
+                zcr = float(np.mean(librosa.feature.zero_crossing_rate(y)))
+                mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
+                mfcc_means = [float(x) for x in np.mean(mfccs, axis=1)]
+
+                analysis = {
+                    "file": audio_file.name,
+                    "duration_s": round(duration, 2),
+                    "sample_rate": sr,
+                    "bpm": round(tempo, 1),
+                    "key": detected_key,
+                    "rms_energy": round(rms, 6),
+                    "spectral_centroid": round(spectral_centroid, 1),
+                    "zero_crossing_rate": round(zcr, 6),
+                    "mfcc_means": [round(x, 4) for x in mfcc_means],
+                }
+                audio_analysis.append(analysis)
+                print(f"[Training] Analyzed: {audio_file.name} - {detected_key} {round(tempo,1)}bpm {round(duration,1)}s")
+            except Exception as ae:
+                print(f"[Training] Analysis error for {audio_file.name}: {ae}")
+
+    except ImportError:
+        print("[Training] librosa not available, skipping audio analysis")
+
+    return audio_analysis
+
+
+def generate_with_stable_audio_tools(prompt: str, model_output_dir: Path, duration_s: float = 30.0,
+                                      steps: int = 100, cfg_scale: float = 7.0) -> bool:
+    try:
+        import torch
+        import torchaudio
+        from einops import rearrange
+        from stable_audio_tools import get_pretrained_model
+        from stable_audio_tools.inference.generation import generate_diffusion_cond
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"[SAO] Loading model via stable-audio-tools on {device}...")
+
+        model, model_config = get_pretrained_model("stabilityai/stable-audio-open-1.0")
+        sample_rate = model_config["sample_rate"]
+        sample_size = model_config["sample_size"]
+
+        model = model.to(device)
+
+        conditioning = [{
+            "prompt": prompt,
+            "seconds_start": 0,
+            "seconds_total": duration_s
+        }]
+
+        print(f"[SAO] Generating audio: '{prompt[:80]}...' ({duration_s}s, {steps} steps, cfg={cfg_scale})")
+
+        output = generate_diffusion_cond(
+            model,
+            steps=steps,
+            cfg_scale=cfg_scale,
+            conditioning=conditioning,
+            sample_size=sample_size,
+            sigma_min=0.3,
+            sigma_max=500,
+            sampler_type="dpmpp-3m-sde",
+            device=device
+        )
+
+        output = rearrange(output, "b d n -> d (b n)")
+        output = output.to(torch.float32).div(torch.max(torch.abs(output))).clamp(-1, 1).mul(32767).to(torch.int16).cpu()
+
+        ref_path = model_output_dir / "generated_reference.wav"
+        torchaudio.save(str(ref_path), output, sample_rate)
+        print(f"[SAO] Reference audio saved: {ref_path} ({ref_path.stat().st_size} bytes)")
+
+        del model
+        torch.cuda.empty_cache()
+        return True
+
+    except Exception as e:
+        print(f"[SAO] stable-audio-tools generation failed: {e}")
+        print(traceback.format_exc())
+        return False
+
+
+def generate_with_diffusers(prompt: str, model_output_dir: Path, duration_s: float = 30.0,
+                             steps: int = 100) -> bool:
+    try:
+        import torch
+        import soundfile as sf
+        from diffusers import StableAudioPipeline
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        dtype = torch.float16 if device == "cuda" else torch.float32
+        print(f"[SAO-Diffusers] Loading model via diffusers on {device}...")
+
+        hf_kwargs = {"torch_dtype": dtype}
+        if HF_TOKEN:
+            hf_kwargs["token"] = HF_TOKEN
+
+        pipe = StableAudioPipeline.from_pretrained(
+            "stabilityai/stable-audio-open-1.0",
+            **hf_kwargs,
+        )
+        pipe = pipe.to(device)
+
+        print(f"[SAO-Diffusers] Generating: '{prompt[:80]}...' ({duration_s}s, {steps} steps)")
+
+        audio = pipe(
+            prompt,
+            negative_prompt="Low quality, noise, distorted",
+            num_inference_steps=steps,
+            audio_end_in_s=duration_s,
+        ).audios[0]
+
+        ref_path = model_output_dir / "generated_reference.wav"
+        output = audio.T.float().cpu().numpy() if hasattr(audio, 'cpu') else audio.T if len(audio.shape) > 1 else audio
+        sf.write(str(ref_path), output, pipe.vae.sampling_rate)
+        print(f"[SAO-Diffusers] Reference audio saved: {ref_path}")
+
+        del pipe
+        torch.cuda.empty_cache()
+        return True
+
+    except Exception as e:
+        print(f"[SAO-Diffusers] Diffusers generation failed: {e}")
+        return False
+
+
 def run_training(job_id: str, kit_id: int, training_config: Dict, webhook_url: Optional[str]):
     try:
         jobs[job_id]["status"] = "running"
@@ -107,39 +302,25 @@ def run_training(job_id: str, kit_id: int, training_config: Dict, webhook_url: O
         kit_audio_dir = AUDIO_DIR / str(kit_id)
         kit_audio_dir.mkdir(parents=True, exist_ok=True)
 
-        downloaded = 0
-        for instr in instruments:
-            audio_url = instr.get("audioUrl", "") or instr.get("audio_url", "")
-            if not audio_url:
-                continue
-            try:
-                if audio_url.startswith("/"):
-                    print(f"[Training] Skipping relative URL: {audio_url}")
-                    continue
-
-                response = requests.get(audio_url, timeout=120)
-                response.raise_for_status()
-                ext = audio_url.rsplit(".", 1)[-1].split("?")[0] if "." in audio_url else "wav"
-                if ext not in ["wav", "mp3", "flac", "ogg", "m4a"]:
-                    ext = "wav"
-                name = instr.get("name", f"instrument_{instr.get('id', downloaded)}")
-                name = "".join(c if c.isalnum() or c in "._- " else "_" for c in name)
-                filepath = kit_audio_dir / f"{name}.{ext}"
-                filepath.write_bytes(response.content)
-                downloaded += 1
-            except Exception as e:
-                print(f"[Training] Failed to download {audio_url}: {e}")
+        downloaded = download_instruments(kit_id, instruments, kit_audio_dir)
 
         if downloaded == 0:
-            raise Exception("No instrument audio files could be downloaded")
+            existing = list(kit_audio_dir.glob("*.*"))
+            audio_exts = [".wav", ".mp3", ".flac", ".ogg", ".m4a"]
+            existing_audio = [f for f in existing if f.suffix.lower() in audio_exts]
+            if existing_audio:
+                downloaded = len(existing_audio)
+                print(f"[Training] Using {downloaded} previously downloaded instruments")
+            else:
+                raise Exception("No instrument audio files could be downloaded")
 
         jobs[job_id]["progress"] = 10
-        print(f"[Training] Downloaded {downloaded} instruments for kit {kit_id}")
+        print(f"[Training] {downloaded} instruments ready for kit {kit_id}")
 
         model_output_dir = MODELS_DIR / str(kit_id)
         model_output_dir.mkdir(parents=True, exist_ok=True)
 
-        jobs[job_id]["progress"] = 20
+        jobs[job_id]["progress"] = 15
         genre = training_config.get("genre", "") or training_config.get("kit", {}).get("genre", "bachata")
         kit_name = training_config.get("kit", {}).get("name", f"Kit {kit_id}")
 
@@ -150,91 +331,26 @@ def run_training(job_id: str, kit_id: int, training_config: Dict, webhook_url: O
         combined_prompt = "; ".join(prompts[:5])
         final_prompt = f"{genre} style: {combined_prompt}"
 
-        sao_success = False
-        try:
-            import torch
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            dtype = torch.float16 if device == "cuda" else torch.float32
-            print(f"[Training] Attempting SAO model load on {device}...")
+        jobs[job_id]["progress"] = 20
 
-            from diffusers import StableAudioPipeline
+        sao_success = generate_with_stable_audio_tools(
+            final_prompt, model_output_dir, duration_s=30.0, steps=100, cfg_scale=7.0
+        )
 
-            hf_kwargs = {"torch_dtype": dtype}
-            if HF_TOKEN:
-                hf_kwargs["token"] = HF_TOKEN
-
-            pipe = StableAudioPipeline.from_pretrained(
-                "stabilityai/stable-audio-open-1.0",
-                **hf_kwargs,
+        if not sao_success:
+            print("[Training] stable-audio-tools failed, trying diffusers fallback...")
+            sao_success = generate_with_diffusers(
+                final_prompt, model_output_dir, duration_s=30.0, steps=100
             )
-            pipe = pipe.to(device)
 
-            jobs[job_id]["progress"] = 50
-            print(f"[Training] SAO model loaded, generating reference audio...")
+        if sao_success:
+            jobs[job_id]["progress"] = 60
+            print(f"[Training] SAO reference audio generated for kit {kit_id}")
+        else:
+            jobs[job_id]["progress"] = 40
+            print(f"[Training] SAO unavailable, proceeding with audio analysis only")
 
-            audio = pipe(
-                final_prompt,
-                negative_prompt="low quality, noise, distorted",
-                num_inference_steps=100,
-                audio_end_in_s=30.0,
-            ).audios[0]
-
-            import soundfile as sf
-            ref_path = model_output_dir / "generated_reference.wav"
-            sf.write(str(ref_path), audio.T if len(audio.shape) > 1 else audio, 44100)
-            sao_success = True
-            print(f"[Training] SAO reference generated successfully")
-
-            del pipe
-            torch.cuda.empty_cache()
-
-        except Exception as e:
-            print(f"[Training] SAO model unavailable ({e}), proceeding with audio processing pipeline...")
-
-        jobs[job_id]["progress"] = 60
-
-        audio_analysis = []
-        try:
-            import librosa
-            import numpy as np
-
-            for audio_file in sorted(kit_audio_dir.iterdir()):
-                if audio_file.suffix.lower() not in [".wav", ".mp3", ".flac", ".ogg", ".m4a"]:
-                    continue
-                try:
-                    y, sr = librosa.load(str(audio_file), sr=44100, mono=True, duration=120)
-                    duration = librosa.get_duration(y=y, sr=sr)
-                    tempo_arr, _ = librosa.beat.beat_track(y=y, sr=sr)
-                    tempo = float(tempo_arr) if np.isscalar(tempo_arr) else float(tempo_arr[0]) if len(tempo_arr) > 0 else 0
-                    chroma = librosa.feature.chroma_stft(y=y, sr=sr)
-                    key_idx = int(np.argmax(np.mean(chroma, axis=1)))
-                    key_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-                    detected_key = key_names[key_idx]
-                    rms = float(np.mean(librosa.feature.rms(y=y)))
-                    spectral_centroid = float(np.mean(librosa.feature.spectral_centroid(y=y, sr=sr)))
-                    zcr = float(np.mean(librosa.feature.zero_crossing_rate(y)))
-                    mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
-                    mfcc_means = [float(x) for x in np.mean(mfccs, axis=1)]
-
-                    analysis = {
-                        "file": audio_file.name,
-                        "duration_s": round(duration, 2),
-                        "sample_rate": sr,
-                        "bpm": round(tempo, 1),
-                        "key": detected_key,
-                        "rms_energy": round(rms, 6),
-                        "spectral_centroid": round(spectral_centroid, 1),
-                        "zero_crossing_rate": round(zcr, 6),
-                        "mfcc_means": [round(x, 4) for x in mfcc_means],
-                    }
-                    audio_analysis.append(analysis)
-                    print(f"[Training] Analyzed: {audio_file.name} - {detected_key} {round(tempo,1)}bpm {round(duration,1)}s")
-                except Exception as ae:
-                    print(f"[Training] Analysis error for {audio_file.name}: {ae}")
-
-        except ImportError:
-            print("[Training] librosa not available, skipping audio analysis")
-
+        audio_analysis = analyze_audio_files(kit_audio_dir)
         jobs[job_id]["progress"] = 80
 
         instrument_manifest = []
@@ -258,8 +374,8 @@ def run_training(job_id: str, kit_id: int, training_config: Dict, webhook_url: O
             "training_prompt": final_prompt,
             "audio_analysis": audio_analysis,
             "sao_reference_generated": sao_success,
+            "engine": "stable-audio-tools" if sao_success else "analysis-only",
             "created_at": time.time(),
-            "device": "cuda" if sao_success else "cpu",
             "status": "completed",
             "audio_dir": str(kit_audio_dir),
             "model_dir": str(model_output_dir),
@@ -283,6 +399,7 @@ def run_training(job_id: str, kit_id: int, training_config: Dict, webhook_url: O
         jobs[job_id]["progress"] = 100
         jobs[job_id]["completed_at"] = time.time()
         jobs[job_id]["model_url"] = model_url
+        jobs[job_id]["sao_generated"] = sao_success
 
         if webhook_url:
             try:
@@ -291,11 +408,12 @@ def run_training(job_id: str, kit_id: int, training_config: Dict, webhook_url: O
                     "status": "completed",
                     "modelUrl": model_url,
                     "jobId": job_id,
+                    "saoGenerated": sao_success,
                 }, headers={"X-DGB-API-Key": API_KEY}, timeout=30)
             except Exception as e:
                 print(f"[Training] Webhook notification failed: {e}")
 
-        print(f"[Training] Kit {kit_id} training completed! SAO: {sao_success}, Instruments: {downloaded}, Analysis: {len(audio_analysis)}")
+        print(f"[Training] Kit {kit_id} completed! SAO: {sao_success}, Instruments: {downloaded}, Analysis: {len(audio_analysis)}")
 
     except Exception as e:
         error_msg = str(e)
@@ -315,6 +433,32 @@ def run_training(job_id: str, kit_id: int, training_config: Dict, webhook_url: O
                 }, headers={"X-DGB-API-Key": API_KEY}, timeout=30)
             except Exception:
                 pass
+
+
+@app.post("/api/generate")
+async def generate_audio(req: GenerateRequest,
+                         x_dgb_api_key: Optional[str] = Header(None),
+                         authorization: Optional[str] = Header(None)):
+    verify_api_key(x_dgb_api_key, authorization)
+
+    output_dir = MODELS_DIR / "generations" / str(int(time.time()))
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    success = generate_with_stable_audio_tools(
+        req.prompt, output_dir, duration_s=req.duration_s or 30.0,
+        steps=req.steps or 100, cfg_scale=req.cfg_scale or 7.0
+    )
+
+    if not success:
+        success = generate_with_diffusers(
+            req.prompt, output_dir, duration_s=req.duration_s or 30.0, steps=req.steps or 100
+        )
+
+    if not success:
+        raise HTTPException(status_code=500, detail="Audio generation failed with all engines")
+
+    ref_path = output_dir / "generated_reference.wav"
+    return FileResponse(str(ref_path), filename="generated.wav", media_type="audio/wav")
 
 
 @app.post("/api/train")
@@ -386,7 +530,7 @@ async def list_models(x_dgb_api_key: Optional[str] = Header(None),
     models = []
     if MODELS_DIR.exists():
         for kit_dir in MODELS_DIR.iterdir():
-            if kit_dir.is_dir():
+            if kit_dir.is_dir() and kit_dir.name != "generations":
                 config_path = kit_dir / "training_config.json"
                 if config_path.exists():
                     config = json.loads(config_path.read_text())
