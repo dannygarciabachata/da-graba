@@ -90,28 +90,22 @@ export async function registerRoutes(
     res.json({ status: "ok", timestamp: Date.now() });
   });
 
-  app.get("/api/internal/runpod-handler", (_req, res) => {
-    const path = require("path");
-    const fs = require("fs");
-    const handlerPath = path.resolve("scripts/runpod_serverless/handler.py");
-    if (fs.existsSync(handlerPath)) {
-      res.setHeader("Content-Type", "text/plain");
-      res.sendFile(handlerPath);
-    } else {
-      res.status(404).send("Not found");
-    }
+  app.get("/api/internal/runpod-handler", async (_req, res) => {
+    try {
+      const fs = await import("fs");
+      const content = fs.readFileSync("scripts/runpod_serverless/handler.py", "utf-8");
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.send(content);
+    } catch (e: any) { res.status(404).send("Error: " + e.message); }
   });
 
-  app.get("/api/internal/runpod-startsh", (_req, res) => {
-    const path = require("path");
-    const fs = require("fs");
-    const shPath = path.resolve("scripts/runpod_serverless/start.sh");
-    if (fs.existsSync(shPath)) {
-      res.setHeader("Content-Type", "text/plain");
-      res.sendFile(shPath);
-    } else {
-      res.status(404).send("Not found");
-    }
+  app.get("/api/internal/runpod-startsh", async (_req, res) => {
+    try {
+      const fs = await import("fs");
+      const content = fs.readFileSync("scripts/runpod_serverless/start.sh", "utf-8");
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.send(content);
+    } catch (e: any) { res.status(404).send("Error: " + e.message); }
   });
 
   // ========== MUSIC ROUTES ==========
