@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
-import { processMusicGeneration, pendingTaskMap, pendingRunPodSongs, startRunPodTimeout } from "./workers/music_tasks";
+import { processMusicGeneration, processMashupGeneration, pendingTaskMap, pendingRunPodSongs, startRunPodTimeout } from "./workers/music_tasks";
 import { saveRunPodAudio } from "./core/runpod_music_engine";
 import { generateCreativeLyrics } from "./core/antigravity_engine";
 import { buildMusicGenPrompt, buildStyleKitPrompt, PROMPT_VERSIONS } from "./core/prompt_engine";
@@ -234,6 +234,96 @@ export async function registerRoutes(
       }
       console.error(err);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/songs/mashup", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      const { songId1, songId2, style, title, instrumental, customMode } = req.body;
+      if (!songId1 || !songId2) {
+        return res.status(400).json({ error: "Two song IDs are required for mashup" });
+      }
+      if (songId1 === songId2) {
+        return res.status(400).json({ error: "Please select two different songs" });
+      }
+
+      const song1 = await storage.getSong(Number(songId1));
+      const song2 = await storage.getSong(Number(songId2));
+      if (!song1 || !song2) {
+        return res.status(404).json({ error: "One or both songs not found" });
+      }
+      if (!song1.audioUrl || !song2.audioUrl) {
+        return res.status(400).json({ error: "Both songs must have completed audio" });
+      }
+      if (song1.userId !== userId && !song1.isPublic) {
+        return res.status(403).json({ error: "You don't have access to song 1" });
+      }
+      if (song2.userId !== userId && !song2.isPublic) {
+        return res.status(403).json({ error: "You don't have access to song 2" });
+      }
+
+      const isUnlimited = user.subscriptionTier === "premium" || user.role === "super_admin" || user.role === "admin";
+      if (!isUnlimited) {
+        const remaining = await storage.deductCredit(userId);
+        if (remaining === -1) {
+          return res.status(403).json({
+            error: "No credits remaining",
+            message: "You've used all your credits. Upgrade your plan for more.",
+            credits: 0,
+          });
+        }
+      }
+
+      const resolveUrl = (url: string) => {
+        if (url.startsWith("http")) return url;
+        const host = process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+        return `${host}${url}`;
+      };
+
+      const audioUrl1 = resolveUrl(song1.audioUrl);
+      const audioUrl2 = resolveUrl(song2.audioUrl);
+
+      const song1Name = song1.title || song1.prompt || "Untitled";
+      const song2Name = song2.title || song2.prompt || "Untitled";
+      const mashupTitle = title || `Mashup: ${song1Name.substring(0, 25)} x ${song2Name.substring(0, 25)}`;
+      const mashupStyle = style || song1.genre || "Bachata";
+
+      const pairId = `mashup_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      const newSong = await storage.createSong({
+        userId,
+        title: mashupTitle,
+        prompt: `Mashup of "${song1Name}" and "${song2Name}" in ${mashupStyle} style`,
+        genre: mashupStyle,
+        mode: "mashup",
+        pairId,
+        variationLabel: "M",
+        artistName: song1.artistName || user.username || undefined,
+        copyrightHolder: "DGB AUDIO",
+      });
+
+      console.log(`[Mashup] Created song ${newSong.id} for mashup of songs ${songId1} and ${songId2}`);
+      await storage.updateSongStatus(newSong.id, "processing");
+
+      processMashupGeneration(newSong.id, audioUrl1, audioUrl2, {
+        style: mashupStyle,
+        title: mashupTitle,
+        instrumental: instrumental === true,
+        customMode: customMode !== false,
+      });
+
+      const remainingCredits = isUnlimited ? -1 : await storage.getUserCredits(userId);
+      res.status(202).json({ ...newSong, status: "processing", remainingCredits });
+    } catch (err: any) {
+      console.error("[Mashup] Error:", err.message);
+      res.status(500).json({ message: "Mashup generation failed" });
     }
   });
 

@@ -33,7 +33,7 @@ DAGRABA Studio employs a microservices-oriented architecture with a clear separa
     - **SAO Training Pipeline:** Fine-tuning custom instrument kits using OpenAI and cloud GPU.
 - **Stem Separation Engine:** Multi-tier fallback system (Private Cloud GPU, Replicate serverless, Generic API, MusicGPT) producing vocal, drum, bass, and melody stems.
 - **Workers:** Background workers handle asynchronous processing for music generation and audio transformations.
-- **Key Features:** DGB AUDIO branded engine with style presets, Bachata Mode, AI Lyrics Generator, Song History tracking, Artist Monetization Ecosystem (PRO registrations, earnings, fan gifts, wallets), Discography management (with Spotify import), and a Copyright & Publishing Hub.
+- **Key Features:** DGB AUDIO branded engine with style presets, Bachata Mode, AI Lyrics Generator, Song History tracking, Artist Monetization Ecosystem (PRO registrations, earnings, fan gifts, wallets), Discography management (with Spotify import), Copyright & Publishing Hub, and AI Mashup (Kie.ai Mashup API blending 2 existing tracks into new compositions).
 - **Internationalization:** Full i18n support with `react-i18next`, defaulting to Spanish.
 - **RunPod Serverless Integration:** Manages music generation, model training, and stem separation endpoints with webhook callbacks.
 

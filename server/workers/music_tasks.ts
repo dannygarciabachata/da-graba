@@ -5,7 +5,7 @@ import {
 } from "../core/generic_api_engine";
 import { generateCreativeLyrics, enrichPromptForMusicGen } from "../core/antigravity_engine";
 import { executeOperation, pollOperation } from "../core/provider_pipeline";
-import { pollKieTask } from "../core/kie_engine";
+import { pollKieTask, submitKieMashup, canUseKie } from "../core/kie_engine";
 import { generateImageBuffer } from "../replit_integrations/image/client";
 import * as fs from "fs";
 import * as path from "path";
@@ -466,4 +466,93 @@ export function startRunPodTimeout(songId: number, timeoutMs: number) {
   }, timeoutMs);
 
   pendingRunPodSongs.set(songId, timer);
+}
+
+export async function processMashupGeneration(
+  songId: number,
+  audioUrl1: string,
+  audioUrl2: string,
+  options: {
+    style?: string;
+    title?: string;
+    instrumental?: boolean;
+    customMode?: boolean;
+  }
+) {
+  try {
+    console.log(`[Mashup Worker] Starting mashup for song ${songId}`);
+
+    if (!canUseKie()) {
+      console.error(`[Mashup Worker] Kie.ai not available for mashup`);
+      await storage.updateSongStatus(songId, "failed", undefined, "Mashup service not available. Kie.ai API key not configured.");
+      return;
+    }
+
+    const result = await submitKieMashup(audioUrl1, audioUrl2, {
+      style: options.style || "Bachata",
+      title: options.title || "DAGRABA Mashup",
+      instrumental: options.instrumental ?? false,
+      customMode: options.customMode ?? true,
+      model: "V5",
+    });
+
+    console.log(`[Mashup Worker] Task ${result.taskId} submitted for song ${songId}`);
+    await storage.updateSongTaskId(songId, result.taskId);
+
+    const maxPolls = 40;
+    const pollInterval = 15000;
+    let pollCount = 0;
+
+    const timer = setInterval(async () => {
+      pollCount++;
+      try {
+        const song = await storage.getSong(songId);
+        if (!song || song.status === "completed" || song.status === "failed") {
+          clearInterval(timer);
+          return;
+        }
+
+        if (pollCount >= maxPolls) {
+          console.log(`[Mashup Worker] Song ${songId} timed out after ${maxPolls * pollInterval / 1000}s`);
+          await storage.updateSongStatus(songId, "failed", undefined, "Mashup generation timed out. Please try again.");
+          clearInterval(timer);
+          return;
+        }
+
+        console.log(`[Mashup Worker] Poll ${pollCount}/${maxPolls} for song ${songId} task ${result.taskId}`);
+
+        const pollResult = await pollKieTask(result.taskId, 14000, 14000);
+
+        if (pollResult.audioUrl) {
+          await storage.updateSongStatus(songId, "completed", pollResult.audioUrl);
+          if (pollResult.imageUrl) {
+            await storage.updateSongImage(songId, pollResult.imageUrl);
+          }
+          if (pollResult.kieAudioId) {
+            try {
+              await storage.updateSongKieAudioId(songId, pollResult.kieAudioId);
+            } catch {}
+          }
+          console.log(`[Mashup Worker] Song ${songId} mashup completed`);
+          clearInterval(timer);
+
+          generateSongCoverImage(songId, `Mashup fusion ${options.style || "Bachata"}`, options.style || "Bachata").catch(() => {});
+        }
+      } catch (err: any) {
+        console.error(`[Mashup Worker] Poll error for song ${songId}:`, err.message);
+        if (pollCount >= maxPolls) {
+          await storage.updateSongStatus(songId, "failed", undefined, "Mashup generation error. Please try again.");
+          clearInterval(timer);
+        }
+      }
+    }, pollInterval);
+
+  } catch (err: any) {
+    console.error(`[Mashup Worker] Mashup failed for song ${songId}:`, err.message);
+    let userMsg = "Mashup generation failed. Please try again.";
+    if (err.message.includes("CREDITS_EXHAUSTED")) {
+      userMsg = "Mashup service credits exhausted. Please contact admin.";
+    }
+    await storage.updateSongStatus(songId, "failed", undefined, userMsg);
+  }
 }

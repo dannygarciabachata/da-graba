@@ -414,6 +414,88 @@ export async function submitKieExtend(
   return { taskId };
 }
 
+export interface KieMashupRequest {
+  uploadUrlList: [string, string];
+  prompt?: string;
+  model?: "V5" | "V4_5PLUS" | "V4_5" | "V4_5ALL" | "V4";
+  customMode?: boolean;
+  instrumental?: boolean;
+  style?: string;
+  title?: string;
+  vocalGender?: "m" | "f";
+  styleWeight?: number;
+  weirdnessConstraint?: number;
+  audioWeight?: number;
+  callBackUrl?: string;
+}
+
+export async function submitKieMashup(
+  audioUrl1: string,
+  audioUrl2: string,
+  options: {
+    prompt?: string;
+    style?: string;
+    title?: string;
+    instrumental?: boolean;
+    customMode?: boolean;
+    model?: "V5" | "V4_5PLUS" | "V4_5" | "V4_5ALL" | "V4";
+    vocalGender?: "m" | "f";
+    styleWeight?: number;
+    weirdnessConstraint?: number;
+    audioWeight?: number;
+    callbackUrl?: string;
+  } = {}
+): Promise<{ taskId: string }> {
+  console.log(`[Kie.ai] Submitting mashup generation`);
+  console.log(`[Kie.ai] Audio 1: ${audioUrl1.substring(0, 80)}`);
+  console.log(`[Kie.ai] Audio 2: ${audioUrl2.substring(0, 80)}`);
+
+  const callBackUrl = options.callbackUrl || getDefaultCallbackUrl();
+  const body: Record<string, any> = {
+    uploadUrlList: [audioUrl1, audioUrl2],
+    model: options.model || "V5",
+    callBackUrl,
+  };
+
+  if (options.customMode) {
+    body.customMode = true;
+    body.style = (options.style || "Bachata").substring(0, 1000);
+    body.title = (options.title || "DAGRABA Mashup").substring(0, 80);
+    if (!options.instrumental && options.prompt) {
+      body.prompt = options.prompt.substring(0, 5000);
+    }
+    body.instrumental = options.instrumental ?? false;
+    if (options.vocalGender) body.vocalGender = options.vocalGender;
+    if (options.styleWeight !== undefined) body.styleWeight = options.styleWeight;
+    if (options.weirdnessConstraint !== undefined) body.weirdnessConstraint = options.weirdnessConstraint;
+    if (options.audioWeight !== undefined) body.audioWeight = options.audioWeight;
+  } else {
+    body.customMode = false;
+    body.prompt = (options.prompt || "Mashup fusion").substring(0, 500);
+    body.instrumental = options.instrumental ?? false;
+  }
+
+  console.log(`[Kie.ai] Mashup body: customMode=${body.customMode}, style=${body.style || "N/A"}, model=${body.model}`);
+
+  const result = await kieFetch("/generate/mashup", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+  if (result?.code === 402 || result?.msg?.toLowerCase().includes("credits insufficient")) {
+    throw new Error("KIE_CREDITS_EXHAUSTED: Kie.ai credits depleted for mashup");
+  }
+
+  const taskId = result?.data?.taskId || result?.taskId;
+  if (!taskId) {
+    console.error(`[Kie.ai] Mashup no taskId:`, JSON.stringify(result).substring(0, 500));
+    throw new Error("Kie.ai mashup returned no task ID");
+  }
+
+  console.log(`[Kie.ai] Mashup task created: ${taskId}`);
+  return { taskId };
+}
+
 export async function submitKieCover(
   audioUrl: string,
   style: string,

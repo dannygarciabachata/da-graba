@@ -35,6 +35,7 @@ import {
   Guitar,
   Check,
   Zap,
+  Shuffle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -52,11 +53,12 @@ interface SongActionMenuProps {
   };
   onDesignCover?: () => void;
   onOpenStudio?: () => void;
+  onMashup?: () => void;
   showLikeButtons?: boolean;
   compact?: boolean;
 }
 
-export function SongActionMenu({ song, onDesignCover, onOpenStudio, showLikeButtons = true, compact = false }: SongActionMenuProps) {
+export function SongActionMenu({ song, onDesignCover, onOpenStudio, onMashup, showLikeButtons = true, compact = false }: SongActionMenuProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -271,6 +273,16 @@ export function SongActionMenu({ song, onDesignCover, onOpenStudio, showLikeButt
             >
               <Music className="h-4 w-4 mr-2" />
               {t("songMenu.studio")}
+            </DropdownMenuItem>
+          )}
+
+          {isCompleted && onMashup && (
+            <DropdownMenuItem
+              onClick={() => onMashup()}
+              data-testid={`menu-mashup-${song.id}`}
+            >
+              <Shuffle className="h-4 w-4 mr-2" />
+              {t("mashup.title", "Mashup")}
             </DropdownMenuItem>
           )}
 

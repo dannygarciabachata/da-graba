@@ -15,7 +15,9 @@ import {
   Loader2,
   Library,
   Music,
+  Shuffle,
 } from "lucide-react";
+import { MashupDialog } from "@/components/MashupDialog";
 import { CoverArtDesigner } from "@/components/CoverArtDesigner";
 import { AudioSpectrum } from "@/components/AudioSpectrum";
 import { SongActionMenu } from "@/components/SongActionMenu";
@@ -29,6 +31,8 @@ export default function LibraryPage() {
   const togglePublish = useTogglePublish();
   const { state: playerState, play: globalPlay, togglePlayPause } = usePlayer();
   const [designCoverFor, setDesignCoverFor] = useState<any>(null);
+  const [mashupOpen, setMashupOpen] = useState(false);
+  const [mashupPreselect, setMashupPreselect] = useState<number | undefined>(undefined);
 
   if (!user) return null;
 
@@ -62,9 +66,21 @@ export default function LibraryPage() {
     <div className="h-full flex flex-col">
       <div className="px-4 md:px-6 py-6 border-b border-white/5">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-1">
-            <Library className="h-5 w-5 text-primary" />
-            <h1 className="text-xl font-bold" data-testid="text-library-title">{t('library.title')}</h1>
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <div className="flex items-center gap-3">
+              <Library className="h-5 w-5 text-primary" />
+              <h1 className="text-xl font-bold" data-testid="text-library-title">{t('library.title')}</h1>
+            </div>
+            {completedSongs.length >= 2 && (
+              <Button
+                variant="outline"
+                onClick={() => setMashupOpen(true)}
+                data-testid="button-open-mashup"
+              >
+                <Shuffle className="h-4 w-4 mr-2" />
+                {t('mashup.title', 'Mashup')}
+              </Button>
+            )}
           </div>
           <p className="text-sm text-muted-foreground pl-8">
             {t('library.subtitle')}
@@ -159,6 +175,10 @@ export default function LibraryPage() {
                         song={song}
                         onDesignCover={() => setDesignCoverFor(designCoverFor?.id === song.id ? null : song)}
                         onOpenStudio={() => setLocation("/studio")}
+                        onMashup={() => {
+                          setMashupPreselect(song.id);
+                          setMashupOpen(true);
+                        }}
                       />
                     </div>
                   </Card>
@@ -185,6 +205,15 @@ export default function LibraryPage() {
           )}
         </div>
       </div>
+
+      <MashupDialog
+        open={mashupOpen}
+        onOpenChange={(open) => {
+          setMashupOpen(open);
+          if (!open) setMashupPreselect(undefined);
+        }}
+        preSelectedSongId={mashupPreselect}
+      />
     </div>
   );
 }
