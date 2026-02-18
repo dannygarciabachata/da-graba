@@ -158,6 +158,24 @@ export async function getJobStatus(
   return res.json();
 }
 
+export async function pollJobUntilDone(
+  endpointType: "music" | "training" | "stems",
+  jobId: string,
+  timeoutMs: number = 120000,
+  intervalMs: number = 3000
+): Promise<ServerlessJobResponse> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const status = await getJobStatus(endpointType, jobId);
+    if (status.status === "COMPLETED" || status.status === "FAILED" || status.status === "CANCELLED" || status.status === "TIMED_OUT") {
+      return status;
+    }
+    console.log(`[RunPod Poll] Job ${jobId}: ${status.status}, waiting ${intervalMs}ms...`);
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+  return { id: jobId, status: "TIMED_OUT", error: `Polling timeout after ${timeoutMs / 1000}s` };
+}
+
 export async function cancelJob(
   endpointType: "music" | "training" | "stems",
   jobId: string

@@ -11,7 +11,7 @@ import {
   Plus, Trash2, Upload, Loader2, Music, FileText,
   Play, CheckCircle, XCircle, Clock, ArrowLeft,
   Database, FolderOpen, Zap, ExternalLink, Search,
-  Piano, HardDrive, RefreshCw,
+  Piano, HardDrive, RefreshCw, Download,
 } from "lucide-react";
 import type { TrainingDataset, TrainingFile } from "@shared/schema";
 
@@ -201,8 +201,10 @@ function InstrumentStatusCard() {
   const { toast } = useToast();
   const [checking, setChecking] = useState(false);
   const [building, setBuilding] = useState(false);
+  const [installing, setInstalling] = useState(false);
   const [status, setStatus] = useState<any>(null);
   const [buildOutput, setBuildOutput] = useState<string | null>(null);
+  const [installOutput, setInstallOutput] = useState<string | null>(null);
 
   const checkStatus = async () => {
     setChecking(true);
@@ -214,6 +216,27 @@ function InstrumentStatusCard() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setChecking(false);
+    }
+  };
+
+  const installInstruments = async () => {
+    setInstalling(true);
+    setInstallOutput(null);
+    try {
+      toast({ title: "Instalando...", description: "Instalando FluidSynth, SoundFont y SAO Finetune en RunPod. Esto puede tardar varios minutos." });
+      const res = await apiRequest("POST", "/api/admin/gpu/setup");
+      const data = await res.json();
+      setInstallOutput(data.output);
+      if (data.success) {
+        toast({ title: "Instalacion Completa", description: "Todos los instrumentos virtuales fueron instalados exitosamente." });
+        checkStatus();
+      } else {
+        toast({ title: "Instalacion Parcial", description: "Algunos componentes fallaron. Revisa el log.", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setInstalling(false);
     }
   };
 
@@ -237,6 +260,8 @@ function InstrumentStatusCard() {
     }
   };
 
+  const anyBusy = checking || building || installing;
+
   return (
     <Card data-testid="card-instrument-status">
       <CardHeader className="pb-3">
@@ -246,30 +271,34 @@ function InstrumentStatusCard() {
             <CardTitle className="text-base">Motor de Instrumentos</CardTitle>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button size="sm" variant="outline" onClick={checkStatus} disabled={checking || building} data-testid="button-check-instruments">
+            <Button size="sm" variant="outline" onClick={checkStatus} disabled={anyBusy} data-testid="button-check-instruments">
               {checking ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
               Verificar
             </Button>
-            <Button size="sm" onClick={buildVst3} disabled={building || checking} data-testid="button-build-vst3">
+            <Button size="sm" variant="outline" onClick={installInstruments} disabled={anyBusy} data-testid="button-install-instruments">
+              {installing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
+              {installing ? "Instalando..." : "GPU Setup"}
+            </Button>
+            <Button size="sm" onClick={buildVst3} disabled={anyBusy} data-testid="button-build-vst3">
               {building ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Zap className="h-4 w-4 mr-1" />}
               {building ? "Compilando..." : "Build VST3"}
             </Button>
           </div>
         </div>
         <CardDescription>
-          FluidSynth (GM SoundFont) + DAGRABA Sampler VST3 (instrumentos custom de Bachata)
+          FluidSynth (GM SoundFont) + SAO Instrumental Finetune + DAGRABA Sampler VST3
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {!status ? (
           <div className="text-center py-4 text-muted-foreground">
             <HardDrive className="h-8 w-8 mx-auto mb-2 opacity-40" />
-            <p className="text-sm">Pulsa &quot;Verificar&quot; para comprobar el estado de los motores de instrumentos en RunPod.</p>
-            <p className="text-xs mt-1">Se necesita un pod RunPod activo con Jupyter para verificar.</p>
+            <p className="text-sm">Pulsa &quot;Verificar&quot; para comprobar el estado de los instrumentos en RunPod Serverless.</p>
+            <p className="text-xs mt-1">Pulsa &quot;GPU Setup&quot; para instalar FluidSynth, SoundFont y SAO Finetune.</p>
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               <div className="border rounded-md p-3 space-y-1">
                 <div className="flex items-center gap-2">
                   {status.soundfontInstalled ? (
@@ -296,6 +325,19 @@ function InstrumentStatusCard() {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {status.fluidsynthInstalled ? "Instalado" : "No instalado"}
+                </p>
+              </div>
+              <div className="border rounded-md p-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  {status.saoFinetuneInstalled ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-orange-500" />
+                  )}
+                  <span className="text-sm font-medium">SAO Finetune</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {status.saoFinetuneInstalled ? "Modelo cargado" : "No descargado"}
                 </p>
               </div>
               <div className="border rounded-md p-3 space-y-1">
@@ -328,11 +370,19 @@ function InstrumentStatusCard() {
                 {status.details}
               </pre>
             )}
-            {!status.soundfontInstalled && (
+            {(!status.soundfontInstalled || !status.fluidsynthInstalled || !status.saoFinetuneInstalled) && (
               <p className="text-xs text-muted-foreground">
-                Ejecuta &quot;GPU Setup&quot; desde la pestana de RunPod para instalar FluidSynth y FluidR3_GM.
+                Pulsa &quot;GPU Setup&quot; para instalar los componentes faltantes (FluidSynth, SoundFont, SAO Finetune).
               </p>
             )}
+          </div>
+        )}
+        {installOutput && (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">Log de Instalacion:</p>
+            <pre className="text-xs bg-muted p-2 rounded-md overflow-auto max-h-48 whitespace-pre-wrap" data-testid="text-install-output">
+              {installOutput}
+            </pre>
           </div>
         )}
         {buildOutput && (

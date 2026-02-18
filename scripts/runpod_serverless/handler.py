@@ -797,6 +797,174 @@ def handle_separate_stems(job_input: dict) -> dict:
 
 
 # ============================================================
+# ACTION: check_instruments (check FluidSynth/VST3/samples status)
+# ============================================================
+def handle_check_instruments(job_input: dict) -> dict:
+    print("[Instruments] Checking instrument status...")
+    result = {
+        "status": "completed",
+        "soundfontInstalled": False,
+        "fluidsynthInstalled": False,
+        "soundfontPath": "/runpod-volume/instruments/soundfonts/FluidR3_GM.sf2",
+        "soundfontSize": 0,
+        "gmInstrumentsAvailable": 0,
+        "vst3Installed": False,
+        "vst3Path": "/runpod-volume/vst3/DAGRABA_Sampler.vst3",
+        "sampleDirs": 0,
+        "sampleFiles": 0,
+        "details": "",
+    }
+
+    details = []
+
+    sf_path = result["soundfontPath"]
+    if os.path.exists(sf_path):
+        size = os.path.getsize(sf_path)
+        result["soundfontSize"] = size
+        if size > 100_000_000:
+            result["soundfontInstalled"] = True
+            result["gmInstrumentsAvailable"] = 128
+            details.append(f"FluidR3_GM.sf2: {size / 1e6:.0f} MB")
+            details.append("128 GM melodic instruments + 47 percussion kits ready")
+        else:
+            details.append(f"FluidR3_GM.sf2: corrupt ({size} bytes)")
+    else:
+        details.append("FluidR3_GM.sf2: NOT INSTALLED")
+
+    r = subprocess.run(["which", "fluidsynth"], capture_output=True, text=True, timeout=5)
+    result["fluidsynthInstalled"] = r.returncode == 0
+    if r.returncode == 0:
+        details.append(f"FluidSynth binary: {r.stdout.strip()}")
+    else:
+        details.append("FluidSynth: NOT INSTALLED")
+
+    try:
+        subprocess.run([sys.executable, "-c", "import fluidsynth"], capture_output=True, text=True, timeout=10, check=True)
+        details.append("pyfluidsynth: installed")
+    except Exception:
+        details.append("pyfluidsynth: NOT INSTALLED")
+
+    vst3_path = result["vst3Path"]
+    result["vst3Installed"] = os.path.exists(vst3_path)
+    details.append("")
+    details.append("=== VST3 Plugin ===")
+    if result["vst3Installed"]:
+        details.append(f"DAGRABA Sampler VST3: INSTALLED at {vst3_path}")
+        so_files = []
+        for root, dirs, files in os.walk(vst3_path):
+            for f in files:
+                if f.endswith(".so"):
+                    fp = os.path.join(root, f)
+                    so_files.append(f"{f} ({os.path.getsize(fp) / 1024:.0f} KB)")
+        if so_files:
+            details.append(f"  Binary: {', '.join(so_files)}")
+    else:
+        details.append("DAGRABA Sampler VST3: NOT BUILT")
+
+    samples_dir = "/runpod-volume/vst3/samples"
+    if os.path.exists(samples_dir):
+        inst_dirs = [d for d in os.listdir(samples_dir) if os.path.isdir(os.path.join(samples_dir, d))]
+        sample_count = 0
+        for d in inst_dirs:
+            wavs = [f for f in os.listdir(os.path.join(samples_dir, d)) if f.endswith(".wav")]
+            sample_count += len(wavs)
+        details.append(f"  Sample dirs: {len(inst_dirs)}, WAV files: {sample_count}")
+        result["sampleDirs"] = len(inst_dirs)
+        result["sampleFiles"] = sample_count
+    else:
+        details.append("  Samples directory: not created yet")
+
+    sao_ft = SAO_FINETUNE_PATH
+    details.append("")
+    details.append("=== SAO Instrumental Finetune ===")
+    if sao_ft.exists():
+        details.append(f"  Checkpoint: PRESENT ({sao_ft.stat().st_size / 1024**3:.1f} GB)")
+    else:
+        details.append(f"  Checkpoint: NOT CACHED (will download on first use)")
+
+    result["saoFinetuneInstalled"] = sao_ft.exists()
+    result["details"] = "\n".join(details)
+    print(f"[Instruments] Status check complete: SF={result['soundfontInstalled']}, FS={result['fluidsynthInstalled']}, VST3={result['vst3Installed']}, SAO-FT={result['saoFinetuneInstalled']}")
+    return result
+
+
+# ============================================================
+# ACTION: install_instruments (install FluidSynth + SoundFont + deps)
+# ============================================================
+def handle_install_instruments(job_input: dict) -> dict:
+    print("[Install] Starting instrument installation...")
+    results = []
+
+    try:
+        r = subprocess.run(["which", "fluidsynth"], capture_output=True, text=True, timeout=5)
+        if r.returncode == 0:
+            results.append(f"FluidSynth: already installed ({r.stdout.strip()})")
+        else:
+            results.append("Installing FluidSynth...")
+            subprocess.run(["apt-get", "update", "-qq"], capture_output=True, text=True, timeout=60)
+            r = subprocess.run(["apt-get", "install", "-y", "-qq", "fluidsynth", "libfluidsynth-dev"],
+                               capture_output=True, text=True, timeout=120)
+            results.append(f"FluidSynth install: {'OK' if r.returncode == 0 else r.stderr[:200]}")
+
+        pip_cmd = [sys.executable, "-m", "pip", "install", "--quiet", "--break-system-packages"]
+        for pkg_import, pkg_pip in [("fluidsynth", "pyfluidsynth"), ("mido", "mido"), ("pyloudnorm", "pyloudnorm")]:
+            r = subprocess.run([sys.executable, "-c", f"import {pkg_import}"], capture_output=True, text=True, timeout=10)
+            if r.returncode == 0:
+                results.append(f"{pkg_pip}: already installed")
+            else:
+                results.append(f"Installing {pkg_pip}...")
+                r = subprocess.run(pip_cmd + [pkg_pip], capture_output=True, text=True, timeout=120)
+                results.append(f"{pkg_pip}: {'OK' if r.returncode == 0 else r.stderr[:200]}")
+
+        sf_dir = "/runpod-volume/instruments/soundfonts"
+        sf_path = os.path.join(sf_dir, "FluidR3_GM.sf2")
+        os.makedirs(sf_dir, exist_ok=True)
+        if os.path.exists(sf_path) and os.path.getsize(sf_path) > 100_000_000:
+            results.append(f"FluidR3_GM.sf2: already present ({os.path.getsize(sf_path) / 1e6:.0f} MB)")
+        else:
+            results.append("Downloading FluidR3_GM.sf2 (~141 MB)...")
+            r = subprocess.run(["wget", "-q", "-O", sf_path,
+                                "https://musical-artifacts.com/artifacts/738/FluidR3_GM.sf2"],
+                               capture_output=True, text=True, timeout=300)
+            if r.returncode == 0 and os.path.exists(sf_path) and os.path.getsize(sf_path) > 100_000_000:
+                results.append(f"FluidR3_GM.sf2: downloaded ({os.path.getsize(sf_path) / 1e6:.0f} MB)")
+            else:
+                results.append(f"FluidR3_GM.sf2: download FAILED - {r.stderr[:200]}")
+
+        download_sao = job_input.get("download_sao_finetune", True)
+        if download_sao and not SAO_FINETUNE_PATH.exists():
+            results.append(f"Downloading SAO Instrumental Finetune from {SAO_FINETUNE_REPO}...")
+            try:
+                download_sao_finetune()
+                results.append(f"SAO Finetune: OK ({SAO_FINETUNE_PATH.stat().st_size / 1024**3:.1f} GB)")
+            except Exception as e:
+                results.append(f"SAO Finetune: FAILED - {str(e)[:200]}")
+        elif SAO_FINETUNE_PATH.exists():
+            results.append(f"SAO Finetune: already cached ({SAO_FINETUNE_PATH.stat().st_size / 1024**3:.1f} GB)")
+
+        has_errors = any("FAILED" in r for r in results)
+        output = "\n".join(results)
+        print(f"[Install] Complete. Errors: {has_errors}")
+        print(output)
+        return {
+            "status": "completed" if not has_errors else "partial",
+            "success": not has_errors,
+            "output": output,
+        }
+
+    except Exception as e:
+        error_msg = str(e)
+        print(f"[Install] Fatal error: {traceback.format_exc()}")
+        results.append(f"FATAL: {error_msg}")
+        return {
+            "status": "failed",
+            "success": False,
+            "output": "\n".join(results),
+            "error": error_msg,
+        }
+
+
+# ============================================================
 # MAIN HANDLER (RunPod Serverless entry point)
 # ============================================================
 def handler(job):
@@ -815,6 +983,10 @@ def handler(job):
             return handle_train_model(job_input)
         elif action == "separate_stems":
             return handle_separate_stems(job_input)
+        elif action == "check_instruments":
+            return handle_check_instruments(job_input)
+        elif action == "install_instruments":
+            return handle_install_instruments(job_input)
         elif action == "health_check":
             return {
                 "status": "healthy",

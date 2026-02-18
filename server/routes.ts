@@ -4588,8 +4588,31 @@ export async function registerRoutes(
   app.post("/api/admin/gpu/setup", async (req, res) => {
     if (!(await requireRole(req, res, "super_admin"))) return;
     try {
-      const result = await setupGpuEnvironment();
-      res.json(result);
+      const serverless = await import("./core/runpod_serverless");
+      if (serverless.isServerlessConfigured("music")) {
+        console.log("[Admin] Installing instruments via RunPod Serverless...");
+        const job = await serverless.submitSyncJob("music", {
+          action: "install_instruments",
+          download_sao_finetune: true,
+        });
+        if (job.status === "COMPLETED" && job.output) {
+          res.json({ success: job.output.success !== false, output: job.output.output || JSON.stringify(job.output) });
+        } else if (job.status === "FAILED") {
+          res.json({ success: false, output: job.error || "Job failed" });
+        } else {
+          const polled = await serverless.pollJobUntilDone("music", job.id, 600000);
+          if (polled.status === "COMPLETED" && polled.output) {
+            res.json({ success: polled.output.success !== false, output: polled.output.output || JSON.stringify(polled.output) });
+          } else {
+            res.json({ success: false, output: polled.error || `Job status: ${polled.status}` });
+          }
+        }
+      } else if (process.env.RUNPOD_BASE_URL) {
+        const result = await setupGpuEnvironment();
+        res.json(result);
+      } else {
+        res.status(400).json({ success: false, output: "No RunPod connection configured. Set RUNPOD_ENDPOINT_MUSIC + RUNPOD_API_KEY for serverless, or RUNPOD_BASE_URL for Jupyter." });
+      }
     } catch (err: any) {
       res.status(500).json({ success: false, output: err.message });
     }
@@ -4598,9 +4621,29 @@ export async function registerRoutes(
   app.get("/api/admin/gpu/instruments", async (req, res) => {
     if (!(await requireRole(req, res, "super_admin"))) return;
     try {
-      const { checkInstrumentStatus } = await import("./core/runpod_client");
-      const result = await checkInstrumentStatus();
-      res.json(result);
+      const serverless = await import("./core/runpod_serverless");
+      if (serverless.isServerlessConfigured("music")) {
+        console.log("[Admin] Checking instruments via RunPod Serverless...");
+        const job = await serverless.submitSyncJob("music", { action: "check_instruments" });
+        if (job.status === "COMPLETED" && job.output) {
+          res.json({ success: true, ...job.output });
+        } else if (job.status === "FAILED") {
+          res.json({ success: false, error: job.error || "Job failed", soundfontInstalled: false, fluidsynthInstalled: false, soundfontPath: "", soundfontSize: 0, gmInstrumentsAvailable: 0, details: job.error || "Serverless job failed" });
+        } else {
+          const polled = await serverless.pollJobUntilDone("music", job.id, 120000);
+          if (polled.status === "COMPLETED" && polled.output) {
+            res.json({ success: true, ...polled.output });
+          } else {
+            res.json({ success: false, error: polled.error || `Job status: ${polled.status}`, soundfontInstalled: false, fluidsynthInstalled: false, soundfontPath: "", soundfontSize: 0, gmInstrumentsAvailable: 0, details: polled.error || "Timeout" });
+          }
+        }
+      } else if (process.env.RUNPOD_BASE_URL) {
+        const { checkInstrumentStatus } = await import("./core/runpod_client");
+        const result = await checkInstrumentStatus();
+        res.json(result);
+      } else {
+        res.json({ success: false, error: "No RunPod connection configured", soundfontInstalled: false, fluidsynthInstalled: false, soundfontPath: "", soundfontSize: 0, gmInstrumentsAvailable: 0, details: "Configure RUNPOD_ENDPOINT_MUSIC + RUNPOD_API_KEY for serverless, or RUNPOD_BASE_URL for Jupyter." });
+      }
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
