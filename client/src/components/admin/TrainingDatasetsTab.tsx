@@ -583,7 +583,7 @@ function EndpointConfigCard() {
                     <Input
                       type="text"
                       defaultValue={config.gpuIds || ""}
-                      placeholder="NVIDIA L40S 48GB,NVIDIA A40 48GB"
+                      placeholder="AMPERE_48,ADA_48_PRO"
                       className="text-sm"
                       data-testid="input-gpu-ids"
                       id="input-gpu-ids"
@@ -597,7 +597,7 @@ function EndpointConfigCard() {
                       {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Guardar"}
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">Alternativas: NVIDIA A40 48GB, NVIDIA RTX A6000, NVIDIA A100 80GB</p>
+                  <p className="text-xs text-muted-foreground">Codigos GPU: AMPERE_16 (A4000), AMPERE_24 (RTX3090/A5000), AMPERE_48 (A40/A6000), AMPERE_80 (A100), ADA_24 (L4/4090), ADA_48_PRO (L40S)</p>
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Idle Timeout (seg)</label>

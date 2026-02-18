@@ -1,4 +1,5 @@
 const RUNPOD_API_KEY = () => process.env.RUNPOD_API_KEY || "";
+const RUNPOD_ACCOUNT_API_KEY = () => process.env.RUNPOD_ACCOUNT_API_KEY || process.env.RUNPOD_API_KEY || "";
 
 const BASE_URL = "https://api.runpod.ai/v2";
 
@@ -285,19 +286,23 @@ export async function getEndpointConfig(): Promise<{
   }
 
   try {
-    const apiKey = RUNPOD_API_KEY();
-    const query = `query { myself { serverlessDiscount endpoints { id name gpuIds idleTimeout scalerType scalerValue workersMax workersMin templateId } } }`;
+    const apiKey = RUNPOD_ACCOUNT_API_KEY();
+    const query = `query { myself { endpoints { id name gpuIds idleTimeout scalerType scalerValue workersMax workersMin templateId } } }`;
     const res = await fetchWithTimeout(`https://api.runpod.io/graphql?api_key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query }),
     }, 15000);
 
+    const data = await res.json();
+    if (data.errors) {
+      console.error(`[RunPod GraphQL] Errors:`, data.errors);
+      return { endpointId, gpuIds: "", maxWorkers: 0, minWorkers: 0, idleTimeout: 0, error: data.errors[0]?.message || "GraphQL error" };
+    }
     if (!res.ok) {
       return { endpointId, gpuIds: "", maxWorkers: 0, minWorkers: 0, idleTimeout: 0, error: `API ${res.status}` };
     }
 
-    const data = await res.json();
     const endpoints = data?.data?.myself?.endpoints || [];
     const ep = endpoints.find((e: any) => e.id === endpointId);
     if (!ep) {
@@ -328,7 +333,7 @@ export async function updateEndpointConfig(params: {
   }
 
   try {
-    const apiKey = RUNPOD_API_KEY();
+    const apiKey = RUNPOD_ACCOUNT_API_KEY();
     const mutations: string[] = [];
     if (params.maxWorkers !== undefined) mutations.push(`workersMax: ${params.maxWorkers}`);
     if (params.minWorkers !== undefined) mutations.push(`workersMin: ${params.minWorkers}`);
