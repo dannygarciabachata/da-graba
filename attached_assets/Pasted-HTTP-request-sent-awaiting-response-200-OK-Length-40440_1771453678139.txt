@@ -1,0 +1,33 @@
+HTTP request sent, awaiting response... 200 OK
+Length: 40440 (39K) [text/plain]
+Saving to: ‘/runpod-volume/dagraba/handler.py’
+
+/runpod-volume/dagraba/handler.py                    100%[=====================================================================================================================>]  39.49K  --.-KB/s    in 0.06s   
+
+2026-02-18 22:27:09 (694 KB/s) - ‘/runpod-volume/dagraba/handler.py’ saved [40440/40440]
+
+root@b8f2f1257186:/workspace# wget -O /runpod-volume/dagraba/start.sh "https://bb23a96a-13f9-4f51-8748-a7a8c5d87cad-00-1j7j4o9jvk8ua.janeway.replit.dev/api/internal/runpod-startsh"
+--2026-02-18 22:27:17--  https://bb23a96a-13f9-4f51-8748-a7a8c5d87cad-00-1j7j4o9jvk8ua.janeway.replit.dev/api/internal/runpod-startsh
+Resolving bb23a96a-13f9-4f51-8748-a7a8c5d87cad-00-1j7j4o9jvk8ua.janeway.replit.dev (bb23a96a-13f9-4f51-8748-a7a8c5d87cad-00-1j7j4o9jvk8ua.janeway.replit.dev)... 34.148.134.19
+Connecting to bb23a96a-13f9-4f51-8748-a7a8c5d87cad-00-1j7j4o9jvk8ua.janeway.replit.dev (bb23a96a-13f9-4f51-8748-a7a8c5d87cad-00-1j7j4o9jvk8ua.janeway.replit.dev)|34.148.134.19|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 5208 (5.1K) [text/plain]
+Saving to: ‘/runpod-volume/dagraba/start.sh’
+
+/runpod-volume/dagraba/start.sh                      100%[=====================================================================================================================>]   5.09K  --.-KB/s    in 0s      
+
+2026-02-18 22:27:17 (25.6 MB/s) - ‘/runpod-volume/dagraba/start.sh’ saved [5208/5208]
+
+root@b8f2f1257186:/workspace# wc -c /runpod-volume/dagraba/handler.py /runpod-volume/dagraba/start.sh
+head -3 /runpod-volume/dagraba/handler.py
+head -3 /runpod-volume/dagraba/start.sh
+40440 /runpod-volume/dagraba/handler.py
+ 5208 /runpod-volume/dagraba/start.sh
+45648 total
+"""
+DAGRABA Studio - RunPod Serverless Handler
+Handles music generation (HeartMuLa/SAO), model training, and stem separation.
+#!/bin/bash
+# =============================================================
+# DAGRABA Studio - RunPod Serverless Startup Script v4
+root@b8f2f1257186:/workspace# 

@@ -90,24 +90,6 @@ export async function registerRoutes(
     res.json({ status: "ok", timestamp: Date.now() });
   });
 
-  app.get("/api/internal/runpod-handler", async (_req, res) => {
-    try {
-      const fs = await import("fs");
-      const content = fs.readFileSync("scripts/runpod_serverless/handler.py", "utf-8");
-      res.setHeader("Content-Type", "text/plain; charset=utf-8");
-      res.send(content);
-    } catch (e: any) { res.status(404).send("Error: " + e.message); }
-  });
-
-  app.get("/api/internal/runpod-startsh", async (_req, res) => {
-    try {
-      const fs = await import("fs");
-      const content = fs.readFileSync("scripts/runpod_serverless/start.sh", "utf-8");
-      res.setHeader("Content-Type", "text/plain; charset=utf-8");
-      res.send(content);
-    } catch (e: any) { res.status(404).send("Error: " + e.message); }
-  });
-
   // ========== MUSIC ROUTES ==========
 
   app.get(api.songs.list.path, async (req, res) => {
