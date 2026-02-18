@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import Landing from "@/pages/Landing";
 import palettaBg from "@assets/palettabg_1771282011333.png";
+import HomePage from "@/pages/HomePage";
 import CreatePage from "@/pages/CreatePage";
 import LibraryPage from "@/pages/LibraryPage";
 import LyricsPage from "@/pages/LyricsPage";
@@ -39,6 +40,7 @@ import { useLocation as useWouterLocation } from "wouter";
 
 function useServiceContext(): string | undefined {
   const [location] = useWouterLocation();
+  if (location.startsWith("/home")) return "home";
   if (location.startsWith("/create")) return "create";
   if (location.startsWith("/library")) return "library";
   if (location.startsWith("/my-playlists")) return "my-playlists";
@@ -84,8 +86,9 @@ function AuthenticatedLayout() {
             <div className="absolute inset-0 bg-[#0a0a12]/92 pointer-events-none" />
             <div className="relative z-10 min-h-full">
             <Switch>
+              <Route path="/home" component={HomePage} />
               <Route path="/create" component={CreatePage} />
-              <Route path="/dashboard"><Redirect to="/create" /></Route>
+              <Route path="/dashboard"><Redirect to="/home" /></Route>
               <Route path="/discover/:genre" component={PlaylistPage} />
               <Route path="/discover" component={DiscoverPage} />
               <Route path="/library" component={LibraryPage} />
@@ -155,7 +158,7 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/"><Redirect to="/create" /></Route>
+      <Route path="/"><Redirect to="/home" /></Route>
       <Route>
         <AuthenticatedLayout />
       </Route>

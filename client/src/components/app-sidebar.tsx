@@ -41,12 +41,16 @@ import {
   FileText,
   Lock,
   ListMusic,
+  Home,
+  Bell,
+  Search,
 } from "lucide-react";
 import { useAdminCheck } from "@/hooks/use-admin";
 import { useCredits } from "@/hooks/use-credits";
 import { Badge } from "@/components/ui/badge";
 
 const NAV_ITEMS = [
+  { titleKey: "nav.home", url: "/home", icon: Home },
   { titleKey: "nav.create", url: "/create", icon: Sparkles },
   { titleKey: "nav.discover", url: "/discover", icon: Disc },
   { titleKey: "nav.discography", url: "/discography", icon: Music },
@@ -97,7 +101,7 @@ export function AppSidebar() {
       <SidebarHeader className="relative z-10 p-4 pb-2">
         <div
           className="flex items-center justify-center cursor-pointer group"
-          onClick={() => setLocation("/create")}
+          onClick={() => setLocation("/home")}
           data-testid="link-sidebar-logo"
         >
           <img
