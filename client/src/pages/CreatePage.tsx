@@ -51,6 +51,18 @@ import {
   ArrowRightToLine,
   Guitar,
   X,
+  Search,
+  Filter,
+  MoreHorizontal,
+  Share2,
+  ThumbsDown,
+  ListMusic,
+  SkipBack,
+  SkipForward,
+  Pause,
+  Repeat,
+  Shuffle,
+  CheckSquare,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -229,6 +241,13 @@ function GenreCarousel({ selectedGenre, onSelect }: { selectedGenre: string; onS
       </div>
     </div>
   );
+}
+
+function formatDuration(seconds: number | null | undefined): string {
+  if (!seconds) return "";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 export default function CreatePage() {
@@ -491,34 +510,31 @@ export default function CreatePage() {
     setMobileView("player");
   };
 
+  const queueSongs = allSongs.filter((s: any) => s.id !== activeSong?.id && s.status === "completed").slice(0, 10);
+
   if (!user) return null;
 
   return (
     <div className="h-full">
 
         {/* ====== LEFT + CENTER + RIGHT: 3-column desktop layout ====== */}
-        <div className="hidden lg:grid lg:grid-cols-[380px_1fr_380px] xl:grid-cols-[400px_1fr_400px] h-full" data-testid="desktop-layout">
+        <div className="hidden lg:grid lg:grid-cols-[320px_1fr_320px] h-full" data-testid="desktop-layout">
 
-          {/* ===== LEFT: Creation Panel ===== */}
+          {/* ===== LEFT: Creation Panel (Suno-style) ===== */}
           <div className="border-r border-white/5 bg-background/50 overflow-y-auto" data-testid="creation-panel">
-            <div className="p-5 xl:p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/30 to-pink-500/20 flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold" data-testid="text-create-heading">{t('create.pageTitle')}</h2>
-                  <p className="text-xs text-muted-foreground">{t('create.adnProtegido', 'ADN Protegido — Instrumentos DGB')}</p>
-                </div>
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-5">
+                <CheckSquare className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-semibold" data-testid="text-create-heading">{t('create.pageTitle')}</h2>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-5" data-testid="dna-flows">
+              <div className="grid grid-cols-2 gap-2 mb-4" data-testid="dna-flows">
                 <button
                   className={cn(
-                    "relative overflow-hidden rounded-xl p-4 text-left transition-all border-2",
+                    "rounded-lg p-2.5 text-left transition-all border",
                     dnaFlow === "bachata"
-                      ? "border-primary bg-gradient-to-br from-primary/15 to-pink-500/10 shadow-[0_0_20px_rgba(255,20,147,0.15)]"
-                      : "border-white/10 hover:border-primary/30 bg-white/[0.03]"
+                      ? "border-primary bg-primary/10"
+                      : "border-white/10 bg-white/[0.03]"
                   )}
                   onClick={() => {
                     if (dnaFlow === "bachata") {
@@ -535,26 +551,19 @@ export default function CreatePage() {
                   }}
                   data-testid="dna-flow-bachata"
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/30 to-pink-400/20 flex items-center justify-center">
-                      <Guitar className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="text-sm font-bold">DAGRABACHATA</div>
+                  <div className="flex items-center gap-1.5">
+                    <Guitar className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-xs font-bold">DAGRABACHATA</span>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">{t('create.dnaFlow.bachataDesc')}</p>
-                  {dnaFlow === "bachata" && (
-                    <div className="absolute top-2.5 right-2.5">
-                      <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                    </div>
-                  )}
+                  <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{t('create.dnaFlow.bachataDesc')}</p>
                 </button>
 
                 <button
                   className={cn(
-                    "relative overflow-hidden rounded-xl p-4 text-left transition-all border-2",
+                    "rounded-lg p-2.5 text-left transition-all border",
                     dnaFlow === "bolero"
-                      ? "border-orange-400 bg-gradient-to-br from-orange-500/15 to-pink-500/10 shadow-[0_0_20px_rgba(255,140,0,0.15)]"
-                      : "border-white/10 hover:border-orange-400/30 bg-white/[0.03]"
+                      ? "border-orange-400 bg-orange-500/10"
+                      : "border-white/10 bg-white/[0.03]"
                   )}
                   onClick={() => {
                     if (dnaFlow === "bolero") {
@@ -571,18 +580,11 @@ export default function CreatePage() {
                   }}
                   data-testid="dna-flow-bolero"
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-orange-500/30 to-pink-400/20 flex items-center justify-center">
-                      <Music className="h-4 w-4 text-orange-400" />
-                    </div>
-                    <div className="text-sm font-bold">DAGRABOLERO</div>
+                  <div className="flex items-center gap-1.5">
+                    <Music className="h-3.5 w-3.5 text-orange-400" />
+                    <span className="text-xs font-bold">DAGRABOLERO</span>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">{t('create.dnaFlow.boleroDesc')}</p>
-                  {dnaFlow === "bolero" && (
-                    <div className="absolute top-2.5 right-2.5">
-                      <div className="h-2 w-2 rounded-full bg-orange-400 animate-pulse" />
-                    </div>
-                  )}
+                  <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{t('create.dnaFlow.boleroDesc')}</p>
                 </button>
               </div>
 
@@ -694,185 +696,204 @@ export default function CreatePage() {
                 )}
               </AnimatePresence>
 
-              <Card className="border-white/10 bg-card/80 backdrop-blur-sm overflow-hidden mb-5">
-                <div className="p-4">
-                  {activeCreationMode === "song" && (
+              <div className="mb-4">
+                <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileChange} data-testid="input-file-upload" />
+
+                {activeCreationMode === "song" && (
+                  <Textarea
+                    placeholder={activePromptSuggestions[placeholderIdx % activePromptSuggestions.length]}
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    className="bg-white/[0.03] border-white/10 focus:border-primary/40 min-h-[100px] resize-none text-sm placeholder:text-muted-foreground/40"
+                    data-testid="input-prompt"
+                    maxLength={500}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                        handleSubmit();
+                      }
+                    }}
+                  />
+                )}
+                {activeCreationMode === "sound" && (
+                  <div className="space-y-3">
                     <Textarea
-                      placeholder={activePromptSuggestions[placeholderIdx % activePromptSuggestions.length]}
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[120px] resize-none text-base p-0 placeholder:text-muted-foreground/40"
-                      data-testid="input-prompt"
+                      placeholder={t('create.soundPrompt.placeholder')}
+                      value={soundPrompt}
+                      onChange={(e) => setSoundPrompt(e.target.value)}
+                      className="bg-white/[0.03] border-white/10 focus:border-primary/40 min-h-[100px] resize-none text-sm placeholder:text-muted-foreground/40"
+                      data-testid="input-sound-prompt"
                       maxLength={500}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                          handleSubmit();
-                        }
-                      }}
                     />
-                  )}
-                  {activeCreationMode === "sound" && (
-                    <div className="space-y-3">
-                      <Textarea
-                        placeholder={t('create.soundPrompt.placeholder')}
-                        value={soundPrompt}
-                        onChange={(e) => setSoundPrompt(e.target.value)}
-                        className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[120px] resize-none text-base p-0 placeholder:text-muted-foreground/40"
-                        data-testid="input-sound-prompt"
-                        maxLength={500}
-                      />
-                      <div className="flex items-center gap-3">
-                        <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {soundDuration[0]}s
-                        </Label>
-                        <Slider value={soundDuration} onValueChange={setSoundDuration} min={1} max={30} step={1} className="flex-1 max-w-[200px]" data-testid="slider-sound-duration" />
-                      </div>
+                    <div className="flex items-center gap-3">
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {soundDuration[0]}s
+                      </Label>
+                      <Slider value={soundDuration} onValueChange={setSoundDuration} min={1} max={30} step={1} className="flex-1 max-w-[200px]" data-testid="slider-sound-duration" />
                     </div>
-                  )}
-                  {activeCreationMode === "speak" && (
-                    <div className="space-y-3">
-                      <Textarea
-                        placeholder={t('create.ttsPrompt.placeholder')}
-                        value={ttsText}
-                        onChange={(e) => setTtsText(e.target.value)}
-                        className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[120px] resize-none text-base p-0 placeholder:text-muted-foreground/40"
-                        data-testid="input-tts-text"
-                        maxLength={2000}
-                      />
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <Input placeholder={t('create.voiceDefault')} value={ttsVoiceId} onChange={(e) => setTtsVoiceId(e.target.value)} className="bg-background/50 border-white/10 text-xs w-[120px]" data-testid="input-tts-voice-id" />
-                        <select className="rounded-md border border-white/10 bg-background/50 px-2 py-1 text-xs" value={ttsLanguage} onChange={(e) => setTtsLanguage(e.target.value)} data-testid="select-tts-language">
-                          {TTS_LANGUAGES.map((lang) => (<option key={lang.value} value={lang.value}>{lang.label}</option>))}
-                        </select>
-                      </div>
+                  </div>
+                )}
+                {activeCreationMode === "speak" && (
+                  <div className="space-y-3">
+                    <Textarea
+                      placeholder={t('create.ttsPrompt.placeholder')}
+                      value={ttsText}
+                      onChange={(e) => setTtsText(e.target.value)}
+                      className="bg-white/[0.03] border-white/10 focus:border-primary/40 min-h-[100px] resize-none text-sm placeholder:text-muted-foreground/40"
+                      data-testid="input-tts-text"
+                      maxLength={2000}
+                    />
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <Input placeholder={t('create.voiceDefault')} value={ttsVoiceId} onChange={(e) => setTtsVoiceId(e.target.value)} className="bg-background/50 border-white/10 text-xs w-[120px]" data-testid="input-tts-voice-id" />
+                      <select className="rounded-md border border-white/10 bg-background/50 px-2 py-1 text-xs" value={ttsLanguage} onChange={(e) => setTtsLanguage(e.target.value)} data-testid="select-tts-language">
+                        {TTS_LANGUAGES.map((lang) => (<option key={lang.value} value={lang.value}>{lang.label}</option>))}
+                      </select>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {attachedFile && (
-                    <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-primary/5 border border-primary/20">
-                      <FileAudio className="h-4 w-4 text-primary" />
-                      <span className="text-xs text-primary flex-1 truncate">{attachedFile.name}</span>
-                      <Button variant="ghost" size="icon" className="text-muted-foreground" onClick={() => setAttachedFile(null)} data-testid="button-remove-file">
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  )}
+                {attachedFile && (
+                  <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-primary/5 border border-primary/20">
+                    <FileAudio className="h-4 w-4 text-primary" />
+                    <span className="text-xs text-primary flex-1 truncate">{attachedFile.name}</span>
+                    <Button variant="ghost" size="icon" className="text-muted-foreground" onClick={() => setAttachedFile(null)} data-testid="button-remove-file">
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
 
-                  {showLyrics && !isInstrumental && activeCreationMode === "song" && (
-                    <div className="mt-3 pt-3 border-t border-white/5">
-                      <Textarea
-                        placeholder={t('create.lyrics.lyricsPlaceholder')}
-                        value={lyrics}
-                        onChange={(e) => setLyrics(e.target.value)}
-                        className="bg-background/30 border-white/10 focus:border-primary/50 min-h-[80px] resize-none text-sm font-mono"
-                        data-testid="input-lyrics"
-                        maxLength={3000}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="border-t border-white/5 px-4 py-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileChange} data-testid="input-file-upload" />
-
-                    <Popover open={attachPopoverOpen} onOpenChange={setAttachPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <button className="h-9 w-9 rounded-full border border-white/15 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-white/30 transition-colors" data-testid="button-attach-menu">
-                          <Paperclip className="h-4 w-4" />
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent align="start" className="w-52 p-1.5" sideOffset={8}>
-                        <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm transition-colors text-left" onClick={handleFileAttach} data-testid="menu-upload-file">
-                          <Upload className="h-4 w-4 text-muted-foreground" />{t('create.attach.uploadFile')}
-                        </button>
-                        <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm transition-colors text-left" onClick={() => { setAttachPopoverOpen(false); setLocation("/sample-lab"); }} data-testid="menu-record">
-                          <MicIcon className="h-4 w-4 text-muted-foreground" />{t('create.attach.record')}
-                        </button>
-                      </PopoverContent>
-                    </Popover>
-
-                    <button
-                      className={cn(
-                        "h-9 w-9 rounded-full border flex items-center justify-center transition-colors",
-                        showProControls ? "border-primary/40 text-primary bg-primary/10" : "border-white/15 text-muted-foreground hover:text-foreground hover:border-white/30"
-                      )}
-                      onClick={() => setShowProControls(!showProControls)}
-                      data-testid="button-pro-controls"
-                    >
-                      <SlidersHorizontal className="h-4 w-4" />
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <Popover open={attachPopoverOpen} onOpenChange={setAttachPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="h-8 px-3 rounded-full border border-white/10 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors" data-testid="button-attach-menu">
+                      <Paperclip className="h-3 w-3" />+Audio
                     </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-52 p-1.5" sideOffset={8}>
+                    <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm transition-colors text-left" onClick={handleFileAttach} data-testid="menu-upload-file">
+                      <Upload className="h-4 w-4 text-muted-foreground" />{t('create.attach.uploadFile')}
+                    </button>
+                    <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm transition-colors text-left" onClick={() => { setAttachPopoverOpen(false); setLocation("/sample-lab"); }} data-testid="menu-record">
+                      <MicIcon className="h-4 w-4 text-muted-foreground" />{t('create.attach.record')}
+                    </button>
+                  </PopoverContent>
+                </Popover>
 
-                    {activeCreationMode === "song" && (
-                      <>
-                        <button
-                          className={cn(
-                            "h-9 px-4 rounded-full border flex items-center gap-1.5 text-sm transition-colors",
-                            isInstrumental ? "border-primary/40 text-primary bg-primary/10" : "border-white/15 text-muted-foreground hover:text-foreground hover:border-white/30"
-                          )}
-                          onClick={() => setIsInstrumental(!isInstrumental)}
-                          data-testid="button-instrumental"
-                        >
-                          <div className={cn("h-3.5 w-3.5 rounded-full border-2", isInstrumental ? "border-primary bg-primary" : "border-muted-foreground/50")} />
-                          {t('create.options.instrumental')}
-                        </button>
-                        <button
-                          className={cn(
-                            "h-9 px-4 rounded-full border flex items-center gap-1.5 text-sm transition-colors",
-                            showLyrics ? "border-primary/40 text-primary bg-primary/10" : "border-white/15 text-muted-foreground hover:text-foreground hover:border-white/30"
-                          )}
-                          onClick={() => { setShowLyrics(!showLyrics); if (isInstrumental) setIsInstrumental(false); }}
-                          data-testid="button-add-lyrics"
-                        >
-                          <span className="text-base leading-none">+</span>{t('create.lyrics.label')}
-                        </button>
-                      </>
+                {activeCreationMode === "song" && (
+                  <button
+                    className={cn(
+                      "h-8 px-3 rounded-full border flex items-center gap-1.5 text-xs transition-colors",
+                      showLyrics ? "border-primary/40 text-primary bg-primary/10" : "border-white/10 text-muted-foreground"
                     )}
+                    onClick={() => { setShowLyrics(!showLyrics); if (isInstrumental) setIsInstrumental(false); }}
+                    data-testid="button-add-lyrics"
+                  >
+                    +{t('create.lyrics.label')}
+                  </button>
+                )}
 
-                    <div className="flex-1" />
+                <div className="flex-1" />
 
-                    <button
-                      onClick={handleSubmit}
-                      disabled={isAnyPending || !canCreate}
-                      className={cn(
-                        "h-10 w-10 rounded-full flex items-center justify-center transition-all duration-300",
-                        canCreate && !isAnyPending
-                          ? "bg-gradient-to-r from-primary to-pink-500 text-white shadow-[0_0_20px_rgba(255,20,147,0.3)] hover:shadow-[0_0_30px_rgba(255,20,147,0.5)]"
-                          : "bg-white/10 text-muted-foreground/50 cursor-not-allowed"
-                      )}
-                      data-testid="button-submit"
-                    >
-                      {isAnyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                    </button>
-                  </div>
+                {activeCreationMode === "song" && (
+                  <button
+                    className={cn(
+                      "h-8 px-3.5 rounded-full border flex items-center gap-1.5 text-xs transition-colors",
+                      isInstrumental ? "border-primary/40 text-primary bg-primary/10" : "border-white/10 text-muted-foreground"
+                    )}
+                    onClick={() => setIsInstrumental(!isInstrumental)}
+                    data-testid="button-instrumental"
+                  >
+                    <div className={cn("h-3 w-6 rounded-full relative transition-colors", isInstrumental ? "bg-primary" : "bg-white/20")}>
+                      <div className={cn("absolute top-0.5 h-2 w-2 rounded-full bg-white transition-all", isInstrumental ? "left-3.5" : "left-0.5")} />
+                    </div>
+                    {t('create.options.instrumental')}
+                  </button>
+                )}
+              </div>
 
-                  <div className="flex items-center gap-2 mt-2.5 overflow-x-auto">
-                    <button
-                      className={cn("flex-shrink-0 h-8 px-3.5 rounded-full border flex items-center gap-1.5 text-xs transition-colors whitespace-nowrap", activeCreationMode === "sound" ? "border-primary/40 text-primary bg-primary/10" : "border-white/15 text-muted-foreground hover:text-foreground hover:border-white/30")}
-                      onClick={() => setActiveCreationMode(activeCreationMode === "sound" ? "song" : "sound")}
-                      data-testid="chip-create-sound"
-                    >
-                      <Sparkles className="h-3 w-3 text-orange-400" />{t('create.modes.sound')}
-                    </button>
-                    <button
-                      className={cn("flex-shrink-0 h-8 px-3.5 rounded-full border flex items-center gap-1.5 text-xs transition-colors whitespace-nowrap", activeCreationMode === "speak" ? "border-primary/40 text-primary bg-primary/10" : "border-white/15 text-muted-foreground hover:text-foreground hover:border-white/30")}
-                      onClick={() => setActiveCreationMode(activeCreationMode === "speak" ? "song" : "speak")}
-                      data-testid="chip-speak-text"
-                    >
-                      <MessageSquare className="h-3 w-3 text-orange-400" />{t('create.modes.speak')}
-                    </button>
-                    <button className="flex-shrink-0 h-8 px-3.5 rounded-full border border-white/15 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-white/30 transition-colors whitespace-nowrap" onClick={handleRandomPrompt} data-testid="chip-random">
-                      <Dices className="h-3 w-3 text-orange-400" />{t('create.random')}
-                    </button>
-                  </div>
+              {showLyrics && !isInstrumental && activeCreationMode === "song" && (
+                <div className="mb-4">
+                  <Textarea
+                    placeholder={t('create.lyrics.lyricsPlaceholder')}
+                    value={lyrics}
+                    onChange={(e) => setLyrics(e.target.value)}
+                    className="bg-white/[0.03] border-white/10 focus:border-primary/40 min-h-[80px] resize-none text-sm font-mono"
+                    data-testid="input-lyrics"
+                    maxLength={3000}
+                  />
                 </div>
-              </Card>
+              )}
 
-              <div className="flex items-center gap-1.5 mb-5">
+              <div className="flex items-center gap-1.5 flex-wrap mb-4">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Inspiration</span>
+                <span className="px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/10 text-[11px] text-foreground flex items-center gap-1.5">
+                  {selectedGenre}
+                  <button onClick={() => setSelectedGenre("Bachata")} className="text-muted-foreground">
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+                <button
+                  className="px-2.5 py-1 rounded-full border border-dashed border-white/15 text-[11px] text-muted-foreground flex items-center gap-1"
+                  onClick={handleRandomPrompt}
+                  data-testid="chip-random"
+                >
+                  <Dices className="h-2.5 w-2.5 text-orange-400" />+ random
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 mb-5 overflow-x-auto">
+                <button
+                  className={cn("flex-shrink-0 h-7 px-3 rounded-full border flex items-center gap-1.5 text-[11px] transition-colors whitespace-nowrap", activeCreationMode === "sound" ? "border-primary/40 text-primary bg-primary/10" : "border-white/10 text-muted-foreground")}
+                  onClick={() => setActiveCreationMode(activeCreationMode === "sound" ? "song" : "sound")}
+                  data-testid="chip-create-sound"
+                >
+                  <Sparkles className="h-2.5 w-2.5 text-orange-400" />{t('create.modes.sound')}
+                </button>
+                <button
+                  className={cn("flex-shrink-0 h-7 px-3 rounded-full border flex items-center gap-1.5 text-[11px] transition-colors whitespace-nowrap", activeCreationMode === "speak" ? "border-primary/40 text-primary bg-primary/10" : "border-white/10 text-muted-foreground")}
+                  onClick={() => setActiveCreationMode(activeCreationMode === "speak" ? "song" : "speak")}
+                  data-testid="chip-speak-text"
+                >
+                  <MessageSquare className="h-2.5 w-2.5 text-orange-400" />{t('create.modes.speak')}
+                </button>
+              </div>
+
+              <Button
+                onClick={handleSubmit}
+                disabled={isAnyPending || !canCreate}
+                className={cn(
+                  "w-full font-semibold text-sm",
+                  canCreate && !isAnyPending
+                    ? "bg-gradient-to-r from-primary to-pink-500 text-white border-primary shadow-[0_0_20px_rgba(255,20,147,0.25)]"
+                    : ""
+                )}
+                size="lg"
+                data-testid="button-submit"
+              >
+                {isAnyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {isAnyPending ? t('create.generating', 'Creating...') : t('create.createButton', 'Create')}
+              </Button>
+
+              <div className="flex items-center gap-1.5 mt-3 mb-3">
                 <Shield className="h-3 w-3 text-primary/60 flex-shrink-0" />
                 <span className="text-[10px] text-muted-foreground/70">{t('create.adnProtegido', 'Usando instrumentos originales DGB — ADN Protegido')}</span>
               </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "text-xs mb-2 px-0",
+                  showProControls ? "text-primary" : "text-muted-foreground"
+                )}
+                onClick={() => setShowProControls(!showProControls)}
+                data-testid="button-pro-controls"
+              >
+                <SlidersHorizontal className="h-3 w-3" />
+                {t('create.unlockCustomization')}
+                <ChevronDown className={cn("h-3 w-3 transition-transform", showProControls && "rotate-180")} />
+              </Button>
 
               <AnimatePresence>
                 {showProControls && (
@@ -943,161 +964,202 @@ export default function CreatePage() {
             </div>
           </div>
 
-          {/* ===== CENTER: Song Feed ===== */}
+          {/* ===== CENTER: Workspace ===== */}
           <div className="overflow-y-auto" data-testid="song-list-panel">
-            <div className="relative overflow-hidden bg-gradient-to-br from-primary/15 via-pink-600/10 to-transparent">
-              <div className="px-6 py-8 xl:px-8 xl:py-10 relative z-10">
-                <h1 className="text-2xl xl:text-3xl font-bold mb-2" data-testid="text-create-title">DAGRABA Studio</h1>
-                <p className="text-sm text-muted-foreground max-w-lg">{t('create.pageTitle')} — La Pura Sangre de la Bachata con el ADN de Danny Garcia</p>
+            <div className="border-b border-white/5 px-5 py-3">
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <span>Workspaces</span>
+                <ChevronRight className="h-3 w-3" />
+                <span className="text-foreground font-medium">Mi Workspace</span>
               </div>
-              <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-primary/10 to-transparent rounded-full blur-3xl" />
-              <div className="absolute bottom-0 left-1/3 w-32 h-32 bg-gradient-to-tr from-pink-500/8 to-transparent rounded-full blur-2xl" />
             </div>
 
             {activeCreationMode === "song" && (
-              <div className="px-6 xl:px-8 py-4 border-b border-white/5">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{t('create.genre', 'Género')}</h3>
-                </div>
+              <div className="px-5 py-3 border-b border-white/5">
                 <GenreCarousel selectedGenre={selectedGenre} onSelect={setSelectedGenre} />
               </div>
             )}
 
+            <div className="px-5 py-3 border-b border-white/5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex-1 min-w-[140px] relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search songs..."
+                    className="bg-white/[0.03] border-white/10 text-sm pl-8"
+                    data-testid="input-search-songs"
+                  />
+                </div>
+                <Badge variant="outline" className="border-white/10 text-muted-foreground text-[11px] gap-1 cursor-pointer">
+                  <Filter className="h-3 w-3" />Filters
+                </Badge>
+                <Badge variant="outline" className="border-white/10 text-muted-foreground text-[11px] gap-1 cursor-pointer">
+                  Newest <ChevronDown className="h-3 w-3" />
+                </Badge>
+              </div>
+            </div>
+
             {isPending && (
-              <div className="px-6 xl:px-8 py-4">
-                <Card className="p-4 border-primary/20 bg-primary/5">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Loader2 className="h-6 w-6 text-primary animate-spin" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{t('create.generating2Versions')}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{t('create.firstTimeTip')}</p>
-                    </div>
+              <div className="px-5 py-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-primary/20 bg-primary/5">
+                  <Loader2 className="h-5 w-5 text-primary animate-spin flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">{t('create.generating2Versions')}</p>
+                    <p className="text-[11px] text-muted-foreground">{t('create.firstTimeTip')}</p>
                   </div>
-                </Card>
+                </div>
               </div>
             )}
 
-            <div className="px-6 xl:px-8 py-5">
+            <div className="px-5 py-3">
               {songsLoading ? (
                 <div className="flex items-center justify-center py-16">
                   <Loader2 className="h-8 w-8 text-primary animate-spin" />
                 </div>
               ) : groupedSongs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
-                    <Music className="h-10 w-10 text-primary/40" />
+                  <div className="h-16 w-16 rounded-2xl bg-white/[0.03] flex items-center justify-center mb-4">
+                    <Music className="h-8 w-8 text-muted-foreground/20" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">{t('create.noSongsYet', 'No hay canciones aún')}</h3>
+                  <h3 className="text-base font-medium mb-1">{t('create.noSongsYet', 'No hay canciones aún')}</h3>
                   <p className="text-sm text-muted-foreground max-w-sm">{t('create.noSongsDesc', 'Describe tu canción en el panel de la izquierda y presiona crear para empezar.')}</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{t('create.recentCreations')}</h3>
-                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setLocation("/library")} data-testid="button-view-all">
-                      {t('create.viewAll')}<ChevronRight className="h-3 w-3 ml-1" />
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {groupedSongs.map((group) => {
-                      const isPair = group.songs.length > 1;
-                      return (
-                        <div key={group.pairId || group.songs[0]?.id} data-testid={`group-${group.pairId || group.songs[0]?.id}`}>
-                          {isPair && (
-                            <div className="flex items-center gap-2 mb-2 px-1">
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">
-                                <Zap className="h-2.5 w-2.5 mr-1" />{t('create.twoVersions')}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground truncate">{group.songs[0]?.title || group.songs[0]?.prompt}</span>
-                            </div>
-                          )}
-                          <div className="space-y-1.5">
-                            {group.songs.map((song: any) => (
-                              <div
-                                key={song.id}
-                                className={cn(
-                                  "flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all",
-                                  currentSong?.id === song.id
-                                    ? "bg-primary/10 border border-primary/30"
-                                    : "border border-transparent hover:bg-white/[0.04]"
+                <div className="space-y-1">
+                  {groupedSongs.map((group) => {
+                    const isPair = group.songs.length > 1;
+                    return (
+                      <div key={group.pairId || group.songs[0]?.id} data-testid={`group-${group.pairId || group.songs[0]?.id}`}>
+                        {isPair && (
+                          <div className="flex items-center gap-2 mb-1 px-1">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">
+                              <Zap className="h-2.5 w-2.5 mr-1" />{t('create.twoVersions')}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground truncate">{group.songs[0]?.title || group.songs[0]?.prompt}</span>
+                          </div>
+                        )}
+                        <div className="space-y-0.5">
+                          {group.songs.map((song: any) => (
+                            <div
+                              key={song.id}
+                              className={cn(
+                                "flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all group/song",
+                                currentSong?.id === song.id
+                                  ? "bg-primary/10 border border-primary/20"
+                                  : "border border-transparent hover:bg-white/[0.03]"
+                              )}
+                              onClick={() => handleSongClick(song)}
+                              data-testid={`card-recent-song-${song.id}`}
+                            >
+                              <div className="h-12 w-12 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+                                {song.imageUrl ? (
+                                  <img src={song.imageUrl} alt={song.title} className="h-12 w-12 rounded-md object-cover" />
+                                ) : song.status === "processing" || song.status === "pending" ? (
+                                  <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                                ) : song.status === "completed" ? (
+                                  <Play className="h-4 w-4 text-primary fill-current" />
+                                ) : (
+                                  <AlertCircle className="h-4 w-4 text-destructive" />
                                 )}
-                                onClick={() => handleSongClick(song)}
-                                data-testid={`card-recent-song-${song.id}`}
-                              >
-                                <div className="h-14 w-14 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-                                  {song.imageUrl ? (
-                                    <img src={song.imageUrl} alt={song.title} className="h-14 w-14 rounded-lg object-cover" />
-                                  ) : song.status === "processing" || song.status === "pending" ? (
-                                    <Loader2 className="h-5 w-5 text-primary animate-spin" />
-                                  ) : song.status === "completed" ? (
-                                    <Play className="h-5 w-5 text-primary fill-current" />
-                                  ) : (
-                                    <AlertCircle className="h-5 w-5 text-destructive" />
-                                  )}
-                                  {song.variationLabel && (
-                                    <span className="absolute -top-0.5 -left-0.5 h-5 w-5 rounded-full bg-primary text-black text-[10px] font-bold flex items-center justify-center">{song.variationLabel}</span>
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
+                                {song.duration && song.status === "completed" && (
+                                  <span className="absolute bottom-0.5 right-0.5 px-1 py-0 rounded text-[9px] font-mono bg-black/70 text-white">
+                                    {formatDuration(song.duration)}
+                                  </span>
+                                )}
+                                {song.variationLabel && (
+                                  <span className="absolute top-0 left-0 h-4 w-4 rounded-br bg-primary text-black text-[9px] font-bold flex items-center justify-center">{song.variationLabel}</span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
                                   <h4 className="text-sm font-medium truncate">
                                     {song.variationLabel ? `${t('create.version')} ${song.variationLabel}` : (song.title || song.prompt || t('create.untitledTrack'))}
                                   </h4>
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                    {song.genre && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-white/10">{song.genre}</Badge>}
-                                    {(song.status === "processing" || song.status === "pending") ? (
-                                      <span className="text-[10px] text-primary animate-pulse">{t('create.generating')}</span>
-                                    ) : (
-                                      <span className="text-[10px] text-muted-foreground">{song.createdAt && formatDistanceToNow(new Date(song.createdAt), { addSuffix: true })}</span>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1 flex-shrink-0">
-                                  {song.status === "completed" && (
-                                    <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); setLocation("/studio"); }} data-testid={`button-studio-${song.id}`}>
-                                      <Scissors className="h-3.5 w-3.5" />
-                                    </Button>
+                                  {song.engine && (
+                                    <Badge variant="outline" className="text-[9px] px-1 py-0 border-white/10 text-muted-foreground flex-shrink-0">
+                                      {song.engine}
+                                    </Badge>
                                   )}
-                                  <Button size="icon" variant="ghost" className="text-muted-foreground" onClick={(e) => { e.stopPropagation(); deleteSong(song.id); }} data-testid={`button-delete-${song.id}`}>
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  {song.genre && <span className="text-[10px] text-muted-foreground">{song.genre}</span>}
+                                  {(song.status === "processing" || song.status === "pending") ? (
+                                    <span className="text-[10px] text-primary animate-pulse">{t('create.generating')}</span>
+                                  ) : (
+                                    <span className="text-[10px] text-muted-foreground/60">{song.createdAt && formatDistanceToNow(new Date(song.createdAt), { addSuffix: true })}</span>
+                                  )}
                                 </div>
                               </div>
-                            ))}
-                          </div>
+                              <div className="flex items-center gap-0.5 flex-shrink-0 invisible group-hover/song:visible">
+                                <Button size="icon" variant="ghost" className="h-7 w-7" data-testid={`button-like-${song.id}`}>
+                                  <ThumbsUp className="h-3 w-3" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-7 w-7" data-testid={`button-dislike-${song.id}`}>
+                                  <ThumbsDown className="h-3 w-3" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-7 w-7" data-testid={`button-share-${song.id}`}>
+                                  <Share2 className="h-3 w-3" />
+                                </Button>
+                                {song.status === "completed" && (
+                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setLocation("/studio"); }} data-testid={`button-studio-${song.id}`}>
+                                    <Scissors className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" onClick={(e) => { e.stopPropagation(); deleteSong(song.id); }} data-testid={`button-delete-${song.id}`}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {groupedSongs.length > 0 && (
+                <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-white/5 flex-wrap">
+                  <span className="text-xs text-muted-foreground">{allSongs.length} {allSongs.length === 1 ? "song" : "songs"}</span>
+                  <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setLocation("/library")} data-testid="button-view-all">
+                    {t('create.viewAll')}<ChevronRight className="h-3 w-3 ml-1" />
+                  </Button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* ===== RIGHT: Player Detail Panel ===== */}
+          {/* ===== RIGHT: Queue Panel ===== */}
           <div className="border-l border-white/5 overflow-y-auto bg-background/30" data-testid="player-panel">
-            <div className="p-5 xl:p-6">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-5">{t('create.nowPlaying', 'Reproduciendo')}</h2>
+            <div className="p-4">
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <div className="flex items-center gap-2">
+                  <ListMusic className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="text-sm font-semibold">Queue</h2>
+                </div>
+                {allSongs.length > 0 && (
+                  <Button variant="ghost" size="sm" className="text-[11px] text-muted-foreground h-7" onClick={() => setCurrentSong(null)} data-testid="button-clear-queue">
+                    Clear queue
+                  </Button>
+                )}
+              </div>
 
               {activeSong ? (
-                <div className="space-y-5">
-                  <div className="aspect-square w-full max-w-[320px] mx-auto rounded-2xl overflow-hidden bg-gradient-to-br from-primary/20 via-pink-500/10 to-purple-500/10 flex items-center justify-center shadow-2xl shadow-primary/5">
-                    {activeSong.imageUrl ? (
-                      <img src={activeSong.imageUrl} alt={activeSong.title || "Cover"} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="flex flex-col items-center gap-3">
-                        <Music className="h-20 w-20 text-primary/25" />
-                        <span className="text-sm text-muted-foreground/40 font-medium">{activeSong.genre || "DAGRABA"}</span>
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('create.nowPlaying', 'Now Playing')}</span>
+                    <div className="flex items-center gap-3 mt-2 p-2 rounded-lg bg-primary/5 border border-primary/15">
+                      <div className="h-12 w-12 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {activeSong.imageUrl ? (
+                          <img src={activeSong.imageUrl} alt={activeSong.title || "Cover"} className="h-12 w-12 object-cover rounded-md" />
+                        ) : (
+                          <Music className="h-5 w-5 text-primary/40" />
+                        )}
                       </div>
-                    )}
-                  </div>
-
-                  <div className="text-center px-2">
-                    <h3 className="text-lg font-bold truncate">{activeSong.title || activeSong.prompt || t('create.untitledTrack')}</h3>
-                    <div className="flex items-center justify-center gap-2 mt-1.5 flex-wrap">
-                      {activeSong.genre && <Badge variant="outline" className="text-xs px-2 py-0.5 border-white/10">{activeSong.genre}</Badge>}
-                      {activeSong.artistName && <span className="text-xs text-muted-foreground">{activeSong.artistName}</span>}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-medium truncate">{activeSong.title || activeSong.prompt || t('create.untitledTrack')}</h3>
+                        <p className="text-[11px] text-muted-foreground truncate">{activeSong.genre || "DAGRABA"} {activeSong.artistName ? `· ${activeSong.artistName}` : ""}</p>
+                      </div>
                     </div>
                   </div>
 
@@ -1114,42 +1176,74 @@ export default function CreatePage() {
                   )}
 
                   {(activeSong.status === "processing" || activeSong.status === "pending") && (
-                    <Card className="p-5 border-primary/20 bg-primary/5">
-                      <div className="flex items-center gap-3 mb-4">
-                        <Loader2 className="h-6 w-6 text-primary animate-spin flex-shrink-0" />
+                    <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Loader2 className="h-5 w-5 text-primary animate-spin flex-shrink-0" />
                         <div>
-                          <p className="text-sm font-medium">{t('create.creatingWithAI')}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{t('create.estimatedTime')}</p>
+                          <p className="text-xs font-medium">{t('create.creatingWithAI')}</p>
+                          <p className="text-[10px] text-muted-foreground">{t('create.estimatedTime')}</p>
                         </div>
                       </div>
-                      <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                         <motion.div className="h-full bg-primary/40 rounded-full" animate={{ width: ["10%", "40%", "60%", "75%"] }} transition={{ duration: 240, times: [0, 0.3, 0.6, 1], ease: "easeOut" }} />
                       </div>
-                    </Card>
+                    </div>
                   )}
 
                   {activeSong.status === "failed" && (
-                    <Card className="p-4 border-destructive/20 bg-destructive/5">
-                      <div className="flex items-center gap-3">
-                        <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
-                        <p className="text-sm text-destructive">{activeSong.statusMessage || t('create.generationFailed', 'La generación falló. Intenta de nuevo.')}</p>
+                    <div className="p-3 rounded-lg border border-destructive/20 bg-destructive/5">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+                        <p className="text-xs text-destructive">{activeSong.statusMessage || t('create.generationFailed', 'La generación falló. Intenta de nuevo.')}</p>
                       </div>
-                    </Card>
+                    </div>
                   )}
 
                   {activeSong.lyricsText && (
                     <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{t('create.lyrics.label')}</h4>
-                      <div className="text-sm text-muted-foreground whitespace-pre-wrap bg-white/[0.02] rounded-xl p-4 border border-white/5 max-h-[250px] overflow-y-auto leading-relaxed">{activeSong.lyricsText}</div>
+                      <h4 className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">{t('create.lyrics.label')}</h4>
+                      <div className="text-xs text-muted-foreground whitespace-pre-wrap bg-white/[0.02] rounded-lg p-3 border border-white/5 max-h-[150px] overflow-y-auto leading-relaxed">{activeSong.lyricsText}</div>
+                    </div>
+                  )}
+
+                  {queueSongs.length > 0 && (
+                    <div>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Next up</span>
+                      <div className="mt-2 space-y-0.5">
+                        {queueSongs.map((song: any) => (
+                          <div
+                            key={song.id}
+                            className="flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-white/[0.03] transition-colors"
+                            onClick={() => handleSongClick(song)}
+                          >
+                            <div className="h-10 w-10 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                              {song.imageUrl ? (
+                                <img src={song.imageUrl} alt="" className="h-10 w-10 object-cover rounded-md" />
+                              ) : (
+                                <Music className="h-3.5 w-3.5 text-muted-foreground/30" />
+                              )}
+                              {song.duration && (
+                                <span className="absolute bottom-0 right-0 px-0.5 text-[8px] font-mono bg-black/70 text-white rounded-sm">
+                                  {formatDuration(song.duration)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-xs font-medium truncate">{song.title || song.prompt || t('create.untitledTrack')}</h4>
+                              <p className="text-[10px] text-muted-foreground truncate">{song.genre}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="h-24 w-24 rounded-2xl bg-white/[0.03] flex items-center justify-center mb-5">
-                    <Play className="h-10 w-10 text-muted-foreground/20" />
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="h-16 w-16 rounded-2xl bg-white/[0.03] flex items-center justify-center mb-4">
+                    <Play className="h-8 w-8 text-muted-foreground/20" />
                   </div>
-                  <p className="text-sm text-muted-foreground">{t('create.selectTrack', 'Selecciona una canción para reproducir')}</p>
+                  <p className="text-xs text-muted-foreground">{t('create.selectTrack', 'Selecciona una canción para reproducir')}</p>
                 </div>
               )}
             </div>
@@ -1187,26 +1281,21 @@ export default function CreatePage() {
 
           {mobileView === "create" && (
             <div className="p-4 sm:p-6 space-y-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/30 to-pink-500/20 flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold">{t('create.pageTitle')}</h2>
-                  <p className="text-xs text-muted-foreground">{t('create.adnProtegido', 'ADN Protegido')}</p>
-                </div>
+              <div className="flex items-center gap-2 mb-2">
+                <CheckSquare className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-semibold">{t('create.pageTitle')}</h2>
               </div>
 
-              <div className="grid grid-cols-2 gap-3" data-testid="mobile-dna-flows">
+              <div className="grid grid-cols-2 gap-2" data-testid="mobile-dna-flows">
                 <button
-                  className={cn("relative overflow-hidden rounded-xl p-3 text-left transition-all border-2", dnaFlow === "bachata" ? "border-primary bg-primary/10" : "border-white/10 bg-white/[0.03]")}
+                  className={cn("rounded-lg p-2.5 text-left transition-all border", dnaFlow === "bachata" ? "border-primary bg-primary/10" : "border-white/10 bg-white/[0.03]")}
                   onClick={() => { if (dnaFlow === "bachata") { setDnaFlow(null); setSelectedSubStyle(null); setSelectedStyleKit(undefined); } else { setDnaFlow("bachata"); setSelectedSubStyle(null); setSelectedGenre("Bachata"); const k = styleKits?.find(k => k.genre === "bachata"); if (k) setSelectedStyleKit(k.id); } }}
                   data-testid="mobile-dna-bachata"
                 >
                   <div className="flex items-center gap-2"><Guitar className="h-4 w-4 text-primary" /><span className="text-xs font-bold">DAGRABACHATA</span></div>
                 </button>
                 <button
-                  className={cn("relative overflow-hidden rounded-xl p-3 text-left transition-all border-2", dnaFlow === "bolero" ? "border-orange-400 bg-orange-500/10" : "border-white/10 bg-white/[0.03]")}
+                  className={cn("rounded-lg p-2.5 text-left transition-all border", dnaFlow === "bolero" ? "border-orange-400 bg-orange-500/10" : "border-white/10 bg-white/[0.03]")}
                   onClick={() => { if (dnaFlow === "bolero") { setDnaFlow(null); setSelectedSubStyle(null); setSelectedStyleKit(undefined); } else { setDnaFlow("bolero"); setSelectedSubStyle(null); setSelectedGenre("Bolero"); const k = styleKits?.find(k => k.genre === "dgb_bolero"); if (k) setSelectedStyleKit(k.id); } }}
                   data-testid="mobile-dna-bolero"
                 >
@@ -1233,41 +1322,53 @@ export default function CreatePage() {
                 )}
               </AnimatePresence>
 
-              <Card className="border-white/10 bg-card/80 overflow-hidden">
-                <div className="p-4">
-                  {activeCreationMode === "song" && (
-                    <Textarea placeholder={activePromptSuggestions[placeholderIdx % activePromptSuggestions.length]} value={prompt} onChange={(e) => setPrompt(e.target.value)} className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[100px] resize-none text-base p-0 placeholder:text-muted-foreground/40" data-testid="mobile-input-prompt" maxLength={500} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSubmit(); }} />
-                  )}
-                  {activeCreationMode === "sound" && (
-                    <Textarea placeholder={t('create.soundPrompt.placeholder')} value={soundPrompt} onChange={(e) => setSoundPrompt(e.target.value)} className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[100px] resize-none text-base p-0 placeholder:text-muted-foreground/40" data-testid="mobile-input-sound" maxLength={500} />
-                  )}
-                  {activeCreationMode === "speak" && (
-                    <Textarea placeholder={t('create.ttsPrompt.placeholder')} value={ttsText} onChange={(e) => setTtsText(e.target.value)} className="bg-transparent border-0 focus:ring-0 focus-visible:ring-0 min-h-[100px] resize-none text-base p-0 placeholder:text-muted-foreground/40" data-testid="mobile-input-tts" maxLength={2000} />
-                  )}
-                  {showLyrics && !isInstrumental && activeCreationMode === "song" && (
-                    <div className="mt-3 pt-3 border-t border-white/5">
-                      <Textarea placeholder={t('create.lyrics.lyricsPlaceholder')} value={lyrics} onChange={(e) => setLyrics(e.target.value)} className="bg-background/30 border-white/10 min-h-[80px] resize-none text-sm font-mono" data-testid="mobile-input-lyrics" maxLength={3000} />
-                    </div>
-                  )}
-                </div>
-                <div className="border-t border-white/5 px-3 py-2.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <button className={cn("h-9 px-4 rounded-full border flex items-center gap-1.5 text-sm", isInstrumental ? "border-primary/40 text-primary bg-primary/10" : "border-white/15 text-muted-foreground")} onClick={() => setIsInstrumental(!isInstrumental)} data-testid="mobile-btn-instrumental">
-                      <div className={cn("h-3.5 w-3.5 rounded-full border-2", isInstrumental ? "border-primary bg-primary" : "border-muted-foreground/50")} />{t('create.options.instrumental')}
-                    </button>
-                    <button className={cn("h-9 px-4 rounded-full border flex items-center gap-1.5 text-sm", showLyrics ? "border-primary/40 text-primary bg-primary/10" : "border-white/15 text-muted-foreground")} onClick={() => { setShowLyrics(!showLyrics); if (isInstrumental) setIsInstrumental(false); }} data-testid="mobile-btn-lyrics">
-                      +{t('create.lyrics.label')}
-                    </button>
-                    <button className="h-9 px-4 rounded-full border border-white/15 flex items-center gap-1.5 text-sm text-muted-foreground" onClick={handleRandomPrompt} data-testid="mobile-btn-random">
-                      <Dices className="h-3.5 w-3.5 text-orange-400" />{t('create.random')}
-                    </button>
-                    <div className="flex-1" />
-                    <button onClick={handleSubmit} disabled={isAnyPending || !canCreate} className={cn("h-11 w-11 rounded-full flex items-center justify-center transition-all", canCreate && !isAnyPending ? "bg-gradient-to-r from-primary to-pink-500 text-white shadow-[0_0_20px_rgba(255,20,147,0.3)]" : "bg-white/10 text-muted-foreground/50 cursor-not-allowed")} data-testid="mobile-btn-submit">
-                      {isAnyPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowRight className="h-5 w-5" />}
-                    </button>
+              <div>
+                {activeCreationMode === "song" && (
+                  <Textarea placeholder={activePromptSuggestions[placeholderIdx % activePromptSuggestions.length]} value={prompt} onChange={(e) => setPrompt(e.target.value)} className="bg-white/[0.03] border-white/10 min-h-[100px] resize-none text-sm placeholder:text-muted-foreground/40" data-testid="mobile-input-prompt" maxLength={500} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSubmit(); }} />
+                )}
+                {activeCreationMode === "sound" && (
+                  <Textarea placeholder={t('create.soundPrompt.placeholder')} value={soundPrompt} onChange={(e) => setSoundPrompt(e.target.value)} className="bg-white/[0.03] border-white/10 min-h-[100px] resize-none text-sm placeholder:text-muted-foreground/40" data-testid="mobile-input-sound" maxLength={500} />
+                )}
+                {activeCreationMode === "speak" && (
+                  <Textarea placeholder={t('create.ttsPrompt.placeholder')} value={ttsText} onChange={(e) => setTtsText(e.target.value)} className="bg-white/[0.03] border-white/10 min-h-[100px] resize-none text-sm placeholder:text-muted-foreground/40" data-testid="mobile-input-tts" maxLength={2000} />
+                )}
+                {showLyrics && !isInstrumental && activeCreationMode === "song" && (
+                  <div className="mt-3">
+                    <Textarea placeholder={t('create.lyrics.lyricsPlaceholder')} value={lyrics} onChange={(e) => setLyrics(e.target.value)} className="bg-white/[0.03] border-white/10 min-h-[80px] resize-none text-sm font-mono" data-testid="mobile-input-lyrics" maxLength={3000} />
                   </div>
-                </div>
-              </Card>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button className={cn("h-8 px-3 rounded-full border flex items-center gap-1.5 text-xs", isInstrumental ? "border-primary/40 text-primary bg-primary/10" : "border-white/10 text-muted-foreground")} onClick={() => setIsInstrumental(!isInstrumental)} data-testid="mobile-btn-instrumental">
+                  <div className={cn("h-3 w-6 rounded-full relative transition-colors", isInstrumental ? "bg-primary" : "bg-white/20")}>
+                    <div className={cn("absolute top-0.5 h-2 w-2 rounded-full bg-white transition-all", isInstrumental ? "left-3.5" : "left-0.5")} />
+                  </div>
+                  {t('create.options.instrumental')}
+                </button>
+                <button className={cn("h-8 px-3 rounded-full border flex items-center gap-1.5 text-xs", showLyrics ? "border-primary/40 text-primary bg-primary/10" : "border-white/10 text-muted-foreground")} onClick={() => { setShowLyrics(!showLyrics); if (isInstrumental) setIsInstrumental(false); }} data-testid="mobile-btn-lyrics">
+                  +{t('create.lyrics.label')}
+                </button>
+                <button className="h-8 px-3 rounded-full border border-white/10 flex items-center gap-1.5 text-xs text-muted-foreground" onClick={handleRandomPrompt} data-testid="mobile-btn-random">
+                  <Dices className="h-3 w-3 text-orange-400" />{t('create.random')}
+                </button>
+              </div>
+
+              <Button
+                onClick={handleSubmit}
+                disabled={isAnyPending || !canCreate}
+                className={cn(
+                  "w-full font-semibold text-sm",
+                  canCreate && !isAnyPending
+                    ? "bg-gradient-to-r from-primary to-pink-500 text-white border-primary shadow-[0_0_20px_rgba(255,20,147,0.25)]"
+                    : ""
+                )}
+                size="lg"
+                data-testid="mobile-btn-submit"
+              >
+                {isAnyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {isAnyPending ? t('create.generating', 'Creating...') : t('create.createButton', 'Create')}
+              </Button>
 
               {activeCreationMode === "song" && (
                 <div>
@@ -1280,18 +1381,17 @@ export default function CreatePage() {
 
           {mobileView === "songs" && (
             <div className="p-4 sm:p-6">
-              <div className="bg-gradient-to-br from-primary/15 via-pink-600/10 to-transparent rounded-xl p-5 mb-5">
-                <h1 className="text-xl font-bold mb-1">DAGRABA Studio</h1>
-                <p className="text-xs text-muted-foreground">{t('create.pageTitle')}</p>
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
+                <span>Workspaces</span>
+                <ChevronRight className="h-3 w-3" />
+                <span className="text-foreground font-medium">Mi Workspace</span>
               </div>
 
               {isPending && (
-                <Card className="p-4 border-primary/20 bg-primary/5 mb-4">
-                  <div className="flex items-center gap-3">
-                    <Loader2 className="h-6 w-6 text-primary animate-spin" />
-                    <div><p className="text-sm font-medium">{t('create.generating2Versions')}</p><p className="text-xs text-muted-foreground">{t('create.firstTimeTip')}</p></div>
-                  </div>
-                </Card>
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-primary/20 bg-primary/5 mb-4">
+                  <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                  <div><p className="text-sm font-medium">{t('create.generating2Versions')}</p><p className="text-xs text-muted-foreground">{t('create.firstTimeTip')}</p></div>
+                </div>
               )}
 
               {groupedSongs.length === 0 ? (
@@ -1301,7 +1401,7 @@ export default function CreatePage() {
                   <p className="text-sm text-muted-foreground">{t('create.noSongsDesc', 'Crea tu primera canción.')}</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {groupedSongs.map((group) => {
                     const isPair = group.songs.length > 1;
                     return (
@@ -1312,9 +1412,14 @@ export default function CreatePage() {
                           </div>
                         )}
                         {group.songs.map((song: any) => (
-                          <div key={song.id} className={cn("flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all", currentSong?.id === song.id ? "bg-primary/10 border border-primary/30" : "border border-transparent")} onClick={() => handleSongClick(song)} data-testid={`mobile-song-${song.id}`}>
-                            <div className="h-12 w-12 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                              {song.imageUrl ? <img src={song.imageUrl} alt="" className="h-12 w-12 object-cover rounded-lg" /> : song.status === "completed" ? <Play className="h-5 w-5 text-primary fill-current" /> : <Loader2 className="h-5 w-5 text-primary animate-spin" />}
+                          <div key={song.id} className={cn("flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all", currentSong?.id === song.id ? "bg-primary/10 border border-primary/20" : "border border-transparent")} onClick={() => handleSongClick(song)} data-testid={`mobile-song-${song.id}`}>
+                            <div className="h-12 w-12 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                              {song.imageUrl ? <img src={song.imageUrl} alt="" className="h-12 w-12 object-cover rounded-md" /> : song.status === "completed" ? <Play className="h-4 w-4 text-primary fill-current" /> : <Loader2 className="h-4 w-4 text-primary animate-spin" />}
+                              {song.duration && song.status === "completed" && (
+                                <span className="absolute bottom-0.5 right-0.5 px-1 py-0 rounded text-[9px] font-mono bg-black/70 text-white">
+                                  {formatDuration(song.duration)}
+                                </span>
+                              )}
                             </div>
                             <div className="flex-1 min-w-0">
                               <h4 className="text-sm font-medium truncate">{song.title || song.prompt || t('create.untitledTrack')}</h4>
@@ -1325,6 +1430,9 @@ export default function CreatePage() {
                       </div>
                     );
                   })}
+                  <div className="pt-3 mt-2 border-t border-white/5">
+                    <span className="text-xs text-muted-foreground">{allSongs.length} {allSongs.length === 1 ? "song" : "songs"}</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -1336,21 +1444,23 @@ export default function CreatePage() {
                 <ChevronLeft className="h-4 w-4" />{t('create.tabSongs', 'Canciones')}
               </button>
               {activeSong && (
-                <div className="space-y-5">
-                  <div className="aspect-square w-full max-w-[300px] mx-auto rounded-2xl overflow-hidden bg-gradient-to-br from-primary/20 via-pink-500/10 to-purple-500/10 flex items-center justify-center">
-                    {activeSong.imageUrl ? <img src={activeSong.imageUrl} alt="" className="w-full h-full object-cover" /> : <Music className="h-16 w-16 text-primary/25" />}
-                  </div>
-                  <div className="text-center">
-                    <h3 className="text-lg font-bold truncate">{activeSong.title || activeSong.prompt || t('create.untitledTrack')}</h3>
-                    {activeSong.genre && <Badge variant="outline" className="mt-1 text-xs border-white/10">{activeSong.genre}</Badge>}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/15">
+                    <div className="h-16 w-16 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {activeSong.imageUrl ? <img src={activeSong.imageUrl} alt="" className="h-16 w-16 object-cover rounded-lg" /> : <Music className="h-6 w-6 text-primary/25" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-bold truncate">{activeSong.title || activeSong.prompt || t('create.untitledTrack')}</h3>
+                      <p className="text-xs text-muted-foreground">{activeSong.genre} {activeSong.artistName ? `· ${activeSong.artistName}` : ""}</p>
+                    </div>
                   </div>
                   {activeSong.status === "completed" && activeSong.audioUrl && (
                     <AudioPlayer url={activeSong.audioUrl} title={activeSong.title || activeSong.prompt || ""} imageUrl={null} genre={activeSong.genre} duration={activeSong.duration} createdAt={activeSong.createdAt} onOpenStudio={() => setLocation("/studio")} />
                   )}
                   {(activeSong.status === "processing" || activeSong.status === "pending") && (
-                    <Card className="p-4 border-primary/20 bg-primary/5">
+                    <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">
                       <div className="flex items-center gap-3"><Loader2 className="h-5 w-5 text-primary animate-spin" /><p className="text-sm">{t('create.creatingWithAI')}</p></div>
-                    </Card>
+                    </div>
                   )}
                 </div>
               )}
