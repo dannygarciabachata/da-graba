@@ -43,7 +43,17 @@ import {
   Home,
   Bell,
   Search,
+  MoreHorizontal,
+  Gift,
+  Megaphone,
+  Info,
+  MessageSquare,
 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useAdminCheck } from "@/hooks/use-admin";
 import { useCredits } from "@/hooks/use-credits";
 import { Badge } from "@/components/ui/badge";
@@ -244,16 +254,6 @@ export function AppSidebar() {
 
       {user && (
         <SidebarFooter className="relative z-10 p-3 space-y-2">
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-[#FF69B4]/5 transition-colors"
-            onClick={toggleLanguage}
-            data-testid="button-language-toggle"
-          >
-            <Globe className="h-4 w-4 text-[#FF69B4]/60 shrink-0" />
-            <span className="text-xs text-muted-foreground">
-              {t("language.label")}: {i18n.language === "es" ? t("language.es") : t("language.en")}
-            </span>
-          </div>
           {creditsData && (
             <div
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-[#FF1493]/5 to-[#FF69B4]/5 border border-[#FF69B4]/15 cursor-pointer hover:from-[#FF1493]/10 hover:to-[#FF69B4]/10 transition-all duration-200"
@@ -279,6 +279,64 @@ export function AppSidebar() {
               )}
             </div>
           )}
+
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <SidebarMenuButton
+                    className="hover:bg-gradient-to-r hover:from-[#FF1493]/5 hover:to-[#FF69B4]/5 transition-all duration-200"
+                    data-testid="button-sidebar-more"
+                  >
+                    <MoreHorizontal className="h-4 w-4 text-[#FF69B4]/60" />
+                    <span>{t("nav.more", "More")}</span>
+                  </SidebarMenuButton>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="start" className="w-56 p-1.5 bg-[#141414] border-white/10" sideOffset={8}>
+                  <div className="flex flex-col gap-0.5">
+                    <Button variant="ghost" className="justify-start gap-3 text-sm font-normal" onClick={() => setLocation("/pricing")} data-testid="more-earn-credits">
+                      <Gift className="h-4 w-4 text-muted-foreground" />{t("nav.earnCredits", "Earn Credits")}
+                    </Button>
+                    <Button variant="ghost" className="justify-start gap-3 text-sm font-normal" onClick={() => setLocation("/blog")} data-testid="more-whats-new">
+                      <Megaphone className="h-4 w-4 text-muted-foreground" />{t("nav.whatsNew", "What's New?")}
+                    </Button>
+                    <div className="h-px bg-white/5 my-1" />
+                    <Button variant="ghost" className="justify-start gap-3 text-sm font-normal" onClick={() => setLocation("/support")} data-testid="more-help">
+                      <HelpCircle className="h-4 w-4 text-muted-foreground" />{t("nav.help", "Help")}
+                    </Button>
+                    <Button variant="ghost" className="justify-start gap-3 text-sm font-normal" onClick={() => setLocation("/about")} data-testid="more-about">
+                      <Info className="h-4 w-4 text-muted-foreground" />{t("nav.about", "About")}
+                    </Button>
+                    <Button variant="ghost" className="justify-start gap-3 text-sm font-normal" onClick={() => setLocation("/blog")} data-testid="more-blog">
+                      <BookOpen className="h-4 w-4 text-muted-foreground" />{t("nav.blog", "Blog")}
+                    </Button>
+                    <Button variant="ghost" className="justify-start gap-3 text-sm font-normal" data-testid="more-feedback">
+                      <MessageSquare className="h-4 w-4 text-muted-foreground" />{t("nav.feedback", "Feedback")}
+                    </Button>
+                    <div className="h-px bg-white/5 my-1" />
+                    <Button variant="ghost" className="justify-start gap-3 text-sm font-normal" onClick={() => setLocation("/terms")} data-testid="more-terms">
+                      <FileText className="h-4 w-4 text-muted-foreground" />{t("legal.terms")}
+                    </Button>
+                    <Button variant="ghost" className="justify-start gap-3 text-sm font-normal" onClick={() => setLocation("/privacy")} data-testid="more-privacy">
+                      <Lock className="h-4 w-4 text-muted-foreground" />{t("legal.privacy")}
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </SidebarMenuItem>
+          </SidebarMenu>
+
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-[#FF69B4]/5 transition-colors"
+            onClick={toggleLanguage}
+            data-testid="button-language-toggle"
+          >
+            <Globe className="h-4 w-4 text-[#FF69B4]/60 shrink-0" />
+            <span className="text-xs text-muted-foreground">
+              {t("language.label")}: {i18n.language === "es" ? t("language.es") : t("language.en")}
+            </span>
+          </div>
+
           <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-gradient-to-r from-[#FF1493]/5 to-[#FF69B4]/10 border border-white/5">
             <Avatar className="h-7 w-7 ring-1 ring-[#FF69B4]/30">
               <AvatarImage src={user.profileImageUrl || undefined} />
@@ -298,27 +356,6 @@ export function AppSidebar() {
             >
               <LogOut className="h-3.5 w-3.5" />
             </Button>
-          </div>
-          <div className="flex items-center justify-center gap-3 px-2 pt-1">
-            <a
-              href="/terms"
-              onClick={(e) => { e.preventDefault(); setLocation("/terms"); }}
-              className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-[#FF1493] transition-colors"
-              data-testid="link-sidebar-terms"
-            >
-              <FileText className="h-3 w-3" />
-              <span>{t("legal.terms")}</span>
-            </a>
-            <span className="text-muted-foreground/30 text-[10px]">|</span>
-            <a
-              href="/privacy"
-              onClick={(e) => { e.preventDefault(); setLocation("/privacy"); }}
-              className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-[#FF1493] transition-colors"
-              data-testid="link-sidebar-privacy"
-            >
-              <Lock className="h-3 w-3" />
-              <span>{t("legal.privacy")}</span>
-            </a>
           </div>
         </SidebarFooter>
       )}

@@ -515,10 +515,10 @@ export default function CreatePage() {
   if (!user) return null;
 
   return (
-    <div className="h-full">
+    <div className="h-full flex flex-col">
 
         {/* ====== LEFT + CENTER + RIGHT: 3-column desktop layout ====== */}
-        <div className="hidden lg:grid lg:grid-cols-[320px_1fr_320px] h-full" data-testid="desktop-layout">
+        <div className="hidden lg:grid lg:grid-cols-[320px_1fr_320px] flex-1 overflow-hidden" data-testid="desktop-layout">
 
           {/* ===== LEFT: Creation Panel (Suno-style) ===== */}
           <div className="border-r border-white/5 bg-background/50 overflow-y-auto" data-testid="creation-panel">
@@ -825,7 +825,7 @@ export default function CreatePage() {
                 </div>
               )}
 
-              <div className="flex items-center gap-1.5 flex-wrap mb-4">
+              <div className="flex items-center gap-1.5 flex-wrap mb-2">
                 <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Inspiration</span>
                 <span className="px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/10 text-[11px] text-foreground flex items-center gap-1.5">
                   {selectedGenre}
@@ -841,6 +841,12 @@ export default function CreatePage() {
                   <Dices className="h-2.5 w-2.5 text-orange-400" />+ random
                 </button>
               </div>
+
+              {activeCreationMode === "song" && (
+                <div className="mb-4" data-testid="genre-carousel-left">
+                  <GenreCarousel selectedGenre={selectedGenre} onSelect={setSelectedGenre} />
+                </div>
+              )}
 
               <div className="flex items-center gap-2 mb-5 overflow-x-auto">
                 <button
@@ -973,12 +979,6 @@ export default function CreatePage() {
                 <span className="text-foreground font-medium">Mi Workspace</span>
               </div>
             </div>
-
-            {activeCreationMode === "song" && (
-              <div className="px-5 py-3 border-b border-white/5">
-                <GenreCarousel selectedGenre={selectedGenre} onSelect={setSelectedGenre} />
-              </div>
-            )}
 
             <div className="px-5 py-3 border-b border-white/5">
               <div className="flex items-center gap-2 flex-wrap">
@@ -1163,18 +1163,6 @@ export default function CreatePage() {
                     </div>
                   </div>
 
-                  {activeSong.status === "completed" && activeSong.audioUrl && (
-                    <AudioPlayer
-                      url={activeSong.audioUrl}
-                      title={activeSong.title || activeSong.prompt || t('create.untitledTrack')}
-                      imageUrl={null}
-                      genre={activeSong.genre}
-                      duration={activeSong.duration}
-                      createdAt={activeSong.createdAt}
-                      onOpenStudio={() => setLocation("/studio")}
-                    />
-                  )}
-
                   {(activeSong.status === "processing" || activeSong.status === "pending") && (
                     <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">
                       <div className="flex items-center gap-3 mb-3">
@@ -1251,7 +1239,7 @@ export default function CreatePage() {
         </div>
 
         {/* ====== MOBILE / TABLET LAYOUT ====== */}
-        <ScrollArea className="lg:hidden h-full">
+        <ScrollArea className="lg:hidden flex-1">
         <div className="flex flex-col min-h-screen" data-testid="mobile-layout">
           {mobileView !== "player" && (
             <div className="flex border-b border-white/5 bg-background/80 sticky top-0 z-20">
@@ -1468,6 +1456,38 @@ export default function CreatePage() {
           )}
         </div>
         </ScrollArea>
+
+        {/* ====== FOOTER PLAYER BAR (always visible like Suno) ====== */}
+        {activeSong && activeSong.status === "completed" && activeSong.audioUrl && (
+          <div className="border-t border-white/10 bg-[#0a0a0a] flex-shrink-0" data-testid="footer-player">
+            <AudioPlayer
+              url={activeSong.audioUrl}
+              title={activeSong.title || activeSong.prompt || t('create.untitledTrack')}
+              imageUrl={activeSong.imageUrl}
+              genre={activeSong.genre}
+              duration={activeSong.duration}
+              createdAt={activeSong.createdAt}
+              onOpenStudio={() => setLocation("/studio")}
+            />
+          </div>
+        )}
+
+        {activeSong && (activeSong.status === "processing" || activeSong.status === "pending") && (
+          <div className="border-t border-white/10 bg-[#0a0a0a] flex-shrink-0 px-4 py-2" data-testid="footer-player-processing">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0">
+                <Loader2 className="h-4 w-4 text-primary animate-spin" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{activeSong.title || activeSong.prompt || t('create.untitledTrack')}</p>
+                <p className="text-[11px] text-muted-foreground">{t('create.creatingWithAI')}</p>
+              </div>
+              <div className="w-32 h-1 bg-white/5 rounded-full overflow-hidden flex-shrink-0">
+                <motion.div className="h-full bg-primary/40 rounded-full" animate={{ width: ["10%", "40%", "60%", "75%"] }} transition={{ duration: 240, times: [0, 0.3, 0.6, 1], ease: "easeOut" }} />
+              </div>
+            </div>
+          </div>
+        )}
 
     </div>
   );
