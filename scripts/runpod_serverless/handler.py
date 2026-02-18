@@ -1,5 +1,5 @@
 """
-DGB Studio - RunPod Serverless Handler
+DAGRABA Studio - RunPod Serverless Handler
 Handles music generation (HeartMuLa/SAO), model training, and stem separation.
 Deploy this as a RunPod Serverless worker.
 """
@@ -14,11 +14,11 @@ import subprocess
 import traceback
 from pathlib import Path
 
-import runpod
-import requests
-import torch
-import torchaudio
-import numpy as np
+try:
+    import runpod
+except ImportError:
+    print("[FATAL] runpod package not installed")
+    sys.exit(1)
 
 WORKSPACE = Path("/workspace")
 MODELS_DIR = WORKSPACE / "models"
@@ -35,9 +35,44 @@ HF_TOKEN = os.environ.get("HF_TOKEN", "")
 if HF_TOKEN:
     os.environ["HUGGING_FACE_HUB_TOKEN"] = HF_TOKEN
 
+TORCH_AVAILABLE = False
+NUMPY_AVAILABLE = False
+
+try:
+    import torch
+    import torchaudio
+    TORCH_AVAILABLE = True
+    print(f"[Init] PyTorch {torch.__version__} loaded | CUDA: {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        print(f"[Init] GPU: {torch.cuda.get_device_name(0)} | VRAM: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
+except ImportError as e:
+    print(f"[Init] WARNING: PyTorch not available: {e}")
+
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError as e:
+    print(f"[Init] WARNING: NumPy not available: {e}")
+
+try:
+    import requests
+except ImportError:
+    print("[Init] WARNING: requests not available, webhooks disabled")
+    requests = None
+
+print(f"[Init] Worker ready | torch={TORCH_AVAILABLE} | numpy={NUMPY_AVAILABLE}")
+print(f"[Init] HF_TOKEN configured: {'yes' if HF_TOKEN else 'no'}")
+print(f"[Init] Workspace: {WORKSPACE} | Models: {MODELS_DIR}")
+
+existing_models = list(MODELS_DIR.glob("kit_*"))
+if existing_models:
+    print(f"[Init] Found {len(existing_models)} fine-tuned model(s): {[m.name for m in existing_models]}")
+else:
+    print("[Init] No fine-tuned models found (will use base SAO model)")
+
 
 def send_webhook(url: str, data: dict, retries: int = 2):
-    if not url:
+    if not url or not requests:
         return
     for attempt in range(retries + 1):
         try:
@@ -51,6 +86,9 @@ def send_webhook(url: str, data: dict, retries: int = 2):
 
 
 def get_device():
+    if not TORCH_AVAILABLE:
+        print("[GPU] PyTorch not available, cannot use GPU")
+        return "cpu"
     if torch.cuda.is_available():
         gpu_name = torch.cuda.get_device_name(0)
         vram = torch.cuda.get_device_properties(0).total_memory / 1024**3
@@ -60,118 +98,91 @@ def get_device():
     return "cpu"
 
 
-# ============================================================
-# ACTION: generate_music (HeartMuLa / Stable Audio Open)
-# ============================================================
-def handle_generate_music(job_input: dict) -> dict:
-    song_id = job_input["song_id"]
-    prompt = job_input["prompt"]
-    duration = job_input.get("duration_seconds", 30)
-    engine = job_input.get("engine", "sao")
-    webhook_url = job_input.get("webhook_url", "")
-    lyrics = job_input.get("lyrics", "")
-    tags = job_input.get("tags", "")
-    genre = job_input.get("genre", "")
-    style_kit_id = job_input.get("style_kit_id")
-
-    print(f"[Music] Song {song_id} | Engine: {engine} | Duration: {duration}s")
-    print(f"[Music] Prompt: {prompt[:200]}")
-
-    device = get_device()
-    output_dir = OUTPUTS_DIR / "music"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    wav_path = str(output_dir / f"song_{song_id}_{int(time.time())}.wav")
-    mp3_path = wav_path.replace(".wav", ".mp3")
+def generate_sao(song_id, prompt, duration, style_kit_id, device, wav_path):
+    if not TORCH_AVAILABLE:
+        raise Exception("PyTorch is not installed on this worker. Cannot generate audio.")
 
     try:
-        if engine == "heartmula":
-            result = generate_heartmula(song_id, prompt, duration, lyrics, tags, genre, device, wav_path)
-        else:
-            result = generate_sao(song_id, prompt, duration, style_kit_id, device, wav_path)
-
-        if os.path.exists(wav_path):
-            try:
-                subprocess.run(
-                    ["ffmpeg", "-i", wav_path, "-codec:a", "libmp3lame", "-b:a", "192k", "-y", mp3_path],
-                    capture_output=True, text=True, timeout=60
-                )
-                if os.path.exists(mp3_path):
-                    print(f"[Music] MP3 converted: {mp3_path}")
-            except Exception as e:
-                print(f"[Music] MP3 conversion failed: {e}")
-
-        final_path = mp3_path if os.path.exists(mp3_path) else wav_path
-
-        send_webhook(webhook_url, {
-            "songId": song_id,
-            "status": "completed",
-            "audioPath": final_path,
-            "engine": engine,
-            "duration": duration,
-        })
-
-        return {
-            "status": "completed",
-            "song_id": song_id,
-            "audio_path": final_path,
-            "engine": engine,
-        }
-
-    except Exception as e:
-        error_msg = str(e)
-        print(f"[Music] Generation failed: {traceback.format_exc()}")
-        send_webhook(webhook_url, {
-            "songId": song_id,
-            "status": "failed",
-            "error": error_msg,
-            "engine": engine,
-        })
-        return {"status": "failed", "error": error_msg, "song_id": song_id}
-
-
-def generate_sao(song_id, prompt, duration, style_kit_id, device, wav_path):
-    from stable_audio_tools import get_pretrained_model
-    from stable_audio_tools.inference.generation import generate_diffusion_cond
+        from stable_audio_tools import get_pretrained_model
+        from stable_audio_tools.inference.generation import generate_diffusion_cond
+    except ImportError as e:
+        raise Exception(f"stable-audio-tools not installed: {e}. Rebuild Docker image with: pip install stable-audio-tools")
 
     model_id = "stabilityai/stable-audio-open-1.0"
 
+    kit_model_path = None
     if style_kit_id:
         kit_model_path = MODELS_DIR / f"kit_{style_kit_id}" / "model_final.pt"
-        if kit_model_path.exists():
-            print(f"[SAO] Loading fine-tuned model for kit {style_kit_id}")
+        if not kit_model_path.exists():
+            best_path = MODELS_DIR / f"kit_{style_kit_id}" / "best_model.pt"
+            if best_path.exists():
+                kit_model_path = best_path
+                print(f"[SAO] Using best_model.pt for kit {style_kit_id}")
+            else:
+                print(f"[SAO] Kit {style_kit_id} model not found at {kit_model_path}, using base model")
+                kit_model_path = None
         else:
-            print(f"[SAO] Kit {style_kit_id} model not found, using base model")
+            print(f"[SAO] Found fine-tuned model for kit {style_kit_id}")
 
-    print("[SAO] Loading base model...")
-    model, model_config = get_pretrained_model(model_id)
+    print(f"[SAO] Loading base model: {model_id}")
+    try:
+        model, model_config = get_pretrained_model(model_id)
+    except Exception as e:
+        error_msg = str(e)
+        if "401" in error_msg or "token" in error_msg.lower() or "authorization" in error_msg.lower():
+            raise Exception(f"HuggingFace authentication failed. Set HF_TOKEN env var with a valid token that has access to {model_id}. Error: {error_msg}")
+        elif "404" in error_msg or "not found" in error_msg.lower():
+            raise Exception(f"Model {model_id} not found on HuggingFace. Error: {error_msg}")
+        else:
+            raise Exception(f"Failed to load SAO model: {error_msg}")
+
     sample_rate = model_config["sample_rate"]
     model = model.to(device)
 
-    if style_kit_id:
-        kit_model_path = MODELS_DIR / f"kit_{style_kit_id}" / "model_final.pt"
-        if kit_model_path.exists():
-            checkpoint = torch.load(str(kit_model_path), map_location=device)
+    if kit_model_path and kit_model_path.exists():
+        try:
+            checkpoint = torch.load(str(kit_model_path), map_location=device, weights_only=False)
             if "model_state_dict" in checkpoint:
                 model.load_state_dict(checkpoint["model_state_dict"], strict=False)
             else:
                 model.load_state_dict(checkpoint, strict=False)
             print(f"[SAO] Fine-tuned weights loaded for kit {style_kit_id}")
+        except Exception as e:
+            print(f"[SAO] WARNING: Failed to load fine-tuned weights for kit {style_kit_id}: {e}")
+            print("[SAO] Continuing with base model")
 
     model.eval()
 
     print(f"[SAO] Generating {duration}s audio...")
-    with torch.no_grad():
-        output = generate_diffusion_cond(
-            model,
-            steps=100,
-            cfg_scale=7,
-            conditioning=[{"prompt": prompt, "seconds_start": 0, "seconds_total": duration}],
-            sample_size=int(sample_rate * duration),
-            sigma_min=0.3,
-            sigma_max=500,
-            sampler_type="dpmpp-3m-sde",
-            device=device,
-        )
+    try:
+        with torch.no_grad():
+            output = generate_diffusion_cond(
+                model,
+                steps=100,
+                cfg_scale=7,
+                conditioning=[{"prompt": prompt, "seconds_start": 0, "seconds_total": duration}],
+                sample_size=int(sample_rate * duration),
+                sigma_min=0.3,
+                sigma_max=500,
+                sampler_type="dpmpp-3m-sde",
+                device=device,
+            )
+    except torch.cuda.OutOfMemoryError:
+        torch.cuda.empty_cache()
+        print(f"[SAO] OOM with {duration}s, retrying with shorter duration...")
+        shorter = min(duration, 30)
+        with torch.no_grad():
+            output = generate_diffusion_cond(
+                model,
+                steps=80,
+                cfg_scale=7,
+                conditioning=[{"prompt": prompt, "seconds_start": 0, "seconds_total": shorter}],
+                sample_size=int(sample_rate * shorter),
+                sigma_min=0.3,
+                sigma_max=500,
+                sampler_type="dpmpp-3m-sde",
+                device=device,
+            )
 
     audio = output.squeeze(0).cpu()
     if audio.dim() == 1:
@@ -180,8 +191,9 @@ def generate_sao(song_id, prompt, duration, style_kit_id, device, wav_path):
     torchaudio.save(wav_path, audio, sample_rate)
     print(f"[SAO] Audio saved: {wav_path}")
 
-    del model
-    torch.cuda.empty_cache()
+    del model, output, audio
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     return {"audio_path": wav_path, "sample_rate": sample_rate}
 
@@ -242,9 +254,106 @@ print("DONE")
 
 
 # ============================================================
+# ACTION: generate_music (HeartMuLa / Stable Audio Open)
+# ============================================================
+def handle_generate_music(job_input: dict) -> dict:
+    song_id = job_input.get("song_id", 0)
+    prompt = job_input.get("prompt", "")
+    duration = job_input.get("duration_seconds", 30)
+    engine = job_input.get("engine", "sao")
+    webhook_url = job_input.get("webhook_url", "")
+    lyrics = job_input.get("lyrics", "")
+    tags = job_input.get("tags", "")
+    genre = job_input.get("genre", "")
+    style_kit_id = job_input.get("style_kit_id")
+
+    if not prompt:
+        return {"status": "failed", "error": "No prompt provided", "song_id": song_id}
+
+    print(f"[Music] Song {song_id} | Engine: {engine} | Duration: {duration}s")
+    print(f"[Music] Prompt: {prompt[:200]}")
+    if style_kit_id:
+        print(f"[Music] Style Kit: {style_kit_id}")
+
+    device = get_device()
+    output_dir = OUTPUTS_DIR / "music"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    wav_path = str(output_dir / f"song_{song_id}_{int(time.time())}.wav")
+    mp3_path = wav_path.replace(".wav", ".mp3")
+
+    try:
+        if engine == "heartmula":
+            result = generate_heartmula(song_id, prompt, duration, lyrics, tags, genre, device, wav_path)
+        else:
+            result = generate_sao(song_id, prompt, duration, style_kit_id, device, wav_path)
+
+        if os.path.exists(wav_path):
+            try:
+                subprocess.run(
+                    ["ffmpeg", "-i", wav_path, "-codec:a", "libmp3lame", "-b:a", "192k", "-y", mp3_path],
+                    capture_output=True, text=True, timeout=60
+                )
+                if os.path.exists(mp3_path):
+                    print(f"[Music] MP3 converted: {mp3_path}")
+            except Exception as e:
+                print(f"[Music] MP3 conversion failed: {e}")
+
+        final_path = mp3_path if os.path.exists(mp3_path) else wav_path
+
+        audio_format = "mp3" if final_path.endswith(".mp3") else "wav"
+
+        result_data = {
+            "status": "completed",
+            "song_id": song_id,
+            "audio_path": final_path,
+            "engine": engine,
+            "audioFormat": audio_format,
+        }
+
+        file_size = os.path.getsize(final_path)
+        max_b64_size = 20 * 1024 * 1024
+        if file_size < max_b64_size:
+            import base64
+            with open(final_path, "rb") as f:
+                audio_bytes = f.read()
+            result_data["audioBase64"] = base64.b64encode(audio_bytes).decode("utf-8")
+            print(f"[Music] Including base64 audio ({file_size / 1024:.0f} KB)")
+        else:
+            print(f"[Music] File too large for base64 ({file_size / 1024 / 1024:.1f} MB), using webhook only")
+
+        send_webhook(webhook_url, {
+            "songId": song_id,
+            "status": "completed",
+            "audioPath": final_path,
+            "engine": engine,
+            "duration": duration,
+        })
+
+        return result_data
+
+    except Exception as e:
+        error_msg = str(e)
+        print(f"[Music] Generation failed: {traceback.format_exc()}")
+
+        if TORCH_AVAILABLE and torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        send_webhook(webhook_url, {
+            "songId": song_id,
+            "status": "failed",
+            "error": error_msg,
+            "engine": engine,
+        })
+        return {"status": "failed", "error": error_msg, "song_id": song_id}
+
+
+# ============================================================
 # ACTION: train_model (Stable Audio Open fine-tuning)
 # ============================================================
 def handle_train_model(job_input: dict) -> dict:
+    if not TORCH_AVAILABLE:
+        return {"status": "failed", "error": "PyTorch not available on this worker"}
+
     kit_id = job_input["kit_id"]
     kit_name = job_input.get("kit_name", f"Kit {kit_id}")
     genre = job_input.get("genre", "bachata")
@@ -372,7 +481,7 @@ def handle_train_model(job_input: dict) -> dict:
 
         optimizer = torch.optim.AdamW(trainable_params, lr=lr, weight_decay=0.01)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
-        scaler = torch.cuda.amp.GradScaler(enabled=device == "cuda")
+        scaler = torch.amp.GradScaler("cuda", enabled=device == "cuda")
 
         model_save_dir = MODELS_DIR / f"kit_{kit_id}"
         model_save_dir.mkdir(parents=True, exist_ok=True)
@@ -418,7 +527,7 @@ def handle_train_model(job_input: dict) -> dict:
                             except Exception:
                                 pass
 
-                    with torch.cuda.amp.autocast(enabled=device == "cuda"):
+                    with torch.amp.autocast("cuda", enabled=device == "cuda"):
                         try:
                             if cond_input is not None:
                                 predicted = diffusion_model(noisy_audio, sigma.squeeze(), cond_input)
@@ -513,7 +622,7 @@ def handle_train_model(job_input: dict) -> dict:
         error_msg = str(e)
         print(f"[Train] Failed: {traceback.format_exc()}")
 
-        if torch.cuda.is_available():
+        if TORCH_AVAILABLE and torch.cuda.is_available():
             torch.cuda.empty_cache()
 
         send_webhook(webhook_url, {
@@ -528,10 +637,13 @@ def handle_train_model(job_input: dict) -> dict:
 # ACTION: separate_stems (Demucs)
 # ============================================================
 def handle_separate_stems(job_input: dict) -> dict:
-    song_id = job_input["song_id"]
-    audio_url = job_input["audio_url"]
+    song_id = job_input.get("song_id", 0)
+    audio_url = job_input.get("audio_url", "")
     model_name = job_input.get("model", "htdemucs")
     webhook_url = job_input.get("webhook_url", "")
+
+    if not audio_url:
+        return {"status": "failed", "error": "No audio_url provided", "song_id": song_id}
 
     print(f"[Stems] Song {song_id} | Model: {model_name}")
 
@@ -551,26 +663,16 @@ def handle_separate_stems(job_input: dict) -> dict:
         result = subprocess.run(
             [
                 sys.executable, "-m", "demucs",
-                "--name", model_name,
-                "--out", str(stems_dir),
-                "--two-stems" if model_name == "htdemucs_ft" else "--skip",
+                "-n", model_name,
+                "-o", str(stems_dir),
                 input_path,
             ],
             capture_output=True, text=True, timeout=600,
         )
 
         if result.returncode != 0:
-            alt_result = subprocess.run(
-                [
-                    sys.executable, "-m", "demucs",
-                    "-n", model_name,
-                    "-o", str(stems_dir),
-                    input_path,
-                ],
-                capture_output=True, text=True, timeout=600,
-            )
-            if alt_result.returncode != 0:
-                raise Exception(f"Demucs failed: {alt_result.stderr[:500]}")
+            print(f"[Stems] Demucs stderr: {result.stderr[:500]}")
+            raise Exception(f"Demucs failed (exit {result.returncode}): {result.stderr[:300]}")
 
         stems_output = stems_dir / model_name / "input"
         stems = {}
@@ -621,29 +723,37 @@ def handle_separate_stems(job_input: dict) -> dict:
 # MAIN HANDLER (RunPod Serverless entry point)
 # ============================================================
 def handler(job):
-    job_input = job.get("input", {})
-    action = job_input.get("action", "")
+    try:
+        job_input = job.get("input", {})
+        action = job_input.get("action", "")
 
-    print(f"[DGB Serverless] Job received | Action: {action}")
-    print(f"[DGB Serverless] GPU available: {torch.cuda.is_available()}")
-    if torch.cuda.is_available():
-        print(f"[DGB Serverless] GPU: {torch.cuda.get_device_name(0)}")
+        print(f"[DAGRABA Serverless] Job received | Action: {action}")
+        print(f"[DAGRABA Serverless] GPU available: {torch.cuda.is_available() if TORCH_AVAILABLE else 'N/A (torch not loaded)'}")
+        if TORCH_AVAILABLE and torch.cuda.is_available():
+            print(f"[DAGRABA Serverless] GPU: {torch.cuda.get_device_name(0)}")
 
-    if action == "generate_music":
-        return handle_generate_music(job_input)
-    elif action == "train_model":
-        return handle_train_model(job_input)
-    elif action == "separate_stems":
-        return handle_separate_stems(job_input)
-    elif action == "health_check":
-        return {
-            "status": "healthy",
-            "gpu": torch.cuda.is_available(),
-            "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "N/A",
-            "server": "dgb-runpod-serverless",
-        }
-    else:
-        return {"status": "error", "error": f"Unknown action: {action}"}
+        if action == "generate_music":
+            return handle_generate_music(job_input)
+        elif action == "train_model":
+            return handle_train_model(job_input)
+        elif action == "separate_stems":
+            return handle_separate_stems(job_input)
+        elif action == "health_check":
+            return {
+                "status": "healthy",
+                "gpu": torch.cuda.is_available() if TORCH_AVAILABLE else False,
+                "gpu_name": torch.cuda.get_device_name(0) if (TORCH_AVAILABLE and torch.cuda.is_available()) else "N/A",
+                "torch_available": TORCH_AVAILABLE,
+                "models_found": len(list(MODELS_DIR.glob("kit_*"))),
+                "server": "dagraba-runpod-serverless",
+            }
+        else:
+            return {"status": "error", "error": f"Unknown action: {action}"}
+
+    except Exception as e:
+        print(f"[DAGRABA Serverless] CRITICAL handler error: {traceback.format_exc()}")
+        return {"status": "failed", "error": f"Handler error: {str(e)}"}
 
 
+print("[DAGRABA Serverless] Starting RunPod handler...")
 runpod.serverless.start({"handler": handler})
