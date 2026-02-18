@@ -274,6 +274,7 @@ export async function purgeQueue(
 
 export async function getEndpointConfig(): Promise<{
   endpointId: string;
+  name?: string;
   gpuIds: string;
   maxWorkers: number;
   minWorkers: number;
@@ -311,6 +312,7 @@ export async function getEndpointConfig(): Promise<{
 
     return {
       endpointId: ep.id,
+      name: ep.name || "",
       gpuIds: ep.gpuIds || "",
       maxWorkers: ep.workersMax || 0,
       minWorkers: ep.workersMin || 0,
@@ -334,18 +336,21 @@ export async function updateEndpointConfig(params: {
 
   try {
     const apiKey = RUNPOD_ACCOUNT_API_KEY();
-    const mutations: string[] = [];
-    if (params.maxWorkers !== undefined) mutations.push(`workersMax: ${params.maxWorkers}`);
-    if (params.minWorkers !== undefined) mutations.push(`workersMin: ${params.minWorkers}`);
-    if (params.idleTimeout !== undefined) mutations.push(`idleTimeout: ${params.idleTimeout}`);
-    if (params.gpuIds !== undefined) mutations.push(`gpuIds: "${params.gpuIds}"`);
-
-    if (mutations.length === 0) {
-      return { success: false, error: "No parameters to update" };
+    const currentConfig = await getEndpointConfig();
+    if (currentConfig.error && !currentConfig.endpointId) {
+      return { success: false, error: `Cannot fetch current config: ${currentConfig.error}` };
     }
 
-    const query = `mutation { saveEndpoint(input: { id: "${endpointId}", ${mutations.join(", ")} }) { id gpuIds workersMax workersMin idleTimeout } }`;
-    console.log(`[RunPod] Updating endpoint ${endpointId}: ${mutations.join(", ")}`);
+    const fields: string[] = [];
+    fields.push(`id: "${endpointId}"`);
+    fields.push(`name: "${currentConfig.name || "dgb-studio"}"`);
+    if (params.maxWorkers !== undefined) fields.push(`workersMax: ${params.maxWorkers}`);
+    if (params.minWorkers !== undefined) fields.push(`workersMin: ${params.minWorkers}`);
+    if (params.idleTimeout !== undefined) fields.push(`idleTimeout: ${params.idleTimeout}`);
+    if (params.gpuIds !== undefined) fields.push(`gpuIds: "${params.gpuIds}"`);
+
+    const query = `mutation { saveEndpoint(input: { ${fields.join(", ")} }) { id gpuIds workersMax workersMin idleTimeout } }`;
+    console.log(`[RunPod] Updating endpoint ${endpointId}: ${fields.join(", ")}`);
 
     const res = await fetchWithTimeout(`https://api.runpod.io/graphql?api_key=${apiKey}`, {
       method: "POST",
@@ -353,14 +358,12 @@ export async function updateEndpointConfig(params: {
       body: JSON.stringify({ query }),
     }, 15000);
 
-    if (!res.ok) {
-      const errText = await res.text();
-      return { success: false, error: `API ${res.status}: ${errText}` };
-    }
-
     const data = await res.json();
     if (data.errors) {
       return { success: false, error: data.errors[0]?.message || "GraphQL error" };
+    }
+    if (!res.ok) {
+      return { success: false, error: `API ${res.status}` };
     }
 
     console.log(`[RunPod] Endpoint updated:`, data?.data?.saveEndpoint);
