@@ -227,7 +227,7 @@ function startUnifiedPoller(
   imageContext?: { prompt: string; genre: string }
 ) {
   const checkInterval = 15000;
-  const maxChecks = 30;
+  const maxChecks = 40;
   let checks = 0;
 
   const timer = setInterval(async () => {
@@ -240,8 +240,8 @@ function startUnifiedPoller(
       }
 
       if (checks >= maxChecks) {
-        console.log(`[Worker] Song ${songId} timed out after ${maxChecks * checkInterval / 1000}s`);
-        await storage.updateSongStatus(songId, "failed", undefined, "Generation timed out. Please try again.");
+        console.log(`[Worker] Song ${songId} (${pollConfig.providerName}) timed out after ${maxChecks * checkInterval / 1000}s of polling`);
+        await storage.updateSongStatus(songId, "failed", undefined, `Generación tardó demasiado (${pollConfig.providerName}). Intenta de nuevo.`);
         clearInterval(timer);
         return;
       }
@@ -319,17 +319,40 @@ export function startRunPodWatchdog(songId: number, jobId: string, timeoutMs: nu
         }
 
         try {
+          const fallbackPrompt = song.prompt || "";
+          const fallbackStyle = song.genre || "Bachata";
+          let fallbackLyrics = song.lyricsText || "";
+
+          if (!fallbackLyrics) {
+            try {
+              const lyricsStyle = mapStyleToLyricsStyle(fallbackStyle);
+              fallbackLyrics = await generateCreativeLyrics(fallbackPrompt, lyricsStyle, fallbackStyle);
+              console.log(`[RunPod Watchdog] Generated ${fallbackLyrics.length} chars of lyrics for fallback`);
+            } catch (lErr: any) {
+              console.log(`[RunPod Watchdog] Lyrics generation failed for fallback: ${lErr.message}`);
+            }
+          }
+
+          let enrichedPrompt = fallbackPrompt;
+          try {
+            enrichedPrompt = await enrichPromptForMusicGen(fallbackPrompt, fallbackStyle);
+          } catch {}
+
+          console.log(`[RunPod Watchdog] Attempting Kie.ai fallback for song ${songId} (hasLyrics: ${!!fallbackLyrics})`);
+
           const submitResult = await executeOperation("music_generation", {
-            prompt: song.prompt || "",
-            style: song.genre || "Bachata",
+            prompt: enrichedPrompt,
+            lyrics: fallbackLyrics || undefined,
+            style: fallbackStyle,
             duration: 180,
+            title: song.title || `DGB AUDIO - ${fallbackStyle}`,
           }, { excludeAdapters: ["runpod_music"] });
 
           if (submitResult.taskId) {
             await storage.updateSongTaskId(songId, submitResult.taskId);
-            await storage.updateSongStatus(songId, "processing", undefined, "GPU timed out, trying backup engine...");
+            await storage.updateSongStatus(songId, "processing", undefined, "Motor GPU tardó, probando motor de respaldo...");
             if (submitResult.pollConfig) {
-              startUnifiedPoller(songId, submitResult.pollConfig, { prompt: song.prompt || "", genre: song.genre || "Bachata" });
+              startUnifiedPoller(songId, submitResult.pollConfig, { prompt: fallbackPrompt, genre: fallbackStyle });
             }
             pendingRunPodSongs.delete(songId);
             return;
@@ -395,17 +418,37 @@ export function startRunPodTimeout(songId: number, timeoutMs: number) {
         console.log(`[RunPod Music] Song ${songId} timed out after ${timeoutMs / 1000}s, attempting pipeline fallback (skipping RunPod)...`);
 
         try {
+          const fallbackPrompt = song.prompt || "";
+          const fallbackStyle = song.genre || "Bachata";
+          let fallbackLyrics = song.lyricsText || "";
+
+          if (!fallbackLyrics) {
+            try {
+              const lyricsStyle = mapStyleToLyricsStyle(fallbackStyle);
+              fallbackLyrics = await generateCreativeLyrics(fallbackPrompt, lyricsStyle, fallbackStyle);
+            } catch {}
+          }
+
+          let enrichedPrompt = fallbackPrompt;
+          try {
+            enrichedPrompt = await enrichPromptForMusicGen(fallbackPrompt, fallbackStyle);
+          } catch {}
+
+          console.log(`[RunPod Music] Fallback to Kie.ai for song ${songId} (hasLyrics: ${!!fallbackLyrics})`);
+
           const submitResult = await executeOperation("music_generation", {
-            prompt: song.prompt || "",
-            style: song.genre || "Bachata",
+            prompt: enrichedPrompt,
+            lyrics: fallbackLyrics || undefined,
+            style: fallbackStyle,
             duration: 180,
+            title: song.title || `DGB AUDIO - ${fallbackStyle}`,
           }, { excludeAdapters: ["runpod_music"] });
 
           if (submitResult.taskId) {
             await storage.updateSongTaskId(songId, submitResult.taskId);
-            await storage.updateSongStatus(songId, "processing", undefined, "GPU timed out, trying backup engine...");
+            await storage.updateSongStatus(songId, "processing", undefined, "Motor GPU tardó, probando motor de respaldo...");
             if (submitResult.pollConfig) {
-              startUnifiedPoller(songId, submitResult.pollConfig, { prompt: song.prompt || "", genre: song.genre || "Bachata" });
+              startUnifiedPoller(songId, submitResult.pollConfig, { prompt: fallbackPrompt, genre: fallbackStyle });
             }
             pendingRunPodSongs.delete(songId);
             return;

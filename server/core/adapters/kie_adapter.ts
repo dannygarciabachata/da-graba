@@ -41,7 +41,7 @@ const kieMusicAdapter: ProviderAdapter = {
   },
 
   poll: async (taskId: string, provider: ApiProvider, endpoint: ApiEndpoint, input: ProviderInput): Promise<ProviderResult> => {
-    const result = await pollKieTask(taskId, 300000, 10000);
+    const result = await pollKieTask(taskId, 480000, 10000);
 
     const audioUrl = result.audioUrl;
     let localAudioUrl: string | undefined;
