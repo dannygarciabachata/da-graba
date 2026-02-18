@@ -256,7 +256,7 @@ export default function CreatePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const [currentSong, setCurrentSong] = useState<any>(null);
+  const { play: globalPlay, state: playerState, history, clearHistory } = usePlayer();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -423,8 +423,8 @@ export default function CreatePage() {
     }
   }
 
-  const activeSong = currentSong
-    ? allSongs.find((s: any) => s.id === currentSong.id) || currentSong
+  const activeSong = playerState.currentSong
+    ? allSongs.find((s: any) => s.id === playerState.currentSong?.id) || null
     : null;
 
   const handleGenerate = () => {
@@ -508,11 +508,41 @@ export default function CreatePage() {
   };
 
   const handleSongClick = (song: any) => {
-    setCurrentSong(song);
+    if (song.status === "completed" && song.audioUrl) {
+      const playerSong: PlayerSong = {
+        id: song.id,
+        title: song.title || song.prompt || "Untitled",
+        audioUrl: song.audioUrl,
+        imageUrl: song.imageUrl,
+        genre: song.genre,
+        artistName: song.artistName,
+        prompt: song.prompt,
+        variationLabel: song.variationLabel,
+        lyricsText: song.lyricsText,
+        copyrightHolder: song.copyrightHolder,
+        isPublic: song.isPublic,
+        duration: song.duration,
+      };
+      const completedSongs = allSongs
+        .filter((s: any) => s.status === "completed" && s.audioUrl)
+        .map((s: any) => ({
+          id: s.id,
+          title: s.title || s.prompt || "Untitled",
+          audioUrl: s.audioUrl,
+          imageUrl: s.imageUrl,
+          genre: s.genre,
+          artistName: s.artistName,
+          prompt: s.prompt,
+          variationLabel: s.variationLabel,
+          lyricsText: s.lyricsText,
+          copyrightHolder: s.copyrightHolder,
+          isPublic: s.isPublic,
+          duration: s.duration,
+        }));
+      globalPlay(playerSong, completedSongs);
+    }
     setMobileView("player");
   };
-
-  const queueSongs = allSongs.filter((s: any) => s.id !== activeSong?.id && s.status === "completed").slice(0, 10);
 
   if (!user) return null;
 
@@ -1046,7 +1076,7 @@ export default function CreatePage() {
                               key={song.id}
                               className={cn(
                                 "flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all group/song",
-                                currentSong?.id === song.id
+                                playerState.currentSong?.id === song.id
                                   ? "bg-primary/10 border border-primary/20"
                                   : "border border-transparent hover:bg-white/[0.03]"
                               )}
@@ -1054,7 +1084,9 @@ export default function CreatePage() {
                               data-testid={`card-recent-song-${song.id}`}
                             >
                               <div className="h-12 w-12 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-                                {song.imageUrl ? (
+                                {playerState.currentSong?.id === song.id && playerState.isPlaying ? (
+                                  <AudioSpectrum songId={song.id} />
+                                ) : song.imageUrl ? (
                                   <img src={song.imageUrl} alt={song.title} className="h-12 w-12 rounded-md object-cover" />
                                 ) : song.status === "processing" || song.status === "pending" ? (
                                   <Loader2 className="h-4 w-4 text-primary animate-spin" />
@@ -1131,109 +1163,66 @@ export default function CreatePage() {
             </div>
           </div>
 
-          {/* ===== RIGHT: Queue Panel ===== */}
-          <div className="border-l border-white/5 overflow-y-auto bg-background/30" data-testid="player-panel">
+          {/* ===== RIGHT: History Panel ===== */}
+          <div className="border-l border-white/5 overflow-y-auto bg-background/30" data-testid="history-panel">
             <div className="p-4">
               <div className="flex items-center justify-between gap-2 mb-4">
                 <div className="flex items-center gap-2">
-                  <ListMusic className="h-4 w-4 text-muted-foreground" />
-                  <h2 className="text-sm font-semibold">Queue</h2>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="text-sm font-semibold">{t('create.history', 'Historial')}</h2>
+                  {history.length > 0 && (
+                    <span className="text-[10px] bg-white/5 text-muted-foreground px-1.5 rounded-full">{history.length}</span>
+                  )}
                 </div>
-                {allSongs.length > 0 && (
-                  <Button variant="ghost" size="sm" className="text-[11px] text-muted-foreground h-7" onClick={() => setCurrentSong(null)} data-testid="button-clear-queue">
-                    Clear queue
+                {history.length > 0 && (
+                  <Button variant="ghost" size="sm" className="text-[11px] text-muted-foreground" onClick={clearHistory} data-testid="button-clear-history">
+                    <Trash2 className="h-3 w-3 mr-1" />{t('create.clearHistory', 'Borrar')}
                   </Button>
                 )}
               </div>
 
-              {activeSong ? (
-                <div className="space-y-4">
-                  <div>
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('create.nowPlaying', 'Now Playing')}</span>
-                    <div className="flex items-center gap-3 mt-2 p-2 rounded-lg bg-primary/5 border border-primary/15">
-                      <div className="h-12 w-12 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                        {activeSong.imageUrl ? (
-                          <img src={activeSong.imageUrl} alt={activeSong.title || "Cover"} className="h-12 w-12 object-cover rounded-md" />
+              {history.length > 0 ? (
+                <div className="space-y-0.5">
+                  {history.map((entry) => (
+                    <div
+                      key={`${entry.song.id}-${entry.playedAt}`}
+                      className={cn(
+                        "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
+                        playerState.currentSong?.id === entry.song.id
+                          ? "bg-primary/10 border border-primary/20"
+                          : "border border-transparent hover:bg-white/[0.03]"
+                      )}
+                      onClick={() => {
+                        const historyQueue = history.map(h => h.song);
+                        globalPlay(entry.song, historyQueue);
+                      }}
+                      data-testid={`history-song-${entry.song.id}`}
+                    >
+                      <div className="h-10 w-10 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                        {playerState.currentSong?.id === entry.song.id && playerState.isPlaying ? (
+                          <AudioSpectrum songId={entry.song.id} />
+                        ) : entry.song.imageUrl ? (
+                          <img src={entry.song.imageUrl} alt="" className="h-10 w-10 object-cover rounded-md" />
                         ) : (
-                          <Music className="h-5 w-5 text-primary/40" />
+                          <Music className="h-3.5 w-3.5 text-muted-foreground/30" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-medium truncate">{activeSong.title || activeSong.prompt || t('create.untitledTrack')}</h3>
-                        <p className="text-[11px] text-muted-foreground truncate">{activeSong.genre || "DAGRABA"} {activeSong.artistName ? `· ${activeSong.artistName}` : ""}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {(activeSong.status === "processing" || activeSong.status === "pending") && (
-                    <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">
-                      <div className="flex items-center gap-3 mb-3">
-                        <Loader2 className="h-5 w-5 text-primary animate-spin flex-shrink-0" />
-                        <div>
-                          <p className="text-xs font-medium">{t('create.creatingWithAI')}</p>
-                          <p className="text-[10px] text-muted-foreground">{t('create.estimatedTime')}</p>
+                        <h4 className="text-xs font-medium truncate">{entry.song.title || entry.song.prompt || t('create.untitledTrack')}</h4>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-[10px] text-muted-foreground truncate">{entry.song.genre}</p>
+                          <span className="text-[9px] text-muted-foreground/50">{formatDistanceToNow(new Date(entry.playedAt), { addSuffix: true })}</span>
                         </div>
                       </div>
-                      <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <motion.div className="h-full bg-primary/40 rounded-full" animate={{ width: ["10%", "40%", "60%", "75%"] }} transition={{ duration: 240, times: [0, 0.3, 0.6, 1], ease: "easeOut" }} />
-                      </div>
                     </div>
-                  )}
-
-                  {activeSong.status === "failed" && (
-                    <div className="p-3 rounded-lg border border-destructive/20 bg-destructive/5">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
-                        <p className="text-xs text-destructive">{activeSong.statusMessage || t('create.generationFailed', 'La generación falló. Intenta de nuevo.')}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {activeSong.lyricsText && (
-                    <div>
-                      <h4 className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">{t('create.lyrics.label')}</h4>
-                      <div className="text-xs text-muted-foreground whitespace-pre-wrap bg-white/[0.02] rounded-lg p-3 border border-white/5 max-h-[150px] overflow-y-auto leading-relaxed">{activeSong.lyricsText}</div>
-                    </div>
-                  )}
-
-                  {queueSongs.length > 0 && (
-                    <div>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Next up</span>
-                      <div className="mt-2 space-y-0.5">
-                        {queueSongs.map((song: any) => (
-                          <div
-                            key={song.id}
-                            className="flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-white/[0.03] transition-colors"
-                            onClick={() => handleSongClick(song)}
-                          >
-                            <div className="h-10 w-10 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden relative">
-                              {song.imageUrl ? (
-                                <img src={song.imageUrl} alt="" className="h-10 w-10 object-cover rounded-md" />
-                              ) : (
-                                <Music className="h-3.5 w-3.5 text-muted-foreground/30" />
-                              )}
-                              {song.duration && (
-                                <span className="absolute bottom-0 right-0 px-0.5 text-[8px] font-mono bg-black/70 text-white rounded-sm">
-                                  {formatDuration(song.duration)}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-xs font-medium truncate">{song.title || song.prompt || t('create.untitledTrack')}</h4>
-                              <p className="text-[10px] text-muted-foreground truncate">{song.genre}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  ))}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="h-16 w-16 rounded-2xl bg-white/[0.03] flex items-center justify-center mb-4">
-                    <Play className="h-8 w-8 text-muted-foreground/20" />
+                    <Clock className="h-8 w-8 text-muted-foreground/20" />
                   </div>
-                  <p className="text-xs text-muted-foreground">{t('create.selectTrack', 'Selecciona una canción para reproducir')}</p>
+                  <p className="text-xs text-muted-foreground">{t('create.noHistory', 'Tu historial aparecerá aquí')}</p>
                 </div>
               )}
             </div>
@@ -1402,7 +1391,7 @@ export default function CreatePage() {
                           </div>
                         )}
                         {group.songs.map((song: any) => (
-                          <div key={song.id} className={cn("flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all", currentSong?.id === song.id ? "bg-primary/10 border border-primary/20" : "border border-transparent")} onClick={() => handleSongClick(song)} data-testid={`mobile-song-${song.id}`}>
+                          <div key={song.id} className={cn("flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all", playerState.currentSong?.id === song.id ? "bg-primary/10 border border-primary/20" : "border border-transparent")} onClick={() => handleSongClick(song)} data-testid={`mobile-song-${song.id}`}>
                             <div className="h-12 w-12 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden relative">
                               {song.imageUrl ? <img src={song.imageUrl} alt="" className="h-12 w-12 object-cover rounded-md" /> : song.status === "completed" ? <Play className="h-4 w-4 text-primary fill-current" /> : <Loader2 className="h-4 w-4 text-primary animate-spin" />}
                               {song.duration && song.status === "completed" && (
@@ -1445,7 +1434,7 @@ export default function CreatePage() {
                     </div>
                   </div>
                   {activeSong.status === "completed" && activeSong.audioUrl && (
-                    <AudioPlayer url={activeSong.audioUrl} title={activeSong.title || activeSong.prompt || ""} imageUrl={null} genre={activeSong.genre} duration={activeSong.duration} createdAt={activeSong.createdAt} onOpenStudio={() => setLocation("/studio")} />
+                    <AudioPlayer url={activeSong.audioUrl} title={activeSong.title || activeSong.prompt || ""} imageUrl={null} genre={activeSong.genre} duration={activeSong.duration} createdAt={activeSong.createdAt?.toString()} onOpenStudio={() => setLocation("/studio")} />
                   )}
                   {(activeSong.status === "processing" || activeSong.status === "pending") && (
                     <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">

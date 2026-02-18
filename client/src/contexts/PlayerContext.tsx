@@ -31,9 +31,15 @@ interface PlayerState {
   isRepeating: boolean;
 }
 
+export interface HistoryEntry {
+  song: PlayerSong;
+  playedAt: number;
+}
+
 interface PlayerContextValue {
   state: PlayerState;
   analyserNode: AnalyserNode | null;
+  history: HistoryEntry[];
   play: (song: PlayerSong, queue?: PlayerSong[]) => void;
   togglePlayPause: () => void;
   pause: () => void;
@@ -46,6 +52,7 @@ interface PlayerContextValue {
   toggleMute: () => void;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
+  clearHistory: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
@@ -67,6 +74,26 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const queueRef = useRef<PlayerQueue>({ songs: [], currentIndex: -1 });
   const savedVolumeRef = useRef(1);
+  const [history, setHistory] = useState<HistoryEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem("dagraba_history");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  const addToHistory = useCallback((song: PlayerSong) => {
+    setHistory(prev => {
+      const filtered = prev.filter(h => h.song.id !== song.id);
+      const next = [{ song, playedAt: Date.now() }, ...filtered].slice(0, 50);
+      try { localStorage.setItem("dagraba_history", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  const clearHistory = useCallback(() => {
+    setHistory([]);
+    try { localStorage.removeItem("dagraba_history"); } catch {}
+  }, []);
 
   const [state, setState] = useState<PlayerState>({
     currentSong: null,
@@ -172,8 +199,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     audio.src = song.audioUrl;
     audio.load();
 
+    addToHistory(song);
     fetch(`/api/songs/${song.id}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).catch(() => {});
-  }, [connectSource, state.volume]);
+  }, [connectSource, state.volume, addToHistory]);
 
   const play = useCallback((song: PlayerSong, queue?: PlayerSong[]) => {
     if (queue && queue.length > 0) {
@@ -278,6 +306,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       value={{
         state,
         analyserNode,
+        history,
         play,
         togglePlayPause,
         pause,
@@ -290,6 +319,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         toggleMute,
         toggleShuffle,
         toggleRepeat,
+        clearHistory,
       }}
     >
       {children}
