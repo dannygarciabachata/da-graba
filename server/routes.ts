@@ -90,6 +90,19 @@ export async function registerRoutes(
     res.json({ status: "ok", timestamp: Date.now() });
   });
 
+  app.get("/api/internal/runpod-startsh", (_req, res) => {
+    try {
+      const file = path.join(process.cwd(), "scripts/runpod_serverless/start.sh");
+      if (fs.existsSync(file)) {
+        res.type("text/plain").send(fs.readFileSync(file, "utf8"));
+      } else {
+        res.status(404).send("not found");
+      }
+    } catch (e: any) {
+      res.status(500).send(e.message);
+    }
+  });
+
   // ========== MUSIC ROUTES ==========
 
   app.get(api.songs.list.path, async (req, res) => {
