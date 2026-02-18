@@ -58,10 +58,10 @@ if [ ! -f "${DEPS_MARKER}" ]; then
     echo "[Init] Installing Python dependencies (first run, cached after)..."
     echo "[Init] This may take 2-5 minutes..."
 
+    echo "[Init] Step 1/2: Installing core dependencies..."
     pip install --no-cache-dir \
         runpod==1.7.7 \
         stable-audio-tools==0.0.17 \
-        demucs==4.0.1 \
         requests==2.32.3 \
         numpy==1.26.4 \
         soundfile==0.13.1 \
@@ -73,7 +73,14 @@ if [ ! -f "${DEPS_MARKER}" ]; then
         scipy==1.14.0 2>&1 | tail -10
 
     if [ $? -ne 0 ]; then
-        echo "[WARN] Some pip packages may have failed. Continuing anyway..."
+        echo "[WARN] Some core pip packages may have failed."
+    fi
+
+    echo "[Init] Step 2/2: Installing demucs (stem separation)..."
+    pip install --no-cache-dir --no-deps demucs==4.0.1 2>&1 | tail -5
+    pip install --no-cache-dir dora-search lameenc openunmix julius diffq 2>&1 | tail -5
+    if [ $? -ne 0 ]; then
+        echo "[WARN] Demucs install had issues. Stem separation may not work."
     fi
 
     echo "[Init] Verifying critical imports..."
