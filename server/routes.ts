@@ -4543,6 +4543,17 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/gpu/instruments", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const { checkInstrumentStatus } = await import("./core/runpod_client");
+      const result = await checkInstrumentStatus();
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   app.post("/api/admin/gpu/diagnostics", async (req, res) => {
     if (!(await requireRole(req, res, "super_admin"))) return;
     try {

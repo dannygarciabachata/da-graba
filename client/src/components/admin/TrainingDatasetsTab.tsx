@@ -11,6 +11,7 @@ import {
   Plus, Trash2, Upload, Loader2, Music, FileText,
   Play, CheckCircle, XCircle, Clock, ArrowLeft,
   Database, FolderOpen, Zap, ExternalLink, Search,
+  Piano, HardDrive, RefreshCw,
 } from "lucide-react";
 import type { TrainingDataset, TrainingFile } from "@shared/schema";
 
@@ -190,7 +191,111 @@ function DatasetListView({ onSelect, onCreate }: { onSelect: (id: number) => voi
           </CardContent>
         </Card>
       )}
+
+      <InstrumentStatusCard />
     </div>
+  );
+}
+
+function InstrumentStatusCard() {
+  const { toast } = useToast();
+  const [checking, setChecking] = useState(false);
+  const [status, setStatus] = useState<any>(null);
+
+  const checkStatus = async () => {
+    setChecking(true);
+    try {
+      const res = await apiRequest("GET", "/api/admin/gpu/instruments");
+      const data = await res.json();
+      setStatus(data);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <Card data-testid="card-instrument-status">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Piano className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">Instrumentos (SoundFont GM)</CardTitle>
+          </div>
+          <Button size="sm" variant="outline" onClick={checkStatus} disabled={checking} data-testid="button-check-instruments">
+            {checking ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+            Verificar RunPod
+          </Button>
+        </div>
+        <CardDescription>
+          FluidR3_GM SoundFont con 128 instrumentos General MIDI para renderizar datasets de entrenamiento
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {!status ? (
+          <div className="text-center py-4 text-muted-foreground">
+            <HardDrive className="h-8 w-8 mx-auto mb-2 opacity-40" />
+            <p className="text-sm">Pulsa &quot;Verificar RunPod&quot; para comprobar si los instrumentos estan instalados en el network volume.</p>
+            <p className="text-xs mt-1">Se necesita un pod RunPod activo con Jupyter para verificar.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="border rounded-md p-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  {status.soundfontInstalled ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  )}
+                  <span className="text-sm font-medium">FluidR3_GM.sf2</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {status.soundfontInstalled
+                    ? `${(status.soundfontSize / 1e6).toFixed(0)} MB instalado`
+                    : "No instalado"}
+                </p>
+              </div>
+              <div className="border rounded-md p-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  {status.fluidsynthInstalled ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  )}
+                  <span className="text-sm font-medium">FluidSynth</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {status.fluidsynthInstalled ? "Motor de sintesis instalado" : "No instalado"}
+                </p>
+              </div>
+              <div className="border rounded-md p-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Music className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Instrumentos GM</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {status.gmInstrumentsAvailable > 0
+                    ? `${status.gmInstrumentsAvailable} melodicos + 47 percusion`
+                    : "0 disponibles"}
+                </p>
+              </div>
+            </div>
+            {status.details && (
+              <pre className="text-xs bg-muted p-2 rounded-md overflow-auto max-h-32 whitespace-pre-wrap" data-testid="text-instrument-details">
+                {status.details}
+              </pre>
+            )}
+            {!status.soundfontInstalled && (
+              <p className="text-xs text-muted-foreground">
+                Ejecuta &quot;GPU Setup&quot; desde la pestana de RunPod para instalar automaticamente FluidSynth y FluidR3_GM.
+              </p>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -1040,7 +1040,7 @@ if cuda_ok:
     results.append(f"GPU: {torch.cuda.get_device_name(0)}")
     results.append(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
 
-# Install ffmpeg if missing
+# Install ffmpeg and fluidsynth if missing
 try:
     subprocess.run(["ffmpeg", "-version"], capture_output=True, timeout=5, check=True)
     results.append("ffmpeg: already installed")
@@ -1049,6 +1049,30 @@ except:
     r = subprocess.run(["apt-get", "update", "-qq"], capture_output=True, text=True, timeout=60)
     r = subprocess.run(["apt-get", "install", "-y", "-qq", "ffmpeg"], capture_output=True, text=True, timeout=120)
     results.append(f"ffmpeg install: {'OK' if r.returncode == 0 else r.stderr[:100]}")
+
+try:
+    subprocess.run(["fluidsynth", "--version"], capture_output=True, timeout=5, check=True)
+    results.append("fluidsynth: already installed")
+except:
+    results.append("Installing fluidsynth...")
+    subprocess.run(["apt-get", "update", "-qq"], capture_output=True, text=True, timeout=60)
+    r = subprocess.run(["apt-get", "install", "-y", "-qq", "fluidsynth", "libfluidsynth-dev"], capture_output=True, text=True, timeout=120)
+    results.append(f"fluidsynth install: {'OK' if r.returncode == 0 else r.stderr[:100]}")
+
+# Download FluidR3_GM SoundFont to network volume
+sf_dir = "/runpod-volume/instruments/soundfonts"
+sf_path = os.path.join(sf_dir, "FluidR3_GM.sf2")
+os.makedirs(sf_dir, exist_ok=True)
+if os.path.exists(sf_path) and os.path.getsize(sf_path) > 100000000:
+    results.append(f"FluidR3_GM.sf2: already present ({os.path.getsize(sf_path) / 1e6:.0f} MB)")
+else:
+    results.append("Downloading FluidR3_GM.sf2 SoundFont (~141 MB)...")
+    r = subprocess.run(["wget", "-q", "-O", sf_path, "https://musical-artifacts.com/artifacts/738/FluidR3_GM.sf2"],
+                       capture_output=True, text=True, timeout=300)
+    if r.returncode == 0 and os.path.exists(sf_path) and os.path.getsize(sf_path) > 100000000:
+        results.append(f"FluidR3_GM.sf2: downloaded ({os.path.getsize(sf_path) / 1e6:.0f} MB)")
+    else:
+        results.append(f"FluidR3_GM.sf2: download FAILED - {r.stderr[:200]}")
 
 # Install required Python packages (use --break-system-packages for system Python)
 pip_cmd = [sys.executable, "-m", "pip", "install", "--quiet", "--break-system-packages"]
@@ -1059,6 +1083,9 @@ packages = {
     "demucs": "demucs",
     "librosa": "librosa",
     "scipy": "scipy",
+    "fluidsynth": "pyfluidsynth",
+    "mido": "mido",
+    "pyloudnorm": "pyloudnorm",
 }
 for pkg_import, pkg_pip in packages.items():
     r = subprocess.run([sys.executable, "-c", f"import {pkg_import}"], capture_output=True, text=True, timeout=10)
@@ -1179,7 +1206,7 @@ else:
 
 # Verify all packages using subprocess to avoid circular import issues
 results.append("=== Package Verification (subprocess) ===")
-for pkg in ["torch", "torchaudio", "diffusers", "transformers", "accelerate", "stable_audio_tools", "demucs", "librosa", "soundfile", "scipy"]:
+for pkg in ["torch", "torchaudio", "diffusers", "transformers", "accelerate", "stable_audio_tools", "demucs", "librosa", "soundfile", "scipy", "fluidsynth", "mido", "pyloudnorm"]:
     r = subprocess.run([sys.executable, "-c", f"import {pkg}; print(getattr({pkg}, '__version__', 'ok'))"],
                       capture_output=True, text=True, timeout=10)
     if r.returncode == 0:
@@ -1210,6 +1237,22 @@ if os.path.exists(codec_dir) and len(os.listdir(codec_dir)) >= 2:
 else:
     results.append("  HeartCodec-oss: MISSING")
 
+# Verify FluidR3_GM SoundFont
+results.append("=== Instrument SoundFont Status ===")
+sf_check = "/runpod-volume/instruments/soundfonts/FluidR3_GM.sf2"
+if os.path.exists(sf_check) and os.path.getsize(sf_check) > 100000000:
+    results.append(f"  FluidR3_GM.sf2: PRESENT ({os.path.getsize(sf_check) / 1e6:.0f} MB)")
+    results.append("  GM Instruments: 128 melodic + 47 percussion available")
+else:
+    results.append("  FluidR3_GM.sf2: MISSING")
+
+# Check fluidsynth binary
+r = subprocess.run(["which", "fluidsynth"], capture_output=True, text=True, timeout=5)
+if r.returncode == 0:
+    results.append(f"  fluidsynth binary: {r.stdout.strip()}")
+else:
+    results.append("  fluidsynth binary: MISSING")
+
 print("\\n".join(results))
 `;
 
@@ -1226,5 +1269,88 @@ print("\\n".join(results))
     };
   } catch (err: any) {
     return { success: false, output: err.message };
+  }
+}
+
+export async function checkInstrumentStatus(): Promise<{
+  success: boolean;
+  soundfontInstalled: boolean;
+  fluidsynthInstalled: boolean;
+  soundfontPath: string;
+  soundfontSize: number;
+  gmInstrumentsAvailable: number;
+  details: string;
+}> {
+  try {
+    const kernelId = await getOrCreateKernel();
+    const code = `
+import os, subprocess, json
+
+result = {
+    "soundfontInstalled": False,
+    "fluidsynthInstalled": False,
+    "soundfontPath": "/runpod-volume/instruments/soundfonts/FluidR3_GM.sf2",
+    "soundfontSize": 0,
+    "gmInstrumentsAvailable": 0,
+    "details": ""
+}
+
+sf_path = result["soundfontPath"]
+if os.path.exists(sf_path):
+    size = os.path.getsize(sf_path)
+    result["soundfontSize"] = size
+    if size > 100000000:
+        result["soundfontInstalled"] = True
+        result["gmInstrumentsAvailable"] = 128
+
+r = subprocess.run(["which", "fluidsynth"], capture_output=True, text=True, timeout=5)
+result["fluidsynthInstalled"] = r.returncode == 0
+
+details = []
+if result["soundfontInstalled"]:
+    details.append(f"FluidR3_GM.sf2: {result['soundfontSize'] / 1e6:.0f} MB")
+    details.append("128 GM melodic instruments + 47 percussion kits ready")
+else:
+    details.append("FluidR3_GM.sf2: NOT INSTALLED - Run GPU Setup to install")
+
+if result["fluidsynthInstalled"]:
+    details.append(f"FluidSynth binary: {r.stdout.strip()}")
+else:
+    details.append("FluidSynth: NOT INSTALLED - Run GPU Setup to install")
+
+try:
+    import fluidsynth as fs_mod
+    details.append(f"pyfluidsynth: installed")
+except ImportError:
+    details.append("pyfluidsynth: NOT INSTALLED - Run GPU Setup to install")
+
+result["details"] = "\\n".join(details)
+print(json.dumps(result))
+`;
+    const output = await executeCode(kernelId, code, 30000);
+    try {
+      const parsed = JSON.parse(output.trim());
+      return { success: true, ...parsed };
+    } catch {
+      return {
+        success: false,
+        soundfontInstalled: false,
+        fluidsynthInstalled: false,
+        soundfontPath: "/runpod-volume/instruments/soundfonts/FluidR3_GM.sf2",
+        soundfontSize: 0,
+        gmInstrumentsAvailable: 0,
+        details: output || "Could not parse instrument status",
+      };
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      soundfontInstalled: false,
+      fluidsynthInstalled: false,
+      soundfontPath: "/runpod-volume/instruments/soundfonts/FluidR3_GM.sf2",
+      soundfontSize: 0,
+      gmInstrumentsAvailable: 0,
+      details: err.message,
+    };
   }
 }
