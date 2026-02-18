@@ -1,0 +1,43 @@
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.10.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.10.0
+npm notice To update run: npm install -g npm@11.10.0
+npm notice
+
+2026-02-17T23:26:06Z info: Pushing pid1 binary layer...
+2026-02-17T23:26:07Z info: Pushing Repl layer...
+2026-02-17T23:26:07Z info: Pushing hosting layer...
+2026-02-17T23:26:07Z info: Retrieved cached nix layer
+2026-02-17T23:26:08Z info: Created hosting layer
+2026-02-17T23:26:09Z info: Created pid1 binary layer
+2026-02-17T23:27:20Z info: Created Repl layer
+2026-02-17T23:27:20Z info: Pushing Repl (cache) layer...
+2026-02-17T23:27:20Z info: Created Repl (cache) layer
+2026-02-17T23:27:23Z info: Pushed image manifest
+2026-02-17T23:27:24Z info: Pushed soci index manifest
+2026-02-17T23:27:27Z info: Creating Autoscale service
+[Stripe] Schema ready
+forwarding local port 5000 to external port 80 (mapped as 1104)
+starting up user application
+[Stripe] Initializing schema...
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2026-02-17T23:27:57Z info: upsertCloudRunService completed
+2026-02-17T23:27:57Z info: Waiting for service to be ready
+[Seed] Updated Mureka AI: {"priority":999,"isActive":false}
+[Pipeline] Registered adapter: replicate_stems
+[Seed] Kie.ai provider already exists, skipping
+[Pipeline] All provider adapters initialized
+[Seed] RunPod Serverless GPU provider seeded
+[Pipeline] Registered adapter: runpod_music
+[Pipeline] Registered adapter: kie_stems
+[Seed] Discography already exists, skipping
+11:27:53 PM [express] serving on port 5000
+[Seed] Providers already exist, skipping seed
+[Pipeline] Registered adapter: kie_music
+[Recovery] Checked 0 stuck songs
+[Seed] Replicate Stems provider already exists, skipping
+[Seed] Seeding RunPod Serverless GPU provider...
+[Seed] Training kits (Bachata, Baladas Boleros, DGB Bolero) already exist, skipping
+[Seed] Cloud Engine provider already exists, skipping
+[Stripe] Init failed: Stripe production connection not found
+2026-02-17T23:27:59Z info: Deployment successful
