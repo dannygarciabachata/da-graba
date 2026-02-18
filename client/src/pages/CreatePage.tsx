@@ -57,6 +57,7 @@ import {
   Share2,
   Heart,
   Download,
+  Globe,
   ThumbsDown,
   ListMusic,
   SkipBack,
@@ -260,6 +261,28 @@ function HistoryNowPlaying({ song, isPlaying }: { song: PlayerSong; isPlaying: b
   const likeMutation = useToggleSongLike();
   const { toast } = useToast();
   const [showLyrics, setShowLyrics] = useState(false);
+  const [isPublic, setIsPublic] = useState(song.isPublic ?? false);
+
+  useEffect(() => {
+    setIsPublic(song.isPublic ?? false);
+  }, [song.id, song.isPublic]);
+
+  const publishMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("PATCH", `/api/songs/${song.id}/publish`);
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      setIsPublic(data.isPublic);
+      queryClient.invalidateQueries({ queryKey: ["/api/songs"] });
+      toast({ title: data.isPublic ? t('create.published', 'Publicada') : t('create.unpublished', 'Despublicada') });
+    },
+  });
+
+  const handlePublish = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    publishMutation.mutate();
+  };
 
   const handleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -355,6 +378,21 @@ function HistoryNowPlaying({ song, isPlaying }: { song: PlayerSong; isPlaying: b
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t('create.download', 'Descargar')}</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handlePublish}
+                className={cn(isPublic && "text-green-400")}
+                data-testid="button-publish-song"
+              >
+                <Globe className={cn("h-4 w-4", isPublic && "fill-current")} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{isPublic ? t('create.unpublish', 'Despublicar') : t('create.publish', 'Publicar')}</TooltipContent>
           </Tooltip>
 
           {song.lyricsText && (
