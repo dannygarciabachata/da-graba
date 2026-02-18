@@ -55,6 +55,8 @@ import {
   Filter,
   MoreHorizontal,
   Share2,
+  Heart,
+  Download,
   ThumbsDown,
   ListMusic,
   SkipBack,
@@ -66,7 +68,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
-import { useDeleteSong } from "@/hooks/use-songs";
+import { useDeleteSong, useSongLike, useToggleSongLike } from "@/hooks/use-songs";
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { usePlayer, type PlayerSong } from "@/contexts/PlayerContext";
 import { AudioSpectrum } from "@/components/AudioSpectrum";
@@ -250,6 +252,148 @@ function formatDuration(seconds: number | null | undefined): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function HistoryNowPlaying({ song, isPlaying }: { song: PlayerSong; isPlaying: boolean }) {
+  const { t } = useTranslation();
+  const likeQuery = useSongLike(song.id);
+  const likeMutation = useToggleSongLike();
+  const { toast } = useToast();
+  const [showLyrics, setShowLyrics] = useState(false);
+
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newValue = likeQuery.data?.userValue === 1 ? -1 : 1;
+    likeMutation.mutate({ songId: song.id, value: newValue as 1 | -1 });
+  };
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/discover?song=${song.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: t('create.linkCopied', 'Enlace copiado') });
+    } catch {
+      toast({ title: url, description: t('create.copyManually', 'Copia el enlace manualmente') });
+    }
+  };
+
+  const handleDownload = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const a = document.createElement("a");
+    a.href = song.audioUrl;
+    a.download = `${song.title || "song"}.mp3`;
+    a.click();
+  };
+
+  return (
+    <div className="p-3 border-b border-white/5" data-testid="history-now-playing">
+      <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-white/5 mb-3">
+        {song.imageUrl ? (
+          <img src={song.imageUrl} alt={song.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-orange-500/20">
+            <Music className="h-16 w-16 text-muted-foreground/30" />
+          </div>
+        )}
+        {isPlaying && (
+          <div className="absolute bottom-2 left-2 right-2">
+            <AudioSpectrum songId={song.id} />
+          </div>
+        )}
+        {song.genre && (
+          <Badge variant="secondary" className="absolute top-2 left-2 text-[10px] bg-black/60 backdrop-blur-sm border-0">
+            {song.genre}
+          </Badge>
+        )}
+        {song.variationLabel && (
+          <Badge variant="secondary" className="absolute top-2 right-2 text-[10px] bg-black/60 backdrop-blur-sm border-0">
+            {song.variationLabel}
+          </Badge>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <div>
+          <h3 className="text-sm font-bold truncate" data-testid="text-now-playing-title">
+            {song.title || song.prompt || t('create.untitledTrack')}
+          </h3>
+          <p className="text-xs text-muted-foreground truncate" data-testid="text-now-playing-artist">
+            {song.artistName || song.copyrightHolder || "DAGRABA Studio"}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1 flex-wrap">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLike}
+                className={cn(likeQuery.data?.userValue === 1 && "text-primary")}
+                data-testid="button-like-song"
+              >
+                <Heart className={cn("h-4 w-4", likeQuery.data?.userValue === 1 && "fill-current")} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('create.like', 'Me gusta')}{likeQuery.data?.likes ? ` (${likeQuery.data.likes})` : ""}</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={handleShare} data-testid="button-share-song">
+                <Share2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('create.share', 'Compartir')}</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={handleDownload} data-testid="button-download-song">
+                <Download className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('create.download', 'Descargar')}</TooltipContent>
+          </Tooltip>
+
+          {song.lyricsText && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => { e.stopPropagation(); setShowLyrics(!showLyrics); }}
+                  className={cn(showLyrics && "text-primary")}
+                  data-testid="button-toggle-lyrics"
+                >
+                  <MessageSquare className={cn("h-4 w-4", showLyrics && "fill-current")} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('create.lyrics', 'Letra')}</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+
+        <AnimatePresence>
+          {showLyrics && song.lyricsText && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-white/[0.03] rounded-lg p-3 max-h-40 overflow-y-auto">
+                <p className="text-[11px] text-muted-foreground whitespace-pre-wrap leading-relaxed" data-testid="text-lyrics">
+                  {song.lyricsText}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
 }
 
 export default function CreatePage() {
@@ -1164,67 +1308,73 @@ export default function CreatePage() {
           </div>
 
           {/* ===== RIGHT: History Panel ===== */}
-          <div className="border-l border-white/5 overflow-y-auto bg-background/30" data-testid="history-panel">
-            <div className="p-4">
-              <div className="flex items-center justify-between gap-2 mb-4">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <h2 className="text-sm font-semibold">{t('create.history', 'Historial')}</h2>
-                  {history.length > 0 && (
-                    <span className="text-[10px] bg-white/5 text-muted-foreground px-1.5 rounded-full">{history.length}</span>
-                  )}
-                </div>
+          <div className="border-l border-white/5 overflow-y-auto bg-background/30 flex flex-col" data-testid="history-panel">
+            <div className="p-3 border-b border-white/5 flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <h2 className="text-sm font-semibold">{t('create.history', 'Historial')}</h2>
                 {history.length > 0 && (
-                  <Button variant="ghost" size="sm" className="text-[11px] text-muted-foreground" onClick={clearHistory} data-testid="button-clear-history">
-                    <Trash2 className="h-3 w-3 mr-1" />{t('create.clearHistory', 'Borrar')}
-                  </Button>
+                  <span className="text-[10px] bg-white/5 text-muted-foreground px-1.5 rounded-full">{history.length}</span>
                 )}
               </div>
+              {history.length > 0 && (
+                <Button variant="ghost" size="sm" className="text-[11px] text-muted-foreground" onClick={clearHistory} data-testid="button-clear-history">
+                  <Trash2 className="h-3 w-3 mr-1" />{t('create.clearHistory', 'Borrar')}
+                </Button>
+              )}
+            </div>
 
-              {history.length > 0 ? (
-                <div className="space-y-0.5">
-                  {history.map((entry) => (
-                    <div
-                      key={`${entry.song.id}-${entry.playedAt}`}
-                      className={cn(
-                        "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
-                        playerState.currentSong?.id === entry.song.id
-                          ? "bg-primary/10 border border-primary/20"
-                          : "border border-transparent hover:bg-white/[0.03]"
-                      )}
-                      onClick={() => {
-                        const historyQueue = history.map(h => h.song);
-                        globalPlay(entry.song, historyQueue);
-                      }}
-                      data-testid={`history-song-${entry.song.id}`}
-                    >
-                      <div className="h-10 w-10 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden relative">
-                        {playerState.currentSong?.id === entry.song.id && playerState.isPlaying ? (
-                          <AudioSpectrum songId={entry.song.id} />
-                        ) : entry.song.imageUrl ? (
-                          <img src={entry.song.imageUrl} alt="" className="h-10 w-10 object-cover rounded-md" />
-                        ) : (
-                          <Music className="h-3.5 w-3.5 text-muted-foreground/30" />
+            {playerState.currentSong && (
+              <HistoryNowPlaying song={playerState.currentSong} isPlaying={playerState.isPlaying} />
+            )}
+
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-3">
+                {history.length > 0 ? (
+                  <div className="space-y-0.5">
+                    {history.map((entry) => (
+                      <div
+                        key={`${entry.song.id}-${entry.playedAt}`}
+                        className={cn(
+                          "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
+                          playerState.currentSong?.id === entry.song.id
+                            ? "bg-primary/10 border border-primary/20"
+                            : "border border-transparent hover:bg-white/[0.03]"
                         )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-xs font-medium truncate">{entry.song.title || entry.song.prompt || t('create.untitledTrack')}</h4>
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-[10px] text-muted-foreground truncate">{entry.song.genre}</p>
-                          <span className="text-[9px] text-muted-foreground/50">{formatDistanceToNow(new Date(entry.playedAt), { addSuffix: true })}</span>
+                        onClick={() => {
+                          const historyQueue = history.map(h => h.song);
+                          globalPlay(entry.song, historyQueue);
+                        }}
+                        data-testid={`history-song-${entry.song.id}`}
+                      >
+                        <div className="h-10 w-10 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                          {playerState.currentSong?.id === entry.song.id && playerState.isPlaying ? (
+                            <AudioSpectrum songId={entry.song.id} />
+                          ) : entry.song.imageUrl ? (
+                            <img src={entry.song.imageUrl} alt="" className="h-10 w-10 object-cover rounded-md" />
+                          ) : (
+                            <Music className="h-3.5 w-3.5 text-muted-foreground/30" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-medium truncate">{entry.song.title || entry.song.prompt || t('create.untitledTrack')}</h4>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-[10px] text-muted-foreground truncate">{entry.song.genre}</p>
+                            <span className="text-[9px] text-muted-foreground/50">{formatDistanceToNow(new Date(entry.playedAt), { addSuffix: true })}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="h-16 w-16 rounded-2xl bg-white/[0.03] flex items-center justify-center mb-4">
-                    <Clock className="h-8 w-8 text-muted-foreground/20" />
+                    ))}
                   </div>
-                  <p className="text-xs text-muted-foreground">{t('create.noHistory', 'Tu historial aparecerá aquí')}</p>
-                </div>
-              )}
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="h-16 w-16 rounded-2xl bg-white/[0.03] flex items-center justify-center mb-4">
+                      <Clock className="h-8 w-8 text-muted-foreground/20" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">{t('create.noHistory', 'Tu historial aparecerá aquí')}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
