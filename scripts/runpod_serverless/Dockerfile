@@ -7,8 +7,8 @@ FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
-ENV HF_HOME=/workspace/.cache/huggingface
-ENV TORCH_HOME=/workspace/.cache/torch
+ENV HF_HOME=/runpod-volume/.cache/huggingface
+ENV TORCH_HOME=/runpod-volume/.cache/torch
 
 RUN apt-get update && apt-get install -y \
     python3 python3-pip python3-dev \

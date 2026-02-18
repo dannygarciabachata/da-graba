@@ -20,7 +20,8 @@ except ImportError:
     print("[FATAL] runpod package not installed")
     sys.exit(1)
 
-WORKSPACE = Path("/workspace")
+NETWORK_VOLUME = Path("/runpod-volume")
+WORKSPACE = NETWORK_VOLUME if NETWORK_VOLUME.exists() else Path("/workspace")
 MODELS_DIR = WORKSPACE / "models"
 OUTPUTS_DIR = WORKSPACE / "outputs"
 DATASETS_DIR = WORKSPACE / "datasets"
@@ -28,6 +29,8 @@ TMP_DIR = WORKSPACE / "tmp"
 
 for d in [MODELS_DIR, OUTPUTS_DIR, DATASETS_DIR, TMP_DIR]:
     d.mkdir(parents=True, exist_ok=True)
+
+print(f"[Init] Using workspace: {WORKSPACE} (network volume: {NETWORK_VOLUME.exists()})")
 
 os.environ["TMPDIR"] = str(TMP_DIR)
 
@@ -270,9 +273,11 @@ def generate_sao(song_id, prompt, duration, style_kit_id, device, wav_path, sao_
 
 
 def generate_heartmula(song_id, prompt, duration, lyrics, tags, genre, device, wav_path):
-    heartmula_dir = Path("/workspace/HeartMuse")
+    heartmula_dir = WORKSPACE / "HeartMuse"
     if not heartmula_dir.exists():
-        raise Exception("HeartMuLa model not available on this worker. Attach a Network Volume with the HeartMuse model at /workspace/HeartMuse, or use engine='sao' instead.")
+        heartmula_dir = Path("/workspace/HeartMuse")
+    if not heartmula_dir.exists():
+        raise Exception("HeartMuLa model not available on this worker. Attach a Network Volume with the HeartMuse model, or use engine='sao' instead.")
 
     venv_site = heartmula_dir / "venv" / "lib" / "python3.11" / "site-packages"
     if venv_site.exists() and str(venv_site) not in sys.path:
