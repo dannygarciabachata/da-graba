@@ -4675,6 +4675,66 @@ export async function registerRoutes(
     }
   });
 
+  // ========== RUNPOD ENDPOINT MANAGEMENT ==========
+
+  app.get("/api/admin/gpu/endpoint-config", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const serverless = await import("./core/runpod_serverless");
+      const health = await serverless.checkHealth("music");
+      const config = await serverless.getEndpointConfig();
+      res.json({ ...config, health });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/admin/gpu/endpoint-config", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const serverless = await import("./core/runpod_serverless");
+      const updates: Record<string, any> = {};
+      if (req.body.maxWorkers !== undefined) {
+        const v = parseInt(req.body.maxWorkers);
+        if (isNaN(v) || v < 1 || v > 10) return res.status(400).json({ success: false, error: "maxWorkers must be 1-10" });
+        updates.maxWorkers = v;
+      }
+      if (req.body.minWorkers !== undefined) {
+        const v = parseInt(req.body.minWorkers);
+        if (isNaN(v) || v < 0 || v > 5) return res.status(400).json({ success: false, error: "minWorkers must be 0-5" });
+        updates.minWorkers = v;
+      }
+      if (req.body.idleTimeout !== undefined) {
+        const v = parseInt(req.body.idleTimeout);
+        if (isNaN(v) || v < 30 || v > 3600) return res.status(400).json({ success: false, error: "idleTimeout must be 30-3600" });
+        updates.idleTimeout = v;
+      }
+      if (req.body.gpuIds !== undefined && typeof req.body.gpuIds === "string") {
+        updates.gpuIds = req.body.gpuIds.trim();
+      }
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ success: false, error: "No valid parameters provided" });
+      }
+      console.log(`[Admin] Updating endpoint config:`, updates);
+      const result = await serverless.updateEndpointConfig(updates);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/admin/gpu/purge-queue", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const serverless = await import("./core/runpod_serverless");
+      console.log("[Admin] Purging RunPod job queue...");
+      const result = await serverless.purgeQueue("music");
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ purged: 0, error: err.message });
+    }
+  });
+
   // ========== DGB CLOUD ENGINE WEBHOOK ==========
 
   app.post("/api/dgb-cloud/webhook", async (req, res) => {

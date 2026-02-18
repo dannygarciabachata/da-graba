@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================
-# DAGRABA Studio - RunPod Serverless Startup Script
+# DAGRABA Studio - RunPod Serverless Startup Script v4
 # =============================================================
 # This script runs when the serverless worker starts.
 # It installs dependencies and launches the handler from the
@@ -13,23 +13,23 @@
 #      bash /runpod-volume/dagraba/start.sh
 # =============================================================
 
-set -e
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VOLUME_DIR="/runpod-volume"
 DAGRABA_DIR="${VOLUME_DIR}/dagraba"
 HANDLER="${DAGRABA_DIR}/handler.py"
-DEPS_MARKER="${VOLUME_DIR}/.deps_installed_v3"
+DEPS_MARKER="${VOLUME_DIR}/.deps_installed_v4"
 
 echo ""
 echo "============================================================="
-echo "  DAGRABA Studio - RunPod Serverless Worker"
+echo "  DAGRABA Studio - RunPod Serverless Worker v4"
 echo "============================================================="
 echo ""
 
 echo "[Init] Script dir: ${SCRIPT_DIR}"
 echo "[Init] Volume dir: ${VOLUME_DIR}"
 echo "[Init] Handler: ${HANDLER}"
+echo "[Init] Python: $(python3 --version 2>&1)"
+echo "[Init] Date: $(date -u)"
 
 if [ ! -f "${HANDLER}" ]; then
     echo "[FATAL] handler.py not found at ${HANDLER}"
@@ -38,11 +38,25 @@ if [ ! -f "${HANDLER}" ]; then
 fi
 
 echo "[Init] Checking GPU..."
-nvidia-smi 2>/dev/null && echo "[Init] GPU detected" || echo "[Init] No GPU (CPU mode)"
+if nvidia-smi 2>/dev/null; then
+    echo "[Init] GPU detected"
+    GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
+    GPU_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader 2>/dev/null | head -1)
+    echo "[Init] GPU: ${GPU_NAME} | VRAM: ${GPU_MEM}"
+else
+    echo "[Init] WARNING: No GPU detected (CPU mode)"
+fi
+
+OLD_MARKER="${VOLUME_DIR}/.deps_installed_v3"
+if [ -f "${OLD_MARKER}" ] && [ ! -f "${DEPS_MARKER}" ]; then
+    echo "[Init] Upgrading from v3 to v4, forcing dependency reinstall..."
+    rm -f "${OLD_MARKER}"
+fi
 
 if [ ! -f "${DEPS_MARKER}" ]; then
     echo ""
     echo "[Init] Installing Python dependencies (first run, cached after)..."
+    echo "[Init] This may take 2-5 minutes..."
 
     pip install --no-cache-dir \
         runpod==1.7.7 \
@@ -56,12 +70,23 @@ if [ ! -f "${DEPS_MARKER}" ]; then
         accelerate==0.33.0 \
         safetensors==0.4.5 \
         huggingface_hub==0.25.0 \
-        scipy==1.14.0 2>&1 | tail -5
+        scipy==1.14.0 2>&1 | tail -10
+
+    if [ $? -ne 0 ]; then
+        echo "[WARN] Some pip packages may have failed. Continuing anyway..."
+    fi
+
+    echo "[Init] Verifying critical imports..."
+    python3 -c "import runpod; import torch; import torchaudio; print('[Init] Core imports OK')" 2>&1
+    if [ $? -ne 0 ]; then
+        echo "[WARN] Core import check failed. Worker may not function correctly."
+        echo "[WARN] Check that the base Docker image has PyTorch + CUDA."
+    fi
 
     echo "[Init] Dependencies installed successfully"
     touch "${DEPS_MARKER}"
 else
-    echo "[Init] Dependencies already installed (cached)"
+    echo "[Init] Dependencies already installed (cached v4)"
 fi
 
 if [ -n "${HF_TOKEN}" ]; then
@@ -76,6 +101,7 @@ export TORCH_HOME="${VOLUME_DIR}/.cache/torch"
 export TMPDIR="${VOLUME_DIR}/tmp"
 mkdir -p "${HF_HOME}" "${TORCH_HOME}" "${TMPDIR}"
 mkdir -p "${VOLUME_DIR}/models" "${VOLUME_DIR}/outputs" "${VOLUME_DIR}/datasets"
+mkdir -p "${VOLUME_DIR}/instruments/soundfonts"
 
 echo ""
 echo "[Init] Environment:"
@@ -83,6 +109,7 @@ echo "  HF_HOME=${HF_HOME}"
 echo "  TORCH_HOME=${TORCH_HOME}"
 echo "  Models: ${VOLUME_DIR}/models"
 echo "  Outputs: ${VOLUME_DIR}/outputs"
+echo "  Instruments: ${VOLUME_DIR}/instruments"
 echo ""
 
 EXISTING_MODELS=$(find "${VOLUME_DIR}/models" -maxdepth 1 -name "kit_*" -type d 2>/dev/null | wc -l)
@@ -90,9 +117,18 @@ echo "[Init] Found ${EXISTING_MODELS} fine-tuned model(s)"
 
 SAO_FT="${VOLUME_DIR}/models/sao_instrumental_finetune/SAO_Instrumental_Finetune.ckpt"
 if [ -f "${SAO_FT}" ]; then
-    echo "[Init] SAO Instrumental Finetune checkpoint found"
+    SAO_SIZE=$(du -h "${SAO_FT}" 2>/dev/null | cut -f1)
+    echo "[Init] SAO Instrumental Finetune: cached (${SAO_SIZE})"
 else
-    echo "[Init] SAO Instrumental Finetune NOT cached (will download on first use)"
+    echo "[Init] SAO Instrumental Finetune: NOT cached (will download on first use)"
+fi
+
+SF_PATH="${VOLUME_DIR}/instruments/soundfonts/FluidR3_GM.sf2"
+if [ -f "${SF_PATH}" ]; then
+    SF_SIZE=$(du -h "${SF_PATH}" 2>/dev/null | cut -f1)
+    echo "[Init] FluidR3_GM.sf2: present (${SF_SIZE})"
+else
+    echo "[Init] FluidR3_GM.sf2: not installed (run GPU Setup from admin panel)"
 fi
 
 echo ""

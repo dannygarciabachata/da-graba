@@ -193,6 +193,7 @@ function DatasetListView({ onSelect, onCreate }: { onSelect: (id: number) => voi
       )}
 
       <InstrumentStatusCard />
+      <EndpointConfigCard />
     </div>
   );
 }
@@ -391,6 +392,237 @@ function InstrumentStatusCard() {
             <pre className="text-xs bg-muted p-2 rounded-md overflow-auto max-h-48 whitespace-pre-wrap" data-testid="text-build-output">
               {buildOutput}
             </pre>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function EndpointConfigCard() {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [purging, setPurging] = useState(false);
+  const [config, setConfig] = useState<any>(null);
+
+  const loadConfig = async () => {
+    setLoading(true);
+    try {
+      const res = await apiRequest("GET", "/api/admin/gpu/endpoint-config");
+      const data = await res.json();
+      setConfig(data);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveConfig = async (updates: Record<string, any>) => {
+    setSaving(true);
+    try {
+      const res = await apiRequest("POST", "/api/admin/gpu/endpoint-config", updates);
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Configuracion Actualizada", description: "Los cambios se aplicaran en el proximo ciclo de workers." });
+        loadConfig();
+      } else {
+        toast({ title: "Error", description: data.error || "No se pudo actualizar", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const purgeQueue = async () => {
+    setPurging(true);
+    try {
+      const res = await apiRequest("POST", "/api/admin/gpu/purge-queue");
+      const data = await res.json();
+      toast({ title: "Cola Purgada", description: `${data.purged || 0} jobs eliminados de la cola.` });
+      loadConfig();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setPurging(false);
+    }
+  };
+
+  const anyBusy = loading || saving || purging;
+  const health = config?.health;
+  const hasUnhealthy = health?.unhealthy > 0;
+  const hasQueued = health?.queued > 0;
+
+  return (
+    <Card data-testid="card-endpoint-config">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <HardDrive className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">RunPod Serverless</CardTitle>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button size="sm" variant="outline" onClick={loadConfig} disabled={anyBusy} data-testid="button-load-endpoint-config">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+              Estado
+            </Button>
+            {hasQueued && (
+              <Button size="sm" variant="outline" onClick={purgeQueue} disabled={anyBusy} data-testid="button-purge-queue">
+                {purging ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Trash2 className="h-4 w-4 mr-1" />}
+                Purgar Cola
+              </Button>
+            )}
+          </div>
+        </div>
+        <CardDescription>
+          Configuracion del endpoint serverless, workers y GPU
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {!config ? (
+          <div className="text-center py-4 text-muted-foreground">
+            <HardDrive className="h-8 w-8 mx-auto mb-2 opacity-40" />
+            <p className="text-sm">Pulsa &quot;Estado&quot; para ver la configuracion del endpoint.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {config.error && (
+              <div className="text-sm text-red-500 border border-red-500/20 rounded-md p-2">
+                {config.error}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="border rounded-md p-3 space-y-1">
+                <span className="text-xs text-muted-foreground">Endpoint ID</span>
+                <p className="text-sm font-mono">{config.endpointId || "N/A"}</p>
+              </div>
+              <div className="border rounded-md p-3 space-y-1">
+                <span className="text-xs text-muted-foreground">GPU</span>
+                <p className="text-sm font-mono">{config.gpuIds || "N/A"}</p>
+              </div>
+              <div className="border rounded-md p-3 space-y-1">
+                <span className="text-xs text-muted-foreground">Workers (min / max)</span>
+                <p className="text-sm font-mono">{config.minWorkers} / {config.maxWorkers}</p>
+              </div>
+              <div className="border rounded-md p-3 space-y-1">
+                <span className="text-xs text-muted-foreground">Idle Timeout</span>
+                <p className="text-sm font-mono">{config.idleTimeout}s</p>
+              </div>
+            </div>
+
+            {health && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="border rounded-md p-3 space-y-1">
+                  <span className="text-xs text-muted-foreground">Workers Activos</span>
+                  <p className="text-sm font-medium">{health.workers || 0}</p>
+                </div>
+                <div className="border rounded-md p-3 space-y-1">
+                  <span className="text-xs text-muted-foreground">En Cola</span>
+                  <p className={`text-sm font-medium ${health.queued > 0 ? "text-orange-500" : ""}`}>{health.queued || 0}</p>
+                </div>
+                <div className="border rounded-md p-3 space-y-1">
+                  <span className="text-xs text-muted-foreground">No Saludables</span>
+                  <p className={`text-sm font-medium ${health.unhealthy > 0 ? "text-red-500" : "text-green-500"}`}>{health.unhealthy || 0}</p>
+                </div>
+                <div className="border rounded-md p-3 space-y-1">
+                  <span className="text-xs text-muted-foreground">Estado</span>
+                  <div className="flex items-center gap-1">
+                    {health.healthy ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    )}
+                    <span className="text-sm">{health.healthy ? "Saludable" : "No Saludable"}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {hasUnhealthy && (
+              <div className="text-xs border border-orange-500/20 rounded-md p-2 space-y-1">
+                <p className="font-medium text-orange-500">Workers no saludables detectados</p>
+                <p className="text-muted-foreground">
+                  Posibles causas: handler.py desactualizado en el volume, dependencias rotas, o GPU sin stock.
+                  Intenta: 1) Purgar la cola, 2) Actualizar handler.py en el volume, 3) Eliminar /runpod-volume/.deps_installed_v4 para forzar reinstalacion.
+                </p>
+              </div>
+            )}
+
+            <div className="border rounded-md p-3 space-y-3">
+              <p className="text-xs font-medium text-muted-foreground">Ajustar Configuracion</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Max Workers</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10}
+                      defaultValue={config.maxWorkers || 3}
+                      className="text-sm"
+                      data-testid="input-max-workers"
+                      id="input-max-workers"
+                    />
+                    <Button size="sm" variant="outline" disabled={anyBusy}
+                      data-testid="button-save-max-workers"
+                      onClick={() => {
+                        const el = document.getElementById("input-max-workers") as HTMLInputElement;
+                        if (el) saveConfig({ maxWorkers: parseInt(el.value) });
+                      }}>
+                      {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Guardar"}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">GPU IDs</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="text"
+                      defaultValue={config.gpuIds || ""}
+                      placeholder="NVIDIA L40S 48GB,NVIDIA A40 48GB"
+                      className="text-sm"
+                      data-testid="input-gpu-ids"
+                      id="input-gpu-ids"
+                    />
+                    <Button size="sm" variant="outline" disabled={anyBusy}
+                      data-testid="button-save-gpu-ids"
+                      onClick={() => {
+                        const el = document.getElementById("input-gpu-ids") as HTMLInputElement;
+                        if (el) saveConfig({ gpuIds: el.value });
+                      }}>
+                      {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Guardar"}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Alternativas: NVIDIA A40 48GB, NVIDIA RTX A6000, NVIDIA A100 80GB</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Idle Timeout (seg)</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={30}
+                      max={3600}
+                      defaultValue={config.idleTimeout || 300}
+                      className="text-sm"
+                      data-testid="input-idle-timeout"
+                      id="input-idle-timeout"
+                    />
+                    <Button size="sm" variant="outline" disabled={anyBusy}
+                      data-testid="button-save-idle-timeout"
+                      onClick={() => {
+                        const el = document.getElementById("input-idle-timeout") as HTMLInputElement;
+                        if (el) saveConfig({ idleTimeout: parseInt(el.value) });
+                      }}>
+                      {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Guardar"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </CardContent>

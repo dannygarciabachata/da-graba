@@ -45,7 +45,7 @@ Your endpoint `9buu4vzqalgj18` should have these settings:
 |---------|-------|
 | **Docker Image** | `runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04` |
 | **Docker Command** | `bash /runpod-volume/dagraba/start.sh` |
-| **GPU** | 24 GB or 48 GB |
+| **GPU** | See GPU Selection below |
 | **Min Workers** | 0 |
 | **Max Workers** | 3 |
 | **Idle Timeout** | 300 seconds |
@@ -63,6 +63,26 @@ bash /runpod-volume/dagraba/start.sh
 ```
 
 This tells the worker to run the startup script instead of the default command.
+
+### GPU Selection Guide
+
+Choose GPUs based on availability and budget. SAO Instrumental Finetune needs ~8GB VRAM minimum.
+
+| GPU | VRAM | Best For | Cost/hr (approx) | Notes |
+|-----|------|----------|-------------------|-------|
+| **NVIDIA L40S** | 48 GB | Primary choice | ~$0.73/hr | Best value for 48GB. May have low stock. |
+| **NVIDIA A40** | 48 GB | Fallback #1 | ~$0.76/hr | Good alternative when L40S unavailable |
+| **NVIDIA RTX A6000** | 48 GB | Fallback #2 | ~$0.79/hr | Widely available |
+| **NVIDIA RTX 4090** | 24 GB | Budget option | ~$0.44/hr | Enough for SAO, may OOM on long generations |
+| **NVIDIA A100 80GB** | 80 GB | High performance | ~$1.64/hr | Fastest, most expensive |
+| **NVIDIA L40** | 48 GB | Alternative | ~$0.69/hr | Different from L40S, check availability |
+
+**Multi-GPU fallback:** You can specify multiple GPU types separated by commas in the endpoint config. RunPod will use whichever is available:
+```
+NVIDIA L40S 48GB, NVIDIA A40 48GB, NVIDIA RTX A6000
+```
+
+**Updating GPU from Admin Panel:** Go to Admin > Training Data tab > RunPod Serverless card > click "Estado" > modify GPU IDs and click "Guardar".
 
 ### Step 3: Verify DAGRABA Studio Config
 
@@ -95,6 +115,8 @@ The handler routes jobs by `action` field:
 - `generate_music` - Stable Audio Open generation (default: SAO Instrumental Finetune)
 - `train_model` - SAO fine-tuning with instrument samples
 - `separate_stems` - Demucs stem separation
+- `check_instruments` - Check status of FluidSynth, SoundFont, VST3, SAO Finetune
+- `install_instruments` - Install FluidSynth, SoundFont, Python deps, download SAO Finetune
 - `health_check` - Returns GPU/server status
 
 ### Network Volume Directory Structure
@@ -111,6 +133,11 @@ After the worker runs, the network volume will contain:
 │   └── kit_{id}/                          <- Fine-tuned style kits
 │       ├── model_final.pt
 │       └── best_model.pt
+├── instruments/
+│   └── soundfonts/
+│       └── FluidR3_GM.sf2                 <- General MIDI soundfont
+├── vst3/
+│   └── DAGRABA_Sampler.vst3              <- Custom VST3 plugin
 ├── outputs/
 │   ├── music/                             <- Generated audio files
 │   └── stems/                             <- Separated stem files
@@ -119,7 +146,7 @@ After the worker runs, the network volume will contain:
 ├── .cache/
 │   ├── huggingface/                       <- HF model cache
 │   └── torch/                             <- PyTorch cache
-└── .deps_installed_v3                     <- Dependencies cache marker
+└── .deps_installed_v4                     <- Dependencies cache marker
 ```
 
 ### SAO Model Variants
@@ -167,11 +194,44 @@ After the worker runs, the network volume will contain:
 }
 ```
 
+### check_instruments
+```json
+{
+  "action": "check_instruments"
+}
+```
+
+### install_instruments
+```json
+{
+  "action": "install_instruments",
+  "download_sao_finetune": true
+}
+```
+
+## Admin Panel Management
+
+The admin panel (Training Data tab) provides direct control over the RunPod endpoint:
+
+- **Estado** - Load current endpoint configuration, worker health, and queue status
+- **Purgar Cola** - Clear stuck jobs from the queue (appears when jobs are queued)
+- **Max Workers** - Increase to 3+ for higher throughput (saves via RunPod GraphQL API)
+- **GPU IDs** - Switch GPU type when stock is low (e.g., add A40 as fallback)
+- **Idle Timeout** - Adjust how long idle workers stay alive
+
 ## Troubleshooting
+
+### Workers showing "unhealthy"
+
+1. **Stale dependencies**: Delete `/runpod-volume/.deps_installed_v4` to force reinstall
+2. **Handler not synced**: Re-upload handler.py to the network volume
+3. **Missing HF_TOKEN**: Set `HF_TOKEN` env var in RunPod endpoint settings
+4. **GPU supply low**: Change GPU type via admin panel or RunPod dashboard
+5. **Purge queue**: Use admin panel "Purgar Cola" button to clear stuck jobs
 
 ### "worker exited with exit code 2"
 1. **Missing HF_TOKEN**: Set `HF_TOKEN` env var in RunPod endpoint settings.
-2. **Dependencies failed**: Delete `/runpod-volume/.deps_installed_v3` to force reinstall.
+2. **Dependencies failed**: Delete `/runpod-volume/.deps_installed_v4` to force reinstall.
 3. **GPU OOM**: Use 48GB GPU or handler auto-retries with shorter duration.
 
 ### Rollout stuck / 0% workers running
@@ -180,14 +240,21 @@ After the worker runs, the network volume will contain:
 3. Check worker logs in RunPod dashboard > Workers tab
 4. If dependencies broke, delete the cache marker:
    - Mount volume via temporary pod
-   - `rm /runpod-volume/.deps_installed_v3`
+   - `rm /runpod-volume/.deps_installed_v4`
    - Restart endpoint
 
 ### Force dependency reinstall
 Delete the cache marker file to make the next worker install fresh:
 ```bash
-rm /runpod-volume/.deps_installed_v3
+rm /runpod-volume/.deps_installed_v4
 ```
+
+### Low GPU Stock
+When your primary GPU (e.g., L40S) has low supply:
+1. Go to Admin > Training Data > RunPod Serverless > click "Estado"
+2. In the "GPU IDs" field, add fallback GPUs: `NVIDIA L40S 48GB,NVIDIA A40 48GB,NVIDIA RTX A6000`
+3. Click "Guardar"
+4. RunPod will use whichever GPU is available first
 
 ## Alternative: Docker Image Deployment
 

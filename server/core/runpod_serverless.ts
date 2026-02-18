@@ -242,6 +242,129 @@ export async function checkHealth(
   }
 }
 
+export async function purgeQueue(
+  endpointType: "music" | "training" | "stems"
+): Promise<{ purged: number; error?: string }> {
+  const endpointId = getEndpointId(endpointType);
+  if (!endpointId) {
+    return { purged: 0, error: `Endpoint not configured for: ${endpointType}` };
+  }
+
+  try {
+    const url = `${BASE_URL}/${endpointId}/purge-queue`;
+    console.log(`[RunPod] Purging queue for ${endpointType}: ${url}`);
+    const res = await fetchWithTimeout(url, {
+      method: "POST",
+      headers: getHeaders(),
+    }, 15000);
+
+    if (!res.ok) {
+      const errText = await res.text();
+      return { purged: 0, error: `Status ${res.status}: ${errText}` };
+    }
+
+    const data = await res.json();
+    console.log(`[RunPod] Queue purged for ${endpointType}:`, data);
+    return { purged: data.removed || data.purged || 0 };
+  } catch (err: any) {
+    return { purged: 0, error: err.message };
+  }
+}
+
+export async function getEndpointConfig(): Promise<{
+  endpointId: string;
+  gpuIds: string;
+  maxWorkers: number;
+  minWorkers: number;
+  idleTimeout: number;
+  error?: string;
+}> {
+  const endpointId = RUNPOD_ENDPOINT_MUSIC();
+  if (!endpointId) {
+    return { endpointId: "", gpuIds: "", maxWorkers: 0, minWorkers: 0, idleTimeout: 0, error: "Endpoint not configured" };
+  }
+
+  try {
+    const apiKey = RUNPOD_API_KEY();
+    const query = `query { myself { serverlessDiscount endpoints { id name gpuIds idleTimeout scalerType scalerValue workersMax workersMin templateId } } }`;
+    const res = await fetchWithTimeout(`https://api.runpod.io/graphql?api_key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    }, 15000);
+
+    if (!res.ok) {
+      return { endpointId, gpuIds: "", maxWorkers: 0, minWorkers: 0, idleTimeout: 0, error: `API ${res.status}` };
+    }
+
+    const data = await res.json();
+    const endpoints = data?.data?.myself?.endpoints || [];
+    const ep = endpoints.find((e: any) => e.id === endpointId);
+    if (!ep) {
+      return { endpointId, gpuIds: "", maxWorkers: 0, minWorkers: 0, idleTimeout: 0, error: `Endpoint ${endpointId} not found in account` };
+    }
+
+    return {
+      endpointId: ep.id,
+      gpuIds: ep.gpuIds || "",
+      maxWorkers: ep.workersMax || 0,
+      minWorkers: ep.workersMin || 0,
+      idleTimeout: ep.idleTimeout || 0,
+    };
+  } catch (err: any) {
+    return { endpointId, gpuIds: "", maxWorkers: 0, minWorkers: 0, idleTimeout: 0, error: err.message };
+  }
+}
+
+export async function updateEndpointConfig(params: {
+  maxWorkers?: number;
+  minWorkers?: number;
+  idleTimeout?: number;
+  gpuIds?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const endpointId = RUNPOD_ENDPOINT_MUSIC();
+  if (!endpointId) {
+    return { success: false, error: "Endpoint not configured" };
+  }
+
+  try {
+    const apiKey = RUNPOD_API_KEY();
+    const mutations: string[] = [];
+    if (params.maxWorkers !== undefined) mutations.push(`workersMax: ${params.maxWorkers}`);
+    if (params.minWorkers !== undefined) mutations.push(`workersMin: ${params.minWorkers}`);
+    if (params.idleTimeout !== undefined) mutations.push(`idleTimeout: ${params.idleTimeout}`);
+    if (params.gpuIds !== undefined) mutations.push(`gpuIds: "${params.gpuIds}"`);
+
+    if (mutations.length === 0) {
+      return { success: false, error: "No parameters to update" };
+    }
+
+    const query = `mutation { saveEndpoint(input: { id: "${endpointId}", ${mutations.join(", ")} }) { id gpuIds workersMax workersMin idleTimeout } }`;
+    console.log(`[RunPod] Updating endpoint ${endpointId}: ${mutations.join(", ")}`);
+
+    const res = await fetchWithTimeout(`https://api.runpod.io/graphql?api_key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    }, 15000);
+
+    if (!res.ok) {
+      const errText = await res.text();
+      return { success: false, error: `API ${res.status}: ${errText}` };
+    }
+
+    const data = await res.json();
+    if (data.errors) {
+      return { success: false, error: data.errors[0]?.message || "GraphQL error" };
+    }
+
+    console.log(`[RunPod] Endpoint updated:`, data?.data?.saveEndpoint);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 export function getWebhookUrl(path: string): string {
   const replitDomains = process.env.REPLIT_DOMAINS?.split(",")[0];
   const replitDevDomain = process.env.REPLIT_DEV_DOMAIN;
