@@ -3,7 +3,7 @@ import { Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import dgbLogo from "@assets/IMG_4931_1771382182342.png";
+import dgbLogo from "@assets/IMG_4933_1771383067858.png";
 import dagrabTranspLogo from "@assets/DAGRABATRANSP_1771365853236.png";
 import palettaBg from "@assets/palettabg_1771282011333.png";
 import {
