@@ -17,11 +17,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VOLUME_DIR="/runpod-volume"
 DAGRABA_DIR="${VOLUME_DIR}/dagraba"
 HANDLER="${DAGRABA_DIR}/handler.py"
-DEPS_MARKER="${VOLUME_DIR}/.deps_installed_v4"
+DEPS_MARKER="${VOLUME_DIR}/.deps_installed_v5"
 
 echo ""
 echo "============================================================="
-echo "  DAGRABA Studio - RunPod Serverless Worker v4"
+echo "  DAGRABA Studio - RunPod Serverless Worker v5"
 echo "============================================================="
 echo ""
 
@@ -47,11 +47,13 @@ else
     echo "[Init] WARNING: No GPU detected (CPU mode)"
 fi
 
-OLD_MARKER="${VOLUME_DIR}/.deps_installed_v3"
-if [ -f "${OLD_MARKER}" ] && [ ! -f "${DEPS_MARKER}" ]; then
-    echo "[Init] Upgrading from v3 to v4, forcing dependency reinstall..."
-    rm -f "${OLD_MARKER}"
-fi
+for OLD_V in v3 v4; do
+    OLD_MARKER="${VOLUME_DIR}/.deps_installed_${OLD_V}"
+    if [ -f "${OLD_MARKER}" ]; then
+        echo "[Init] Removing old marker: ${OLD_MARKER}"
+        rm -f "${OLD_MARKER}"
+    fi
+done
 
 if [ ! -f "${DEPS_MARKER}" ]; then
     echo ""
