@@ -1,0 +1,37 @@
+
+ef0tsw7nvsenmy[info]  Downloading tensorboard-2.20.0-py3-none-any.whl.metadata (1.8 kB)\n
+ef0tsw7nvsenmy[info]Collecting tensorboard (from descript-audiotools>=0.7.2->descript-audio-codec==1.0.0->stable-audio-tools)\n
+ef0tsw7nvsenmy[info]  Downloading protobuf-3.19.6-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (787 bytes)\n
+ef0tsw7nvsenmy[info]Collecting protobuf!=4.21.0,<5,>=3.19.0 (from wandb==0.15.4->stable-audio-tools)\n
+ef0tsw7nvsenmy[info]  Preparing metadata (setup.py): finished with status 'done'\n
+ef0tsw7nvsenmy[info]  Preparing metadata (setup.py): started\n
+ef0tsw7nvsenmy[info]     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 64.2/64.2 kB 41.4 MB/s eta 0:00:00\n
+ef0tsw7nvsenmy[info]  Downloading randomname-0.2.1.tar.gz (64 kB)\n
+ef0tsw7nvsenmy[info]Collecting randomname (from descript-audiotools>=0.7.2->descript-audio-codec==1.0.0->stable-audio-tools)\n
+ef0tsw7nvsenmy[info]  Downloading markdown2-2.5.4-py3-none-any.whl.metadata (2.1 kB)\n
+ef0tsw7nvsenmy[info]Collecting markdown2 (from descript-audiotools>=0.7.2->descript-audio-codec==1.0.0->stable-audio-tools)\n
+ef0tsw7nvsenmy[info]  Downloading flatten_dict-0.4.2-py2.py3-none-any.whl.metadata (9.2 kB)\n
+ef0tsw7nvsenmy[info]Collecting flatten-dict (from descript-audiotools>=0.7.2->descript-audio-codec==1.0.0->stable-audio-tools)\n
+ef0tsw7nvsenmy[info]  Downloading torch_stoi-0.2.3-py3-none-any.whl.metadata (3.6 kB)\n
+ef0tsw7nvsenmy[info]Collecting torch-stoi (from descript-audiotools>=0.7.2->descript-audio-codec==1.0.0->stable-audio-tools)\n
+ef0tsw7nvsenmy[info]  Downloading pystoi-0.4.1-py2.py3-none-any.whl.metadata (4.0 kB)\n
+ef0tsw7nvsenmy[info]Collecting pystoi (from descript-audiotools>=0.7.2->descript-audio-codec==1.0.0->stable-audio-tools)\n
+ef0tsw7nvsenmy[info]     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 52.8/52.8 kB 30.1 MB/s eta 0:00:00\n
+ef0tsw7nvsenmy[info]  Downloading matplotlib-3.10.8-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (52 kB)\n
+ef0tsw7nvsenmy[info]Collecting matplotlib (from descript-audiotools>=0.7.2->descript-audio-codec==1.0.0->stable-audio-tools)\n
+ef0tsw7nvsenmy[info]  Downloading rich-14.3.2-py3-none-any.whl.metadata (18 kB)\n
+ef0tsw7nvsenmy[info]Collecting rich (from descript-audiotools>=0.7.2->descript-audio-codec==1.0.0->stable-audio-tools)\n
+ef0tsw7nvsenmy[info]Requirement already satisfied: ipython in /usr/local/lib/python3.10/dist-packages (from descript-audiotools>=0.7.2->descript-audio-codec==1.0.0->stable-audio-tools) (8.17.2)\n
+ef0tsw7nvsenmy[info]  Preparing metadata (setup.py): finished with status 'done'\n
+ef0tsw7nvsenmy[info]  Preparing metadata (setup.py): started\n
+ef0tsw7nvsenmy[info]     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 59.6/59.6 kB 35.9 MB/s eta 0:00:00\n
+ef0tsw7nvsenmy[info]  Downloading julius-0.2.7.tar.gz (59 kB)\n
+ef0tsw7nvsenmy[info]Collecting julius (from descript-audiotools>=0.7.2->descript-audio-codec==1.0.0->stable-audio-tools)\n
+ef0tsw7nvsenmy[info]  Downloading pyloudnorm-0.2.0-py3-none-any.whl.metadata (6.6 kB)\n
+ef0tsw7nvsenmy[info]Collecting pyloudnorm (from descript-audiotools>=0.7.2->descript-audio-codec==1.0.0->stable-audio-tools)\n
+ef0tsw7nvsenmy[info]  Downloading docstring_parser-0.17.0-py3-none-any.whl.metadata (3.5 kB)\n
+ef0tsw7nvsenmy[info]Collecting docstring-parser (from argbind>=0.3.7->descript-audio-codec==1.0.0->stable-audio-tools)\n
+ef0tsw7nvsenmy[info]Requirement already satisfied: exceptiongroup>=1.0.2 in /usr/local/lib/python3.10/dist-packages (from anyio<5.0,>=3.0->gradio>=5.20.0->stable-audio-tools) (1.1.3)\n
+ef0tsw7nvsenmy[info]Requirement already satisfied: sniffio>=1.1 in /usr/local/lib/python3.10/dist-packages (from anyio<5.0,>=3.0->gradio>=5.20.0->stable-audio-tools) (1.3.0)\n
+ef0tsw7nvsenmy[info]  Downloading pycares-5.0.1-cp310-cp310-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (4.1 kB)\n
+ef0tsw7nvsenmy[info]Collecting pycares<6,>=5.0.0 (from aiodns>=3.3.0->aiohttp[speedups]>=3.9.3->runpod)\n
