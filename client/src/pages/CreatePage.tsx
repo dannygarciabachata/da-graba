@@ -68,7 +68,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useDeleteSong } from "@/hooks/use-songs";
 import { AudioPlayer } from "@/components/AudioPlayer";
-import { FooterPlayerBar } from "@/components/FooterPlayerBar";
+import { usePlayer, type PlayerSong } from "@/contexts/PlayerContext";
+import { AudioSpectrum } from "@/components/AudioSpectrum";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -1457,20 +1458,6 @@ export default function CreatePage() {
           )}
         </div>
         </ScrollArea>
-
-        {/* ====== FIXED FOOTER PLAYER BAR ====== */}
-        {activeSong && activeSong.status === "completed" && activeSong.audioUrl && (
-          <div className="flex-shrink-0" data-testid="footer-player">
-            <FooterPlayerBar
-              url={activeSong.audioUrl}
-              title={activeSong.title || activeSong.prompt || t('create.untitledTrack')}
-              imageUrl={activeSong.imageUrl}
-              genre={activeSong.genre}
-              duration={activeSong.duration}
-              onOpenStudio={() => setLocation("/studio")}
-            />
-          </div>
-        )}
 
         {activeSong && (activeSong.status === "processing" || activeSong.status === "pending") && (
           <div className="h-[72px] bg-[#0a0a0a] border-t border-white/10 flex items-center px-4 gap-3 flex-shrink-0" data-testid="footer-player-processing">

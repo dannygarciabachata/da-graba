@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useAuth } from "@/hooks/use-auth";
+import { PlayerProvider } from "@/contexts/PlayerContext";
+import { FooterPlayerBar } from "@/components/FooterPlayerBar";
 import Landing from "@/pages/Landing";
 import palettaBg from "@assets/palettabg_1771282011333.png";
 import HomePage from "@/pages/HomePage";
@@ -84,7 +86,7 @@ function AuthenticatedLayout() {
             }}
           >
             <div className="absolute inset-0 bg-[#0a0a12]/92 pointer-events-none" />
-            <div className="relative z-10 min-h-full">
+            <div className="relative z-10 min-h-full pb-[72px]">
             <Switch>
               <Route path="/home" component={HomePage} />
               <Route path="/create" component={CreatePage} />
@@ -120,6 +122,9 @@ function AuthenticatedLayout() {
             <SupportChat serviceContext={serviceContext} />
             </div>
           </main>
+          <div className="flex-shrink-0 sticky bottom-0 z-50">
+            <FooterPlayerBar onOpenStudio={() => window.location.href = "/studio"} />
+          </div>
         </div>
       </div>
     </SidebarProvider>
@@ -170,7 +175,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Router />
+        <PlayerProvider>
+          <Router />
+        </PlayerProvider>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
