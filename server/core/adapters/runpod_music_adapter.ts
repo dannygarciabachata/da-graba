@@ -22,7 +22,7 @@ const runpodMusicAdapter: ProviderAdapter = {
       throw new Error(`RunPod workers unavailable: ${health.error || `${health.unhealthy} unhealthy, ${health.workers} ready`}`);
     }
 
-    console.log(`[RunPodAdapter] Health OK (${health.workers} workers ready, ${health.unhealthy} unhealthy, ${health.queued} queued). Submitting song ${songId} (engine: sao, duration: ${duration}s)`);
+    console.log(`[RunPodAdapter] Health OK (${health.workers} workers ready, ${health.unhealthy} unhealthy, ${health.queued} queued). Submitting song ${songId} (engine: sao, sao_model: instrumental_finetune, duration: ${duration}s)`);
 
     const result = await submitMusicGeneration({
       songId,
@@ -32,6 +32,7 @@ const runpodMusicAdapter: ProviderAdapter = {
       lyrics,
       tags,
       genre: style,
+      saoModel: "instrumental_finetune",
     });
 
     console.log(`[RunPodAdapter] Job submitted: ${result.jobId} (status: ${result.status})`);

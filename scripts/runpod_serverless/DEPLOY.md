@@ -5,6 +5,10 @@
 ```bash
 cd scripts/runpod_serverless
 
+# Build WITH pre-downloaded SAO Instrumental Finetune model (recommended, ~4.85 GB baked in):
+docker build --build-arg HF_TOKEN=hf_YOUR_TOKEN -t dagraba-serverless:latest .
+
+# OR build without pre-download (model downloads on first use, slower cold start):
 docker build -t dagraba-serverless:latest .
 
 docker tag dagraba-serverless:latest YOUR_DOCKERHUB/dagraba-serverless:latest
@@ -46,8 +50,21 @@ You can use a single endpoint for all three actions, or separate endpoints.
 ## Architecture
 
 The handler routes jobs by `action` field:
-- `generate_music` - HeartMuLa or Stable Audio Open generation
+- `generate_music` - HeartMuLa or Stable Audio Open generation (default: SAO Instrumental Finetune)
 - `train_model` - SAO fine-tuning with instrument samples
+
+### SAO Model Variants
+The `sao_model` parameter controls which SAO variant is used:
+- `instrumental_finetune` (default) - SAO Instrumental Finetune from `santifiorino/SAO-Instrumental-Finetune`. Better instrument control, tempo accuracy (~88% vs 75%), and genre adherence. Trained on 9h of curated data (MIDI + YouTube), 4000 steps on A100.
+- `base` - Original `stabilityai/stable-audio-open-1.0`. Useful as fallback.
+
+When a `style_kit_id` is provided, it takes priority over both variants (custom kit weights loaded on top of base architecture).
+
+### Reference Files
+The `sao_finetune_reference/` directory contains the original training configs:
+- `model_config.json` - Architecture config (DiT with T5 conditioning, 44.1kHz, stereo)
+- `dataset_config.json` - Dataset loading config for custom renders
+- `renders.py` - Custom metadata module for prompt loading
 - `separate_stems` - Demucs stem separation
 - `health_check` - Returns GPU/server status
 

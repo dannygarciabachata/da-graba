@@ -25,7 +25,7 @@ DAGRABA Studio employs a microservices-oriented architecture with a clear separa
 - **Payments:** Stripe integration for subscriptions, fan gifts, and artist monetization.
 - **Generic API Provider System:** An API-agnostic engine for dynamic configuration of various API providers, including fallback mechanisms.
 - **AI Engines (Music Generation Pipeline - priority order):**
-    - **RunPod Serverless GPU (Priority 1):** Primary engine using Stable Audio Open + HeartMuLa on private GPU. Zero third-party API cost. Requires `RUNPOD_ENDPOINT_MUSIC` env var. Webhook-based delivery.
+    - **RunPod Serverless GPU (Priority 1):** Primary engine using SAO Instrumental Finetune (santifiorino/SAO-Instrumental-Finetune) + HeartMuLa on private GPU. Default model is `instrumental_finetune` with improved instrument control, tempo accuracy (~88%), and genre adherence over base SAO. Zero third-party API cost. Requires `RUNPOD_ENDPOINT_MUSIC` env var. Webhook-based delivery.
     - **Kie.ai (Priority 2):** Suno V5 integration for high-quality music generation with vocals. Fallback when RunPod unavailable.
     - **DGB AUDIO Audio Engine (Priority 3):** MusicGPT-based last resort fallback.
     - **Replicate/Mureka:** Deactivated. No longer part of music generation pipeline.
@@ -39,7 +39,7 @@ DAGRABA Studio employs a microservices-oriented architecture with a clear separa
 
 ## External Dependencies
 - **HeartMuLa:** Self-hosted on private RunPod GPU.
-- **Stable Audio Open:** Self-hosted on private RunPod GPU.
+- **SAO Instrumental Finetune:** Fine-tuned Stable Audio Open from santifiorino/SAO-Instrumental-Finetune, self-hosted on RunPod GPU. 88% tempo accuracy, improved instrument control.
 - **Replicate:** Used for serverless stem separation (Demucs model).
 - **OpenAI:** AI lyrics generation, support chatbot, prompt enrichment.
 - **Neon (PostgreSQL):** Database hosting.

@@ -247,6 +247,7 @@ export interface MusicGenerationInput {
   tags?: string;
   style_kit_id?: number;
   genre?: string;
+  sao_model?: "instrumental_finetune" | "base";
   webhook_url: string;
 }
 
@@ -288,6 +289,7 @@ export async function submitMusicGeneration(params: {
   tags?: string;
   styleKitId?: number;
   genre?: string;
+  saoModel?: "instrumental_finetune" | "base";
 }): Promise<{ jobId: string; status: string }> {
   const webhookUrl = getWebhookUrl("/api/webhooks/runpod-serverless");
 
@@ -297,6 +299,7 @@ export async function submitMusicGeneration(params: {
     song_id: params.songId,
     prompt: params.prompt,
     duration_seconds: params.duration,
+    sao_model: params.saoModel || "instrumental_finetune",
     webhook_url: webhookUrl,
   };
 

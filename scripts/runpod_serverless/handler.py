@@ -70,6 +70,17 @@ if existing_models:
 else:
     print("[Init] No fine-tuned models found (will use base SAO model)")
 
+SAO_FINETUNE_REPO = "santifiorino/SAO-Instrumental-Finetune"
+SAO_FINETUNE_CKPT = "SAO_Instrumental_Finetune.ckpt"
+SAO_FINETUNE_DIR = MODELS_DIR / "sao_instrumental_finetune"
+SAO_FINETUNE_DIR.mkdir(parents=True, exist_ok=True)
+SAO_FINETUNE_PATH = SAO_FINETUNE_DIR / SAO_FINETUNE_CKPT
+
+if SAO_FINETUNE_PATH.exists():
+    print(f"[Init] SAO Instrumental Finetune checkpoint found ({SAO_FINETUNE_PATH.stat().st_size / 1024**3:.1f} GB)")
+else:
+    print(f"[Init] SAO Instrumental Finetune NOT cached. Will download on first use from {SAO_FINETUNE_REPO}")
+
 
 def send_webhook(url: str, data: dict, retries: int = 2):
     if not url or not requests:
@@ -98,17 +109,62 @@ def get_device():
     return "cpu"
 
 
-def generate_sao(song_id, prompt, duration, style_kit_id, device, wav_path):
-    if not TORCH_AVAILABLE:
-        raise Exception("PyTorch is not installed on this worker. Cannot generate audio.")
+def download_sao_finetune():
+    """Download the SAO Instrumental Finetune checkpoint from HuggingFace if not cached."""
+    if SAO_FINETUNE_PATH.exists():
+        print(f"[SAO-FT] Checkpoint already cached: {SAO_FINETUNE_PATH}")
+        return SAO_FINETUNE_PATH
 
+    print(f"[SAO-FT] Downloading {SAO_FINETUNE_CKPT} from {SAO_FINETUNE_REPO}...")
+    try:
+        from huggingface_hub import hf_hub_download
+        downloaded = hf_hub_download(
+            repo_id=SAO_FINETUNE_REPO,
+            filename=SAO_FINETUNE_CKPT,
+            local_dir=str(SAO_FINETUNE_DIR),
+            token=HF_TOKEN or None,
+        )
+        print(f"[SAO-FT] Downloaded: {downloaded} ({os.path.getsize(downloaded) / 1024**3:.1f} GB)")
+        return Path(downloaded)
+    except Exception as e:
+        print(f"[SAO-FT] Failed to download from HuggingFace: {e}")
+        raise Exception(
+            f"Cannot download SAO Instrumental Finetune from {SAO_FINETUNE_REPO}. "
+            f"Ensure HF_TOKEN is set or pre-download the checkpoint to {SAO_FINETUNE_PATH}. Error: {e}"
+        )
+
+
+def load_sao_model(sao_model_variant, style_kit_id, device):
+    """
+    Load a Stable Audio Open model variant.
+    
+    sao_model_variant: 'instrumental_finetune' (default), 'base', or 'kit'
+    style_kit_id: optional kit ID for custom fine-tuned models
+    
+    Returns: (model, model_config, variant_used)
+    """
     try:
         from stable_audio_tools import get_pretrained_model
         from stable_audio_tools.inference.generation import generate_diffusion_cond
     except ImportError as e:
         raise Exception(f"stable-audio-tools not installed: {e}. Rebuild Docker image with: pip install stable-audio-tools")
 
-    model_id = "stabilityai/stable-audio-open-1.0"
+    base_model_id = "stabilityai/stable-audio-open-1.0"
+
+    print(f"[SAO] Loading base architecture: {base_model_id}")
+    try:
+        model, model_config = get_pretrained_model(base_model_id)
+    except Exception as e:
+        error_msg = str(e)
+        if "401" in error_msg or "token" in error_msg.lower() or "authorization" in error_msg.lower():
+            raise Exception(f"HuggingFace authentication failed. Set HF_TOKEN env var. Error: {error_msg}")
+        elif "404" in error_msg or "not found" in error_msg.lower():
+            raise Exception(f"Model {base_model_id} not found on HuggingFace. Error: {error_msg}")
+        else:
+            raise Exception(f"Failed to load SAO model: {error_msg}")
+
+    model = model.to(device)
+    variant_used = "base"
 
     kit_model_path = None
     if style_kit_id:
@@ -119,26 +175,10 @@ def generate_sao(song_id, prompt, duration, style_kit_id, device, wav_path):
                 kit_model_path = best_path
                 print(f"[SAO] Using best_model.pt for kit {style_kit_id}")
             else:
-                print(f"[SAO] Kit {style_kit_id} model not found at {kit_model_path}, using base model")
+                print(f"[SAO] Kit {style_kit_id} model not found at {kit_model_path}")
                 kit_model_path = None
-        else:
-            print(f"[SAO] Found fine-tuned model for kit {style_kit_id}")
 
-    print(f"[SAO] Loading base model: {model_id}")
-    try:
-        model, model_config = get_pretrained_model(model_id)
-    except Exception as e:
-        error_msg = str(e)
-        if "401" in error_msg or "token" in error_msg.lower() or "authorization" in error_msg.lower():
-            raise Exception(f"HuggingFace authentication failed. Set HF_TOKEN env var with a valid token that has access to {model_id}. Error: {error_msg}")
-        elif "404" in error_msg or "not found" in error_msg.lower():
-            raise Exception(f"Model {model_id} not found on HuggingFace. Error: {error_msg}")
-        else:
-            raise Exception(f"Failed to load SAO model: {error_msg}")
-
-    sample_rate = model_config["sample_rate"]
-    model = model.to(device)
-
+    kit_loaded = False
     if kit_model_path and kit_model_path.exists():
         try:
             checkpoint = torch.load(str(kit_model_path), map_location=device, weights_only=False)
@@ -146,14 +186,45 @@ def generate_sao(song_id, prompt, duration, style_kit_id, device, wav_path):
                 model.load_state_dict(checkpoint["model_state_dict"], strict=False)
             else:
                 model.load_state_dict(checkpoint, strict=False)
-            print(f"[SAO] Fine-tuned weights loaded for kit {style_kit_id}")
+            print(f"[SAO] Style Kit {style_kit_id} weights loaded")
+            variant_used = f"kit_{style_kit_id}"
+            kit_loaded = True
         except Exception as e:
-            print(f"[SAO] WARNING: Failed to load fine-tuned weights for kit {style_kit_id}: {e}")
-            print("[SAO] Continuing with base model")
+            print(f"[SAO] WARNING: Failed to load kit {style_kit_id} weights: {e}")
+            print("[SAO] Falling back to instrumental finetune or base")
+
+    if not kit_loaded and sao_model_variant != "base":
+        try:
+            ckpt_path = download_sao_finetune()
+            checkpoint = torch.load(str(ckpt_path), map_location=device, weights_only=False)
+            if isinstance(checkpoint, dict) and "state_dict" in checkpoint:
+                model.load_state_dict(checkpoint["state_dict"], strict=False)
+            elif isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
+                model.load_state_dict(checkpoint["model_state_dict"], strict=False)
+            else:
+                model.load_state_dict(checkpoint, strict=False)
+            print(f"[SAO] Instrumental Finetune weights loaded successfully")
+            variant_used = "instrumental_finetune"
+        except Exception as e:
+            print(f"[SAO] WARNING: Could not load Instrumental Finetune: {e}")
+            print("[SAO] Continuing with base SAO 1.0 model")
+            variant_used = "base"
 
     model.eval()
+    return model, model_config, variant_used
 
-    print(f"[SAO] Generating {duration}s audio...")
+
+def generate_sao(song_id, prompt, duration, style_kit_id, device, wav_path, sao_model="instrumental_finetune"):
+    if not TORCH_AVAILABLE:
+        raise Exception("PyTorch is not installed on this worker. Cannot generate audio.")
+
+    from stable_audio_tools.inference.generation import generate_diffusion_cond
+
+    model, model_config, variant_used = load_sao_model(sao_model, style_kit_id, device)
+    sample_rate = model_config["sample_rate"]
+
+    print(f"[SAO] Generating {duration}s audio with variant={variant_used}...")
+    print(f"[SAO] Prompt: {prompt[:300]}")
     try:
         with torch.no_grad():
             output = generate_diffusion_cond(
@@ -189,13 +260,13 @@ def generate_sao(song_id, prompt, duration, style_kit_id, device, wav_path):
         audio = audio.unsqueeze(0)
 
     torchaudio.save(wav_path, audio, sample_rate)
-    print(f"[SAO] Audio saved: {wav_path}")
+    print(f"[SAO] Audio saved: {wav_path} (variant={variant_used})")
 
     del model, output, audio
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
-    return {"audio_path": wav_path, "sample_rate": sample_rate}
+    return {"audio_path": wav_path, "sample_rate": sample_rate, "sao_variant": variant_used}
 
 
 def generate_heartmula(song_id, prompt, duration, lyrics, tags, genre, device, wav_path):
@@ -266,11 +337,12 @@ def handle_generate_music(job_input: dict) -> dict:
     tags = job_input.get("tags", "")
     genre = job_input.get("genre", "")
     style_kit_id = job_input.get("style_kit_id")
+    sao_model = job_input.get("sao_model", "instrumental_finetune")
 
     if not prompt:
         return {"status": "failed", "error": "No prompt provided", "song_id": song_id}
 
-    print(f"[Music] Song {song_id} | Engine: {engine} | Duration: {duration}s")
+    print(f"[Music] Song {song_id} | Engine: {engine} | SAO Model: {sao_model} | Duration: {duration}s")
     print(f"[Music] Prompt: {prompt[:200]}")
     if style_kit_id:
         print(f"[Music] Style Kit: {style_kit_id}")
@@ -285,7 +357,7 @@ def handle_generate_music(job_input: dict) -> dict:
         if engine == "heartmula":
             result = generate_heartmula(song_id, prompt, duration, lyrics, tags, genre, device, wav_path)
         else:
-            result = generate_sao(song_id, prompt, duration, style_kit_id, device, wav_path)
+            result = generate_sao(song_id, prompt, duration, style_kit_id, device, wav_path, sao_model=sao_model)
 
         if os.path.exists(wav_path):
             try:
