@@ -1,0 +1,63 @@
+ ______                 ______            _
+(_____ \               (_____ \          | |
+ _____) ) _   _  ____   _____) )___    __| |
+|  __  / | | | ||  _ \ |  ____// _ \  / _  |
+| |  \ \ | |_| || | | || |    | |_| |( (_| |
+|_|   |_||____/ |_| |_||_|     \___/  \____|
+
+For detailed documentation and guides, please visit:
+https://docs.runpod.io/ and https://blog.runpod.io/
+
+
+root@dd95dccf42d8:/workspace#  ls -la /workspace/
+ls -la /runpod-volume/
+find / -name '*.vst3' 2>/dev/null
+total 40
+drwxr-xr-x  14 root root 4096 Feb 16 19:10 .
+drwxr-xr-x   1 root root  149 Feb 18 15:51 ..
+drwxr-xr-x   2 root root   10 Feb 14 05:06 .ipynb_checkpoints
+drwxr-xr-x   4 root root   50 Feb 15 03:13 .pip_cache
+drwxr-xr-x   7 root root 4096 Feb 15 03:13 HeartMuse
+-rw-r--r--   1 root root 6760 Feb 14 04:49 dgb_api_receptor.py
+drwxr-xr-x   5 root root   65 Feb 14 04:49 dgb_audio
+drwxr-xr-x   2 root root  160 Feb 15 01:37 generated_music
+drwxr-xr-x   6 root root  167 Feb 14 06:14 heartlib
+drwxr-xr-x   5 root root  182 Feb 14 23:48 heartmula_ckpt
+-rw-r--r--   1 root root  745 Feb 14 05:55 receptor.log
+-rwxr-xr-x   1 root root 1299 Feb 15 03:13 setup_hm.sh
+drwxr-xr-x   2 root root   10 Feb 15 03:06 site-packages
+-rwxr-xr-x   1 root root  852 Feb 14 05:00 start.sh
+drwxr-xr-x   4 root root   51 Feb 15 06:28 stem_separation
+drwxr-xr-x 222 root root 8192 Feb 15 04:02 tmp
+drwxr-xr-x   2 root root   33 Feb 16 19:10 training_configs
+drwxr-xr-x   3 root root   28 Feb 16 19:10 training_data
+total 0
+drwxr-xr-x 3 root root  28 Feb 18 15:51 .
+drwxr-xr-x 1 root root 149 Feb 18 15:51 ..
+drwxr-xr-x 3 root root  47 Feb 18 15:51 models
+root@dd95dccf42d8:/workspace# ls -la /workspace/
+ls -la /runpod-volume/
+total 40
+drwxr-xr-x  14 root root 4096 Feb 16 19:10 .
+drwxr-xr-x   1 root root  149 Feb 18 15:51 ..
+drwxr-xr-x   2 root root   10 Feb 14 05:06 .ipynb_checkpoints
+drwxr-xr-x   4 root root   50 Feb 15 03:13 .pip_cache
+drwxr-xr-x   7 root root 4096 Feb 15 03:13 HeartMuse
+-rw-r--r--   1 root root 6760 Feb 14 04:49 dgb_api_receptor.py
+drwxr-xr-x   5 root root   65 Feb 14 04:49 dgb_audio
+drwxr-xr-x   2 root root  160 Feb 15 01:37 generated_music
+drwxr-xr-x   6 root root  167 Feb 14 06:14 heartlib
+drwxr-xr-x   5 root root  182 Feb 14 23:48 heartmula_ckpt
+-rw-r--r--   1 root root  745 Feb 14 05:55 receptor.log
+-rwxr-xr-x   1 root root 1299 Feb 15 03:13 setup_hm.sh
+drwxr-xr-x   2 root root   10 Feb 15 03:06 site-packages
+-rwxr-xr-x   1 root root  852 Feb 14 05:00 start.sh
+drwxr-xr-x   4 root root   51 Feb 15 06:28 stem_separation
+drwxr-xr-x 222 root root 8192 Feb 15 04:02 tmp
+drwxr-xr-x   2 root root   33 Feb 16 19:10 training_configs
+drwxr-xr-x   3 root root   28 Feb 16 19:10 training_data
+total 0
+drwxr-xr-x 3 root root  28 Feb 18 15:51 .
+drwxr-xr-x 1 root root 149 Feb 18 15:51 ..
+drwxr-xr-x 3 root root  47 Feb 18 15:51 models
+root@dd95dccf42d8:/workspace# 
