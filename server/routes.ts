@@ -4554,6 +4554,19 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/gpu/build-vst3", async (req, res) => {
+    if (!(await requireRole(req, res, "super_admin"))) return;
+    try {
+      const { buildVst3Plugin } = await import("./core/runpod_client");
+      console.log("[Admin] Starting VST3 plugin build on RunPod...");
+      const result = await buildVst3Plugin();
+      console.log("[Admin] VST3 build result:", result.success ? "SUCCESS" : "FAILED");
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, output: err.message });
+    }
+  });
+
   app.post("/api/admin/gpu/diagnostics", async (req, res) => {
     if (!(await requireRole(req, res, "super_admin"))) return;
     try {

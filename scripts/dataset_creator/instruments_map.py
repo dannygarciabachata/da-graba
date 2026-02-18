@@ -136,6 +136,74 @@ GM_INSTRUMENT_NAMES = {
     127: "Gunshot",
 }
 
+VST3_PRESET_NAMES = {
+    0: "Requinto",
+    1: "Segunda Guitarra",
+    2: "Bongo",
+    3: "Conga",
+    4: "Guira",
+    5: "Timbal",
+    6: "Campanas",
+    7: "Bajo",
+    8: "Piano",
+    9: "Pad",
+    10: "Strings (Violines)",
+    11: "Strings (Chelos)",
+}
+
+GM_TO_VST3_MAPPING = {
+    24: 0,
+    25: 0,
+    26: 1,
+    27: 1,
+    28: 1,
+    0: 8,
+    1: 8,
+    2: 8,
+    3: 8,
+    4: 8,
+    5: 8,
+    32: 7,
+    33: 7,
+    34: 7,
+    35: 7,
+    36: 7,
+    37: 7,
+    38: 7,
+    39: 7,
+    40: 10,
+    41: 10,
+    42: 11,
+    43: 11,
+    44: 10,
+    45: 10,
+    48: 10,
+    49: 10,
+    88: 9,
+    89: 9,
+    90: 9,
+    91: 9,
+    92: 9,
+    93: 9,
+    94: 9,
+    95: 9,
+    112: 6,
+    113: 6,
+    114: 6,
+    115: 2,
+    116: 3,
+    117: 5,
+    118: 2,
+}
+
 
 def get_instrument_name(program_number: int) -> str:
     return GM_INSTRUMENT_NAMES.get(program_number, f"Unknown ({program_number})")
+
+
+def get_vst3_preset_index(gm_program_number: int):
+    return GM_TO_VST3_MAPPING.get(gm_program_number, None)
+
+
+def get_vst3_preset_name(preset_index: int) -> str:
+    return VST3_PRESET_NAMES.get(preset_index, f"Unknown Preset ({preset_index})")

@@ -1324,6 +1324,40 @@ try:
 except ImportError:
     details.append("pyfluidsynth: NOT INSTALLED - Run GPU Setup to install")
 
+vst3_path = "/runpod-volume/vst3/DAGRABA_Sampler.vst3"
+result["vst3Installed"] = os.path.exists(vst3_path)
+result["vst3Path"] = vst3_path
+
+details.append("")
+details.append("=== VST3 Plugin ===")
+if result["vst3Installed"]:
+    details.append(f"DAGRABA Sampler VST3: INSTALLED at {vst3_path}")
+    so_files = []
+    for root, dirs, files in os.walk(vst3_path):
+        for f in files:
+            if f.endswith(".so"):
+                fp = os.path.join(root, f)
+                so_files.append(f"{f} ({os.path.getsize(fp) / 1024:.0f} KB)")
+    if so_files:
+        details.append(f"  Binary: {', '.join(so_files)}")
+else:
+    details.append("DAGRABA Sampler VST3: NOT BUILT - Use Build VST3 to compile")
+
+samples_dir = "/runpod-volume/vst3/samples"
+if os.path.exists(samples_dir):
+    inst_dirs = [d for d in os.listdir(samples_dir) if os.path.isdir(os.path.join(samples_dir, d))]
+    sample_count = 0
+    for d in inst_dirs:
+        wavs = [f for f in os.listdir(os.path.join(samples_dir, d)) if f.endswith(".wav")]
+        sample_count += len(wavs)
+    details.append(f"  Sample dirs: {len(inst_dirs)}, WAV files: {sample_count}")
+    result["sampleDirs"] = len(inst_dirs)
+    result["sampleFiles"] = sample_count
+else:
+    details.append("  Samples directory: not created yet")
+    result["sampleDirs"] = 0
+    result["sampleFiles"] = 0
+
 result["details"] = "\\n".join(details)
 print(json.dumps(result))
 `;
@@ -1352,5 +1386,135 @@ print(json.dumps(result))
       gmInstrumentsAvailable: 0,
       details: err.message,
     };
+  }
+}
+
+export async function buildVst3Plugin(): Promise<{ success: boolean; output: string }> {
+  try {
+    const kernelId = await getOrCreateKernel();
+    const buildScript = `
+import subprocess, os, sys
+
+results = []
+results.append("=== DAGRABA Sampler VST3 Build ===")
+
+results.append("[1/6] Installing build dependencies...")
+r = subprocess.run(["apt-get", "update", "-qq"], capture_output=True, text=True, timeout=60)
+r = subprocess.run(["apt-get", "install", "-y", "-qq", "build-essential", "cmake", "git", "pkg-config",
+    "libx11-dev", "libxcb1-dev", "libfreetype6-dev", "libfontconfig1-dev"],
+    capture_output=True, text=True, timeout=120)
+results.append(f"  Dependencies: {'OK' if r.returncode == 0 else r.stderr[:200]}")
+
+VST3_SDK_DIR = "/runpod-volume/vst3sdk"
+PLUGIN_SRC = "/workspace/vst3_plugins/dagraba_sampler"
+BUILD_DIR = "/runpod-volume/vst3_build"
+DEPLOY_DIR = "/runpod-volume/vst3"
+SAMPLES_DIR = "/runpod-volume/vst3/samples"
+
+results.append("[2/6] Checking VST3 SDK...")
+if os.path.exists(os.path.join(VST3_SDK_DIR, "CMakeLists.txt")):
+    results.append("  VST3 SDK already cloned")
+else:
+    results.append("  Cloning VST3 SDK (may take several minutes)...")
+    r = subprocess.run(["git", "clone", "--recursive", "--quiet",
+        "https://github.com/steinbergmedia/vst3sdk.git", VST3_SDK_DIR],
+        capture_output=True, text=True, timeout=600)
+    if r.returncode != 0:
+        results.append(f"  Clone FAILED: {r.stderr[:300]}")
+        print("\\n".join(results))
+        sys.exit(0)
+    results.append("  VST3 SDK cloned successfully")
+
+if not os.path.exists(PLUGIN_SRC):
+    results.append(f"  ERROR: Plugin source not found at {PLUGIN_SRC}")
+    results.append("  Make sure plugin source is synced to /workspace/vst3_plugins/")
+    print("\\n".join(results))
+    sys.exit(0)
+
+results.append("[3/6] Preparing build directory...")
+os.makedirs(BUILD_DIR, exist_ok=True)
+
+results.append("[4/6] Running CMake configuration...")
+r = subprocess.run(["cmake", PLUGIN_SRC,
+    f"-Dvst3sdk_SOURCE_DIR={VST3_SDK_DIR}",
+    "-DCMAKE_BUILD_TYPE=Release",
+    "-DSMTG_ADD_VST3_HOSTING_SAMPLES=OFF",
+    "-DSMTG_ADD_VST3_PLUGINS_SAMPLES=OFF",
+    "-DSMTG_CREATE_PLUGIN_LINK=OFF",
+    "-DSMTG_RUN_VST_VALIDATOR=OFF"],
+    capture_output=True, text=True, timeout=120, cwd=BUILD_DIR)
+if r.returncode != 0:
+    results.append(f"  CMake FAILED: {r.stderr[:500]}")
+    print("\\n".join(results))
+    sys.exit(0)
+results.append("  CMake configuration: OK")
+
+import multiprocessing
+nproc = multiprocessing.cpu_count()
+results.append(f"[5/6] Building with {nproc} threads...")
+r = subprocess.run(["cmake", "--build", ".", "--config", "Release", f"-j{nproc}"],
+    capture_output=True, text=True, timeout=600, cwd=BUILD_DIR)
+if r.returncode != 0:
+    results.append(f"  Build FAILED: {r.stderr[:500]}")
+    print("\\n".join(results))
+    sys.exit(0)
+results.append("  Build: OK")
+
+results.append("[6/6] Deploying to network volume...")
+os.makedirs(DEPLOY_DIR, exist_ok=True)
+os.makedirs(SAMPLES_DIR, exist_ok=True)
+
+import glob, shutil
+vst3_dirs = glob.glob(os.path.join(BUILD_DIR, "**", "*.vst3"), recursive=True)
+vst3_dirs = [d for d in vst3_dirs if os.path.isdir(d)]
+deployed = False
+
+if vst3_dirs:
+    src = vst3_dirs[0]
+    dst = os.path.join(DEPLOY_DIR, "DAGRABA_Sampler.vst3")
+    if os.path.exists(dst):
+        shutil.rmtree(dst)
+    shutil.copytree(src, dst)
+    results.append(f"  Deployed: {dst}")
+    deployed = True
+else:
+    so_files = glob.glob(os.path.join(BUILD_DIR, "**", "*.so"), recursive=True)
+    so_files = [f for f in so_files if "DAGRABA" in f or "dagraba" in f.lower()]
+    if so_files:
+        dst_dir = os.path.join(DEPLOY_DIR, "DAGRABA_Sampler.vst3", "Contents", "x86_64-linux")
+        os.makedirs(dst_dir, exist_ok=True)
+        shutil.copy2(so_files[0], os.path.join(dst_dir, "DAGRABA_Sampler.so"))
+        results.append(f"  Deployed manually: {DEPLOY_DIR}/DAGRABA_Sampler.vst3")
+        deployed = True
+
+if not deployed:
+    results.append("  ERROR: Could not find built plugin binary")
+
+instrument_names = ["Requinto", "Segunda Guitarra", "Bongo", "Conga", "Guira",
+    "Timbal", "Campanas", "Bajo", "Piano", "Pad", "Strings (Violines)", "Strings (Chelos)"]
+for inst in instrument_names:
+    os.makedirs(os.path.join(SAMPLES_DIR, inst), exist_ok=True)
+results.append(f"  Created {len(instrument_names)} sample directories")
+
+results.append("")
+results.append("=== Build Complete ===")
+if deployed:
+    results.append("Plugin ready at: /runpod-volume/vst3/DAGRABA_Sampler.vst3")
+    results.append(f"Samples dir: {SAMPLES_DIR}/")
+
+print("\\n".join(results))
+`;
+    const output = await executeCode(kernelId, buildScript, 900000);
+    const isTimeout = output === "execution_timeout_submitted" || output === "timeout";
+    if (isTimeout) {
+      return { success: false, output: "Build timed out. The SDK clone or compilation may still be running. Check status again in a few minutes." };
+    }
+    const hasError = output.includes("FAILED") || output.includes("ERROR");
+    return {
+      success: !hasError && output.includes("Build Complete"),
+      output: output || "Build process completed",
+    };
+  } catch (err: any) {
+    return { success: false, output: err.message };
   }
 }

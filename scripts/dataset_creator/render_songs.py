@@ -7,18 +7,42 @@ import soundfile as sf
 import pyloudnorm as pyln
 import fluidsynth
 
-from instruments_map import SOUNDFONT_PATH, get_instrument_name
+from instruments_map import SOUNDFONT_PATH, get_instrument_name, get_vst3_preset_index
 
 sample_rate = 44100
 num_channels = 2
 output_dir = Path("renders")
 output_dir.mkdir(parents=True, exist_ok=True)
 
+RENDER_ENGINE = os.environ.get("RENDER_ENGINE", "fluidsynth")
+VST3_PLUGIN_PATH = os.environ.get("VST3_PLUGIN_PATH", "/runpod-volume/vst3/DAGRABA_Sampler.vst3")
+
 
 def main():
-    if not os.path.exists(SOUNDFONT_PATH):
-        print(f"SoundFont not found at {SOUNDFONT_PATH}")
-        print("Run setup_runpod_instruments.sh first to download FluidR3_GM.sf2")
+    engine = RENDER_ENGINE.lower()
+    print(f"Render engine: {engine}")
+
+    if engine == "fluidsynth":
+        if not os.path.exists(SOUNDFONT_PATH):
+            print(f"SoundFont not found at {SOUNDFONT_PATH}")
+            print("Run GPU Setup first to download FluidR3_GM.sf2")
+            return
+        print(f"Using FluidSynth with {SOUNDFONT_PATH}")
+    elif engine == "vst3":
+        if not os.path.exists(VST3_PLUGIN_PATH):
+            print(f"VST3 plugin not found at {VST3_PLUGIN_PATH}")
+            print("Run Build VST3 from admin panel first")
+            return
+        try:
+            import pedalboard
+            print(f"Using DAGRABA Sampler VST3 at {VST3_PLUGIN_PATH}")
+        except ImportError:
+            print("pedalboard not installed. Install with: pip install pedalboard")
+            return
+    elif engine == "hybrid":
+        print("Using hybrid mode: VST3 for DAGRABA instruments, FluidSynth for GM fallback")
+    else:
+        print(f"Unknown render engine: {engine}. Use 'fluidsynth', 'vst3', or 'hybrid'")
         return
 
     root = Path("clean_midi")
@@ -74,13 +98,30 @@ def synthesize_single_track(midi_path, temp_dir):
 
     audio_path = temp_dir / f"{midi_path.stem}.wav"
 
+    engine = RENDER_ENGINE.lower()
+    vst3_preset = get_vst3_preset_index(instrument_number)
+
+    use_vst3 = False
+    if engine == "vst3":
+        use_vst3 = True
+    elif engine == "hybrid" and vst3_preset is not None:
+        use_vst3 = True
+
     try:
-        render_midi_with_fluidsynth(
-            midi_path=str(midi_path),
-            output_path=str(audio_path),
-            program_number=instrument_number,
-            sample_rate=sample_rate,
-        )
+        if use_vst3 and os.path.exists(VST3_PLUGIN_PATH):
+            render_midi_with_vst3(
+                midi_path=str(midi_path),
+                output_path=str(audio_path),
+                preset_index=vst3_preset if vst3_preset is not None else 0,
+                sample_rate=sample_rate,
+            )
+        else:
+            render_midi_with_fluidsynth(
+                midi_path=str(midi_path),
+                output_path=str(audio_path),
+                program_number=instrument_number,
+                sample_rate=sample_rate,
+            )
     except Exception as e:
         print(f"\t\tError synthesizing {midi_path.name}: {e}")
         return
@@ -143,6 +184,48 @@ def render_midi_with_fluidsynth(midi_path, output_path, program_number, sample_r
 
     audio_buffer = np.clip(audio_buffer, -1.0, 1.0)
     sf.write(output_path, audio_buffer, sample_rate)
+
+
+def render_midi_with_vst3(midi_path, output_path, preset_index=0, sample_rate=44100):
+    import pedalboard
+    import mido
+
+    plugin = pedalboard.load_plugin(VST3_PLUGIN_PATH, parameter_values={"Instrument": preset_index / 11.0})
+
+    midi_file = mido.MidiFile(midi_path)
+    total_duration = midi_file.length + 2.0
+    total_samples = int(total_duration * sample_rate)
+
+    block_size = 4096
+    audio_buffer = np.zeros((2, total_samples), dtype=np.float32)
+    current_sample = 0
+    event_count = 0
+
+    board = pedalboard.Pedalboard([plugin])
+
+    midi_events = []
+    current_time = 0.0
+    for msg in midi_file:
+        current_time += msg.time
+        sample_pos = int(current_time * sample_rate)
+        if msg.type == 'note_on':
+            midi_events.append((sample_pos, 'on', msg.note, msg.velocity))
+            event_count += 1
+        elif msg.type == 'note_off':
+            midi_events.append((sample_pos, 'off', msg.note, 0))
+            event_count += 1
+
+    midi_events.sort(key=lambda e: e[0])
+
+    silence_input = np.zeros((2, total_samples), dtype=np.float32)
+    rendered = board(silence_input, sample_rate=sample_rate)
+    if rendered is not None:
+        audio_buffer = rendered
+
+    print(f"\t\tVST3: {event_count} MIDI events, preset={preset_index}, duration={total_duration:.1f}s")
+
+    audio_buffer = np.clip(audio_buffer, -1.0, 1.0)
+    sf.write(output_path, audio_buffer.T, sample_rate)
 
 
 def mix_and_normalize(temp_dir, output_path):

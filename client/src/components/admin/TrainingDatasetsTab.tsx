@@ -200,7 +200,9 @@ function DatasetListView({ onSelect, onCreate }: { onSelect: (id: number) => voi
 function InstrumentStatusCard() {
   const { toast } = useToast();
   const [checking, setChecking] = useState(false);
+  const [building, setBuilding] = useState(false);
   const [status, setStatus] = useState<any>(null);
+  const [buildOutput, setBuildOutput] = useState<string | null>(null);
 
   const checkStatus = async () => {
     setChecking(true);
@@ -215,33 +217,59 @@ function InstrumentStatusCard() {
     }
   };
 
+  const buildVst3 = async () => {
+    setBuilding(true);
+    setBuildOutput(null);
+    try {
+      const res = await apiRequest("POST", "/api/admin/gpu/build-vst3");
+      const data = await res.json();
+      setBuildOutput(data.output);
+      if (data.success) {
+        toast({ title: "VST3 Compilado", description: "DAGRABA Sampler compilado y desplegado exitosamente." });
+        checkStatus();
+      } else {
+        toast({ title: "Error de Compilacion", description: "Revisa el log de salida para detalles.", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setBuilding(false);
+    }
+  };
+
   return (
     <Card data-testid="card-instrument-status">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
             <Piano className="h-5 w-5 text-primary" />
-            <CardTitle className="text-base">Instrumentos (SoundFont GM)</CardTitle>
+            <CardTitle className="text-base">Motor de Instrumentos</CardTitle>
           </div>
-          <Button size="sm" variant="outline" onClick={checkStatus} disabled={checking} data-testid="button-check-instruments">
-            {checking ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
-            Verificar RunPod
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button size="sm" variant="outline" onClick={checkStatus} disabled={checking || building} data-testid="button-check-instruments">
+              {checking ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+              Verificar
+            </Button>
+            <Button size="sm" onClick={buildVst3} disabled={building || checking} data-testid="button-build-vst3">
+              {building ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Zap className="h-4 w-4 mr-1" />}
+              {building ? "Compilando..." : "Build VST3"}
+            </Button>
+          </div>
         </div>
         <CardDescription>
-          FluidR3_GM SoundFont con 128 instrumentos General MIDI para renderizar datasets de entrenamiento
+          FluidSynth (GM SoundFont) + DAGRABA Sampler VST3 (instrumentos custom de Bachata)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {!status ? (
           <div className="text-center py-4 text-muted-foreground">
             <HardDrive className="h-8 w-8 mx-auto mb-2 opacity-40" />
-            <p className="text-sm">Pulsa &quot;Verificar RunPod&quot; para comprobar si los instrumentos estan instalados en el network volume.</p>
+            <p className="text-sm">Pulsa &quot;Verificar&quot; para comprobar el estado de los motores de instrumentos en RunPod.</p>
             <p className="text-xs mt-1">Se necesita un pod RunPod activo con Jupyter para verificar.</p>
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="border rounded-md p-3 space-y-1">
                 <div className="flex items-center gap-2">
                   {status.soundfontInstalled ? (
@@ -253,7 +281,7 @@ function InstrumentStatusCard() {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {status.soundfontInstalled
-                    ? `${(status.soundfontSize / 1e6).toFixed(0)} MB instalado`
+                    ? `${(status.soundfontSize / 1e6).toFixed(0)} MB`
                     : "No instalado"}
                 </p>
               </div>
@@ -267,18 +295,31 @@ function InstrumentStatusCard() {
                   <span className="text-sm font-medium">FluidSynth</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {status.fluidsynthInstalled ? "Motor de sintesis instalado" : "No instalado"}
+                  {status.fluidsynthInstalled ? "Instalado" : "No instalado"}
+                </p>
+              </div>
+              <div className="border rounded-md p-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  {status.vst3Installed ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="text-sm font-medium">DAGRABA Sampler</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {status.vst3Installed ? "VST3 compilado" : "No compilado"}
                 </p>
               </div>
               <div className="border rounded-md p-3 space-y-1">
                 <div className="flex items-center gap-2">
                   <Music className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">Instrumentos GM</span>
+                  <span className="text-sm font-medium">Samples</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {status.gmInstrumentsAvailable > 0
-                    ? `${status.gmInstrumentsAvailable} melodicos + 47 percusion`
-                    : "0 disponibles"}
+                  {status.sampleDirs > 0
+                    ? `${status.sampleDirs} instrumentos, ${status.sampleFiles || 0} WAVs`
+                    : "Sin samples cargados"}
                 </p>
               </div>
             </div>
@@ -289,9 +330,17 @@ function InstrumentStatusCard() {
             )}
             {!status.soundfontInstalled && (
               <p className="text-xs text-muted-foreground">
-                Ejecuta &quot;GPU Setup&quot; desde la pestana de RunPod para instalar automaticamente FluidSynth y FluidR3_GM.
+                Ejecuta &quot;GPU Setup&quot; desde la pestana de RunPod para instalar FluidSynth y FluidR3_GM.
               </p>
             )}
+          </div>
+        )}
+        {buildOutput && (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">Log de Compilacion VST3:</p>
+            <pre className="text-xs bg-muted p-2 rounded-md overflow-auto max-h-48 whitespace-pre-wrap" data-testid="text-build-output">
+              {buildOutput}
+            </pre>
           </div>
         )}
       </CardContent>
