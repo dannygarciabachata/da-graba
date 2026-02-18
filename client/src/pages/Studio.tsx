@@ -1,36 +1,31 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSongs } from "@/hooks/use-songs";
-
-const GENRE_DISPLAY: Record<string, string> = {
-  Bachata: "DAGRABACHATA",
-  Bolero: "DAGRABOLERO",
-};
 import { useSongTracks, useSeparateStems, useUpdateTrack, useMasterSong, useDenoiseSong, useCoverSong, useTrimSong } from "@/hooks/use-tracks";
+import { useAudioEngine } from "@/hooks/use-audio-engine";
+import { useStripeSubscription } from "@/hooks/use-stripe";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Play, Pause, Square, Volume2, VolumeX, Mic, Drum,
-  Guitar, Music, Loader2, Scissors, ArrowLeft, ChevronRight, Download,
-  Package, SkipBack, Sparkles, Shield, MicVocal
+  Guitar, Music, Loader2, Scissors, Download, SkipBack,
+  Sparkles, Shield, MicVocal, ChevronDown, ChevronUp,
+  Repeat, Package, PanelRightClose, PanelRightOpen
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import type { Track } from "@shared/schema";
-import WaveSurfer from "wavesurfer.js";
 import JSZip from "jszip";
 import { useTranslation } from "react-i18next";
-import { useStripeSubscription } from "@/hooks/use-stripe";
 
-const STEM_ICONS: Record<string, typeof Mic> = {
-  vocals: Mic,
-  drums: Drum,
-  bass: Guitar,
-  other: Music,
+const GENRE_DISPLAY: Record<string, string> = {
+  Bachata: "DAGRABACHATA",
+  Bolero: "DAGRABOLERO",
 };
 
 const STEM_COLORS: Record<string, string> = {
@@ -40,197 +35,273 @@ const STEM_COLORS: Record<string, string> = {
   other: "#A78BFA",
 };
 
-function TrackStrip({
-  track,
-  audioRef,
-  isSoloedByOther,
-  onToggleMute,
-  onToggleSolo,
-  onVolumeChange,
-  onSeek,
-}: {
-  track: Track;
-  audioRef: HTMLAudioElement | null;
-  isSoloedByOther: boolean;
-  onToggleMute: () => void;
-  onToggleSolo: () => void;
-  onVolumeChange: (vol: number) => void;
-  onSeek: (progress: number) => void;
-}) {
-  const waveRef = useRef<HTMLDivElement>(null);
-  const wsRef = useRef<WaveSurfer | null>(null);
-  const [waveReady, setWaveReady] = useState(false);
-  const Icon = STEM_ICONS[track.type] || Music;
-  const color = STEM_COLORS[track.type] || "#00F3FF";
+const STEM_ICONS: Record<string, typeof Mic> = {
+  vocals: Mic,
+  drums: Drum,
+  bass: Guitar,
+  other: Music,
+};
 
-  const effectivelyMuted = isSoloedByOther || (track.isMuted && !track.isSolo);
+function VUMeter({ getLevel, height = 120 }: { getLevel: () => number; height?: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const levelRef = useRef(0);
+  const peakRef = useRef(0);
+  const peakHoldRef = useRef(0);
+  const rafRef = useRef(0);
 
   useEffect(() => {
-    if (!waveRef.current || !track.audioUrl || track.status !== "completed" || !audioRef) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    const ws = WaveSurfer.create({
-      container: waveRef.current,
-      waveColor: `${color}40`,
-      progressColor: color,
-      cursorColor: "#ffffff40",
-      barWidth: 2,
-      barGap: 2,
-      height: 48,
-      normalize: false,
-      interact: true,
-      media: audioRef,
-    });
+    const w = canvas.width;
+    const h = canvas.height;
 
-    ws.on("ready", () => setWaveReady(true));
-    ws.on("seeking", (currentTime: number) => {
-      if (audioRef && audioRef.duration) {
-        onSeek(currentTime / audioRef.duration);
+    const draw = () => {
+      const raw = getLevel();
+      levelRef.current += (raw - levelRef.current) * 0.3;
+      const level = levelRef.current;
+
+      if (level > peakRef.current) {
+        peakRef.current = level;
+        peakHoldRef.current = 30;
+      } else if (peakHoldRef.current > 0) {
+        peakHoldRef.current--;
+      } else {
+        peakRef.current *= 0.95;
       }
-    });
-    wsRef.current = ws;
 
-    return () => {
-      ws.destroy();
-      wsRef.current = null;
-      setWaveReady(false);
+      ctx.clearRect(0, 0, w, h);
+
+      const grad = ctx.createLinearGradient(0, h, 0, 0);
+      grad.addColorStop(0, "#22c55e");
+      grad.addColorStop(0.6, "#eab308");
+      grad.addColorStop(0.85, "#f97316");
+      grad.addColorStop(1, "#ef4444");
+
+      ctx.fillStyle = "#1a1a1a";
+      ctx.fillRect(0, 0, w, h);
+
+      const barH = level * h;
+      ctx.fillStyle = grad;
+      ctx.fillRect(1, h - barH, w - 2, barH);
+
+      const peakY = h - peakRef.current * h;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(1, peakY, w - 2, 2);
+
+      for (let i = 0; i < h; i += 3) {
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.fillRect(0, i, w, 1);
+      }
+
+      rafRef.current = requestAnimationFrame(draw);
     };
-  }, [track.audioUrl, track.status, color, audioRef]);
 
-  useEffect(() => {
-    if (!audioRef) return;
-    const vol = effectivelyMuted ? 0 : (track.volume ?? 100) / 100;
-    audioRef.volume = vol;
-  }, [effectivelyMuted, track.volume, audioRef]);
-
-  const isPending = track.status === "pending" || track.status === "processing";
-  const isFailed = track.status === "failed";
+    rafRef.current = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [getLevel]);
 
   return (
-    <Card
-      className={cn(
-        "p-3 md:p-4 border-white/5 bg-card transition-opacity duration-200",
-        isSoloedByOther && !track.isSolo && "opacity-40"
-      )}
-      data-testid={`track-strip-${track.type}`}
-    >
-      <div className="flex items-center gap-3 md:gap-4">
-        <div
-          className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
-          style={{ backgroundColor: `${color}20` }}
-        >
-          <Icon className="w-5 h-5" style={{ color }} />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium truncate" data-testid={`text-track-name-${track.type}`}>
-              {track.name}
-            </span>
-            {isPending && (
-              <span className="text-[10px] text-yellow-500 flex items-center gap-1 animate-pulse">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Processing
-              </span>
-            )}
-            {isFailed && (
-              <span className="text-[10px] text-destructive" title={track.error || "Processing failed"}>
-                Failed - Retry available
-              </span>
-            )}
-            {track.status === "completed" && track.isSolo && (
-              <span className="text-[10px] text-yellow-500 uppercase tracking-wider font-bold">
-                SOLO
-              </span>
-            )}
-            {effectivelyMuted && track.status === "completed" && (
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                {isSoloedByOther ? "Solo Off" : "Muted"}
-              </span>
-            )}
-          </div>
-
-          {track.status === "completed" && track.audioUrl ? (
-            <div ref={waveRef} className="w-full" />
-          ) : (
-            <div className="h-12 bg-white/5 rounded flex items-center justify-center">
-              {isPending ? (
-                <div className="flex gap-1">
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <div
-                      key={i}
-                      className="w-1 bg-white/20 rounded-full animate-pulse"
-                      style={{
-                        height: `${12 + Math.random() * 24}px`,
-                        animationDelay: `${i * 0.15}s`,
-                      }}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <span className="text-xs text-muted-foreground">No audio</span>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {track.status === "completed" && (
-        <div className="flex items-center gap-2 mt-3 flex-wrap">
-          <Button
-            size="sm"
-            variant={track.isMuted ? "default" : "outline"}
-            className={cn("text-xs gap-1", track.isMuted && "bg-destructive/80")}
-            onClick={onToggleMute}
-            data-testid={`button-mute-${track.type}`}
-          >
-            {track.isMuted ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
-            {track.isMuted ? "Muted" : "Mute"}
-          </Button>
-          <Button
-            size="sm"
-            variant={track.isSolo ? "default" : "outline"}
-            className={cn("text-xs gap-1", track.isSolo && "bg-yellow-600")}
-            onClick={onToggleSolo}
-            data-testid={`button-solo-${track.type}`}
-          >
-            S
-          </Button>
-          <div className="flex items-center gap-2 flex-1 min-w-[100px]">
-            <Slider
-              value={[track.volume ?? 100]}
-              max={100}
-              step={1}
-              onValueChange={(v) => onVolumeChange(v[0])}
-              className="flex-1"
-              data-testid={`slider-volume-${track.type}`}
-            />
-            <span className="text-xs text-muted-foreground w-8 text-right font-mono">
-              {track.volume ?? 100}%
-            </span>
-          </div>
-          {track.audioUrl && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1 text-xs"
-              onClick={() => {
-                const link = document.createElement("a");
-                link.href = track.audioUrl!;
-                link.download = `${track.name}.wav`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              }}
-              data-testid={`button-download-${track.type}`}
-            >
-              <Download className="w-3 h-3" />
-              WAV
-            </Button>
-          )}
-        </div>
-      )}
-    </Card>
+    <canvas
+      ref={canvasRef}
+      width={14}
+      height={height}
+      className="rounded-sm"
+      style={{ width: 14, height }}
+    />
   );
+}
+
+function WaveformCanvas({
+  buffer,
+  color,
+  currentTime,
+  duration,
+  onSeek,
+  height = 64,
+}: {
+  buffer: AudioBuffer | null;
+  color: string;
+  currentTime: number;
+  duration: number;
+  onSeek?: (time: number) => void;
+  height?: number;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const w = rect.width;
+    const h = rect.height;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "#111";
+    ctx.fillRect(0, 0, w, h);
+
+    if (buffer) {
+      const data = buffer.getChannelData(0);
+      const step = Math.ceil(data.length / w);
+      const mid = h / 2;
+
+      ctx.beginPath();
+      ctx.strokeStyle = `${color}50`;
+      ctx.lineWidth = 1;
+
+      for (let i = 0; i < w; i++) {
+        let min = 1.0;
+        let max = -1.0;
+        for (let j = 0; j < step; j++) {
+          const idx = i * step + j;
+          if (idx < data.length) {
+            const val = data[idx];
+            if (val < min) min = val;
+            if (val > max) max = val;
+          }
+        }
+        const yLow = mid + min * mid;
+        const yHigh = mid + max * mid;
+        ctx.moveTo(i, yLow);
+        ctx.lineTo(i, yHigh);
+      }
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      const rmsStep = Math.ceil(data.length / w);
+      for (let i = 0; i < w; i++) {
+        let sum = 0;
+        let count = 0;
+        for (let j = 0; j < rmsStep; j++) {
+          const idx = i * rmsStep + j;
+          if (idx < data.length) {
+            sum += data[idx] * data[idx];
+            count++;
+          }
+        }
+        const rms = Math.sqrt(sum / (count || 1));
+        const yTop = mid - rms * mid * 0.8;
+        const yBot = mid + rms * mid * 0.8;
+        ctx.moveTo(i, yTop);
+        ctx.lineTo(i, yBot);
+      }
+      ctx.stroke();
+    }
+
+    if (duration > 0) {
+      const progress = currentTime / duration;
+      const playheadX = progress * w;
+
+      ctx.fillStyle = `${color}15`;
+      ctx.fillRect(0, 0, playheadX, h);
+
+      ctx.beginPath();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.moveTo(playheadX, 0);
+      ctx.lineTo(playheadX, h);
+      ctx.stroke();
+    }
+  }, [buffer, color, currentTime, duration]);
+
+  const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!onSeek || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const progress = x / rect.width;
+    onSeek(progress * duration);
+  };
+
+  return (
+    <div ref={containerRef} className="w-full" style={{ height }}>
+      <canvas
+        ref={canvasRef}
+        className="w-full h-full cursor-pointer rounded-sm"
+        onClick={handleClick}
+        style={{ height }}
+      />
+    </div>
+  );
+}
+
+function TimelineRuler({ duration, currentTime }: { duration: number; currentTime: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const w = rect.width;
+    const h = rect.height;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "#0d0d0d";
+    ctx.fillRect(0, 0, w, h);
+
+    if (duration <= 0) return;
+
+    const interval = duration > 120 ? 30 : duration > 60 ? 10 : duration > 30 ? 5 : 1;
+
+    ctx.strokeStyle = "#333";
+    ctx.fillStyle = "#666";
+    ctx.font = "9px monospace";
+    ctx.textAlign = "center";
+
+    for (let t = 0; t <= duration; t += interval) {
+      const x = (t / duration) * w;
+      ctx.beginPath();
+      ctx.moveTo(x, h - 6);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+
+      const min = Math.floor(t / 60);
+      const sec = Math.floor(t % 60);
+      ctx.fillText(`${min}:${sec.toString().padStart(2, "0")}`, x, h - 8);
+    }
+
+    const playX = (currentTime / duration) * w;
+    ctx.beginPath();
+    ctx.fillStyle = "#FF1493";
+    ctx.moveTo(playX - 4, 0);
+    ctx.lineTo(playX + 4, 0);
+    ctx.lineTo(playX, 6);
+    ctx.fill();
+  }, [duration, currentTime]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="w-full"
+      style={{ height: 24 }}
+    />
+  );
+}
+
+function formatTime(seconds: number): string {
+  const min = Math.floor(seconds / 60);
+  const sec = Math.floor(seconds % 60);
+  return `${min}:${sec.toString().padStart(2, "0")}`;
 }
 
 export default function StudioPage() {
@@ -239,9 +310,6 @@ export default function StudioPage() {
   const [, setLocation] = useLocation();
   const { data: songs, isLoading: songsLoading } = useSongs();
   const [selectedSongId, setSelectedSongId] = useState<number | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [showSongList, setShowSongList] = useState(true);
-  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const { data: songTracks, isLoading: tracksLoading } = useSongTracks(selectedSongId);
   const { mutate: separateStems, isPending: isSeparating } = useSeparateStems();
   const { mutate: updateTrack } = useUpdateTrack();
@@ -252,13 +320,19 @@ export default function StudioPage() {
   const { data: subData } = useStripeSubscription();
   const userTier = subData?.tier || "free";
   const canUseStemSeparation = userTier === "pro" || userTier === "premium" || userTier === "producer" || user?.role === "super_admin" || user?.role === "admin";
-  const [showTools, setShowTools] = useState(false);
+
+  const engine = useAudioEngine();
+
+  const [showMixer, setShowMixer] = useState(true);
+  const [showSidePanel, setShowSidePanel] = useState(false);
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const [coverVoice, setCoverVoice] = useState("");
   const [trimStart, setTrimStart] = useState("");
   const [trimEnd, setTrimEnd] = useState("");
-
-  const audioElementsRef = useRef<Map<number, HTMLAudioElement>>(new Map());
-  const [audioReady, setAudioReady] = useState<Set<number>>(new Set());
+  const [trackPans, setTrackPans] = useState<Record<number, number>>({});
+  const [trackEqs, setTrackEqs] = useState<Record<number, { low: number; mid: number; high: number }>>({});
+  const [trackCompressors, setTrackCompressors] = useState<Record<number, boolean>>({});
+  const [trackReverbs, setTrackReverbs] = useState<Record<number, number>>({});
 
   const completedSongs = songs?.filter((s) => s.status === "completed" && s.audioUrl) ?? [];
   const selectedSong = completedSongs.find((s) => s.id === selectedSongId);
@@ -266,137 +340,75 @@ export default function StudioPage() {
   const allTracksReady = songTracks?.every((t) => t.status === "completed") ?? false;
   const completedTracks = songTracks?.filter((t) => t.status === "completed" && t.audioUrl) ?? [];
 
-  const anySoloed = songTracks?.some((t) => t.isSolo) ?? false;
-
   useEffect(() => {
-    const map = audioElementsRef.current;
-    const currentIds = new Set(completedTracks.map((t) => t.id));
-
-    for (const track of completedTracks) {
-      if (!track.audioUrl) continue;
-      if (map.has(track.id)) continue;
-      const audio = new Audio();
-      audio.crossOrigin = "anonymous";
-      audio.preload = "auto";
-      audio.src = track.audioUrl;
-      audio.addEventListener("canplaythrough", () => {
-        setAudioReady((prev) => new Set(prev).add(track.id));
-      }, { once: true });
-      map.set(track.id, audio);
-    }
-
-    Array.from(map.entries()).forEach(([id, audio]) => {
-      if (!currentIds.has(id)) {
-        audio.pause();
-        audio.src = "";
-        map.delete(id);
+    if (!completedTracks.length) return;
+    completedTracks.forEach((track) => {
+      if (track.audioUrl) {
+        engine.loadTrack(track.id, track.audioUrl, track.name, track.type);
       }
     });
-
-    setAudioReady((prev) => {
-      const next = new Set<number>();
-      prev.forEach((id) => {
-        if (currentIds.has(id)) next.add(id);
-      });
-      return next;
-    });
-
-    return () => {};
   }, [completedTracks.map((t) => `${t.id}:${t.audioUrl}`).join(",")]);
-
-  useEffect(() => {
-    return () => {
-      Array.from(audioElementsRef.current.values()).forEach((audio) => {
-        audio.pause();
-        audio.src = "";
-      });
-      audioElementsRef.current.clear();
-    };
-  }, [selectedSongId]);
-
-  const allAudioReady = completedTracks.length > 0 && completedTracks.every((t) => audioReady.has(t.id));
-
-  const syncPlayAll = useCallback(() => {
-    const elements = audioElementsRef.current;
-    const audios = completedTracks.map((t) => elements.get(t.id)).filter(Boolean) as HTMLAudioElement[];
-    if (audios.length === 0) return;
-
-    const masterTime = audios[0].currentTime;
-    for (const audio of audios) {
-      if (Math.abs(audio.currentTime - masterTime) > 0.05) {
-        audio.currentTime = masterTime;
-      }
-    }
-
-    Promise.all(audios.map((a) => a.play()))
-      .then(() => setIsPlaying(true))
-      .catch(() => {
-        for (const audio of audios) {
-          audio.play().catch(() => {});
-        }
-        setIsPlaying(true);
-      });
-  }, [completedTracks]);
-
-  const pauseAll = useCallback(() => {
-    Array.from(audioElementsRef.current.values()).forEach((audio) => {
-      audio.pause();
-    });
-    setIsPlaying(false);
-  }, []);
-
-  const stopAll = useCallback(() => {
-    Array.from(audioElementsRef.current.values()).forEach((audio) => {
-      audio.pause();
-      audio.currentTime = 0;
-    });
-    setIsPlaying(false);
-  }, []);
-
-  const seekAll = useCallback((progress: number) => {
-    Array.from(audioElementsRef.current.values()).forEach((audio) => {
-      if (audio.duration && isFinite(audio.duration)) {
-        audio.currentTime = progress * audio.duration;
-      }
-    });
-  }, []);
-
-  if (!user) return null;
 
   const handleSeparate = () => {
     if (selectedSongId) {
       separateStems(selectedSongId);
-      setShowSongList(false);
     }
   };
 
   const handleToggleMute = (track: Track) => {
-    updateTrack({ id: track.id, isMuted: !track.isMuted });
+    const newMuted = !track.isMuted;
+    updateTrack({ id: track.id, isMuted: newMuted });
+    engine.setTrackMute(track.id, newMuted);
   };
 
   const handleToggleSolo = (track: Track) => {
-    updateTrack({ id: track.id, isSolo: !track.isSolo });
+    const newSolo = !track.isSolo;
+    updateTrack({ id: track.id, isSolo: newSolo });
+    engine.setTrackSolo(track.id, newSolo);
   };
 
-  const handleVolumeChange = (track: Track, vol: number) => {
-    updateTrack({ id: track.id, volume: vol });
+  const handleVolumeChange = (trackId: number, vol: number) => {
+    engine.setTrackVolume(trackId, vol);
+    updateTrack({ id: trackId, volume: Math.round(vol * 100) });
+  };
+
+  const handlePanChange = (trackId: number, pan: number) => {
+    engine.setTrackPan(trackId, pan);
+    setTrackPans((prev) => ({ ...prev, [trackId]: pan }));
+  };
+
+  const handleEQChange = (trackId: number, band: "low" | "mid" | "high", value: number) => {
+    engine.setTrackEQ(trackId, band, value);
+    setTrackEqs((prev) => ({
+      ...prev,
+      [trackId]: { ...(prev[trackId] || { low: 0, mid: 0, high: 0 }), [band]: value },
+    }));
+  };
+
+  const handleCompressorToggle = (trackId: number) => {
+    const current = trackCompressors[trackId] ?? false;
+    const newEnabled = !current;
+    engine.setTrackCompressor(trackId, { enabled: newEnabled });
+    setTrackCompressors((prev) => ({ ...prev, [trackId]: newEnabled }));
+  };
+
+  const handleReverbChange = (trackId: number, mix: number) => {
+    engine.setTrackReverb(trackId, { mix, enabled: mix > 0 });
+    setTrackReverbs((prev) => ({ ...prev, [trackId]: mix }));
   };
 
   const handleDownloadAll = async () => {
     if (completedTracks.length === 0 || !selectedSong) return;
     setIsDownloadingAll(true);
-
     try {
       const zip = new JSZip();
       const songName = selectedSong.title.replace(/[^a-zA-Z0-9\s-]/g, "").trim() || "stems";
-
       for (const track of completedTracks) {
         if (!track.audioUrl) continue;
         const response = await fetch(track.audioUrl, { credentials: "include" });
         const blob = await response.blob();
         zip.file(`${songName}_${track.name}.wav`, blob);
       }
-
       const content = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(content);
       const link = document.createElement("a");
@@ -413,422 +425,662 @@ export default function StudioPage() {
     }
   };
 
+  if (!user) return null;
+
+  const anySoloed = songTracks?.some((t) => t.isSolo) ?? false;
+
   return (
-    <div className="h-full bg-background text-foreground flex flex-col font-sans">
-      <div className="px-4 md:px-6 py-4 border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <Scissors className="h-5 w-5 text-primary" />
-          <div>
-            <h1 className="text-lg font-bold" data-testid="text-studio-title">{t('studio.title')}</h1>
-            <p className="text-xs text-muted-foreground">{t('studio.subtitle')}</p>
+    <div className="h-full flex flex-col bg-[#0a0a0a] text-foreground font-sans overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-2 bg-[#111] border-b border-white/5 flex-wrap" data-testid="studio-top-bar">
+        <div className="flex items-center gap-2 min-w-0">
+          <Scissors className="w-4 h-4 text-[#FF1493] flex-shrink-0" />
+          <select
+            className="bg-[#1a1a1a] border border-white/10 rounded px-2 py-1 text-sm text-foreground min-w-[140px] max-w-[220px] truncate"
+            value={selectedSongId ?? ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val) {
+                engine.stopPlayback();
+                setSelectedSongId(Number(val));
+              } else {
+                setSelectedSongId(null);
+              }
+            }}
+            data-testid="select-song"
+          >
+            <option value="">{songsLoading ? "Loading..." : "Select a song..."}</option>
+            {completedSongs.map((song) => (
+              <option key={song.id} value={song.id}>
+                {song.title}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {selectedSong && hasTracks && allTracksReady && (
+          <div className="flex items-center gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => { engine.stopPlayback(); engine.seekTo(0); }}
+              data-testid="button-rewind"
+            >
+              <SkipBack className="w-4 h-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => engine.togglePlayPause()}
+              data-testid="button-play-pause"
+            >
+              {engine.transport.isPlaying ? (
+                <Pause className="w-4 h-4 fill-current" />
+              ) : (
+                <Play className="w-4 h-4 fill-current" />
+              )}
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => engine.stopPlayback()}
+              data-testid="button-stop"
+            >
+              <Square className="w-4 h-4 fill-current" />
+            </Button>
+            <Button
+              size="icon"
+              variant={engine.transport.loopEnabled ? "default" : "ghost"}
+              className={cn("toggle-elevate", engine.transport.loopEnabled && "toggle-elevated")}
+              onClick={() => engine.setLoop(!engine.transport.loopEnabled)}
+              data-testid="button-loop"
+            >
+              <Repeat className="w-4 h-4" />
+            </Button>
           </div>
+        )}
+
+        <div className="flex items-center gap-2 ml-auto">
+          <span className="text-xs text-muted-foreground font-mono" data-testid="text-time-display">
+            {formatTime(engine.transport.currentTime)} / {formatTime(engine.transport.duration)}
+          </span>
+          {selectedSong && (
+            <Badge variant="secondary" className="text-[10px]" data-testid="badge-song-info">
+              {GENRE_DISPLAY[selectedSong.genre || ""] || selectedSong.genre || "DAGRABACHATA"}
+            </Badge>
+          )}
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setShowSidePanel(!showSidePanel)}
+            data-testid="button-toggle-side-panel"
+          >
+            {showSidePanel ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+          </Button>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        <div
-          className={cn(
-            "lg:w-80 lg:border-r border-white/5 flex flex-col bg-black/30",
-            !showSongList && selectedSongId ? "hidden lg:flex" : "flex"
-          )}
-        >
-          <div className="p-4 border-b border-white/5">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-              Completed Songs
-            </h2>
-            <p className="text-xs text-muted-foreground mt-1">
-              Select a song to separate into individual tracks
-            </p>
-          </div>
-          <ScrollArea className="flex-1 p-3">
-            {songsLoading ? (
-              <div className="flex justify-center p-8">
-                <Loader2 className="animate-spin text-muted-foreground" />
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-auto" data-testid="timeline-area">
+            {!selectedSong ? (
+              <div className="flex-1 flex items-center justify-center h-full p-8">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-center"
+                >
+                  <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                    <Scissors className="w-10 h-10 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2" data-testid="text-studio-title">{t("studio.title")}</h3>
+                  <p className="text-sm text-muted-foreground max-w-md">{t("studio.selectSong")}</p>
+                </motion.div>
               </div>
-            ) : completedSongs.length === 0 ? (
-              <div className="text-center p-8 text-muted-foreground text-sm">
-                No completed songs yet. Generate a track first.
+            ) : !hasTracks ? (
+              <div className="flex-1 flex items-center justify-center h-full p-8">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-center"
+                >
+                  <div className="grid grid-cols-2 gap-3 mb-6 max-w-xs mx-auto">
+                    {[
+                      { icon: Mic, label: t("studio.tracks.vocals"), color: "#FF6B9D" },
+                      { icon: Drum, label: t("studio.tracks.drums"), color: "#FFB347" },
+                      { icon: Guitar, label: t("studio.tracks.bass"), color: "#4ECDC4" },
+                      { icon: Music, label: t("studio.tracks.other"), color: "#A78BFA" },
+                    ].map((s) => (
+                      <div
+                        key={s.label}
+                        className="p-4 rounded-xl border border-white/5 bg-[#111] flex flex-col items-center gap-2"
+                      >
+                        <s.icon className="w-6 h-6" style={{ color: s.color }} />
+                        <span className="text-xs font-medium">{s.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground max-w-sm mb-4">
+                    {canUseStemSeparation ? t("studio.separateDescription") : t("studio.stemsProOnly")}
+                  </p>
+                  {canUseStemSeparation ? (
+                    <Button
+                      onClick={handleSeparate}
+                      disabled={isSeparating}
+                      className="gap-2"
+                      data-testid="button-separate-stems"
+                    >
+                      {isSeparating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scissors className="w-4 h-4" />}
+                      {t("studio.separateTracks")}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => setLocation("/pricing")}
+                      variant="outline"
+                      className="gap-2"
+                      data-testid="button-upgrade-stems"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      {t("studio.upgradeForStems")}
+                    </Button>
+                  )}
+                </motion.div>
+              </div>
+            ) : tracksLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="space-y-2">
-                {completedSongs.map((song) => (
-                  <Card
-                    key={song.id}
-                    className={cn(
-                      "p-3 cursor-pointer transition-all duration-200 border",
-                      song.id === selectedSongId
-                        ? "bg-primary/10 border-primary/50"
-                        : "bg-card border-white/5 hover-elevate"
-                    )}
-                    onClick={() => {
-                      pauseAll();
-                      setSelectedSongId(song.id);
-                      setShowSongList(false);
-                    }}
-                    data-testid={`card-studio-song-${song.id}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-blue-600/20 flex items-center justify-center flex-shrink-0">
-                        <Music className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium truncate">{song.title}</h4>
-                        <p className="text-[10px] text-muted-foreground">
-                          {GENRE_DISPLAY[song.genre || ""] || song.genre || "DAGRABACHATA"} · {song.mode === "aggregate" ? "Quick" : "Custom"}
-                        </p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    </div>
-                  </Card>
-                ))}
+              <div className="flex flex-col h-full">
+                <div className="px-4 pt-2" style={{ paddingLeft: 140 }}>
+                  <TimelineRuler duration={engine.transport.duration} currentTime={engine.transport.currentTime} />
+                </div>
+
+                <ScrollArea className="flex-1">
+                  <div className="space-y-1 p-2">
+                    {songTracks?.map((track) => {
+                      const Icon = STEM_ICONS[track.type] || Music;
+                      const color = STEM_COLORS[track.type] || "#A78BFA";
+                      const isSoloedByOther = anySoloed && !track.isSolo;
+                      const isPending = track.status === "pending" || track.status === "processing";
+                      const buffer = track.status === "completed" ? engine.getTrackBuffer(track.id) : null;
+
+                      return (
+                        <div
+                          key={track.id}
+                          className={cn(
+                            "flex items-stretch bg-[#111] rounded border border-white/5 overflow-visible",
+                            isSoloedByOther && !track.isMuted && "opacity-40"
+                          )}
+                          data-testid={`track-row-${track.id}`}
+                        >
+                          <div
+                            className="flex flex-col items-center justify-center gap-1 px-3 py-2 border-r border-white/5 flex-shrink-0"
+                            style={{ width: 130, backgroundColor: `${color}08` }}
+                          >
+                            <div
+                              className="w-8 h-8 rounded flex items-center justify-center"
+                              style={{ backgroundColor: `${color}20` }}
+                            >
+                              <Icon className="w-4 h-4" style={{ color }} />
+                            </div>
+                            <span className="text-[10px] font-medium truncate w-full text-center" data-testid={`text-track-name-${track.type}`}>
+                              {track.name}
+                            </span>
+                            <div className="flex gap-1">
+                              <Button
+                                size="icon"
+                                variant={track.isMuted ? "default" : "ghost"}
+                                className={cn("toggle-elevate", track.isMuted && "toggle-elevated bg-destructive/80")}
+                                onClick={() => handleToggleMute(track)}
+                                data-testid={`button-mute-${track.type}`}
+                              >
+                                <span className="text-[10px] font-bold">M</span>
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant={track.isSolo ? "default" : "ghost"}
+                                className={cn("toggle-elevate", track.isSolo && "toggle-elevated bg-yellow-600")}
+                                onClick={() => handleToggleSolo(track)}
+                                data-testid={`button-solo-${track.type}`}
+                              >
+                                <span className="text-[10px] font-bold">S</span>
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="flex-1 min-w-0 p-1">
+                            {isPending ? (
+                              <div className="h-16 flex items-center justify-center gap-2">
+                                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">Processing...</span>
+                              </div>
+                            ) : track.status === "completed" ? (
+                              <WaveformCanvas
+                                buffer={buffer}
+                                color={color}
+                                currentTime={engine.transport.currentTime}
+                                duration={engine.transport.duration}
+                                onSeek={(time) => engine.seekTo(time)}
+                                height={64}
+                              />
+                            ) : (
+                              <div className="h-16 flex items-center justify-center">
+                                <span className="text-xs text-destructive">{track.error || "Failed"}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
               </div>
             )}
-          </ScrollArea>
+          </div>
+
+          <AnimatePresence>
+            {showMixer && hasTracks && allTracksReady && (
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: 220 }}
+                exit={{ height: 0 }}
+                className="border-t border-white/5 bg-[#0d0d0d] overflow-hidden"
+                data-testid="mixer-console"
+              >
+                <div className="h-full flex flex-col">
+                  <div className="flex items-center justify-between px-3 py-1 border-b border-white/10">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Mixer Console</span>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setShowMixer(false)}
+                      data-testid="button-hide-mixer"
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <ScrollArea className="flex-1" data-testid="mixer-scroll">
+                    <div className="flex gap-0 p-2 h-full">
+                      {completedTracks.map((track) => {
+                        const color = STEM_COLORS[track.type] || "#A78BFA";
+                        const trackId = track.id;
+                        const engineTrack = engine.tracks.get(trackId);
+                        const vol = engineTrack?.volume ?? (track.volume ?? 100) / 100;
+                        const pan = trackPans[trackId] ?? 0;
+                        const eq = trackEqs[trackId] || { low: 0, mid: 0, high: 0 };
+                        const compEnabled = trackCompressors[trackId] ?? false;
+                        const reverbMix = trackReverbs[trackId] ?? 0;
+
+                        return (
+                          <div
+                            key={trackId}
+                            className="flex flex-col items-center gap-1 px-2 border-r border-white/5 last:border-r-0"
+                            style={{ minWidth: 90 }}
+                            data-testid={`mixer-strip-${track.type}`}
+                          >
+                            <VUMeter getLevel={() => engine.getTrackMeter(trackId)} height={50} />
+
+                            <div className="flex items-center gap-1" style={{ height: 50 }}>
+                              <Slider
+                                orientation="vertical"
+                                value={[vol * 100]}
+                                max={100}
+                                step={1}
+                                onValueChange={(v) => handleVolumeChange(trackId, v[0] / 100)}
+                                className="h-full"
+                                data-testid={`slider-volume-${track.type}`}
+                              />
+                            </div>
+
+                            <div className="w-full">
+                              <Slider
+                                value={[pan * 50 + 50]}
+                                max={100}
+                                step={1}
+                                onValueChange={(v) => handlePanChange(trackId, (v[0] - 50) / 50)}
+                                data-testid={`slider-pan-${track.type}`}
+                              />
+                              <span className="text-[8px] text-muted-foreground block text-center">
+                                {pan < -0.1 ? `L${Math.abs(Math.round(pan * 100))}` : pan > 0.1 ? `R${Math.round(pan * 100)}` : "C"}
+                              </span>
+                            </div>
+
+                            <div className="flex gap-0.5 w-full">
+                              {(["low", "mid", "high"] as const).map((band) => (
+                                <div key={band} className="flex-1 flex flex-col items-center">
+                                  <span className="text-[7px] text-muted-foreground uppercase">{band[0]}</span>
+                                  <Slider
+                                    orientation="vertical"
+                                    value={[eq[band] + 12]}
+                                    max={24}
+                                    step={1}
+                                    onValueChange={(v) => handleEQChange(trackId, band, v[0] - 12)}
+                                    className="h-[24px]"
+                                    data-testid={`slider-eq-${band}-${track.type}`}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="flex gap-1">
+                              <Button
+                                size="icon"
+                                variant={track.isMuted ? "default" : "ghost"}
+                                className={cn("toggle-elevate", track.isMuted && "toggle-elevated bg-destructive/80")}
+                                onClick={() => handleToggleMute(track)}
+                                data-testid={`mixer-mute-${track.type}`}
+                              >
+                                <span className="text-[8px] font-bold">M</span>
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant={track.isSolo ? "default" : "ghost"}
+                                className={cn("toggle-elevate", track.isSolo && "toggle-elevated bg-yellow-600")}
+                                onClick={() => handleToggleSolo(track)}
+                                data-testid={`mixer-solo-${track.type}`}
+                              >
+                                <span className="text-[8px] font-bold">S</span>
+                              </Button>
+                            </div>
+
+                            <span
+                              className="text-[8px] font-medium truncate w-full text-center"
+                              style={{ color }}
+                            >
+                              {track.name}
+                            </span>
+                          </div>
+                        );
+                      })}
+
+                      <div
+                        className="flex flex-col items-center gap-1 px-2 border-l border-[#FF1493]/30"
+                        style={{ minWidth: 90 }}
+                        data-testid="mixer-strip-master"
+                      >
+                        <VUMeter getLevel={() => engine.getMasterMeter()} height={50} />
+
+                        <div className="flex items-center gap-1" style={{ height: 50 }}>
+                          <Slider
+                            orientation="vertical"
+                            value={[engine.masterSettings.volume * 100]}
+                            max={100}
+                            step={1}
+                            onValueChange={(v) => engine.setMasterVolume(v[0] / 100)}
+                            className="h-full"
+                            data-testid="slider-master-volume"
+                          />
+                        </div>
+
+                        <div className="flex gap-0.5 w-full">
+                          {(["low", "mid", "high"] as const).map((band) => (
+                            <div key={band} className="flex-1 flex flex-col items-center">
+                              <span className="text-[7px] text-muted-foreground uppercase">{band[0]}</span>
+                              <Slider
+                                orientation="vertical"
+                                value={[engine.masterSettings.eq[band] + 12]}
+                                max={24}
+                                step={1}
+                                onValueChange={(v) => engine.setMasterEQ(band, v[0] - 12)}
+                                className="h-[24px]"
+                                data-testid={`slider-master-eq-${band}`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        <span className="text-[8px] font-bold text-[#FF1493] uppercase tracking-wider">
+                          MASTER
+                        </span>
+                      </div>
+                    </div>
+                  </ScrollArea>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {!showMixer && hasTracks && allTracksReady && (
+            <div className="border-t border-white/5 bg-[#0d0d0d] px-3 py-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="gap-1 text-[10px]"
+                onClick={() => setShowMixer(true)}
+                data-testid="button-show-mixer"
+              >
+                <ChevronUp className="w-3 h-3" />
+                Show Mixer
+              </Button>
+            </div>
+          )}
         </div>
 
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {!selectedSong ? (
-            <div className="flex-1 flex items-center justify-center p-8">
-              <div className="text-center">
-                <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-                  <Scissors className="w-10 h-10 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-bold mb-2">{t('studio.title')}</h3>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  {t('studio.selectSong')}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="p-4 border-b border-white/5 flex items-center gap-3 flex-wrap">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="lg:hidden"
-                  onClick={() => setShowSongList(true)}
-                  data-testid="button-show-song-list"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </Button>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-base md:text-lg font-bold truncate" data-testid="text-studio-song-title">
-                    {selectedSong.title}
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    {GENRE_DISPLAY[selectedSong.genre || ""] || selectedSong.genre || "DAGRABACHATA"} · Stem Separation
-                  </p>
-                </div>
-
-                {!hasTracks && canUseStemSeparation && (
-                  <Button
-                    onClick={handleSeparate}
-                    disabled={isSeparating}
-                    className="gap-2"
-                    data-testid="button-separate-stems"
-                  >
-                    {isSeparating ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Scissors className="w-4 h-4" />
-                    )}
-                    {t('studio.separateTracks')}
-                  </Button>
-                )}
-                {!hasTracks && !canUseStemSeparation && (
-                  <Button
-                    onClick={() => setLocation("/pricing")}
-                    variant="outline"
-                    className="gap-2 border-cyan-500/30 text-cyan-400"
-                    data-testid="button-upgrade-stems"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    {t('studio.upgradeForStems')}
-                  </Button>
-                )}
-
-                {hasTracks && allTracksReady && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={stopAll}
-                      data-testid="button-studio-rewind"
-                    >
-                      <SkipBack className="w-4 h-4 fill-current" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      onClick={() => (isPlaying ? pauseAll() : syncPlayAll())}
-                      disabled={!allAudioReady}
-                      className="rounded-full bg-white text-black shadow-lg shadow-white/10"
-                      data-testid="button-studio-play"
-                    >
-                      {isPlaying ? (
-                        <Pause className="w-5 h-5 fill-current" />
-                      ) : (
-                        <Play className="w-5 h-5 fill-current ml-0.5" />
-                      )}
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={stopAll}
-                      data-testid="button-studio-stop"
-                    >
-                      <Square className="w-4 h-4 fill-current" />
-                    </Button>
+        <AnimatePresence>
+          {showSidePanel && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 280, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              className="border-l border-white/5 bg-[#0d0d0d] overflow-hidden flex-shrink-0"
+              data-testid="side-panel"
+            >
+              <ScrollArea className="h-full">
+                <div className="p-3 space-y-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="w-4 h-4 text-[#FF1493]" />
+                    <h3 className="text-sm font-bold" data-testid="text-ai-tools-title">{t("studio.aiTools")}</h3>
                   </div>
-                )}
-              </div>
 
-              <ScrollArea className="flex-1 p-4">
-                {tracksLoading ? (
-                  <div className="flex justify-center p-8">
-                    <Loader2 className="animate-spin text-muted-foreground" />
-                  </div>
-                ) : !hasTracks ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col items-center justify-center p-8 text-center"
-                  >
-                    <div className="grid grid-cols-2 gap-3 mb-6 max-w-xs">
-                      {[
-                        { icon: Mic, label: t('studio.tracks.vocals'), color: "#FF6B9D" },
-                        { icon: Drum, label: t('studio.tracks.drums'), color: "#FFB347" },
-                        { icon: Guitar, label: t('studio.tracks.bass'), color: "#4ECDC4" },
-                        { icon: Music, label: t('studio.tracks.other'), color: "#A78BFA" },
-                      ].map((s) => (
-                        <div
-                          key={s.label}
-                          className="p-4 rounded-xl border border-white/5 bg-card flex flex-col items-center gap-2"
-                        >
-                          <s.icon className="w-6 h-6" style={{ color: s.color }} />
-                          <span className="text-xs font-medium">{s.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-sm text-muted-foreground max-w-sm">
-                      {canUseStemSeparation
-                        ? t('studio.separateDescription')
-                        : t('studio.stemsProOnly')}
-                    </p>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="space-y-3"
-                  >
-                    {songTracks?.map((track) => (
-                      <TrackStrip
-                        key={track.id}
-                        track={track}
-                        audioRef={audioElementsRef.current.get(track.id) ?? null}
-                        isSoloedByOther={track.status === "completed" && anySoloed && !track.isSolo}
-                        onToggleMute={() => handleToggleMute(track)}
-                        onToggleSolo={() => handleToggleSolo(track)}
-                        onVolumeChange={(vol) => handleVolumeChange(track, vol)}
-                        onSeek={seekAll}
-                      />
-                    ))}
+                  {selectedSong && !hasTracks && canUseStemSeparation && (
+                    <Card className="p-3 border-white/5 bg-[#111]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Scissors className="w-4 h-4 text-[#FF8C00]" />
+                        <p className="text-sm font-medium">{t("studio.separateTracks")}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="w-full gap-1.5"
+                        disabled={isSeparating}
+                        onClick={handleSeparate}
+                        data-testid="button-separate-stems-side"
+                      >
+                        {isSeparating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Scissors className="w-3 h-3" />}
+                        {isSeparating ? t("common.processing") : t("studio.separateTracks")}
+                      </Button>
+                    </Card>
+                  )}
 
-                    {completedTracks.length > 0 && (
-                      <Card className="p-4 border-white/5 bg-card">
-                        <div className="flex items-center justify-between gap-3 flex-wrap">
-                          <div>
-                            <h3 className="text-sm font-bold" data-testid="text-download-section-title">
-                              Download Stems
-                            </h3>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {completedTracks.length} tracks available in WAV format
-                            </p>
+                  {selectedSong && (
+                    <>
+                      <Card className="p-3 border-white/5 bg-[#111]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-6 h-6 rounded bg-emerald-500/10 flex items-center justify-center">
+                            <Sparkles className="w-3 h-3 text-emerald-400" />
                           </div>
+                          <div>
+                            <p className="text-xs font-medium">Master</p>
+                            <p className="text-[9px] text-muted-foreground">Professional quality</p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="w-full gap-1.5"
+                          disabled={isMastering}
+                          onClick={() => selectedSongId && masterSong(selectedSongId)}
+                          data-testid="button-master-song"
+                        >
+                          {isMastering ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                          {isMastering ? t("common.processing") : t("studio.masterTrack")}
+                        </Button>
+                      </Card>
+
+                      <Card className="p-3 border-white/5 bg-[#111]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-6 h-6 rounded bg-blue-500/10 flex items-center justify-center">
+                            <Shield className="w-3 h-3 text-blue-400" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium">Denoise</p>
+                            <p className="text-[9px] text-muted-foreground">Remove noise</p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="w-full gap-1.5"
+                          disabled={isDenoising}
+                          onClick={() => selectedSongId && denoiseSong(selectedSongId)}
+                          data-testid="button-denoise-song"
+                        >
+                          {isDenoising ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
+                          {isDenoising ? t("common.processing") : t("studio.denoiseTrack")}
+                        </Button>
+                      </Card>
+
+                      <Card className="p-3 border-white/5 bg-[#111]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-6 h-6 rounded bg-purple-500/10 flex items-center justify-center">
+                            <MicVocal className="w-3 h-3 text-purple-400" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium">AI Cover</p>
+                            <p className="text-[9px] text-muted-foreground">Re-sing with AI voice</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Voice name..."
+                            value={coverVoice}
+                            onChange={(e) => setCoverVoice(e.target.value)}
+                            className="flex-1 text-xs bg-black/20 border-white/10"
+                            data-testid="input-cover-voice"
+                          />
                           <Button
-                            onClick={handleDownloadAll}
-                            disabled={isDownloadingAll}
-                            className="gap-2"
-                            data-testid="button-download-all-stems"
+                            size="sm"
+                            className="flex-shrink-0 gap-1"
+                            disabled={isCovering || !coverVoice.trim() || !selectedSongId}
+                            onClick={() => {
+                              if (selectedSongId && coverVoice.trim()) {
+                                coverSong({ songId: selectedSongId, voiceId: coverVoice });
+                                setCoverVoice("");
+                              }
+                            }}
+                            data-testid="button-cover-song"
                           >
-                            {isDownloadingAll ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Package className="w-4 h-4" />
-                            )}
-                            {isDownloadingAll ? "Creating ZIP..." : "Download All (ZIP)"}
+                            {isCovering ? <Loader2 className="w-3 h-3 animate-spin" /> : <MicVocal className="w-3 h-3" />}
+                            {isCovering ? t("common.processing") : t("studio.createCover")}
                           </Button>
                         </div>
                       </Card>
-                    )}
 
-                    <Card className="p-4 border-white/5 bg-card">
-                      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-primary" />
-                          <h3 className="text-sm font-bold" data-testid="text-ai-tools-title">{t('studio.aiTools')}</h3>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs"
-                          onClick={() => setShowTools(!showTools)}
-                          data-testid="button-toggle-tools"
-                        >
-                          {showTools ? t('studio.hideTools') : t('studio.showTools')}
-                        </Button>
-                      </div>
-
-                      {showTools && (
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <Card className="p-3 border-white/5">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                                  <Sparkles className="w-4 h-4 text-emerald-400" />
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium">Master</p>
-                                  <p className="text-[10px] text-muted-foreground">Professional quality audio</p>
-                                </div>
-                              </div>
-                              <Button
-                                size="sm"
-                                className="w-full gap-1.5"
-                                disabled={isMastering || !selectedSong}
-                                onClick={() => selectedSongId && masterSong(selectedSongId)}
-                                data-testid="button-master-song"
-                              >
-                                {isMastering ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                                {isMastering ? t('common.processing') : t('studio.masterTrack')}
-                              </Button>
-                            </Card>
-
-                            <Card className="p-3 border-white/5">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                                  <Shield className="w-4 h-4 text-blue-400" />
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium">Denoise</p>
-                                  <p className="text-[10px] text-muted-foreground">Remove background noise</p>
-                                </div>
-                              </div>
-                              <Button
-                                size="sm"
-                                className="w-full gap-1.5"
-                                disabled={isDenoising || !selectedSong}
-                                onClick={() => selectedSongId && denoiseSong(selectedSongId)}
-                                data-testid="button-denoise-song"
-                              >
-                                {isDenoising ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
-                                {isDenoising ? t('common.processing') : t('studio.denoiseTrack')}
-                              </Button>
-                            </Card>
+                      <Card className="p-3 border-white/5 bg-[#111]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-6 h-6 rounded bg-orange-500/10 flex items-center justify-center">
+                            <Scissors className="w-3 h-3 text-orange-400" />
                           </div>
-
-                          <Card className="p-3 border-white/5">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                                <MicVocal className="w-4 h-4 text-blue-400" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium">AI Cover</p>
-                                <p className="text-[10px] text-muted-foreground">Re-sing with a different AI voice</p>
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Input
-                                placeholder="Enter voice name... (e.g. Drake, Taylor Swift)"
-                                value={coverVoice}
-                                onChange={(e) => setCoverVoice(e.target.value)}
-                                className="flex-1 text-xs bg-black/20 border-white/10"
-                                data-testid="input-cover-voice"
-                              />
-                              <Button
-                                size="sm"
-                                className="gap-1.5 flex-shrink-0"
-                                disabled={isCovering || !coverVoice.trim() || !selectedSongId}
-                                onClick={() => {
-                                  if (selectedSongId && coverVoice.trim()) {
-                                    coverSong({ songId: selectedSongId, voiceId: coverVoice });
-                                    setCoverVoice("");
-                                  }
-                                }}
-                                data-testid="button-cover-song"
-                              >
-                                {isCovering ? <Loader2 className="w-3 h-3 animate-spin" /> : <MicVocal className="w-3 h-3" />}
-                                {isCovering ? t('common.processing') : t('studio.createCover')}
-                              </Button>
-                            </div>
-                          </Card>
-
-                          <Card className="p-3 border-white/5">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                                <Scissors className="w-4 h-4 text-orange-400" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium">Audio Cutter</p>
-                                <p className="text-[10px] text-muted-foreground">Trim audio to a specific time range</p>
-                              </div>
-                            </div>
-                            <div className="flex gap-2 items-end flex-wrap">
-                              <div className="flex-1 min-w-[80px]">
-                                <label className="text-[10px] text-muted-foreground mb-1 block">Start (seconds)</label>
-                                <Input
-                                  type="number"
-                                  placeholder="0"
-                                  min="0"
-                                  step="0.5"
-                                  value={trimStart}
-                                  onChange={(e) => setTrimStart(e.target.value)}
-                                  className="text-xs bg-black/20 border-white/10"
-                                  data-testid="input-trim-start"
-                                />
-                              </div>
-                              <div className="flex-1 min-w-[80px]">
-                                <label className="text-[10px] text-muted-foreground mb-1 block">End (seconds)</label>
-                                <Input
-                                  type="number"
-                                  placeholder="30"
-                                  min="0.5"
-                                  step="0.5"
-                                  value={trimEnd}
-                                  onChange={(e) => setTrimEnd(e.target.value)}
-                                  className="text-xs bg-black/20 border-white/10"
-                                  data-testid="input-trim-end"
-                                />
-                              </div>
-                              <Button
-                                size="sm"
-                                className="gap-1.5 flex-shrink-0"
-                                disabled={isTrimming || !trimStart || !trimEnd || !selectedSongId || parseFloat(trimEnd) <= parseFloat(trimStart)}
-                                onClick={() => {
-                                  if (selectedSongId && trimStart && trimEnd) {
-                                    const startMs = parseFloat(trimStart) * 1000;
-                                    const endMs = parseFloat(trimEnd) * 1000;
-                                    trimSong({ songId: selectedSongId, startTimeMs: startMs, endTimeMs: endMs });
-                                    setTrimStart("");
-                                    setTrimEnd("");
-                                  }
-                                }}
-                                data-testid="button-trim-song"
-                              >
-                                {isTrimming ? <Loader2 className="w-3 h-3 animate-spin" /> : <Scissors className="w-3 h-3" />}
-                                {isTrimming ? t('common.processing') : t('studio.trimAudio')}
-                              </Button>
-                            </div>
-                          </Card>
+                          <div>
+                            <p className="text-xs font-medium">Audio Cutter</p>
+                            <p className="text-[9px] text-muted-foreground">Trim to range</p>
+                          </div>
                         </div>
-                      )}
+                        <div className="flex gap-2 items-end flex-wrap">
+                          <div className="flex-1 min-w-[60px]">
+                            <label className="text-[9px] text-muted-foreground mb-1 block">Start (s)</label>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              min="0"
+                              step="0.5"
+                              value={trimStart}
+                              onChange={(e) => setTrimStart(e.target.value)}
+                              className="text-xs bg-black/20 border-white/10"
+                              data-testid="input-trim-start"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-[60px]">
+                            <label className="text-[9px] text-muted-foreground mb-1 block">End (s)</label>
+                            <Input
+                              type="number"
+                              placeholder="30"
+                              min="0.5"
+                              step="0.5"
+                              value={trimEnd}
+                              onChange={(e) => setTrimEnd(e.target.value)}
+                              className="text-xs bg-black/20 border-white/10"
+                              data-testid="input-trim-end"
+                            />
+                          </div>
+                          <Button
+                            size="sm"
+                            className="flex-shrink-0 gap-1"
+                            disabled={isTrimming || !trimStart || !trimEnd || !selectedSongId || parseFloat(trimEnd) <= parseFloat(trimStart)}
+                            onClick={() => {
+                              if (selectedSongId && trimStart && trimEnd) {
+                                const startMs = parseFloat(trimStart) * 1000;
+                                const endMs = parseFloat(trimEnd) * 1000;
+                                trimSong({ songId: selectedSongId, startTimeMs: startMs, endTimeMs: endMs });
+                                setTrimStart("");
+                                setTrimEnd("");
+                              }
+                            }}
+                            data-testid="button-trim-song"
+                          >
+                            {isTrimming ? <Loader2 className="w-3 h-3 animate-spin" /> : <Scissors className="w-3 h-3" />}
+                            {isTrimming ? t("common.processing") : t("studio.trimAudio")}
+                          </Button>
+                        </div>
+                      </Card>
+                    </>
+                  )}
+
+                  {completedTracks.length > 0 && (
+                    <Card className="p-3 border-white/5 bg-[#111]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Package className="w-4 h-4 text-[#FF8C00]" />
+                        <div>
+                          <p className="text-xs font-medium" data-testid="text-download-section-title">Download Stems</p>
+                          <p className="text-[9px] text-muted-foreground">{completedTracks.length} tracks · WAV</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1 mb-2">
+                        {completedTracks.map((track) => (
+                          <div key={track.id} className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] text-muted-foreground truncate">{track.name}</span>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => {
+                                const link = document.createElement("a");
+                                link.href = track.audioUrl!;
+                                link.download = `${track.name}.wav`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              }}
+                              data-testid={`button-download-${track.type}`}
+                            >
+                              <Download className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        size="sm"
+                        className="w-full gap-1.5"
+                        disabled={isDownloadingAll}
+                        onClick={handleDownloadAll}
+                        data-testid="button-download-all-stems"
+                      >
+                        {isDownloadingAll ? <Loader2 className="w-3 h-3 animate-spin" /> : <Package className="w-3 h-3" />}
+                        {isDownloadingAll ? "Creating ZIP..." : "Download All (ZIP)"}
+                      </Button>
                     </Card>
-                  </motion.div>
-                )}
+                  )}
+                </div>
               </ScrollArea>
-            </>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </div>
     </div>
   );
