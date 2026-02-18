@@ -270,8 +270,18 @@ export function CoverArtDesigner({ songTitle = "", artistName = "", songId, song
         setUploadedImageUrl(existingImageUrl);
       };
       img.src = existingImageUrl;
+    } else {
+      setUploadedImage(null);
+      setUploadedImageUrl(null);
     }
   }, [existingImageUrl]);
+
+  useEffect(() => {
+    setTitle(songTitle);
+    setArtist(artistName);
+    setCurrentDesignId(null);
+    setDesignName("Untitled Design");
+  }, [songTitle, artistName, songId]);
 
   const getFilterString = useCallback(() => {
     const f = selectedFilter.id === "none" ? customFilters : selectedFilter;
