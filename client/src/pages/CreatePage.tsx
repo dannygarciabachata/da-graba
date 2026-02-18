@@ -81,7 +81,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -151,18 +151,26 @@ const TTS_LANGUAGES = [
 
 type DnaFlow = "bachata" | "bolero" | null;
 
-const BACHATA_STYLE_KEYS = ["tradicional", "moderna", "sensual", "urbana", "rosa"] as const;
-const BOLERO_STYLE_KEYS = ["romantico", "ranchero", "son", "moderno"] as const;
+const GENRE_SLUG_TO_VALUE: Record<string, string> = {
+  bachata: "Bachata",
+  bolero: "Bolero",
+  merengue: "Merengue",
+  salsa: "Salsa",
+  cumbia: "Cumbia",
+  vallenato: "Vallenato",
+  reggaeton: "Reggaeton",
+  latin_pop: "Latin Pop",
+  son: "Son",
+  mambo: "Mambo",
+  cha_cha_cha: "Cha-Cha-Chá",
+  guaracha: "Guaracha",
+  dembow: "Dembow",
+  tropical: "Tropical",
+};
 
-const DGB_BOLERO_BASE_INSTRUMENTS = [
-  "bongo", "conga", "guira", "timbal", "campanas",
-  "requinto", "segunda_guitarra", "bajo",
-  "voz_principal", "duo_voz",
-] as const;
-
-const DGB_BOLERO_ORCHESTRATION = [
-  "piano", "pad", "violines", "chelos", "coros",
-] as const;
+const GENRE_VALUE_TO_SLUG: Record<string, string> = Object.fromEntries(
+  Object.entries(GENRE_SLUG_TO_VALUE).map(([k, v]) => [v, k])
+);
 
 type CreationMode = "song" | "sound" | "speak";
 
@@ -477,6 +485,30 @@ export default function CreatePage() {
   const { data: songs, isLoading: songsLoading } = useSongs();
   const { mutate: deleteSong } = useDeleteSong();
   const { data: styleKits } = useStyleKits();
+  const { data: genreStylesData } = useQuery<any[]>({ queryKey: ["/api/genre-styles"] });
+
+  const genreStylesByGenre = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    (genreStylesData || []).forEach((s: any) => {
+      if (!s.isActive) return;
+      if (!map[s.genre]) map[s.genre] = [];
+      map[s.genre].push(s);
+    });
+    Object.values(map).forEach(arr => arr.sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0)));
+    return map;
+  }, [genreStylesData]);
+
+  const currentGenreSlug = useMemo(() => {
+    if (dnaFlow) return dnaFlow;
+    return GENRE_VALUE_TO_SLUG[selectedGenre] || selectedGenre.toLowerCase().replace(/\s+/g, "_");
+  }, [dnaFlow, selectedGenre]);
+
+  const currentGenreStyles = genreStylesByGenre[currentGenreSlug] || [];
+
+  const selectedStyleData = useMemo(() => {
+    if (!selectedSubStyle || !currentGenreStyles.length) return null;
+    return currentGenreStyles.find((s: any) => s.slug === selectedSubStyle) || null;
+  }, [selectedSubStyle, currentGenreStyles]);
 
   const BACHATA_SUGGESTIONS = [
     "Bachata romántica bajo la luna del Caribe",
@@ -611,12 +643,25 @@ export default function CreatePage() {
 
   const handleGenerate = () => {
     if (!prompt.trim() && !title.trim() && !lyrics.trim()) return;
+    let basePrompt = prompt || title;
+    if (selectedStyleData?.promptHint) {
+      basePrompt = `${basePrompt}. Style: ${selectedStyleData.promptHint}`;
+    }
     const finalPrompt = isInstrumental
-      ? `${prompt || title} (instrumental, no vocals)`
-      : prompt || title;
-    const orchestrationList = dnaFlow === "bolero" && !selectedSubStyle
-      ? [...DGB_BOLERO_BASE_INSTRUMENTS, ...Array.from(selectedOrchestration)]
-      : undefined;
+      ? `${basePrompt} (instrumental, no vocals)`
+      : basePrompt;
+    const orchestrationList = (() => {
+      if (selectedStyleData) {
+        return [...(selectedStyleData.baseInstruments || []), ...Array.from(selectedOrchestration)];
+      }
+      if (currentGenreStyles.length > 0 && !selectedSubStyle) {
+        const defaultStyle = currentGenreStyles[0];
+        if (defaultStyle?.baseInstruments?.length) {
+          return [...defaultStyle.baseInstruments, ...Array.from(selectedOrchestration)];
+        }
+      }
+      return undefined;
+    })();
     generate({
       prompt: finalPrompt,
       title: title || undefined,
@@ -630,6 +675,7 @@ export default function CreatePage() {
       ...(lyrics.trim() && !isInstrumental ? { lyrics: lyrics.trim() } : {}),
       ...(selectedStyleKit ? { styleKitId: selectedStyleKit } : {}),
       ...(orchestrationList ? { orchestration: orchestrationList } : {}),
+      ...(selectedSubStyle ? { genreStyleSlug: selectedSubStyle } : {}),
     } as any);
     setPrompt("");
   };
@@ -803,7 +849,7 @@ export default function CreatePage() {
               </div>
 
               <AnimatePresence>
-                {dnaFlow && (
+                {dnaFlow && currentGenreStyles.length > 0 && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
@@ -811,100 +857,116 @@ export default function CreatePage() {
                     className="overflow-hidden mb-4"
                   >
                     <div className="flex gap-2 flex-wrap pb-1" data-testid="sub-styles">
-                      {(dnaFlow === "bachata" ? BACHATA_STYLE_KEYS : BOLERO_STYLE_KEYS).map((styleKey) => (
-                        <button
-                          key={styleKey}
-                          className={cn(
-                            "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
-                            selectedSubStyle === styleKey
-                              ? dnaFlow === "bachata"
-                                ? "border-primary/50 bg-primary/10 text-primary"
-                                : "border-orange-400/50 bg-orange-500/10 text-orange-300"
-                              : "border-white/10 text-muted-foreground hover:border-white/20"
-                          )}
-                          onClick={() => {
-                            const isDeselecting = selectedSubStyle === styleKey;
-                            setSelectedSubStyle(isDeselecting ? null : styleKey);
-                            if (!isDeselecting) {
-                              const genreName = dnaFlow === "bachata" ? "Bachata" : "Bolero";
-                              setSelectedGenre(`${genreName} ${t(`create.dnaFlow.styles.${styleKey}.label`)}`);
-                              if (dnaFlow === "bolero") {
-                                const normalBoleroKit = styleKits?.find(k => k.genre === "bolero");
-                                if (normalBoleroKit) setSelectedStyleKit(normalBoleroKit.id);
+                      {currentGenreStyles.map((style: any) => {
+                        const isBachata = currentGenreSlug === "bachata";
+                        const isBolero = currentGenreSlug === "bolero";
+                        return (
+                          <button
+                            key={style.slug}
+                            className={cn(
+                              "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
+                              selectedSubStyle === style.slug
+                                ? isBachata
+                                  ? "border-primary/50 bg-primary/10 text-primary"
+                                  : isBolero
+                                    ? "border-orange-400/50 bg-orange-500/10 text-orange-300"
+                                    : "border-primary/50 bg-primary/10 text-primary"
+                                : "border-white/10 text-muted-foreground hover:border-white/20"
+                            )}
+                            onClick={() => {
+                              const isDeselecting = selectedSubStyle === style.slug;
+                              setSelectedSubStyle(isDeselecting ? null : style.slug);
+                              setSelectedOrchestration(new Set());
+                              if (!isDeselecting) {
+                                const genreName = GENRE_SLUG_TO_VALUE[currentGenreSlug] || selectedGenre;
+                                setSelectedGenre(`${genreName} ${style.name}`);
+                                if (style.styleKitId) setSelectedStyleKit(style.styleKitId);
+                              } else {
+                                setSelectedGenre(GENRE_SLUG_TO_VALUE[currentGenreSlug] || selectedGenre.split(" ")[0]);
                               }
-                            } else {
-                              setSelectedGenre(dnaFlow === "bachata" ? "Bachata" : "Bolero");
-                              if (dnaFlow === "bolero") {
-                                const dgbKit = styleKits?.find(k => k.genre === "dgb_bolero");
-                                if (dgbKit) setSelectedStyleKit(dgbKit.id);
-                              }
-                            }
-                          }}
-                          data-testid={`sub-style-${styleKey}`}
-                        >
-                          {t(`create.dnaFlow.styles.${styleKey}.label`)}
-                        </button>
-                      ))}
+                            }}
+                            data-testid={`sub-style-${style.slug}`}
+                          >
+                            {style.name}
+                          </button>
+                        );
+                      })}
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
 
               <AnimatePresence>
-                {dnaFlow === "bolero" && !selectedSubStyle && (
+                {dnaFlow && selectedStyleData && (selectedStyleData.baseInstruments?.length > 0 || selectedStyleData.extraInstruments?.length > 0) && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     className="overflow-hidden mb-4"
                   >
-                    <div className="rounded-xl border border-orange-400/20 bg-orange-500/[0.04] p-4" data-testid="orchestration-panel">
+                    <div className={cn(
+                      "rounded-xl border p-4",
+                      currentGenreSlug === "bolero"
+                        ? "border-orange-400/20 bg-orange-500/[0.04]"
+                        : "border-primary/20 bg-primary/[0.04]"
+                    )} data-testid="orchestration-panel">
                       <div className="flex items-center gap-2 mb-3">
-                        <SlidersHorizontal className="h-3.5 w-3.5 text-orange-400" />
-                        <span className="text-xs font-semibold text-orange-300">{t('create.dnaFlow.orchestration.title')}</span>
+                        <SlidersHorizontal className={cn("h-3.5 w-3.5", currentGenreSlug === "bolero" ? "text-orange-400" : "text-primary")} />
+                        <span className={cn("text-xs font-semibold", currentGenreSlug === "bolero" ? "text-orange-300" : "text-primary")}>{t('create.dnaFlow.orchestration.title')}</span>
                       </div>
-                      <div className="mb-3">
-                        <div className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wider">{t('create.dnaFlow.orchestration.baseLabel')}</div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {DGB_BOLERO_BASE_INSTRUMENTS.map((instr) => (
-                            <span
-                              key={instr}
-                              className="px-2 py-0.5 rounded-md bg-orange-500/15 border border-orange-400/20 text-[10px] text-orange-300"
-                              data-testid={`base-instr-${instr}`}
-                            >
-                              {t(`create.dnaFlow.orchestration.instruments.${instr}`)}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wider">{t('create.dnaFlow.orchestration.extrasLabel')}</div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {DGB_BOLERO_ORCHESTRATION.map((instr) => {
-                            const isSelected = selectedOrchestration.has(instr);
-                            return (
-                              <button
+                      {selectedStyleData.baseInstruments?.length > 0 && (
+                        <div className="mb-3">
+                          <div className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wider">{t('create.dnaFlow.orchestration.baseLabel')}</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {selectedStyleData.baseInstruments.map((instr: string) => (
+                              <span
                                 key={instr}
                                 className={cn(
-                                  "px-2.5 py-1 rounded-lg border text-[11px] transition-all",
-                                  isSelected
-                                    ? "border-orange-400/50 bg-orange-500/20 text-orange-200"
-                                    : "border-white/10 text-muted-foreground hover:border-orange-400/30"
+                                  "px-2 py-0.5 rounded-md border text-[10px]",
+                                  currentGenreSlug === "bolero"
+                                    ? "bg-orange-500/15 border-orange-400/20 text-orange-300"
+                                    : "bg-primary/15 border-primary/20 text-primary"
                                 )}
-                                onClick={() => {
-                                  const next = new Set(selectedOrchestration);
-                                  if (isSelected) next.delete(instr);
-                                  else next.add(instr);
-                                  setSelectedOrchestration(next);
-                                }}
-                                data-testid={`orch-${instr}`}
+                                data-testid={`base-instr-${instr}`}
                               >
-                                {t(`create.dnaFlow.orchestration.instruments.${instr}`)}
-                              </button>
-                            );
-                          })}
+                                {instr.replace(/_/g, " ")}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      )}
+                      {selectedStyleData.extraInstruments?.length > 0 && (
+                        <div>
+                          <div className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wider">{t('create.dnaFlow.orchestration.extrasLabel')}</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {selectedStyleData.extraInstruments.map((instr: string) => {
+                              const isSelected = selectedOrchestration.has(instr);
+                              return (
+                                <button
+                                  key={instr}
+                                  className={cn(
+                                    "px-2.5 py-1 rounded-lg border text-[11px] transition-all",
+                                    isSelected
+                                      ? currentGenreSlug === "bolero"
+                                        ? "border-orange-400/50 bg-orange-500/20 text-orange-200"
+                                        : "border-primary/50 bg-primary/20 text-primary"
+                                      : "border-white/10 text-muted-foreground hover:border-white/20"
+                                  )}
+                                  onClick={() => {
+                                    const next = new Set(selectedOrchestration);
+                                    if (isSelected) next.delete(instr);
+                                    else next.add(instr);
+                                    setSelectedOrchestration(next);
+                                  }}
+                                  data-testid={`orch-${instr}`}
+                                >
+                                  {instr.replace(/_/g, " ")}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -1058,7 +1120,90 @@ export default function CreatePage() {
 
               {activeCreationMode === "song" && (
                 <div className="mb-4" data-testid="genre-carousel-left">
-                  <GenreCarousel selectedGenre={selectedGenre} onSelect={setSelectedGenre} />
+                  <GenreCarousel selectedGenre={selectedGenre} onSelect={(g) => {
+                    setSelectedGenre(g);
+                    setSelectedSubStyle(null);
+                    setSelectedOrchestration(new Set());
+                    const slug = GENRE_VALUE_TO_SLUG[g];
+                    if (slug === "bachata" || slug === "bolero") {
+                      setDnaFlow(slug as "bachata" | "bolero");
+                    } else {
+                      setDnaFlow(null);
+                    }
+                  }} />
+                  <AnimatePresence>
+                    {!dnaFlow && currentGenreStyles.length > 0 && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden mt-3"
+                      >
+                        <div className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wider">Tocadas / Estilos</div>
+                        <div className="flex gap-2 flex-wrap" data-testid="carousel-sub-styles">
+                          {currentGenreStyles.map((style: any) => (
+                            <button
+                              key={style.slug}
+                              className={cn(
+                                "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
+                                selectedSubStyle === style.slug
+                                  ? "border-primary/50 bg-primary/10 text-primary"
+                                  : "border-white/10 text-muted-foreground hover:border-white/20"
+                              )}
+                              onClick={() => {
+                                const isDeselecting = selectedSubStyle === style.slug;
+                                setSelectedSubStyle(isDeselecting ? null : style.slug);
+                                setSelectedOrchestration(new Set());
+                                if (!isDeselecting) {
+                                  const genreName = GENRE_SLUG_TO_VALUE[currentGenreSlug] || selectedGenre;
+                                  setSelectedGenre(`${genreName} ${style.name}`);
+                                } else {
+                                  setSelectedGenre(GENRE_SLUG_TO_VALUE[currentGenreSlug] || selectedGenre.split(" ")[0]);
+                                }
+                              }}
+                              data-testid={`carousel-sub-style-${style.slug}`}
+                            >
+                              {style.name}
+                            </button>
+                          ))}
+                        </div>
+                        {selectedStyleData && (selectedStyleData.baseInstruments?.length > 0 || selectedStyleData.extraInstruments?.length > 0) && (
+                          <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3 mt-3">
+                            {selectedStyleData.baseInstruments?.length > 0 && (
+                              <div className="mb-2">
+                                <div className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wider">{t('create.dnaFlow.orchestration.baseLabel')}</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {selectedStyleData.baseInstruments.map((instr: string) => (
+                                    <span key={instr} className="px-2 py-0.5 rounded-md bg-primary/15 border border-primary/20 text-[10px] text-primary" data-testid={`carousel-base-instr-${instr}`}>
+                                      {instr.replace(/_/g, " ")}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {selectedStyleData.extraInstruments?.length > 0 && (
+                              <div>
+                                <div className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wider">{t('create.dnaFlow.orchestration.extrasLabel')}</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {selectedStyleData.extraInstruments.map((instr: string) => {
+                                    const isSelected = selectedOrchestration.has(instr);
+                                    return (
+                                      <button key={instr} className={cn("px-2.5 py-1 rounded-lg border text-[11px] transition-all", isSelected ? "border-primary/50 bg-primary/20 text-primary" : "border-white/10 text-muted-foreground hover:border-white/20")}
+                                        onClick={() => { const next = new Set(selectedOrchestration); if (isSelected) next.delete(instr); else next.add(instr); setSelectedOrchestration(next); }}
+                                        data-testid={`carousel-orch-${instr}`}
+                                      >
+                                        {instr.replace(/_/g, " ")}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
 
@@ -1471,18 +1616,20 @@ export default function CreatePage() {
               </div>
 
               <AnimatePresence>
-                {dnaFlow && (
+                {currentGenreStyles.length > 0 && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                     <div className="flex gap-2 flex-wrap">
-                      {(dnaFlow === "bachata" ? BACHATA_STYLE_KEYS : BOLERO_STYLE_KEYS).map((sk) => (
-                        <button key={sk} className={cn("px-3 py-1.5 rounded-lg border text-xs", selectedSubStyle === sk ? (dnaFlow === "bachata" ? "border-primary/50 bg-primary/10 text-primary" : "border-orange-400/50 bg-orange-500/10 text-orange-300") : "border-white/10 text-muted-foreground")}
+                      {currentGenreStyles.map((style: any) => (
+                        <button key={style.slug} className={cn("px-3 py-1.5 rounded-lg border text-xs", selectedSubStyle === style.slug ? (currentGenreSlug === "bachata" ? "border-primary/50 bg-primary/10 text-primary" : currentGenreSlug === "bolero" ? "border-orange-400/50 bg-orange-500/10 text-orange-300" : "border-primary/50 bg-primary/10 text-primary") : "border-white/10 text-muted-foreground")}
                           onClick={() => {
-                            const des = selectedSubStyle === sk;
-                            setSelectedSubStyle(des ? null : sk);
-                            if (!des) { setSelectedGenre(`${dnaFlow === "bachata" ? "Bachata" : "Bolero"} ${t(`create.dnaFlow.styles.${sk}.label`)}`); }
-                            else { setSelectedGenre(dnaFlow === "bachata" ? "Bachata" : "Bolero"); }
+                            const des = selectedSubStyle === style.slug;
+                            setSelectedSubStyle(des ? null : style.slug);
+                            setSelectedOrchestration(new Set());
+                            if (!des) { setSelectedGenre(`${GENRE_SLUG_TO_VALUE[currentGenreSlug] || selectedGenre} ${style.name}`); }
+                            else { setSelectedGenre(GENRE_SLUG_TO_VALUE[currentGenreSlug] || selectedGenre.split(" ")[0]); }
                           }}
-                        >{t(`create.dnaFlow.styles.${sk}.label`)}</button>
+                          data-testid={`mobile-sub-style-${style.slug}`}
+                        >{style.name}</button>
                       ))}
                     </div>
                   </motion.div>
@@ -1540,7 +1687,17 @@ export default function CreatePage() {
               {activeCreationMode === "song" && (
                 <div>
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{t('create.genre', 'Género')}</h3>
-                  <GenreCarousel selectedGenre={selectedGenre} onSelect={setSelectedGenre} />
+                  <GenreCarousel selectedGenre={selectedGenre} onSelect={(g) => {
+                    setSelectedGenre(g);
+                    setSelectedSubStyle(null);
+                    setSelectedOrchestration(new Set());
+                    const slug = GENRE_VALUE_TO_SLUG[g];
+                    if (slug === "bachata" || slug === "bolero") {
+                      setDnaFlow(slug as "bachata" | "bolero");
+                    } else {
+                      setDnaFlow(null);
+                    }
+                  }} />
                 </div>
               )}
             </div>

@@ -37,8 +37,9 @@ import {
 } from "lucide-react";
 import type { ApiProvider, ApiEndpoint, CloudServer } from "@shared/schema";
 import { TrainingDatasetsTab } from "@/components/admin/TrainingDatasetsTab";
+import { GenreStylesTab } from "@/components/admin/GenreStylesTab";
 
-type Tab = "dashboard" | "analytics" | "users" | "subscriptions" | "support" | "settings" | "email" | "style-kits" | "providers" | "endpoints" | "cloud-servers" | "gpu" | "blog" | "billing" | "training-data";
+type Tab = "dashboard" | "analytics" | "users" | "subscriptions" | "support" | "settings" | "email" | "style-kits" | "genre-styles" | "providers" | "endpoints" | "cloud-servers" | "gpu" | "blog" | "billing" | "training-data";
 
 export default function AdminPage() {
   const [, setLocation] = useLocation();
@@ -71,8 +72,8 @@ export default function AdminPage() {
 }
 
 const TAB_ROLE_ACCESS: Record<string, Tab[]> = {
-  super_admin: ["dashboard", "analytics", "users", "subscriptions", "blog", "billing", "support", "settings", "email", "style-kits", "training-data", "gpu", "cloud-servers", "providers", "endpoints"],
-  admin: ["dashboard", "analytics", "users", "subscriptions", "blog", "support", "style-kits", "training-data", "gpu"],
+  super_admin: ["dashboard", "analytics", "users", "subscriptions", "blog", "billing", "support", "settings", "email", "style-kits", "genre-styles", "training-data", "gpu", "cloud-servers", "providers", "endpoints"],
+  admin: ["dashboard", "analytics", "users", "subscriptions", "blog", "support", "style-kits", "genre-styles", "training-data", "gpu"],
   moderator: ["support"],
 };
 
@@ -95,6 +96,7 @@ function AdminDashboard({ role }: { role: string }) {
     { id: "settings" as Tab, label: t('admin.tabs.settings'), icon: Sliders },
     { id: "email" as Tab, label: t('admin.tabs.email'), icon: Mail },
     { id: "style-kits" as Tab, label: t('admin.tabs.styleKits'), icon: Disc },
+    { id: "genre-styles" as Tab, label: "Tocadas", icon: Music },
     { id: "training-data" as Tab, label: "Training Data", icon: Database },
     { id: "blog" as Tab, label: t('admin.tabs.blog'), icon: FileText },
     { id: "billing" as Tab, label: t('admin.tabs.billing'), icon: CreditCard },
@@ -146,6 +148,7 @@ function AdminDashboard({ role }: { role: string }) {
       {activeTab === "settings" && <SettingsTab />}
       {activeTab === "email" && <EmailSettingsTab />}
       {activeTab === "style-kits" && <StyleKitsAdminTab />}
+      {activeTab === "genre-styles" && <GenreStylesTab />}
       {activeTab === "training-data" && <TrainingDatasetsTab />}
       {activeTab === "blog" && <BlogAdminTab />}
       {activeTab === "billing" && <BillingAdminTab />}
