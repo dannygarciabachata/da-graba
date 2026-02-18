@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
-import dgbLogo from "@assets/DAGRABA2_1771364648913.png";
+import dgbLogo from "@assets/DGB2_1771378545651.png";
 import sidebarBg from "@assets/DAGRABABAG_1771365063394.png";
 import {
   Sidebar,

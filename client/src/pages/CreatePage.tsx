@@ -494,11 +494,10 @@ export default function CreatePage() {
   if (!user) return null;
 
   return (
-    <ScrollArea className="h-full">
-      <div className="min-h-full">
+    <div className="h-full">
 
         {/* ====== LEFT + CENTER + RIGHT: 3-column desktop layout ====== */}
-        <div className="hidden lg:grid lg:grid-cols-[380px_1fr_400px] xl:grid-cols-[420px_1fr_420px] h-full min-h-screen" data-testid="desktop-layout">
+        <div className="hidden lg:grid lg:grid-cols-[380px_1fr_380px] xl:grid-cols-[400px_1fr_400px] h-full" data-testid="desktop-layout">
 
           {/* ===== LEFT: Creation Panel ===== */}
           <div className="border-r border-white/5 bg-background/50 overflow-y-auto" data-testid="creation-panel">
@@ -1158,7 +1157,8 @@ export default function CreatePage() {
         </div>
 
         {/* ====== MOBILE / TABLET LAYOUT ====== */}
-        <div className="lg:hidden flex flex-col min-h-screen" data-testid="mobile-layout">
+        <ScrollArea className="lg:hidden h-full">
+        <div className="flex flex-col min-h-screen" data-testid="mobile-layout">
           {mobileView !== "player" && (
             <div className="flex border-b border-white/5 bg-background/80 sticky top-0 z-20">
               <button
@@ -1357,8 +1357,8 @@ export default function CreatePage() {
             </div>
           )}
         </div>
+        </ScrollArea>
 
-      </div>
-    </ScrollArea>
+    </div>
   );
 }

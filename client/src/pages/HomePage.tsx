@@ -37,7 +37,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import dgbLogo from "@assets/DAGRABA2_1771364648913.png";
+import dgbLogo from "@assets/DGB2_1771378545651.png";
 
 const HERO_SLIDES = [
   {
