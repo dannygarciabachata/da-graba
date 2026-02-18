@@ -17,12 +17,12 @@ const runpodMusicAdapter: ProviderAdapter = {
     const tags = buildHeartMuLaTags(prompt, style);
 
     const health = await checkHealth("music");
-    if (!health.connected || health.workers === 0) {
-      console.log(`[RunPodAdapter] Skipping - workers unhealthy/unavailable (connected: ${health.connected}, workers: ${health.workers}, error: ${health.error || "none"})`);
-      throw new Error(`RunPod workers unavailable: ${health.error || "0 workers online"}`);
+    if (!health.connected || !health.healthy) {
+      console.log(`[RunPodAdapter] Skipping - workers unhealthy/unavailable (connected: ${health.connected}, healthy: ${health.healthy}, workers: ${health.workers}, unhealthy: ${health.unhealthy}, error: ${health.error || "none"})`);
+      throw new Error(`RunPod workers unavailable: ${health.error || `${health.unhealthy} unhealthy, ${health.workers} ready`}`);
     }
 
-    console.log(`[RunPodAdapter] Health OK (${health.workers} workers, ${health.queued} queued). Submitting song ${songId} (engine: sao, duration: ${duration}s)`);
+    console.log(`[RunPodAdapter] Health OK (${health.workers} workers ready, ${health.unhealthy} unhealthy, ${health.queued} queued). Submitting song ${songId} (engine: sao, duration: ${duration}s)`);
 
     const result = await submitMusicGeneration({
       songId,

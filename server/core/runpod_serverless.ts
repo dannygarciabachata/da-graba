@@ -1,9 +1,22 @@
 const RUNPOD_API_KEY = () => process.env.RUNPOD_API_KEY || "";
-const RUNPOD_ENDPOINT_MUSIC = () => process.env.RUNPOD_ENDPOINT_MUSIC || "";
-const RUNPOD_ENDPOINT_TRAINING = () => process.env.RUNPOD_ENDPOINT_TRAINING || "";
-const RUNPOD_ENDPOINT_STEMS = () => process.env.RUNPOD_ENDPOINT_STEMS || "";
 
 const BASE_URL = "https://api.runpod.ai/v2";
+
+function extractEndpointId(raw: string): string {
+  if (!raw) return "";
+  const match = raw.match(/\/v2\/([a-zA-Z0-9]+)\/?$/);
+  if (match) {
+    console.log(`[RunPod] Extracted endpoint ID '${match[1]}' from full URL`);
+    return match[1];
+  }
+  if (/^[a-zA-Z0-9]+$/.test(raw)) return raw;
+  console.warn(`[RunPod] WARNING: Unexpected endpoint format: '${raw}'. Expected either a plain ID or full URL.`);
+  return raw;
+}
+
+const RUNPOD_ENDPOINT_MUSIC = () => extractEndpointId(process.env.RUNPOD_ENDPOINT_MUSIC || "");
+const RUNPOD_ENDPOINT_TRAINING = () => extractEndpointId(process.env.RUNPOD_ENDPOINT_TRAINING || "");
+const RUNPOD_ENDPOINT_STEMS = () => extractEndpointId(process.env.RUNPOD_ENDPOINT_STEMS || "");
 
 export interface ServerlessJobResponse {
   id: string;
@@ -24,7 +37,11 @@ export interface ServerlessHealthResponse {
   };
   workers: {
     idle: number;
+    initializing: number;
+    ready: number;
     running: number;
+    throttled: number;
+    unhealthy: number;
   };
 }
 
@@ -167,34 +184,43 @@ export async function cancelJob(
 
 export async function checkHealth(
   endpointType: "music" | "training" | "stems"
-): Promise<{ connected: boolean; workers: number; queued: number; error?: string }> {
+): Promise<{ connected: boolean; healthy: boolean; workers: number; queued: number; unhealthy: number; error?: string }> {
   const endpointId = getEndpointId(endpointType);
   if (!endpointId) {
-    return { connected: false, workers: 0, queued: 0, error: `Endpoint not configured for: ${endpointType}` };
+    return { connected: false, healthy: false, workers: 0, queued: 0, unhealthy: 0, error: `Endpoint not configured for: ${endpointType}` };
   }
 
   try {
     const url = `${BASE_URL}/${endpointId}/health`;
+    console.log(`[RunPod Health] Checking ${endpointType}: ${url}`);
     const res = await fetchWithTimeout(url, {
       method: "GET",
       headers: getHeaders(),
     }, 10000);
 
     if (!res.ok) {
-      return { connected: false, workers: 0, queued: 0, error: `Status ${res.status}` };
+      return { connected: false, healthy: false, workers: 0, queued: 0, unhealthy: 0, error: `Status ${res.status}` };
     }
 
     const data: ServerlessHealthResponse = await res.json();
-    const totalWorkers = (data.workers?.idle || 0) + (data.workers?.running || 0);
+    const readyWorkers = (data.workers?.idle || 0) + (data.workers?.ready || 0) + (data.workers?.running || 0);
+    const initializingWorkers = data.workers?.initializing || 0;
+    const unhealthyWorkers = data.workers?.unhealthy || 0;
     const queued = data.jobs?.inQueue || 0;
+    const isHealthy = readyWorkers > 0;
+
+    console.log(`[RunPod Health] ${endpointType}: ready=${readyWorkers} initializing=${initializingWorkers} unhealthy=${unhealthyWorkers} queued=${queued} healthy=${isHealthy}`);
 
     return {
       connected: true,
-      workers: totalWorkers,
+      healthy: isHealthy,
+      workers: readyWorkers,
       queued,
+      unhealthy: unhealthyWorkers,
     };
   } catch (err: any) {
-    return { connected: false, workers: 0, queued: 0, error: err.message };
+    console.error(`[RunPod Health] ${endpointType} check failed: ${err.message}`);
+    return { connected: false, healthy: false, workers: 0, queued: 0, unhealthy: 0, error: err.message };
   }
 }
 
