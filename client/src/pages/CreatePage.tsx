@@ -68,6 +68,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useDeleteSong } from "@/hooks/use-songs";
 import { AudioPlayer } from "@/components/AudioPlayer";
+import { FooterPlayerBar } from "@/components/FooterPlayerBar";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -1457,34 +1458,31 @@ export default function CreatePage() {
         </div>
         </ScrollArea>
 
-        {/* ====== FOOTER PLAYER BAR (always visible like Suno) ====== */}
+        {/* ====== FIXED FOOTER PLAYER BAR ====== */}
         {activeSong && activeSong.status === "completed" && activeSong.audioUrl && (
-          <div className="border-t border-white/10 bg-[#0a0a0a] flex-shrink-0" data-testid="footer-player">
-            <AudioPlayer
+          <div className="flex-shrink-0" data-testid="footer-player">
+            <FooterPlayerBar
               url={activeSong.audioUrl}
               title={activeSong.title || activeSong.prompt || t('create.untitledTrack')}
               imageUrl={activeSong.imageUrl}
               genre={activeSong.genre}
               duration={activeSong.duration}
-              createdAt={activeSong.createdAt}
               onOpenStudio={() => setLocation("/studio")}
             />
           </div>
         )}
 
         {activeSong && (activeSong.status === "processing" || activeSong.status === "pending") && (
-          <div className="border-t border-white/10 bg-[#0a0a0a] flex-shrink-0 px-4 py-2" data-testid="footer-player-processing">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0">
-                <Loader2 className="h-4 w-4 text-primary animate-spin" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{activeSong.title || activeSong.prompt || t('create.untitledTrack')}</p>
-                <p className="text-[11px] text-muted-foreground">{t('create.creatingWithAI')}</p>
-              </div>
-              <div className="w-32 h-1 bg-white/5 rounded-full overflow-hidden flex-shrink-0">
-                <motion.div className="h-full bg-primary/40 rounded-full" animate={{ width: ["10%", "40%", "60%", "75%"] }} transition={{ duration: 240, times: [0, 0.3, 0.6, 1], ease: "easeOut" }} />
-              </div>
+          <div className="h-[72px] bg-[#0a0a0a] border-t border-white/10 flex items-center px-4 gap-3 flex-shrink-0" data-testid="footer-player-processing">
+            <div className="w-12 h-12 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0">
+              <Loader2 className="h-5 w-5 text-primary animate-spin" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{activeSong.title || activeSong.prompt || t('create.untitledTrack')}</p>
+              <p className="text-[11px] text-muted-foreground">{t('create.creatingWithAI')}</p>
+            </div>
+            <div className="w-40 h-1.5 bg-white/5 rounded-full overflow-hidden flex-shrink-0">
+              <motion.div className="h-full bg-primary/40 rounded-full" animate={{ width: ["10%", "40%", "60%", "75%"] }} transition={{ duration: 240, times: [0, 0.3, 0.6, 1], ease: "easeOut" }} />
             </div>
           </div>
         )}
