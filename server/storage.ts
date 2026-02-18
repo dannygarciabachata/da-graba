@@ -56,6 +56,9 @@ import {
   type PublisherEntity, type InsertPublisherEntity,
   type UserPlaylist, type InsertUserPlaylist,
   type UserPlaylistSong, type InsertUserPlaylistSong,
+  trainingDatasets, trainingFiles,
+  type TrainingDataset, type InsertTrainingDataset,
+  type TrainingFile, type InsertTrainingFile,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -321,6 +324,18 @@ export interface IStorage {
   removeSongFromPlaylist(playlistId: number, songId: number): Promise<void>;
   getPlaylistSongs(playlistId: number): Promise<any[]>;
   getPublicPlaylists(limit?: number): Promise<UserPlaylist[]>;
+
+  getTrainingDatasets(): Promise<TrainingDataset[]>;
+  getTrainingDataset(id: number): Promise<TrainingDataset | undefined>;
+  createTrainingDataset(dataset: InsertTrainingDataset): Promise<TrainingDataset>;
+  updateTrainingDataset(id: number, data: Partial<TrainingDataset>): Promise<TrainingDataset>;
+  deleteTrainingDataset(id: number): Promise<void>;
+
+  getTrainingFiles(datasetId: number, fileType?: string): Promise<TrainingFile[]>;
+  getTrainingFile(id: number): Promise<TrainingFile | undefined>;
+  createTrainingFile(file: InsertTrainingFile): Promise<TrainingFile>;
+  deleteTrainingFile(id: number): Promise<void>;
+  deleteTrainingFilesByDataset(datasetId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1882,6 +1897,59 @@ export class DatabaseStorage implements IStorage {
       return await q.limit(limit);
     }
     return await q;
+  }
+
+  async getTrainingDatasets(): Promise<TrainingDataset[]> {
+    return await db.select().from(trainingDatasets).orderBy(desc(trainingDatasets.createdAt));
+  }
+
+  async getTrainingDataset(id: number): Promise<TrainingDataset | undefined> {
+    const [dataset] = await db.select().from(trainingDatasets).where(eq(trainingDatasets.id, id));
+    return dataset;
+  }
+
+  async createTrainingDataset(dataset: InsertTrainingDataset): Promise<TrainingDataset> {
+    const [created] = await db.insert(trainingDatasets).values(dataset).returning();
+    return created;
+  }
+
+  async updateTrainingDataset(id: number, data: Partial<TrainingDataset>): Promise<TrainingDataset> {
+    const [updated] = await db.update(trainingDatasets).set(data).where(eq(trainingDatasets.id, id)).returning();
+    return updated;
+  }
+
+  async deleteTrainingDataset(id: number): Promise<void> {
+    await db.delete(trainingFiles).where(eq(trainingFiles.datasetId, id));
+    await db.delete(trainingDatasets).where(eq(trainingDatasets.id, id));
+  }
+
+  async getTrainingFiles(datasetId: number, fileType?: string): Promise<TrainingFile[]> {
+    if (fileType) {
+      return await db.select().from(trainingFiles)
+        .where(and(eq(trainingFiles.datasetId, datasetId), eq(trainingFiles.fileType, fileType)))
+        .orderBy(trainingFiles.fileName);
+    }
+    return await db.select().from(trainingFiles)
+      .where(eq(trainingFiles.datasetId, datasetId))
+      .orderBy(trainingFiles.fileName);
+  }
+
+  async getTrainingFile(id: number): Promise<TrainingFile | undefined> {
+    const [file] = await db.select().from(trainingFiles).where(eq(trainingFiles.id, id));
+    return file;
+  }
+
+  async createTrainingFile(file: InsertTrainingFile): Promise<TrainingFile> {
+    const [created] = await db.insert(trainingFiles).values(file).returning();
+    return created;
+  }
+
+  async deleteTrainingFile(id: number): Promise<void> {
+    await db.delete(trainingFiles).where(eq(trainingFiles.id, id));
+  }
+
+  async deleteTrainingFilesByDataset(datasetId: number): Promise<void> {
+    await db.delete(trainingFiles).where(eq(trainingFiles.datasetId, datasetId));
   }
 }
 

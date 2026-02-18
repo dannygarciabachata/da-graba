@@ -30,7 +30,7 @@ DAGRABA Studio employs a microservices-oriented architecture with a clear separa
     - **DGB AUDIO Audio Engine (Priority 3):** MusicGPT-based last resort fallback.
     - **Replicate/Mureka:** Deactivated. No longer part of music generation pipeline.
     - **OpenAI Integration:** Used for lyrics generation (GPT-5.1), support chatbot, instrument prompt generation, and prompt enrichment via the Antigravity Engine.
-    - **SAO Training Pipeline:** Fine-tuning custom instrument kits using OpenAI and cloud GPU.
+    - **SAO Training Pipeline:** Fine-tuning custom instrument kits using OpenAI and cloud GPU. Admin Training Datasets panel (`/admin` → Training Data tab) for managing MIDI dataset pipeline with 4 steps: Clean MIDI → Metadata (Spotify/LastFM) → Prompts (LLM) → Audio Rendering (VST3). Supports Lakh MIDI Dataset (clean subset), craffel/midi-dataset, and custom MIDI uploads. DB tables: `training_datasets` + `training_files` with pipeline status tracking. Pipeline scripts in `scripts/dataset_creator/`.
 - **Stem Separation Engine:** Multi-tier fallback system (Private Cloud GPU, Replicate serverless, Generic API, MusicGPT) producing vocal, drum, bass, and melody stems.
 - **Workers:** Background workers handle asynchronous processing for music generation and audio transformations.
 - **Key Features:** DGB AUDIO branded engine with style presets, Bachata Mode, AI Lyrics Generator, Song History tracking, Artist Monetization Ecosystem (PRO registrations, earnings, fan gifts, wallets), Discography management (with Spotify import), Copyright & Publishing Hub, and AI Mashup (Kie.ai Mashup API blending 2 existing tracks into new compositions).

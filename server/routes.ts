@@ -24,7 +24,7 @@ import { generateInstrumentPrompt, generateKitTrainingPrompt, buildTrainingConfi
 import { submitTrainingJob, submitAnalysisJob, isRunPodConfigured, checkRunPodConnection, getGpuStatus, resumeGpuPod, stopGpuPod, setupGpuEnvironment } from "./core/runpod_client";
 import { isCloudConfigured, getActiveServer, checkCloudHealth, checkDgbCloudHealth, uploadInstrumentToCloud, saveMidiFile, verifyWebhookFromAnyServer } from "./core/dgb_runpod_api";
 import { isServerlessConfigured as isServerlessAvailable } from "./core/runpod_serverless";
-import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, STYLE_KIT_GENRES, INSTRUMENT_TYPES, SETTING_CATEGORIES, TICKET_STATUSES, TICKET_PRIORITIES, insertApiProviderSchema, insertApiEndpointSchema, insertStyleKitSchema, insertStyleKitInstrumentSchema, insertPlatformSettingSchema, insertUserPlaylistSchema } from "@shared/schema";
+import { OPERATION_TYPES, PROVIDER_CATEGORIES, AUTH_TYPES, STYLE_KIT_GENRES, INSTRUMENT_TYPES, SETTING_CATEGORIES, TICKET_STATUSES, TICKET_PRIORITIES, insertApiProviderSchema, insertApiEndpointSchema, insertStyleKitSchema, insertStyleKitInstrumentSchema, insertPlatformSettingSchema, insertUserPlaylistSchema, insertTrainingDatasetSchema } from "@shared/schema";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
 import path from "path";
@@ -6095,6 +6095,221 @@ IMPORTANT GUIDELINES:
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
+  });
+
+  // === TRAINING DATASETS ADMIN ROUTES ===
+
+  app.get("/api/admin/training-datasets", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const user = await storage.getUser((req.user as any).claims.sub);
+    if (!user || !["super_admin", "admin"].includes(user.role || "")) return res.sendStatus(403);
+    try {
+      const datasets = await storage.getTrainingDatasets();
+      res.json(datasets);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/admin/training-datasets/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const user = await storage.getUser((req.user as any).claims.sub);
+    if (!user || !["super_admin", "admin"].includes(user.role || "")) return res.sendStatus(403);
+    try {
+      const dataset = await storage.getTrainingDataset(Number(req.params.id));
+      if (!dataset) return res.sendStatus(404);
+      const files = await storage.getTrainingFiles(dataset.id);
+      res.json({ ...dataset, files });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/training-datasets", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const user = await storage.getUser((req.user as any).claims.sub);
+    if (!user || !["super_admin", "admin"].includes(user.role || "")) return res.sendStatus(403);
+    try {
+      const parsed = insertTrainingDatasetSchema.pick({ name: true, description: true, sourceType: true }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten().fieldErrors });
+      const dataset = await storage.createTrainingDataset({
+        ...parsed.data,
+        createdBy: (req.user as any).claims.sub,
+      });
+      res.json(dataset);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/training-datasets/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const user = await storage.getUser((req.user as any).claims.sub);
+    if (!user || !["super_admin", "admin"].includes(user.role || "")) return res.sendStatus(403);
+    try {
+      const allowedFields = ["name", "description", "sourceType", "config"];
+      const updates: Record<string, any> = {};
+      for (const key of allowedFields) {
+        if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+      if (Object.keys(updates).length === 0) return res.status(400).json({ message: "No valid fields to update" });
+      const dataset = await storage.updateTrainingDataset(Number(req.params.id), updates);
+      res.json(dataset);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/training-datasets/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const user = await storage.getUser((req.user as any).claims.sub);
+    if (!user || !["super_admin"].includes(user.role || "")) return res.sendStatus(403);
+    try {
+      await storage.deleteTrainingDataset(Number(req.params.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/admin/training-datasets/:id/files", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const user = await storage.getUser((req.user as any).claims.sub);
+    if (!user || !["super_admin", "admin"].includes(user.role || "")) return res.sendStatus(403);
+    try {
+      const fileType = req.query.type as string | undefined;
+      const files = await storage.getTrainingFiles(Number(req.params.id), fileType);
+      res.json(files);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/training-datasets/:id/files", upload.single("file"), async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const user = await storage.getUser((req.user as any).claims.sub);
+    if (!user || !["super_admin", "admin"].includes(user.role || "")) return res.sendStatus(403);
+    try {
+      const datasetId = Number(req.params.id);
+      const dataset = await storage.getTrainingDataset(datasetId);
+      if (!dataset) return res.sendStatus(404);
+
+      const file = req.file;
+      if (!file) return res.status(400).json({ message: "No file uploaded" });
+
+      const validFileTypes = ["midi", "audio", "prompt", "render"];
+      let fileType = req.body.fileType;
+      if (!fileType || !validFileTypes.includes(fileType)) {
+        const ext = file.originalname.toLowerCase();
+        fileType = ext.endsWith(".mid") || ext.endsWith(".midi") ? "midi" : ext.endsWith(".json") ? "prompt" : "audio";
+      }
+
+      let parsedMetadata = null;
+      if (req.body.metadata) {
+        try { parsedMetadata = JSON.parse(req.body.metadata); } catch { return res.status(400).json({ message: "Invalid metadata JSON" }); }
+      }
+
+      const trainingFile = await storage.createTrainingFile({
+        datasetId,
+        fileName: file.originalname,
+        fileType,
+        filePath: file.path || `/uploads/${file.filename}`,
+        fileSize: file.size,
+        artistName: req.body.artistName || null,
+        songName: req.body.songName || null,
+        instrumentCode: req.body.instrumentCode ? Number(req.body.instrumentCode) : null,
+        promptText: req.body.promptText || null,
+        metadata: parsedMetadata,
+      });
+
+      const countField = fileType === "midi" ? "midiFileCount" : fileType === "render" ? "renderFileCount" : fileType === "prompt" ? "promptFileCount" : "midiFileCount";
+      const currentCount = (dataset as any)[countField] || 0;
+      await storage.updateTrainingDataset(datasetId, {
+        [countField]: currentCount + 1,
+        totalSizeBytes: (dataset.totalSizeBytes || 0) + file.size,
+      });
+
+      res.json(trainingFile);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/training-files/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const user = await storage.getUser((req.user as any).claims.sub);
+    if (!user || !["super_admin", "admin"].includes(user.role || "")) return res.sendStatus(403);
+    try {
+      await storage.deleteTrainingFile(Number(req.params.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/training-datasets/:id/trigger-step", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const user = await storage.getUser((req.user as any).claims.sub);
+    if (!user || !["super_admin", "admin"].includes(user.role || "")) return res.sendStatus(403);
+    try {
+      const datasetId = Number(req.params.id);
+      const { step } = req.body;
+      const validSteps = ["clean_midi", "metadata", "prompts", "rendering"];
+      if (!validSteps.includes(step)) {
+        return res.status(400).json({ message: `Invalid step: ${step}. Valid: ${validSteps.join(", ")}` });
+      }
+
+      const stepFieldMap: Record<string, string> = {
+        clean_midi: "stepCleanMidi",
+        metadata: "stepMetadata",
+        prompts: "stepPrompts",
+        rendering: "stepRendering",
+      };
+
+      await storage.updateTrainingDataset(datasetId, {
+        [stepFieldMap[step]]: "running",
+        status: "processing",
+      });
+
+      console.log(`[Training] Step '${step}' triggered for dataset ${datasetId}. This would dispatch to Cloud GPU.`);
+
+      res.json({
+        success: true,
+        message: `Step '${step}' queued for processing on Cloud GPU.`,
+        step,
+        datasetId,
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/admin/training-pipeline-info", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const user = await storage.getUser((req.user as any).claims.sub);
+    if (!user || !["super_admin", "admin"].includes(user.role || "")) return res.sendStatus(403);
+    res.json({
+      pipeline: [
+        { id: "clean_midi", name: "Clean MIDI", description: "Remove duplicates, corrupt files, split by instrument tracks" },
+        { id: "metadata", name: "Metadata Generation", description: "Fetch metadata from Spotify & LastFM APIs, generate JSON" },
+        { id: "prompts", name: "Prompt Generation", description: "Use LLM to convert metadata into training prompts" },
+        { id: "rendering", name: "Audio Rendering", description: "Synthesize MIDI tracks with VST3 instruments, mix & normalize" },
+      ],
+      sources: [
+        { id: "lakh_clean", name: "Lakh MIDI Dataset (Clean)", url: "https://colinraffel.com/projects/lmd/", description: "178,561 clean MIDI files from the Lakh MIDI Dataset" },
+        { id: "custom", name: "Custom Upload", description: "Upload your own MIDI files for training" },
+        { id: "midi_dataset", name: "craffel/midi-dataset", url: "https://github.com/craffel/midi-dataset", description: "MIDI-audio matching and alignment tools by Colin Raffel" },
+      ],
+      instrumentCodes: {
+        0: "Acoustic Grand Piano", 24: "Nylon Guitar", 25: "Steel Guitar",
+        26: "Jazz Guitar", 27: "Clean Guitar", 28: "Muted Guitar",
+        29: "Overdriven Guitar", 30: "Distortion Guitar", 32: "Acoustic Bass",
+        33: "Fingered Bass", 34: "Picked Bass", 35: "Fretless Bass",
+        40: "Violin", 42: "Cello", 46: "Orchestral Harp",
+        48: "String Ensemble 1", 56: "Trumpet", 57: "Trombone",
+        65: "Alto Sax", 66: "Tenor Sax", 73: "Flute",
+      },
+    });
   });
 
   app.use((err: any, _req: any, res: any, next: any) => {

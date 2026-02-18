@@ -1457,3 +1457,70 @@ export type UserPlaylist = typeof userPlaylists.$inferSelect;
 export type InsertUserPlaylist = z.infer<typeof insertUserPlaylistSchema>;
 export type UserPlaylistSong = typeof userPlaylistSongs.$inferSelect;
 export type InsertUserPlaylistSong = z.infer<typeof insertUserPlaylistSongSchema>;
+
+// === TRAINING DATASETS ===
+
+export const trainingDatasets = pgTable("training_datasets", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  sourceType: text("source_type").notNull().default("custom"),
+  status: text("status").notNull().default("created"),
+  stepCleanMidi: text("step_clean_midi").default("pending"),
+  stepMetadata: text("step_metadata").default("pending"),
+  stepPrompts: text("step_prompts").default("pending"),
+  stepRendering: text("step_rendering").default("pending"),
+  config: jsonb("config"),
+  midiFileCount: integer("midi_file_count").default(0),
+  renderFileCount: integer("render_file_count").default(0),
+  promptFileCount: integer("prompt_file_count").default(0),
+  totalSizeBytes: integer("total_size_bytes").default(0),
+  errorLog: text("error_log"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const trainingFiles = pgTable("training_files", {
+  id: serial("id").primaryKey(),
+  datasetId: integer("dataset_id").notNull().references(() => trainingDatasets.id, { onDelete: "cascade" }),
+  fileName: text("file_name").notNull(),
+  fileType: text("file_type").notNull(),
+  filePath: text("file_path"),
+  fileSize: integer("file_size").default(0),
+  artistName: text("artist_name"),
+  songName: text("song_name"),
+  instrumentCode: integer("instrument_code"),
+  promptText: text("prompt_text"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const trainingDatasetsRelations = relations(trainingDatasets, ({ many }) => ({
+  files: many(trainingFiles),
+}));
+
+export const trainingFilesRelations = relations(trainingFiles, ({ one }) => ({
+  dataset: one(trainingDatasets, {
+    fields: [trainingFiles.datasetId],
+    references: [trainingDatasets.id],
+  }),
+}));
+
+export const insertTrainingDatasetSchema = createInsertSchema(trainingDatasets).omit({
+  id: true,
+  createdAt: true,
+  midiFileCount: true,
+  renderFileCount: true,
+  promptFileCount: true,
+  totalSizeBytes: true,
+});
+
+export const insertTrainingFileSchema = createInsertSchema(trainingFiles).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type TrainingDataset = typeof trainingDatasets.$inferSelect;
+export type InsertTrainingDataset = z.infer<typeof insertTrainingDatasetSchema>;
+export type TrainingFile = typeof trainingFiles.$inferSelect;
+export type InsertTrainingFile = z.infer<typeof insertTrainingFileSchema>;
