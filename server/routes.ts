@@ -3073,6 +3073,58 @@ export async function registerRoutes(
     }
   });
 
+  // === Genre Styles (Tocadas) ===
+
+  app.get("/api/genre-styles", async (req, res) => {
+    try {
+      const genre = req.query.genre as string | undefined;
+      const styles = await storage.getGenreStyles(genre);
+      res.json(styles);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/genre-styles/:id", async (req, res) => {
+    try {
+      const style = await storage.getGenreStyle(Number(req.params.id));
+      if (!style) return res.sendStatus(404);
+      res.json(style);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/genre-styles", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    try {
+      const style = await storage.createGenreStyle(req.body);
+      res.status(201).json(style);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/genre-styles/:id", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    try {
+      const style = await storage.updateGenreStyle(Number(req.params.id), req.body);
+      res.json(style);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/genre-styles/:id", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    try {
+      await storage.deleteGenreStyle(Number(req.params.id));
+      res.sendStatus(204);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/style-kits/:id/analyze", async (req, res) => {
     if (!(await requireRole(req, res, "admin"))) return;
     try {

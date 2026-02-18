@@ -3,7 +3,7 @@ import { eq, desc, and, sql, count, gte, gt, inArray, sum } from "drizzle-orm";
 import { 
   songs, lyrics, quizResults, tracks, samples,
   apiProviders, apiEndpoints,
-  styleKits, styleKitInstruments,
+  styleKits, styleKitInstruments, genreStyles,
   platformSettings, supportTickets, supportMessages,
   cloudServers, voiceModels, voiceSamples, styleReferences,
   blogPosts, blogCategories, blogComments, blogLikes, blogStars, blogShares, pricingPlans, coverDesigns, songLikes,
@@ -59,6 +59,7 @@ import {
   trainingDatasets, trainingFiles,
   type TrainingDataset, type InsertTrainingDataset,
   type TrainingFile, type InsertTrainingFile,
+  type GenreStyle, type InsertGenreStyle,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -124,6 +125,12 @@ export interface IStorage {
   createStyleKitInstrument(instrument: InsertStyleKitInstrument): Promise<StyleKitInstrument>;
   updateStyleKitInstrument(id: number, data: Partial<StyleKitInstrument>): Promise<StyleKitInstrument>;
   deleteStyleKitInstrument(id: number): Promise<void>;
+
+  getGenreStyles(genre?: string): Promise<GenreStyle[]>;
+  getGenreStyle(id: number): Promise<GenreStyle | undefined>;
+  createGenreStyle(style: InsertGenreStyle): Promise<GenreStyle>;
+  updateGenreStyle(id: number, data: Partial<GenreStyle>): Promise<GenreStyle>;
+  deleteGenreStyle(id: number): Promise<void>;
 
   getPlatformSettings(category?: string): Promise<PlatformSetting[]>;
   getPlatformSetting(key: string): Promise<PlatformSetting | undefined>;
@@ -792,6 +799,36 @@ export class DatabaseStorage implements IStorage {
       } catch {}
     }
     await db.delete(styleKitInstruments).where(eq(styleKitInstruments.id, id));
+  }
+
+  // === Genre Styles (Tocadas) ===
+
+  async getGenreStyles(genre?: string): Promise<GenreStyle[]> {
+    if (genre) {
+      return await db.select().from(genreStyles)
+        .where(eq(genreStyles.genre, genre))
+        .orderBy(genreStyles.displayOrder, genreStyles.name);
+    }
+    return await db.select().from(genreStyles).orderBy(genreStyles.genre, genreStyles.displayOrder, genreStyles.name);
+  }
+
+  async getGenreStyle(id: number): Promise<GenreStyle | undefined> {
+    const [style] = await db.select().from(genreStyles).where(eq(genreStyles.id, id));
+    return style;
+  }
+
+  async createGenreStyle(style: InsertGenreStyle): Promise<GenreStyle> {
+    const [created] = await db.insert(genreStyles).values(style).returning();
+    return created;
+  }
+
+  async updateGenreStyle(id: number, data: Partial<GenreStyle>): Promise<GenreStyle> {
+    const [updated] = await db.update(genreStyles).set(data).where(eq(genreStyles.id, id)).returning();
+    return updated;
+  }
+
+  async deleteGenreStyle(id: number): Promise<void> {
+    await db.delete(genreStyles).where(eq(genreStyles.id, id));
   }
 
   // === Platform Settings ===

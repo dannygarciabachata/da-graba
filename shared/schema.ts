@@ -371,6 +371,39 @@ export const STYLE_KIT_GENRES = [
 
 export type StyleKitGenre = typeof STYLE_KIT_GENRES[number];
 
+// === GENRE STYLES (TOCADAS) ===
+
+export const genreStyles = pgTable("genre_styles", {
+  id: serial("id").primaryKey(),
+  genre: text("genre").notNull(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  description: text("description"),
+  promptHint: text("prompt_hint"),
+  baseInstruments: text("base_instruments").array(),
+  extraInstruments: text("extra_instruments").array(),
+  styleKitId: integer("style_kit_id").references(() => styleKits.id, { onDelete: "set null" }),
+  isActive: boolean("is_active").default(true),
+  displayOrder: integer("display_order").default(0),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const genreStylesRelations = relations(genreStyles, ({ one }) => ({
+  styleKit: one(styleKits, {
+    fields: [genreStyles.styleKitId],
+    references: [styleKits.id],
+  }),
+}));
+
+export const insertGenreStyleSchema = createInsertSchema(genreStyles).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type GenreStyle = typeof genreStyles.$inferSelect;
+export type InsertGenreStyle = z.infer<typeof insertGenreStyleSchema>;
+
 export const INSTRUMENT_TYPES = [
   "guira",
   "bongo",
