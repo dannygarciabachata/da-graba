@@ -1,0 +1,77 @@
+Verificar que se corrigió
+grep "total_mem" /runpod-volume/dagraba/handler.py
+        print(f"[Init] GPU: {torch.cuda.get_device_name(0)} | VRAM: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
+root@dd95dccf42d8:/workspace# grep "total_mem" /runpod-volume/dagraba/handler.py
+        print(f"[Init] GPU: {torch.cuda.get_device_name(0)} | VRAM: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
+root@dd95dccf42d8:/workspace# head -70 /runpod-volume/dagraba/start.sh
+#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VOLUME_DIR="/runpod-volume"
+DAGRABA_DIR="${VOLUME_DIR}/dagraba"
+HANDLER="${DAGRABA_DIR}/handler.py"
+DEPS_MARKER="${VOLUME_DIR}/.deps_installed_v4"
+
+echo ""
+echo "============================================================="
+echo "  DAGRABA Studio - RunPod Serverless Worker v4"
+echo "============================================================="
+echo ""
+
+echo "[Init] Script dir: ${SCRIPT_DIR}"
+echo "[Init] Volume dir: ${VOLUME_DIR}"
+echo "[Init] Handler: ${HANDLER}"
+echo "[Init] Python: $(python3 --version 2>&1)"
+echo "[Init] Date: $(date -u)"
+
+if [ ! -f "${HANDLER}" ]; then
+    echo "[FATAL] handler.py not found at ${HANDLER}"
+    exit 1
+fi
+
+echo "[Init] Checking GPU..."
+if nvidia-smi 2>/dev/null; then
+    GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
+    GPU_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader 2>/dev/null | head -1)
+    echo "[Init] GPU: ${GPU_NAME} | VRAM: ${GPU_MEM}"
+else
+    echo "[Init] WARNING: No GPU detected (CPU mode)"
+fi
+
+OLD_MARKER="${VOLUME_DIR}/.deps_installed_v3"
+if [ -f "${OLD_MARKER}" ] && [ ! -f "${DEPS_MARKER}" ]; then
+    rm -f "${OLD_MARKER}"
+fi
+
+if [ ! -f "${DEPS_MARKER}" ]; then
+    echo ""
+    echo "[Init] Installing Python dependencies (first run, cached after)..."
+    echo "[Init] This may take 2-5 minutes..."
+
+    echo "[Init] Step 1/2: Installing core dependencies..."
+    pip install --no-cache-dir \
+        runpod==1.7.7 \
+        stable-audio-tools==0.0.17 \
+        requests==2.32.3 \
+        numpy==1.26.4 \
+        soundfile==0.13.1 \
+        librosa==0.10.2 \
+        transformers==4.44.0 \
+        accelerate==0.33.0 \
+        safetensors==0.4.5 \
+        huggingface_hub==0.25.0 \
+        scipy==1.14.0 2>&1 | tail -10
+
+    if [ $? -ne 0 ]; then
+        echo "[WARN] Some core pip packages may have failed."
+    fi
+
+    echo "[Init] Step 2/2: Installing demucs (stem separation)..."
+    pip install --no-cache-dir --no-deps demucs==4.0.1 2>&1 | tail -5
+    pip install --no-cache-dir dora-search lameenc openunmix julius diffq 2>&1 | tail -5
+    if [ $? -ne 0 ]; then
+        echo "[WARN] Demucs install had issues. Stem separation may not work."
+    fi
+
+    echo "[Init] Verifying critical imports..."
+    python3 -c "import runpod; import torch; import torchaudio; print('[Init] Core imports OK')" 2>&1
+root@dd95dccf42d8:/workspace# 
