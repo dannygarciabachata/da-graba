@@ -3,7 +3,7 @@ import { Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import dgbLogo from "@assets/DGB2_1771378545651.png";
+import dgbLogo from "@assets/IMG_4931_1771382182342.png";
 import dagrabTranspLogo from "@assets/DAGRABATRANSP_1771365853236.png";
 import palettaBg from "@assets/palettabg_1771282011333.png";
 import {
@@ -174,7 +174,7 @@ function HeroSongCarousel({ songs }: { songs: any[] }) {
                   data-testid="img-hero-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-primary/30 to-blue-600/30 flex items-center justify-center">
+                <div className="w-full h-full bg-gradient-to-br from-primary/30 to-pink-600/30 flex items-center justify-center">
                   <Music className="h-20 w-20 text-primary/40" />
                 </div>
               )}
@@ -217,7 +217,7 @@ function HeroSongCarousel({ songs }: { songs: any[] }) {
                 >
                   <div className="h-1.5 w-full bg-white/10 rounded-full pointer-events-none">
                     <div
-                      className="h-full bg-gradient-to-r from-primary via-blue-400 to-blue-500 rounded-full relative transition-all duration-100"
+                      className="h-full bg-gradient-to-r from-primary via-pink-400 to-pink-500 rounded-full relative transition-all duration-100"
                       style={{ width: `${progress}%` }}
                     >
                       <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" />
@@ -272,8 +272,8 @@ function HeroSongCarousel({ songs }: { songs: any[] }) {
             </Button>
           </div>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <Mic2 className="w-5 h-5 text-blue-400" />
+            <div className="p-2 bg-pink-500/20 rounded-lg">
+              <Mic2 className="w-5 h-5 text-pink-400" />
             </div>
             <div className="text-left">
               <p className="text-xs text-muted-foreground">{t('common.poweredBy')}</p>
@@ -286,8 +286,8 @@ function HeroSongCarousel({ songs }: { songs: any[] }) {
       {songs.length <= 1 && (
         <div className="mt-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <Mic2 className="w-5 h-5 text-blue-400" />
+            <div className="p-2 bg-pink-500/20 rounded-lg">
+              <Mic2 className="w-5 h-5 text-pink-400" />
             </div>
             <div className="text-left">
               <p className="text-xs text-muted-foreground">{t('common.poweredBy')}</p>
@@ -339,13 +339,13 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500/8 via-background to-background z-0" />
-      <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-primary/5 via-blue-500/3 to-transparent z-0" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-pink-500/8 via-background to-background z-0" />
+      <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-primary/5 via-pink-500/3 to-transparent z-0" />
 
       <nav className="relative z-20 border-b border-white/[0.06] backdrop-blur-xl bg-background/70 sticky top-0" data-testid="nav-landing">
         <div className="container mx-auto px-4 md:px-6 py-3 flex justify-between items-center">
           <div className="flex items-center cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-            <img src={dagrabTranspLogo} alt="DAGRABA Studio" className="h-10 sm:h-12 object-contain drop-shadow-[0_0_15px_rgba(0,200,255,0.3)]" data-testid="img-landing-logo" />
+            <img src={dagrabTranspLogo} alt="DAGRABA Studio" className="h-10 sm:h-12 object-contain drop-shadow-[0_0_15px_rgba(255,20,147,0.3)]" data-testid="img-landing-logo" />
           </div>
 
           <div className="hidden md:flex items-center gap-1">
@@ -373,7 +373,7 @@ export default function Landing() {
               {i18n.language === 'es' ? 'EN' : 'ES'}
             </Button>
             <Button
-              className="ml-2 bg-gradient-to-r from-primary to-blue-500 text-black font-semibold text-sm px-5 shadow-[0_0_15px_rgba(0,200,255,0.25)]"
+              className="ml-2 bg-gradient-to-r from-primary to-pink-500 text-white font-semibold text-sm px-5 shadow-[0_0_15px_rgba(255,20,147,0.25)]"
               onClick={handleLogin}
               data-testid="button-member-login"
             >
@@ -414,7 +414,7 @@ export default function Landing() {
                 <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => scrollTo("pricing")}>{t('nav.pricing')}</Button>
                 <div className="pt-2">
                   <Button
-                    className="w-full bg-gradient-to-r from-primary to-blue-500 text-black font-semibold"
+                    className="w-full bg-gradient-to-r from-primary to-pink-500 text-white font-semibold"
                     onClick={() => { handleLogin(); setMobileMenuOpen(false); }}
                     data-testid="button-mobile-login"
                   >
@@ -442,7 +442,7 @@ export default function Landing() {
 
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight leading-tight" data-testid="text-hero-title">
                 {t('landing.heroTitle')}{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-400 to-blue-500">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-pink-400 to-pink-500">
                   {t('landing.heroTitleHighlight')}
                 </span>
               </h1>
@@ -454,7 +454,7 @@ export default function Landing() {
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center lg:justify-start pt-2 md:pt-4">
                 <Button
                   size="lg"
-                  className="h-12 md:h-14 px-6 md:px-8 text-base md:text-lg bg-gradient-to-r from-primary to-blue-500 text-black font-bold shadow-[0_0_25px_rgba(0,200,255,0.35)] gap-2"
+                  className="h-12 md:h-14 px-6 md:px-8 text-base md:text-lg bg-gradient-to-r from-primary to-pink-500 text-white font-bold shadow-[0_0_25px_rgba(255,20,147,0.35)] gap-2"
                   onClick={handleLogin}
                   data-testid="button-start-creating"
                 >
@@ -513,11 +513,11 @@ export default function Landing() {
         <section id="about" className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp}>
             <div className="relative rounded-2xl overflow-hidden border border-white/10">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-primary/5 to-blue-600/5" />
+              <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 via-primary/5 to-pink-600/5" />
               <div className="relative p-6 sm:p-8 md:p-16">
                 <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
                   <div className="flex-shrink-0">
-                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-blue-500/20 border border-primary/20 flex items-center justify-center">
+                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-pink-500/20 border border-primary/20 flex items-center justify-center">
                       <Heart className="w-10 h-10 md:w-12 md:h-12 text-primary" />
                     </div>
                   </div>
@@ -537,7 +537,7 @@ export default function Landing() {
 
         <section id="use-cases" className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp} className="text-center mb-12 md:mb-16">
-            <Badge className="mb-4 bg-gradient-to-r from-primary/20 to-blue-500/20 text-primary border-primary/20">
+            <Badge className="mb-4 bg-gradient-to-r from-primary/20 to-pink-500/20 text-primary border-primary/20">
               <Sparkles className="h-3 w-3 mr-1" />
               {t('landing.useCases.title')}
             </Badge>
@@ -554,11 +554,11 @@ export default function Landing() {
               const Icon = USE_CASE_ICONS[i];
               const gradients = [
                 "from-amber-500/10 to-yellow-600/10 border-amber-500/20",
-                "from-blue-400/10 to-blue-600/10 border-blue-400/20",
+                "from-pink-400/10 to-pink-600/10 border-pink-400/20",
                 "from-green-500/10 to-emerald-600/10 border-green-500/20",
-                "from-blue-500/10 to-indigo-600/10 border-blue-500/20",
+                "from-pink-500/10 to-pink-600/10 border-pink-500/20",
                 "from-orange-500/10 to-red-600/10 border-orange-500/20",
-                "from-red-500/10 to-blue-500/10 border-red-500/20",
+                "from-red-500/10 to-pink-500/10 border-red-500/20",
                 "from-indigo-500/10 to-indigo-600/10 border-indigo-500/20",
                 "from-cyan-500/10 to-teal-600/10 border-cyan-500/20",
               ];
@@ -755,7 +755,7 @@ export default function Landing() {
 
           <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.4 }}>
             <div className="mt-8 md:mt-12 max-w-2xl mx-auto">
-              <Card className="bg-gradient-to-r from-primary/5 via-blue-600/5 to-blue-500/5 border-primary/20" data-testid="card-topup-info">
+              <Card className="bg-gradient-to-r from-primary/5 via-pink-600/5 to-pink-500/5 border-primary/20" data-testid="card-topup-info">
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start gap-3">
                     <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 shrink-0">
@@ -782,7 +782,7 @@ export default function Landing() {
 
         <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp} className="text-center mb-12 md:mb-16">
-            <Badge className="mb-4 bg-blue-500/10 text-blue-400 border-blue-500/20">
+            <Badge className="mb-4 bg-pink-500/10 text-pink-400 border-pink-500/20">
               <Clock className="h-3 w-3 mr-1" />
               {t('landing.comingSoonTitle')}
             </Badge>
@@ -792,16 +792,16 @@ export default function Landing() {
           </motion.div>
 
           <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.15 }}>
-            <Card className="bg-white/[0.02] border-white/5 hover:border-blue-500/20 transition-colors max-w-2xl mx-auto" data-testid="card-coming-soon-genre">
+            <Card className="bg-white/[0.02] border-white/5 hover:border-pink-500/20 transition-colors max-w-2xl mx-auto" data-testid="card-coming-soon-genre">
               <CardContent className="p-6 md:p-8">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 shrink-0">
-                    <BookOpen className="h-6 w-6 text-blue-400" />
+                  <div className="p-3 rounded-xl bg-pink-500/10 border border-pink-500/20 shrink-0">
+                    <BookOpen className="h-6 w-6 text-pink-400" />
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <h3 className="font-bold text-lg">{t('landing.comingSoonGenreHistory')}</h3>
-                      <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px]">{t('landing.comingSoonTitle')}</Badge>
+                      <Badge className="bg-pink-500/10 text-pink-400 border-pink-500/20 text-[10px]">{t('landing.comingSoonTitle')}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       {t('landing.comingSoonGenreHistoryDesc')}
@@ -841,7 +841,7 @@ export default function Landing() {
                       {song.imageUrl ? (
                         <img src={song.imageUrl} alt={song.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-blue-600/20 flex items-center justify-center">
+                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-pink-600/20 flex items-center justify-center">
                           <Music className="h-12 w-12 text-primary/30" />
                         </div>
                       )}
@@ -872,7 +872,7 @@ export default function Landing() {
         <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
           <motion.div {...fadeUp}>
             <div className="relative rounded-2xl overflow-hidden border border-white/10">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-blue-600/10 to-blue-500/10" />
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-pink-600/10 to-pink-500/10" />
               <div className="relative p-6 sm:p-8 md:p-16 text-center space-y-4 sm:space-y-6">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-cta-title">
                   {t('landing.ctaTitle')}
@@ -882,7 +882,7 @@ export default function Landing() {
                 </p>
                 <Button
                   size="lg"
-                  className="h-12 sm:h-14 px-6 sm:px-10 text-base sm:text-lg bg-gradient-to-r from-primary to-blue-500 text-black font-bold shadow-[0_0_30px_rgba(0,200,255,0.35)] gap-2"
+                  className="h-12 sm:h-14 px-6 sm:px-10 text-base sm:text-lg bg-gradient-to-r from-primary to-pink-500 text-white font-bold shadow-[0_0_30px_rgba(255,20,147,0.35)] gap-2"
                   onClick={handleLogin}
                   data-testid="button-cta-signup"
                 >
@@ -909,7 +909,7 @@ export default function Landing() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
             <div className="col-span-2 md:col-span-1">
               <div className="mb-4">
-                <img src={dagrabTranspLogo} alt="DAGRABA Studio" className="h-10 object-contain drop-shadow-[0_0_12px_rgba(0,200,255,0.25)]" data-testid="img-footer-logo" />
+                <img src={dagrabTranspLogo} alt="DAGRABA Studio" className="h-10 object-contain drop-shadow-[0_0_12px_rgba(255,20,147,0.25)]" data-testid="img-footer-logo" />
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {t('landing.footer.footerDescription')}

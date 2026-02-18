@@ -216,7 +216,7 @@ function GenreCarousel({ selectedGenre, onSelect }: { selectedGenre: string; onS
               "flex-shrink-0 px-4 py-2 rounded-full border text-sm font-medium transition-all whitespace-nowrap",
               selectedGenre === genre.value
                 ? (genre as any).accent
-                  ? "border-primary bg-primary/15 text-primary shadow-[0_0_12px_rgba(0,200,255,0.15)]"
+                  ? "border-primary bg-primary/15 text-primary shadow-[0_0_12px_rgba(255,20,147,0.15)]"
                   : "border-primary bg-primary/10 text-primary"
                 : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground"
             )}
@@ -503,7 +503,7 @@ export default function CreatePage() {
           <div className="border-r border-white/5 bg-background/50 overflow-y-auto" data-testid="creation-panel">
             <div className="p-5 xl:p-6">
               <div className="flex items-center gap-3 mb-6">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/30 to-blue-500/20 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/30 to-pink-500/20 flex items-center justify-center">
                   <Sparkles className="h-5 w-5 text-primary" />
                 </div>
                 <div>
@@ -517,7 +517,7 @@ export default function CreatePage() {
                   className={cn(
                     "relative overflow-hidden rounded-xl p-4 text-left transition-all border-2",
                     dnaFlow === "bachata"
-                      ? "border-primary bg-gradient-to-br from-primary/15 to-cyan-500/10 shadow-[0_0_20px_rgba(0,200,255,0.15)]"
+                      ? "border-primary bg-gradient-to-br from-primary/15 to-pink-500/10 shadow-[0_0_20px_rgba(255,20,147,0.15)]"
                       : "border-white/10 hover:border-primary/30 bg-white/[0.03]"
                   )}
                   onClick={() => {
@@ -536,7 +536,7 @@ export default function CreatePage() {
                   data-testid="dna-flow-bachata"
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/30 to-cyan-400/20 flex items-center justify-center">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/30 to-pink-400/20 flex items-center justify-center">
                       <Guitar className="h-4 w-4 text-primary" />
                     </div>
                     <div className="text-sm font-bold">DAGRABACHATA</div>
@@ -553,8 +553,8 @@ export default function CreatePage() {
                   className={cn(
                     "relative overflow-hidden rounded-xl p-4 text-left transition-all border-2",
                     dnaFlow === "bolero"
-                      ? "border-blue-400 bg-gradient-to-br from-blue-500/15 to-pink-500/10 shadow-[0_0_20px_rgba(168,85,247,0.15)]"
-                      : "border-white/10 hover:border-blue-400/30 bg-white/[0.03]"
+                      ? "border-orange-400 bg-gradient-to-br from-orange-500/15 to-pink-500/10 shadow-[0_0_20px_rgba(255,140,0,0.15)]"
+                      : "border-white/10 hover:border-orange-400/30 bg-white/[0.03]"
                   )}
                   onClick={() => {
                     if (dnaFlow === "bolero") {
@@ -572,15 +572,15 @@ export default function CreatePage() {
                   data-testid="dna-flow-bolero"
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/30 to-pink-400/20 flex items-center justify-center">
-                      <Music className="h-4 w-4 text-blue-400" />
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-orange-500/30 to-pink-400/20 flex items-center justify-center">
+                      <Music className="h-4 w-4 text-orange-400" />
                     </div>
                     <div className="text-sm font-bold">DAGRABOLERO</div>
                   </div>
                   <p className="text-[11px] text-muted-foreground">{t('create.dnaFlow.boleroDesc')}</p>
                   {dnaFlow === "bolero" && (
                     <div className="absolute top-2.5 right-2.5">
-                      <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
+                      <div className="h-2 w-2 rounded-full bg-orange-400 animate-pulse" />
                     </div>
                   )}
                 </button>
@@ -603,7 +603,7 @@ export default function CreatePage() {
                             selectedSubStyle === styleKey
                               ? dnaFlow === "bachata"
                                 ? "border-primary/50 bg-primary/10 text-primary"
-                                : "border-blue-400/50 bg-blue-500/10 text-blue-300"
+                                : "border-orange-400/50 bg-orange-500/10 text-orange-300"
                               : "border-white/10 text-muted-foreground hover:border-white/20"
                           )}
                           onClick={() => {
@@ -642,10 +642,10 @@ export default function CreatePage() {
                     exit={{ height: 0, opacity: 0 }}
                     className="overflow-hidden mb-4"
                   >
-                    <div className="rounded-xl border border-blue-400/20 bg-blue-500/[0.04] p-4" data-testid="orchestration-panel">
+                    <div className="rounded-xl border border-orange-400/20 bg-orange-500/[0.04] p-4" data-testid="orchestration-panel">
                       <div className="flex items-center gap-2 mb-3">
-                        <SlidersHorizontal className="h-3.5 w-3.5 text-blue-400" />
-                        <span className="text-xs font-semibold text-blue-300">{t('create.dnaFlow.orchestration.title')}</span>
+                        <SlidersHorizontal className="h-3.5 w-3.5 text-orange-400" />
+                        <span className="text-xs font-semibold text-orange-300">{t('create.dnaFlow.orchestration.title')}</span>
                       </div>
                       <div className="mb-3">
                         <div className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wider">{t('create.dnaFlow.orchestration.baseLabel')}</div>
@@ -653,7 +653,7 @@ export default function CreatePage() {
                           {DGB_BOLERO_BASE_INSTRUMENTS.map((instr) => (
                             <span
                               key={instr}
-                              className="px-2 py-0.5 rounded-md bg-blue-500/15 border border-blue-400/20 text-[10px] text-blue-300"
+                              className="px-2 py-0.5 rounded-md bg-orange-500/15 border border-orange-400/20 text-[10px] text-orange-300"
                               data-testid={`base-instr-${instr}`}
                             >
                               {t(`create.dnaFlow.orchestration.instruments.${instr}`)}
@@ -672,8 +672,8 @@ export default function CreatePage() {
                                 className={cn(
                                   "px-2.5 py-1 rounded-lg border text-[11px] transition-all",
                                   isSelected
-                                    ? "border-blue-400/50 bg-blue-500/20 text-blue-200"
-                                    : "border-white/10 text-muted-foreground hover:border-blue-400/30"
+                                    ? "border-orange-400/50 bg-orange-500/20 text-orange-200"
+                                    : "border-white/10 text-muted-foreground hover:border-orange-400/30"
                                 )}
                                 onClick={() => {
                                   const next = new Set(selectedOrchestration);
@@ -838,7 +838,7 @@ export default function CreatePage() {
                       className={cn(
                         "h-10 w-10 rounded-full flex items-center justify-center transition-all duration-300",
                         canCreate && !isAnyPending
-                          ? "bg-gradient-to-r from-primary to-blue-500 text-black shadow-[0_0_20px_rgba(0,200,255,0.3)] hover:shadow-[0_0_30px_rgba(0,200,255,0.5)]"
+                          ? "bg-gradient-to-r from-primary to-pink-500 text-white shadow-[0_0_20px_rgba(255,20,147,0.3)] hover:shadow-[0_0_30px_rgba(255,20,147,0.5)]"
                           : "bg-white/10 text-muted-foreground/50 cursor-not-allowed"
                       )}
                       data-testid="button-submit"
@@ -853,14 +853,14 @@ export default function CreatePage() {
                       onClick={() => setActiveCreationMode(activeCreationMode === "sound" ? "song" : "sound")}
                       data-testid="chip-create-sound"
                     >
-                      <Sparkles className="h-3 w-3 text-blue-400" />{t('create.modes.sound')}
+                      <Sparkles className="h-3 w-3 text-orange-400" />{t('create.modes.sound')}
                     </button>
                     <button
                       className={cn("flex-shrink-0 h-8 px-3.5 rounded-full border flex items-center gap-1.5 text-xs transition-colors whitespace-nowrap", activeCreationMode === "speak" ? "border-primary/40 text-primary bg-primary/10" : "border-white/15 text-muted-foreground hover:text-foreground hover:border-white/30")}
                       onClick={() => setActiveCreationMode(activeCreationMode === "speak" ? "song" : "speak")}
                       data-testid="chip-speak-text"
                     >
-                      <MessageSquare className="h-3 w-3 text-blue-400" />{t('create.modes.speak')}
+                      <MessageSquare className="h-3 w-3 text-orange-400" />{t('create.modes.speak')}
                     </button>
                     <button className="flex-shrink-0 h-8 px-3.5 rounded-full border border-white/15 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-white/30 transition-colors whitespace-nowrap" onClick={handleRandomPrompt} data-testid="chip-random">
                       <Dices className="h-3 w-3 text-orange-400" />{t('create.random')}
@@ -945,13 +945,13 @@ export default function CreatePage() {
 
           {/* ===== CENTER: Song Feed ===== */}
           <div className="overflow-y-auto" data-testid="song-list-panel">
-            <div className="relative overflow-hidden bg-gradient-to-br from-primary/15 via-blue-600/10 to-transparent">
+            <div className="relative overflow-hidden bg-gradient-to-br from-primary/15 via-pink-600/10 to-transparent">
               <div className="px-6 py-8 xl:px-8 xl:py-10 relative z-10">
                 <h1 className="text-2xl xl:text-3xl font-bold mb-2" data-testid="text-create-title">DAGRABA Studio</h1>
                 <p className="text-sm text-muted-foreground max-w-lg">{t('create.pageTitle')} — La Pura Sangre de la Bachata con el ADN de Danny Garcia</p>
               </div>
               <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-primary/10 to-transparent rounded-full blur-3xl" />
-              <div className="absolute bottom-0 left-1/3 w-32 h-32 bg-gradient-to-tr from-blue-500/8 to-transparent rounded-full blur-2xl" />
+              <div className="absolute bottom-0 left-1/3 w-32 h-32 bg-gradient-to-tr from-pink-500/8 to-transparent rounded-full blur-2xl" />
             </div>
 
             {activeCreationMode === "song" && (
@@ -1082,7 +1082,7 @@ export default function CreatePage() {
 
               {activeSong ? (
                 <div className="space-y-5">
-                  <div className="aspect-square w-full max-w-[320px] mx-auto rounded-2xl overflow-hidden bg-gradient-to-br from-primary/20 via-blue-500/10 to-purple-500/10 flex items-center justify-center shadow-2xl shadow-primary/5">
+                  <div className="aspect-square w-full max-w-[320px] mx-auto rounded-2xl overflow-hidden bg-gradient-to-br from-primary/20 via-pink-500/10 to-purple-500/10 flex items-center justify-center shadow-2xl shadow-primary/5">
                     {activeSong.imageUrl ? (
                       <img src={activeSong.imageUrl} alt={activeSong.title || "Cover"} className="w-full h-full object-cover" />
                     ) : (
@@ -1188,7 +1188,7 @@ export default function CreatePage() {
           {mobileView === "create" && (
             <div className="p-4 sm:p-6 space-y-4">
               <div className="flex items-center gap-3 mb-2">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/30 to-blue-500/20 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/30 to-pink-500/20 flex items-center justify-center">
                   <Sparkles className="h-5 w-5 text-primary" />
                 </div>
                 <div>
@@ -1206,11 +1206,11 @@ export default function CreatePage() {
                   <div className="flex items-center gap-2"><Guitar className="h-4 w-4 text-primary" /><span className="text-xs font-bold">DAGRABACHATA</span></div>
                 </button>
                 <button
-                  className={cn("relative overflow-hidden rounded-xl p-3 text-left transition-all border-2", dnaFlow === "bolero" ? "border-blue-400 bg-blue-500/10" : "border-white/10 bg-white/[0.03]")}
+                  className={cn("relative overflow-hidden rounded-xl p-3 text-left transition-all border-2", dnaFlow === "bolero" ? "border-orange-400 bg-orange-500/10" : "border-white/10 bg-white/[0.03]")}
                   onClick={() => { if (dnaFlow === "bolero") { setDnaFlow(null); setSelectedSubStyle(null); setSelectedStyleKit(undefined); } else { setDnaFlow("bolero"); setSelectedSubStyle(null); setSelectedGenre("Bolero"); const k = styleKits?.find(k => k.genre === "dgb_bolero"); if (k) setSelectedStyleKit(k.id); } }}
                   data-testid="mobile-dna-bolero"
                 >
-                  <div className="flex items-center gap-2"><Music className="h-4 w-4 text-blue-400" /><span className="text-xs font-bold">DAGRABOLERO</span></div>
+                  <div className="flex items-center gap-2"><Music className="h-4 w-4 text-orange-400" /><span className="text-xs font-bold">DAGRABOLERO</span></div>
                 </button>
               </div>
 
@@ -1219,7 +1219,7 @@ export default function CreatePage() {
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                     <div className="flex gap-2 flex-wrap">
                       {(dnaFlow === "bachata" ? BACHATA_STYLE_KEYS : BOLERO_STYLE_KEYS).map((sk) => (
-                        <button key={sk} className={cn("px-3 py-1.5 rounded-lg border text-xs", selectedSubStyle === sk ? (dnaFlow === "bachata" ? "border-primary/50 bg-primary/10 text-primary" : "border-blue-400/50 bg-blue-500/10 text-blue-300") : "border-white/10 text-muted-foreground")}
+                        <button key={sk} className={cn("px-3 py-1.5 rounded-lg border text-xs", selectedSubStyle === sk ? (dnaFlow === "bachata" ? "border-primary/50 bg-primary/10 text-primary" : "border-orange-400/50 bg-orange-500/10 text-orange-300") : "border-white/10 text-muted-foreground")}
                           onClick={() => {
                             const des = selectedSubStyle === sk;
                             setSelectedSubStyle(des ? null : sk);
@@ -1262,7 +1262,7 @@ export default function CreatePage() {
                       <Dices className="h-3.5 w-3.5 text-orange-400" />{t('create.random')}
                     </button>
                     <div className="flex-1" />
-                    <button onClick={handleSubmit} disabled={isAnyPending || !canCreate} className={cn("h-11 w-11 rounded-full flex items-center justify-center transition-all", canCreate && !isAnyPending ? "bg-gradient-to-r from-primary to-blue-500 text-black shadow-[0_0_20px_rgba(0,200,255,0.3)]" : "bg-white/10 text-muted-foreground/50 cursor-not-allowed")} data-testid="mobile-btn-submit">
+                    <button onClick={handleSubmit} disabled={isAnyPending || !canCreate} className={cn("h-11 w-11 rounded-full flex items-center justify-center transition-all", canCreate && !isAnyPending ? "bg-gradient-to-r from-primary to-pink-500 text-white shadow-[0_0_20px_rgba(255,20,147,0.3)]" : "bg-white/10 text-muted-foreground/50 cursor-not-allowed")} data-testid="mobile-btn-submit">
                       {isAnyPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowRight className="h-5 w-5" />}
                     </button>
                   </div>
@@ -1280,7 +1280,7 @@ export default function CreatePage() {
 
           {mobileView === "songs" && (
             <div className="p-4 sm:p-6">
-              <div className="bg-gradient-to-br from-primary/15 via-blue-600/10 to-transparent rounded-xl p-5 mb-5">
+              <div className="bg-gradient-to-br from-primary/15 via-pink-600/10 to-transparent rounded-xl p-5 mb-5">
                 <h1 className="text-xl font-bold mb-1">DAGRABA Studio</h1>
                 <p className="text-xs text-muted-foreground">{t('create.pageTitle')}</p>
               </div>
@@ -1337,7 +1337,7 @@ export default function CreatePage() {
               </button>
               {activeSong && (
                 <div className="space-y-5">
-                  <div className="aspect-square w-full max-w-[300px] mx-auto rounded-2xl overflow-hidden bg-gradient-to-br from-primary/20 via-blue-500/10 to-purple-500/10 flex items-center justify-center">
+                  <div className="aspect-square w-full max-w-[300px] mx-auto rounded-2xl overflow-hidden bg-gradient-to-br from-primary/20 via-pink-500/10 to-purple-500/10 flex items-center justify-center">
                     {activeSong.imageUrl ? <img src={activeSong.imageUrl} alt="" className="w-full h-full object-cover" /> : <Music className="h-16 w-16 text-primary/25" />}
                   </div>
                   <div className="text-center">

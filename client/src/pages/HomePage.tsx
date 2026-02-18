@@ -37,7 +37,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import dgbLogo from "@assets/DGB2_1771378545651.png";
+import dgbLogo from "@assets/IMG_4931_1771382182342.png";
 
 const HERO_SLIDES = [
   {
@@ -48,7 +48,7 @@ const HERO_SLIDES = [
     ctaUrl: "/studio",
     cta2: "Crear Canción",
     cta2Url: "/create",
-    gradient: "from-primary/30 via-blue-600/20 to-purple-600/10",
+    gradient: "from-primary/30 via-pink-600/20 to-purple-600/10",
     accentColor: "primary",
   },
   {
@@ -57,8 +57,8 @@ const HERO_SLIDES = [
     subtitle: "Crea bachata auténtica con instrumentos originales DGB — requinto, bongó, güira, y más. ADN Protegido.",
     cta: "Crear Bachata",
     ctaUrl: "/create?genre=Bachata",
-    gradient: "from-cyan-500/25 via-primary/15 to-blue-600/10",
-    accentColor: "cyan",
+    gradient: "from-pink-500/25 via-primary/15 to-pink-600/10",
+    accentColor: "pink",
   },
   {
     id: 3,
@@ -66,8 +66,8 @@ const HERO_SLIDES = [
     subtitle: "Bolero con alma dominicana. Orquestación completa con piano, violines, cuerdas y voces armónicas.",
     cta: "Crear Bolero",
     ctaUrl: "/create?genre=Bolero",
-    gradient: "from-blue-500/25 via-indigo-500/15 to-purple-500/10",
-    accentColor: "blue",
+    gradient: "from-pink-500/25 via-pink-500/15 to-purple-500/10",
+    accentColor: "pink",
   },
   {
     id: 4,
@@ -90,19 +90,19 @@ const HERO_SLIDES = [
 ];
 
 const FEATURED_GENRES = [
-  { name: "DAGRABACHATA", Icon: Guitar, color: "from-primary to-cyan-400" },
-  { name: "DAGRABOLERO", Icon: Music2, color: "from-blue-500 to-indigo-400" },
+  { name: "DAGRABACHATA", Icon: Guitar, color: "from-primary to-pink-400" },
+  { name: "DAGRABOLERO", Icon: Music2, color: "from-pink-500 to-pink-400" },
   { name: "Salsa", Icon: Flame, color: "from-red-500 to-orange-400" },
   { name: "Merengue", Icon: Drum, color: "from-yellow-500 to-amber-400" },
   { name: "Reggaeton", Icon: Volume2, color: "from-purple-500 to-pink-400" },
   { name: "R&B", Icon: Mic, color: "from-rose-500 to-pink-400" },
   { name: "Hip Hop", Icon: Headphones, color: "from-gray-600 to-gray-400" },
-  { name: "EDM", Icon: Waves, color: "from-blue-400 to-cyan-300" },
+  { name: "EDM", Icon: Waves, color: "from-pink-400 to-orange-300" },
 ];
 
 const QUICK_ACTIONS = [
   { title: "Crear Canción", desc: "IA genera tu música", icon: Sparkles, url: "/create", color: "text-primary" },
-  { title: "Studio", desc: "Edita y mezcla", icon: Scissors, url: "/studio", color: "text-blue-400" },
+  { title: "Studio", desc: "Edita y mezcla", icon: Scissors, url: "/studio", color: "text-pink-400" },
   { title: "Sample Lab", desc: "Graba y sube audio", icon: Mic, url: "/sample-lab", color: "text-purple-400" },
   { title: "Descubrir", desc: "Explora música", icon: Globe, url: "/discover", color: "text-emerald-400" },
 ];
@@ -160,9 +160,9 @@ export default function HomePage() {
               />
             </AnimatePresence>
 
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(0,200,255,0.08),transparent_60%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,20,147,0.08),transparent_60%)]" />
             <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-bl from-primary/8 to-transparent rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-1/4 w-56 h-56 bg-gradient-to-tr from-blue-500/6 to-transparent rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-1/4 w-56 h-56 bg-gradient-to-tr from-pink-500/6 to-transparent rounded-full blur-3xl" />
 
             <div className="relative z-10 flex items-center min-h-[280px] sm:min-h-[320px] lg:min-h-[360px] xl:min-h-[400px]">
               <div className="w-full px-6 sm:px-8 lg:px-10 xl:px-12 py-8">
@@ -171,7 +171,7 @@ export default function HomePage() {
                     <img
                       src={dgbLogo}
                       alt="DAGRABA"
-                      className="h-24 w-24 lg:h-32 lg:w-32 xl:h-36 xl:w-36 object-contain drop-shadow-[0_0_30px_rgba(0,200,255,0.3)]"
+                      className="h-24 w-24 lg:h-32 lg:w-32 xl:h-36 xl:w-36 object-contain drop-shadow-[0_0_30px_rgba(255,20,147,0.3)]"
                     />
                   </div>
                   <div className="flex-1">
@@ -200,7 +200,7 @@ export default function HomePage() {
                           </Button>
                           {slide.cta2 && (
                             <Button
-                              className="bg-gradient-to-r from-primary to-blue-500 text-black font-semibold shadow-[0_0_20px_rgba(0,200,255,0.25)]"
+                              className="bg-gradient-to-r from-primary to-pink-500 text-white font-semibold shadow-[0_0_20px_rgba(255,20,147,0.25)]"
                               onClick={() => setLocation(slide.cta2Url!)}
                               data-testid="hero-cta-secondary"
                             >
@@ -396,7 +396,7 @@ export default function HomePage() {
 
             {/* RIGHT SIDEBAR INFO */}
             <div className="space-y-5" data-testid="section-sidebar-info">
-              <Card className="p-4 border-white/5 bg-gradient-to-br from-primary/5 to-blue-500/5">
+              <Card className="p-4 border-white/5 bg-gradient-to-br from-primary/5 to-pink-500/5">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
                     <Crown className="h-4 w-4 text-primary" />
@@ -406,7 +406,7 @@ export default function HomePage() {
                     <p className="text-[11px] text-muted-foreground">Más créditos, mejores modelos</p>
                   </div>
                 </div>
-                <Button size="sm" className="w-full bg-gradient-to-r from-primary to-blue-500 text-black font-semibold" onClick={() => setLocation("/pricing")} data-testid="button-go-pro">
+                <Button size="sm" className="w-full bg-gradient-to-r from-primary to-pink-500 text-white font-semibold" onClick={() => setLocation("/pricing")} data-testid="button-go-pro">
                   Upgrade
                 </Button>
               </Card>
@@ -438,7 +438,7 @@ export default function HomePage() {
 
               <Card className="p-4 border-white/5 bg-white/[0.02]">
                 <div className="flex items-center gap-2 mb-2">
-                  <Users className="h-4 w-4 text-blue-400" />
+                  <Users className="h-4 w-4 text-pink-400" />
                   <h3 className="text-sm font-semibold">Comunidad</h3>
                 </div>
                 <p className="text-xs text-muted-foreground mb-3">Únete a artistas creando música con DAGRABA Studio</p>
