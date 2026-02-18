@@ -151,7 +151,7 @@ function DatasetListView({ onSelect, onCreate }: { onSelect: (id: number) => voi
                     <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> {ds.promptFileCount || 0} Prompts</span>
                     <span className="flex items-center gap-1"><Play className="h-3 w-3" /> {ds.renderFileCount || 0} Renders</span>
                     <span>{formatBytes(ds.totalSizeBytes || 0)}</span>
-                    <span>Fuente: {ds.sourceType}</span>
+                    <span>Fuente: {ds.sourceType === "million_song" ? "MSD" : ds.sourceType}</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     <StepBadge status={ds.stepCleanMidi || "pending"} />
@@ -250,6 +250,7 @@ function CreateDatasetView({ onBack }: { onBack: () => void }) {
               {[
                 { id: "custom", label: "Custom Upload" },
                 { id: "lakh_clean", label: "Lakh MIDI (Clean)" },
+                { id: "million_song", label: "Million Song Dataset" },
                 { id: "midi_dataset", label: "craffel/midi-dataset" },
               ].map((src) => (
                 <Button
@@ -264,6 +265,31 @@ function CreateDatasetView({ onBack }: { onBack: () => void }) {
                 </Button>
               ))}
             </div>
+            {sourceType === "million_song" && (
+              <div className="mt-3 border rounded-md p-3 space-y-2 bg-muted/30" data-testid="msd-info-panel">
+                <p className="text-xs font-medium text-primary">Million Song Dataset (MSD)</p>
+                <p className="text-xs text-muted-foreground">300GB con instrumentos pre-entrenados y MIDIs via Lakh mapping.</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">AWS Snapshot:</span>
+                    <span className="ml-1 font-mono">snap-5178cf30</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Subset:</span>
+                    <span className="ml-1">10K songs (1.8 GB)</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Full:</span>
+                    <span className="ml-1">272 GB (us-east-1)</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Formato:</span>
+                    <span className="ml-1">HDF5 + SQLite</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Incluye: vectores timbre/chroma 12-dim por beat, metadata artistas, tags, similaridad, año.</p>
+              </div>
+            )}
           </div>
           <Button
             onClick={() => createMutation.mutate({ name, description, sourceType })}
@@ -377,7 +403,7 @@ function DatasetDetailView({ id, onBack }: { id: number; onBack: () => void }) {
               <CardTitle className="text-base">{dataset.name}</CardTitle>
               {dataset.description && <CardDescription>{dataset.description}</CardDescription>}
             </div>
-            <Badge variant="outline">{dataset.sourceType}</Badge>
+            <Badge variant={dataset.sourceType === "million_song" ? "default" : "outline"}>{dataset.sourceType === "million_song" ? "MSD" : dataset.sourceType}</Badge>
           </div>
         </CardHeader>
         <CardContent>
@@ -399,6 +425,39 @@ function DatasetDetailView({ id, onBack }: { id: number; onBack: () => void }) {
               <p className="text-lg font-semibold" data-testid="text-total-size">{formatBytes(dataset.totalSizeBytes || 0)}</p>
             </div>
           </div>
+
+          {dataset.sourceType === "million_song" && (
+            <div className="border rounded-md p-3 space-y-2 bg-muted/30" data-testid="msd-detail-panel">
+              <p className="text-sm font-medium text-primary">Million Song Dataset</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground">AWS Snapshot:</span>
+                  <span className="ml-1 font-mono">snap-5178cf30</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Region:</span>
+                  <span className="ml-1">us-east-1</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Full Size:</span>
+                  <span className="ml-1">272 GB</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Subset:</span>
+                  <span className="ml-1">10K songs (1.8 GB)</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Formato:</span>
+                  <span className="ml-1">HDF5 + SQLite</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Lakh Mapping:</span>
+                  <span className="ml-1">178K MIDIs</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Instrumentos pre-entrenados: vectores timbre/chroma 12-dim por beat, artist terms, MusicBrainz tags, similaridad, geo data.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

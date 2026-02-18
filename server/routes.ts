@@ -6297,6 +6297,7 @@ IMPORTANT GUIDELINES:
       ],
       sources: [
         { id: "lakh_clean", name: "Lakh MIDI Dataset (Clean)", url: "https://colinraffel.com/projects/lmd/", description: "178,561 clean MIDI files from the Lakh MIDI Dataset" },
+        { id: "million_song", name: "Million Song Dataset", url: "https://labrosa.ee.columbia.edu/millionsong/", description: "300GB dataset with pre-trained instrument features (timbre/chroma vectors), MIDIs via Lakh mapping. AWS snapshot: snap-5178cf30. Subset: 10K songs (1.8GB).", awsSnapshot: "snap-5178cf30", subsetSize: "10,000 songs (1.8 GB)", fullSize: "272 GB (493 GB partition)", features: ["12-dim chroma vectors per beat", "12-dim timbre vectors per beat", "HDF5 format with metadata", "SQLite databases (tracks, artists, tags, similarity)", "Artist terms, MusicBrainz tags, geo data", "Year predictions for 515,576 tracks"] },
         { id: "custom", name: "Custom Upload", description: "Upload your own MIDI files for training" },
         { id: "midi_dataset", name: "craffel/midi-dataset", url: "https://github.com/craffel/midi-dataset", description: "MIDI-audio matching and alignment tools by Colin Raffel" },
       ],
