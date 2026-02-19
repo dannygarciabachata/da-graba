@@ -59,8 +59,16 @@ export async function generateFullCreativePackage(
 }
 
 const GENRE_INSTRUMENT_MAP: Record<string, string> = {
-  "bachata": "tight Dominican bachata band playing together in perfect sync, warm nylon guitar rhythm with melodic picking, smooth Latin groove, romantic and intimate feel, professional studio recording, cohesive ensemble, 130 BPM",
-  "bolero": "intimate romantic bolero ensemble, soft nylon guitar arpeggios with gentle piano chords, slow and emotional Latin ballad, warm and dreamy production, cohesive arrangement, 80 BPM",
+  "bachata": "tight Dominican bachata band, warm nylon requinto guitar melodic picking over syncopated segunda rhythm, bongó derecho groove with güira metallic pulse, electric bass walking lines, romantic intimate feel, cohesive ensemble, professional studio, 130 BPM, 4/4",
+  "bachata tradicional": "authentic Dominican bachata tradicional, requinto nylon guitar melodic phrasing, segunda guitarra syncopated strumming, bongó with hand-played derecho pattern, güira metallic scraping rhythm, electric bass walking lines, warm romantic intimate feel, classic Dominican sound, 130 BPM, 4/4",
+  "bachata moderna": "modern bachata fusion with R&B influence, requinto guitar over contemporary chord voicings, segunda rhythm with modern feel, bongó groove, güira pulse, electric bass with funk influence, lush pad atmospherics, violin string arrangement, polished production, 125 BPM, 4/4",
+  "bachata sensual": "slow sensual bachata, soft melodic requinto guitar arpeggios, gentle segunda rhythm, subtle bongó groove, light güira shimmer, prominent bass line, warm pad layers, smooth violin strings, intimate romantic atmosphere, slow tempo, 115 BPM, 4/4",
+  "bachata urbana": "urban bachata with trap influence, requinto guitar with effects processing, segunda rhythm over modern production, bongó with electronic enhancement, punchy bass, synth pad atmosphere, contemporary Latin urban sound, 120 BPM, 4/4",
+  "bachata rosa": "bachata rosa ballad, delicate requinto guitar melodic lines, soft segunda strumming, gentle bongó, light güira, warm bass, lush violin and cello strings, piano embellishments, dreamy romantic atmosphere, sweet and tender, 120 BPM, 4/4",
+  "bolero": "intimate bolero ballad, expressive nylon requinto guitar arpeggios with tremolo, gentle segunda accompaniment, soft bongó brushwork, warm piano chords, lush violin and cello string arrangement, emotional and romantic, slow tempo, 78 BPM, 4/4",
+  "bolero romantico": "classic romantic bolero, expressive requinto with vibrato and tremolo, segunda guitar warm harmonic support, soft bongó and conga, piano with rich voicings, full violin and cello orchestral strings, pad atmosphere, intimate and deeply emotional, 75 BPM, 4/4",
+  "bolero moderno": "modern bolero with contemporary arrangement, requinto melodic phrasing, segunda support, piano with elegant voicings, cinematic string section, atmospheric pad layers, polished production maintaining romantic essence, 80 BPM, 4/4",
+  "bolero son": "bolero with Cuban son flavor, requinto guitar over tres-inspired guajeo, bongó with martillo pattern, claves 3-2, bass walking line, warm Caribbean romantic feel, Afro-Cuban groove, 85 BPM, 4/4",
   "salsa": "tight salsa band with driving piano montuno and brass hits, energetic Latin dance groove, professional big band sound, all instruments locked in together, 180 BPM",
   "merengue": "fast energetic merengue band, driving accordion melody with tight drum pattern, upbeat Caribbean dance music, cohesive festive sound, 160 BPM",
   "reggaeton": "modern reggaeton beat with deep bass and crisp hi-hats, urban Latin groove, polished club production, tight rhythm section, 90 BPM",
@@ -97,38 +105,59 @@ const GENRE_INSTRUMENT_MAP: Record<string, string> = {
   "drum & bass": "fast drum and bass production, breakbeat drums with deep sub-bass and atmospheric pads, high-energy electronic, 174 BPM",
 };
 
-export async function enrichPromptForMusicGen(
-  userPrompt: string,
-  genre: string
-): Promise<string> {
-  try {
-    const genreLower = genre.toLowerCase()
+function resolveGenreHints(genre: string, substyle?: string): string {
+  const genreLower = genre.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/-/g, " ").trim();
+
+  if (substyle) {
+    const substyleLower = substyle.toLowerCase()
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .replace(/-/g, " ").trim();
-    const genreHints = GENRE_INSTRUMENT_MAP[genreLower] || GENRE_INSTRUMENT_MAP[genreLower.replace(/\s+/g, "_")] || GENRE_INSTRUMENT_MAP["bachata"];
+    const compositeKey = `${genreLower} ${substyleLower}`;
+    if (GENRE_INSTRUMENT_MAP[compositeKey]) return GENRE_INSTRUMENT_MAP[compositeKey];
+  }
+
+  return GENRE_INSTRUMENT_MAP[genreLower]
+    || GENRE_INSTRUMENT_MAP[genreLower.replace(/\s+/g, "_")]
+    || GENRE_INSTRUMENT_MAP["bachata"];
+}
+
+export async function enrichPromptForMusicGen(
+  userPrompt: string,
+  genre: string,
+  substyle?: string
+): Promise<string> {
+  try {
+    const genreHints = resolveGenreHints(genre, substyle);
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: `You are a music prompt engineer for AI music generation models.
+          content: `You are a music prompt engineer for Stable Audio Open (SAO), an AI music generation model trained on instrumental audio.
 
 CRITICAL RULES:
-- Output ONLY a short English music description (under 200 chars)
-- ALWAYS START with the genre name and its signature rhythm feel (e.g. "bachata groove", "bolero ballad", "salsa dance")
-- Describe the OVERALL SOUND as a cohesive band, NOT individual instruments
-- Include the BPM and time signature from the genre reference
-- Focus on FEEL (tight, warm, groovy, intimate, energetic) and RHYTHM PATTERN
+- Output ONLY a short English music description (max 200 chars)
+- START with the genre name and its signature rhythm feel (e.g. "bachata groove", "bolero ballad")
+- Describe the OVERALL SOUND as a cohesive ensemble playing together
+- Include BPM and time signature from the genre reference
+- Focus on FEEL (tight, warm, groovy, intimate, energetic), TEXTURE (warm, bright, lush), and RHYTHM PATTERN
+- Mention 2-3 key sonic elements that define the genre (e.g. "nylon guitar rhythm with hand percussion")
 - Translate Spanish/other languages to English
-- NO lyrics, NO singing instructions, NO vocal descriptions
+- NO lyrics, NO singing, NO vocal descriptions — this is INSTRUMENTAL ONLY
+- NO long instrument lists — describe the BAND SOUND, not individual parts
 
 GOOD examples:
-- "romantic bachata groove, tight Latin guitar rhythm with smooth percussion, warm intimate Dominican feel, syncopated rhythm, 130 BPM, studio quality"
-- "slow bolero ballad, soft guitar arpeggios with gentle rhythmic accompaniment, intimate and emotional, 80 BPM, professional recording"
-- "energetic salsa dance groove, tight horn section with driving piano rhythm, clave pattern, 180 BPM, professional big band sound"
+- "romantic bachata groove, warm nylon guitar rhythm with syncopated hand percussion, intimate Dominican feel, tight ensemble, 130 BPM, studio quality"
+- "slow bolero ballad, gentle guitar arpeggios with lush string arrangement, deeply emotional and intimate, 78 BPM, professional orchestral recording"
+- "energetic salsa dance groove, driving piano montuno with tight brass and percussion, clave rhythm, 180 BPM, big band sound"
+- "sensual bachata, soft melodic guitar over gentle percussion groove, warm pad layers with smooth strings, intimate slow-dance feel, 115 BPM"
 
-BAD example: "requinto guitar arpeggios, segunda guitar strumming, bongo drums, guira scraping, electric bass" (too many separate instruments = messy output)
+BAD examples:
+- "requinto guitar arpeggios, segunda guitar strumming, bongo drums, guira scraping, electric bass" (instrument laundry list)
+- "a beautiful song with vocals singing about love" (has vocals — SAO is instrumental only)
 
 Genre reference: ${genreHints}`
         },
@@ -142,17 +171,14 @@ Genre reference: ${genreHints}`
 
     const enriched = completion.choices[0].message.content?.trim();
     if (enriched && enriched.length > 10) {
-      console.log(`[PromptEnrich] "${userPrompt}" → "${enriched}"`);
+      console.log(`[PromptEnrich] "${userPrompt}" (${genre}${substyle ? '/' + substyle : ''}) → "${enriched}"`);
       return enriched;
     }
   } catch (err: any) {
     console.log(`[PromptEnrich] OpenAI enrichment failed: ${err.message}, using fallback`);
   }
 
-  const genreLower = genre.toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/-/g, " ").trim();
-  const hints = GENRE_INSTRUMENT_MAP[genreLower] || GENRE_INSTRUMENT_MAP[genreLower.replace(/\s+/g, "_")] || GENRE_INSTRUMENT_MAP["bachata"];
+  const hints = resolveGenreHints(genre, substyle);
   const fallback = `${genre} music, ${hints}`;
   console.log(`[PromptEnrich] Fallback prompt: "${fallback}"`);
   return fallback;

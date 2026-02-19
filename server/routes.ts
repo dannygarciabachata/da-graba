@@ -6945,6 +6945,288 @@ IMPORTANT GUIDELINES:
     });
   });
 
+  app.post("/api/admin/training-datasets/:id/generate-prompts", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const user = await storage.getUser((req.user as any).claims.sub);
+    if (!user || !["super_admin", "admin"].includes(user.role || "")) return res.sendStatus(403);
+    try {
+      const datasetId = Number(req.params.id);
+      const dataset = await storage.getTrainingDataset(datasetId);
+      if (!dataset) return res.sendStatus(404);
+
+      const genreStyles = await storage.getGenreStyles();
+      const activeStyles = genreStyles.filter(s => s.isActive);
+      if (activeStyles.length === 0) {
+        return res.status(400).json({ message: "No hay estilos de género activos para generar prompts." });
+      }
+
+      const prompts: Array<{ genre: string; style: string; slug: string; prompt: string; instruments: string[]; bpm: string }> = [];
+
+      for (const style of activeStyles) {
+        const genreKey = `${style.genre}_${style.slug}`.toLowerCase();
+        const hintFromMap = GENRE_STYLE_HINTS[genreKey] || GENRE_STYLE_HINTS[style.genre] || "";
+        const baseInstruments = style.baseInstruments || [];
+        const extraInstruments = style.extraInstruments || [];
+        const allInstruments = [...baseInstruments, ...extraInstruments];
+
+        const variations = [
+          { tempo: "slow", energy: "intimate", mood: "romantic" },
+          { tempo: "medium", energy: "warm", mood: "nostalgic" },
+          { tempo: "upbeat", energy: "energetic", mood: "festive" },
+          { tempo: "moderate", energy: "smooth", mood: "melancholic" },
+          { tempo: "lively", energy: "bright", mood: "joyful" },
+        ];
+
+        for (const variation of variations) {
+          const promptText = `${style.genre} ${style.name} - ${variation.mood} ${variation.energy} feel, ${variation.tempo} tempo. ${style.promptHint || hintFromMap}. Instruments: ${allInstruments.join(", ")}`;
+          const bpmHint = style.promptHint?.match(/\d{2,3}\s*BPM/i)?.[0] || hintFromMap.match(/\d{2,3}\s*BPM/i)?.[0] || "";
+          prompts.push({
+            genre: style.genre,
+            style: style.name,
+            slug: style.slug,
+            prompt: promptText,
+            instruments: allInstruments,
+            bpm: bpmHint,
+          });
+        }
+      }
+
+      await storage.updateTrainingDataset(datasetId, {
+        stepPrompts: "completed",
+        promptFileCount: prompts.length,
+        config: {
+          generatedAt: new Date().toISOString(),
+          totalPrompts: prompts.length,
+          genres: Array.from(new Set(activeStyles.map(s => s.genre))),
+          styles: activeStyles.map(s => `${s.genre}/${s.name}`),
+        } as any,
+      });
+
+      console.log(`[Training] Generated ${prompts.length} prompts for dataset ${datasetId} from ${activeStyles.length} genre styles`);
+      res.json({ success: true, prompts, count: prompts.length });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/training-datasets/:id/launch-training", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const user = await storage.getUser((req.user as any).claims.sub);
+    if (!user || !["super_admin"].includes(user.role || "")) return res.sendStatus(403);
+    try {
+      const datasetId = Number(req.params.id);
+      const dataset = await storage.getTrainingDataset(datasetId);
+      if (!dataset) return res.sendStatus(404);
+
+      const { styleKitId, learningRate, batchSize, epochs } = req.body;
+
+      let kit = null;
+      if (styleKitId) {
+        kit = await storage.getStyleKit(Number(styleKitId));
+        if (!kit) return res.status(400).json({ message: "Style Kit no encontrado" });
+      }
+
+      const { isServerlessConfigured } = await import("./core/runpod_serverless");
+      if (!isServerlessConfigured("training")) {
+        return res.status(400).json({
+          message: "RunPod Training endpoint no configurado. Configure RUNPOD_ENDPOINT_TRAINING.",
+          configured: false,
+        });
+      }
+
+      const replitDomains = process.env.REPLIT_DOMAINS?.split(",")[0];
+      const replitDevDomain = process.env.REPLIT_DEV_DOMAIN;
+      const domain = replitDomains || replitDevDomain || "localhost:5000";
+      const base = domain.startsWith("http") ? domain : `https://${domain}`;
+      const webhookUrl = `${base.replace(/\/$/, "")}/api/webhooks/training-complete`;
+
+      const trainingPayload = {
+        action: "train_sao",
+        dataset_id: datasetId,
+        kit_id: styleKitId || null,
+        kit_name: kit?.name || dataset.name,
+        kit_genre: kit?.genre || "bachata",
+        training_config: {
+          model_type: "diffusion_cond",
+          sample_rate: 44100,
+          audio_channels: 2,
+          learning_rate: learningRate || 5e-5,
+          batch_size: batchSize || 1,
+          epochs: epochs || 100,
+          use_ema: true,
+          demo_every: 1000,
+        },
+        webhook_url: webhookUrl,
+      };
+
+      const { submitJob } = await import("./core/runpod_serverless");
+      const job = await submitJob("training", trainingPayload, webhookUrl);
+
+      const existingConfig = typeof dataset.config === 'object' && dataset.config ? dataset.config : {};
+      await storage.updateTrainingDataset(datasetId, {
+        status: "training",
+        stepRendering: "running",
+        config: {
+          ...(existingConfig as any),
+          trainingJobId: job.id,
+          trainingStarted: new Date().toISOString(),
+          trainingConfig: trainingPayload.training_config,
+          kitName: kit?.name || dataset.name,
+        } as any,
+      });
+
+      if (kit) {
+        await storage.updateStyleKit(kit.id, {
+          trainingStatus: "training",
+          trainingJobId: job.id,
+          pipelineStep: "train",
+        });
+      }
+
+      console.log(`[Training] Launched SAO training job ${job.id} for dataset ${datasetId}${kit ? ` (kit: ${kit.name})` : ""}`);
+      res.json({
+        success: true,
+        jobId: job.id,
+        status: job.status,
+        message: `Entrenamiento SAO lanzado en RunPod (Job: ${job.id})`,
+      });
+    } catch (err: any) {
+      console.error(`[Training] Launch failed:`, err);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/admin/training-datasets/:id/training-status", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const user = await storage.getUser((req.user as any).claims.sub);
+    if (!user || !["super_admin", "admin"].includes(user.role || "")) return res.sendStatus(403);
+    try {
+      const datasetId = Number(req.params.id);
+      const dataset = await storage.getTrainingDataset(datasetId);
+      if (!dataset) return res.sendStatus(404);
+
+      const config: any = typeof dataset.config === 'object' && dataset.config ? dataset.config : {};
+
+      const jobId = config.trainingJobId;
+      if (!jobId) {
+        return res.json({
+          status: dataset.status || "idle",
+          jobId: null,
+          message: "No hay trabajo de entrenamiento activo.",
+        });
+      }
+
+      try {
+        const { getJobStatus, isServerlessConfigured } = await import("./core/runpod_serverless");
+        if (isServerlessConfigured("training")) {
+          const jobStatus = await getJobStatus("training", jobId);
+          const isComplete = jobStatus.status === "COMPLETED";
+          const isFailed = jobStatus.status === "FAILED";
+
+          if (isComplete || isFailed) {
+            await storage.updateTrainingDataset(datasetId, {
+              status: isComplete ? "completed" : "failed",
+              stepRendering: isComplete ? "completed" : "failed",
+            });
+          }
+
+          return res.json({
+            status: jobStatus.status,
+            jobId,
+            output: jobStatus.output || null,
+            error: jobStatus.error || null,
+            executionTime: jobStatus.executionTime || null,
+            trainingStarted: config.trainingStarted || null,
+          });
+        }
+      } catch (pollErr: any) {
+        console.log(`[Training] Status poll failed for job ${jobId}: ${pollErr.message}`);
+      }
+
+      res.json({
+        status: dataset.status || "unknown",
+        jobId,
+        message: "No se pudo verificar el estado en RunPod. El webhook notificará cuando complete.",
+        trainingStarted: config.trainingStarted || null,
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/webhooks/training-complete", async (req, res) => {
+    try {
+      const { id, status, output } = req.body;
+      console.log(`[Training Webhook] Received: job=${id}, status=${status}`);
+
+      const datasets = await storage.getTrainingDatasets();
+      let targetDataset = null;
+      for (const ds of datasets) {
+        const dsConfig: any = typeof ds.config === 'object' && ds.config ? ds.config : {};
+        if (dsConfig.trainingJobId === id) {
+          targetDataset = ds;
+          break;
+        }
+      }
+
+      if (targetDataset) {
+        const isComplete = status === "COMPLETED";
+        const existingCfg: any = typeof targetDataset.config === 'object' && targetDataset.config ? targetDataset.config : {};
+        await storage.updateTrainingDataset(targetDataset.id, {
+          status: isComplete ? "completed" : "failed",
+          stepRendering: isComplete ? "completed" : "failed",
+          config: {
+            ...existingCfg,
+            trainingCompleted: new Date().toISOString(),
+            trainingOutput: output || null,
+            finalStatus: status,
+          } as any,
+        });
+
+        if (existingCfg.kitName) {
+          const kits = await storage.getStyleKits();
+          const kit = kits.find(k => k.name === existingCfg.kitName);
+          if (kit) {
+            await storage.updateStyleKit(kit.id, {
+              trainingStatus: isComplete ? "completed" : "failed",
+              pipelineStep: isComplete ? "ready" : "train",
+              trainedModelUrl: isComplete && output?.model_url ? output.model_url : null,
+              lastTrainedAt: isComplete ? new Date() : null,
+            });
+          }
+        }
+
+        console.log(`[Training Webhook] Dataset ${targetDataset.id} updated: ${isComplete ? "completed" : "failed"}`);
+      }
+
+      res.json({ received: true });
+    } catch (err: any) {
+      console.error("[Training Webhook] Error:", err);
+      res.json({ received: true, error: err.message });
+    }
+  });
+
+  app.get("/api/admin/style-kits-for-training", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const user = await storage.getUser((req.user as any).claims.sub);
+    if (!user || !["super_admin", "admin"].includes(user.role || "")) return res.sendStatus(403);
+    try {
+      const kits = await storage.getStyleKits();
+      res.json(kits.map(k => ({
+        id: k.id,
+        name: k.name,
+        genre: k.genre,
+        description: k.description,
+        trainingStatus: k.trainingStatus,
+        trainingPrompt: k.trainingPrompt,
+        pipelineStep: k.pipelineStep,
+        lastTrainedAt: k.lastTrainedAt,
+      })));
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/runpod-deploy/:file", (req, res) => {
     const file = req.params.file;
     const allowed: Record<string, string> = {

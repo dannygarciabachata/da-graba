@@ -11,7 +11,7 @@ import {
   Plus, Trash2, Upload, Loader2, Music, FileText,
   Play, CheckCircle, XCircle, Clock, ArrowLeft,
   Database, FolderOpen, Zap, ExternalLink, Search,
-  Piano, HardDrive, RefreshCw, Download,
+  Piano, HardDrive, RefreshCw, Download, Rocket, BarChart3, Sparkles,
 } from "lucide-react";
 import type { TrainingDataset, TrainingFile } from "@shared/schema";
 
@@ -941,6 +941,8 @@ function DatasetDetailView({ id, onBack }: { id: number; onBack: () => void }) {
         </CardContent>
       </Card>
 
+      <TrainingControlsCard datasetId={id} dataset={dataset} />
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1029,6 +1031,246 @@ function DatasetDetailView({ id, onBack }: { id: number; onBack: () => void }) {
         </Card>
       )}
     </div>
+  );
+}
+
+function TrainingControlsCard({ datasetId, dataset }: { datasetId: number; dataset: TrainingDataset }) {
+  const [generatingPrompts, setGeneratingPrompts] = useState(false);
+  const [launchingTraining, setLaunchingTraining] = useState(false);
+  const [pollingStatus, setPollingStatus] = useState(false);
+  const [generatedPrompts, setGeneratedPrompts] = useState<any[] | null>(null);
+  const [trainingStatus, setTrainingStatus] = useState<any>(null);
+  const [selectedKit, setSelectedKit] = useState<string>("");
+  const { toast } = useToast();
+
+  const { data: styleKits } = useQuery<any[]>({
+    queryKey: ["/api/admin/style-kits-for-training"],
+  });
+
+  const generatePrompts = async () => {
+    setGeneratingPrompts(true);
+    try {
+      const res = await apiRequest("POST", `/api/admin/training-datasets/${datasetId}/generate-prompts`);
+      const data = await res.json();
+      if (data.success) {
+        setGeneratedPrompts(data.prompts);
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/training-datasets", datasetId] });
+        toast({ title: "Prompts Generados", description: `${data.count} prompts creados desde los estilos de genero activos.` });
+      } else {
+        toast({ title: "Error", description: data.message, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setGeneratingPrompts(false);
+    }
+  };
+
+  const launchTraining = async () => {
+    setLaunchingTraining(true);
+    try {
+      const res = await apiRequest("POST", `/api/admin/training-datasets/${datasetId}/launch-training`, {
+        styleKitId: selectedKit ? Number(selectedKit) : null,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTrainingStatus(data);
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/training-datasets", datasetId] });
+        toast({ title: "Entrenamiento Lanzado", description: data.message });
+      } else {
+        toast({ title: "Error", description: data.message, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setLaunchingTraining(false);
+    }
+  };
+
+  const pollStatus = async () => {
+    setPollingStatus(true);
+    try {
+      const res = await apiRequest("GET", `/api/admin/training-datasets/${datasetId}/training-status`);
+      const data = await res.json();
+      setTrainingStatus(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/training-datasets", datasetId] });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setPollingStatus(false);
+    }
+  };
+
+  const dsConfig: any = typeof dataset.config === 'object' && dataset.config ? dataset.config : {};
+  const hasTrainingJob = !!dsConfig.trainingJobId;
+  const isTraining = dataset.status === "training";
+
+  return (
+    <Card data-testid="card-training-controls">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <Rocket className="h-5 w-5 text-primary" />
+          <CardTitle className="text-base">Entrenamiento SAO</CardTitle>
+        </div>
+        <CardDescription>Generar prompts desde los estilos, seleccionar Style Kit y lanzar entrenamiento en RunPod</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="border rounded-md p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Generar Prompts de Entrenamiento</span>
+            </div>
+            <Button
+              size="sm"
+              onClick={generatePrompts}
+              disabled={generatingPrompts}
+              data-testid="button-generate-prompts"
+            >
+              {generatingPrompts ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
+              {generatingPrompts ? "Generando..." : "Generar Prompts"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Genera prompts de entrenamiento automaticamente desde todos los estilos de genero activos (Bachata, Bolero, Merengue, Salsa, etc.) con variaciones de tempo y mood.
+          </p>
+          {generatedPrompts && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-green-500">{generatedPrompts.length} prompts generados</p>
+              <div className="max-h-48 overflow-y-auto space-y-1">
+                {generatedPrompts.slice(0, 15).map((p, i) => (
+                  <div key={i} className="text-xs border rounded p-2 space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant="outline" className="text-[10px]">{p.genre}</Badge>
+                      <Badge variant="outline" className="text-[10px]">{p.style}</Badge>
+                      {p.bpm && <Badge variant="outline" className="text-[10px]">{p.bpm}</Badge>}
+                    </div>
+                    <p className="text-muted-foreground line-clamp-2">{p.prompt}</p>
+                  </div>
+                ))}
+                {generatedPrompts.length > 15 && (
+                  <p className="text-xs text-muted-foreground text-center">...y {generatedPrompts.length - 15} mas</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="border rounded-md p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Rocket className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">Lanzar Entrenamiento en RunPod</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Style Kit (opcional)</label>
+              <select
+                value={selectedKit}
+                onChange={(e) => setSelectedKit(e.target.value)}
+                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                data-testid="select-style-kit"
+              >
+                <option value="">Sin kit especifico</option>
+                {styleKits?.map((kit: any) => (
+                  <option key={kit.id} value={kit.id}>
+                    {kit.name} ({kit.genre}) — {kit.trainingStatus}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Configuracion</label>
+              <div className="text-xs text-muted-foreground space-y-0.5">
+                <p>Modelo: SAO Instrumental Finetune (diffusion_cond)</p>
+                <p>Sample Rate: 44100 Hz, Stereo</p>
+                <p>LR: 5e-5, Batch: 1, Epochs: 100</p>
+              </div>
+            </div>
+          </div>
+          <Button
+            onClick={launchTraining}
+            disabled={launchingTraining || isTraining}
+            className="w-full"
+            data-testid="button-launch-training"
+          >
+            {launchingTraining ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Rocket className="h-4 w-4 mr-1" />}
+            {isTraining ? "Entrenamiento en Progreso..." : launchingTraining ? "Lanzando..." : "Lanzar Entrenamiento SAO"}
+          </Button>
+        </div>
+
+        <div className="border rounded-md p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Estado del Entrenamiento</span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={pollStatus}
+              disabled={pollingStatus || !hasTrainingJob}
+              data-testid="button-poll-status"
+            >
+              {pollingStatus ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+              Verificar
+            </Button>
+          </div>
+          {!hasTrainingJob && !trainingStatus ? (
+            <p className="text-xs text-muted-foreground">No hay trabajo de entrenamiento activo para este dataset.</p>
+          ) : trainingStatus ? (
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="border rounded p-2">
+                  <p className="text-[10px] text-muted-foreground">Estado</p>
+                  <Badge variant={
+                    trainingStatus.status === "COMPLETED" ? "default" :
+                    trainingStatus.status === "FAILED" ? "destructive" :
+                    "outline"
+                  } className="text-xs mt-0.5" data-testid="badge-training-status">
+                    {trainingStatus.status}
+                  </Badge>
+                </div>
+                <div className="border rounded p-2">
+                  <p className="text-[10px] text-muted-foreground">Job ID</p>
+                  <p className="text-xs font-mono" data-testid="text-training-job-id">{trainingStatus.jobId || dsConfig.trainingJobId || "N/A"}</p>
+                </div>
+                {trainingStatus.executionTime && (
+                  <div className="border rounded p-2">
+                    <p className="text-[10px] text-muted-foreground">Tiempo</p>
+                    <p className="text-xs">{(trainingStatus.executionTime / 1000).toFixed(0)}s</p>
+                  </div>
+                )}
+                {trainingStatus.trainingStarted && (
+                  <div className="border rounded p-2">
+                    <p className="text-[10px] text-muted-foreground">Iniciado</p>
+                    <p className="text-xs">{new Date(trainingStatus.trainingStarted).toLocaleString()}</p>
+                  </div>
+                )}
+              </div>
+              {trainingStatus.error && (
+                <div className="text-xs text-red-500 border border-red-500/20 rounded p-2">
+                  {trainingStatus.error}
+                </div>
+              )}
+              {trainingStatus.message && (
+                <p className="text-xs text-muted-foreground">{trainingStatus.message}</p>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="border rounded p-2">
+                <p className="text-[10px] text-muted-foreground">Job ID</p>
+                <p className="text-xs font-mono">{dsConfig.trainingJobId}</p>
+              </div>
+              <div className="border rounded p-2">
+                <p className="text-[10px] text-muted-foreground">Iniciado</p>
+                <p className="text-xs">{dsConfig.trainingStarted ? new Date(dsConfig.trainingStarted).toLocaleString() : "N/A"}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

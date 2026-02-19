@@ -231,16 +231,27 @@ export function buildRunPodPayload(
 }
 
 export const GENRE_STYLE_HINTS: Record<string, string> = {
-  bachata: "Dominican bachata style with requinto guitar, bongo, guira, and romantic feel",
-  bolero: "Classic bolero with nylon guitar arpeggios, soft percussion, and intimate atmosphere",
-  salsa: "Salsa dura with piano montuno, timbales, congas, and brass sections",
-  merengue: "Merengue típico with accordion, tambora, güira, and energetic rhythm",
-  cumbia: "Colombian cumbia with accordion, guacharaca, and tropical rhythms",
-  reggaeton: "Reggaeton with dembow beat, 808 bass, and urban production",
-  son: "Son cubano with tres, bongo, claves, and traditional Caribbean feel",
-  latin_pop: "Latin pop with piano, acoustic guitar, and modern production",
-  vallenato: "Vallenato with accordion paseos, caja, and romantic Colombian sound",
-  tropical: "Tropical music with warm percussion, brass, and Caribbean influences",
+  bachata: "Dominican bachata ensemble — requinto nylon guitar (melodic picking, arpeggios), segunda guitarra (syncopated rhythm strumming), bongó (derecho pattern, hand-played), güira metálica (scraping pulse), bajo eléctrico (walking lines), optional: piano, pad, violines, chelos. Tight cohesive band, warm romantic feel, 125-135 BPM, 4/4",
+  bachata_tradicional: "Bachata tradicional dominicana — requinto melodic nylon with phrasing ornaments, segunda syncopated strumming, bongó derecho, güira metálica scraping, bajo eléctrico walking bass. Classic Dominican intimate sound, 130 BPM, 4/4",
+  bachata_moderna: "Bachata moderna fusion — requinto over contemporary voicings, segunda with modern feel, bongó groove, güira, bajo with funk influence, pad atmospherics, violin strings. R&B-influenced production, 125 BPM, 4/4",
+  bachata_sensual: "Bachata sensual — soft requinto arpeggios, gentle segunda, subtle bongó, light güira shimmer, prominent bass, warm pad layers, smooth violin strings. Slow intimate atmosphere, 115 BPM, 4/4",
+  bachata_urbana: "Bachata urbana — requinto with effects, segunda over modern production, bongó electronic enhancement, punchy bass, synth pad, trap-influenced. Contemporary urban Latin, 120 BPM, 4/4",
+  bachata_rosa: "Bachata rosa — delicate requinto melodic lines, soft segunda, gentle bongó, warm bass, lush violines y chelos, piano embellishments. Dreamy romantic ballad, 120 BPM, 4/4",
+  bolero: "Bolero ensemble — expressive requinto (arpeggios, tremolo, vibrato), segunda warm support, soft bongó brushwork, conga gentle warmth, piano rich voicings, violines y chelos lush orchestral strings, pad atmosphere. Deeply emotional and intimate, 75-85 BPM, 4/4",
+  bolero_romantico: "Bolero romántico clásico — requinto expressive tremolo, segunda harmonic support, soft bongó y conga, piano rich chords, full orchestral violines y chelos, pad. Intimate deeply emotional ballad, 75 BPM, 4/4",
+  bolero_moderno: "Bolero moderno — requinto melodic phrasing, segunda support, piano elegant voicings, cinematic string section, atmospheric pad layers. Contemporary production maintaining romantic essence, 80 BPM, 4/4",
+  dgb_bolero: "DGB Bolero complete orchestra — bongó, conga, güira, timbal completo, campanas, segunda guitarra, requinto, bajo, piano, pad, strings (violines + chelos). Danny Garcia signature sound with full vocal harmonies. Rich emotional depth, 78 BPM, 4/4",
+  salsa: "Salsa dura — trompetas bright brass, piano montuno/guajeos, timbales cascara y campana, congas tumbaos y slaps, bajo contundente tumbao. Fania sound, clave 2-3, 180 BPM",
+  salsa_romantica: "Salsa romántica — piano delicado, conga suave, timbal con escobillas, bajo melodic, violines lush strings, trompeta soft melody. Emotional salsera ballad, 160 BPM",
+  merengue: "Merengue típico perico ripiao — acordeón de botones rapid melodic runs, tambora de madera derecho pattern, güira metálica rápida, bajo. Fast festive dance, 160 BPM, 2/4",
+  merengue_tipico: "Merengue típico cibaeño — acordeón botones paseos, tambora madera, güira rápida, bajo. Authentic perico ripiao, 160 BPM, 2/4",
+  merengue_de_salon: "Merengue de salón — orquesta completa, sección de cuerdas, metales, piano, percusión latina, arreglos sofisticados. Elegant ballroom, 140 BPM",
+  cumbia: "Colombian cumbia — acordeón melodic phrases, guacharaca scraping rhythm, caja vallenata hand drums, bajo walking tropical bass. Warm festive groove, 100 BPM, 4/4",
+  reggaeton: "Reggaetón — deep 808 sub-bass, crisp hi-hats trap rolls, synth leads catchy hooks, pad atmospherics. Dembow rhythm, 90-95 BPM",
+  son: "Son cubano — tres guajeos y montunos, bongó martillo, claves 3-2, contrabajo walking, trumpet accents. Warm Havana groove, 110 BPM",
+  latin_pop: "Latin pop — piano melodic hooks, guitarra acústica fingerpicked arpeggios, percusión suave, bajo melódico, pad warmth. Radio-ready, 120 BPM",
+  vallenato: "Vallenato — acordeón expressive paseos, caja vallenata, guacharaca, bajo warm foundation. Romantic Colombian Caribbean, 120 BPM",
+  tropical: "Tropical Latin — warm percussion with brass accents, melodic hooks, festive Caribbean groove. Professional Latin production, 120 BPM",
 };
 
 export const PIPELINE_STEPS = ["upload", "analyze", "prompt", "train", "ready"] as const;
