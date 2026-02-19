@@ -1391,7 +1391,17 @@ export default function CreatePage() {
             </div>
           </div>
 
-          {/* ===== RIGHT: Track List with glow ===== */}
+          {/* ===== RIGHT: Now Playing + Track List ===== */}
+          <div className="space-y-6">
+            {activeSong && (
+              <div className="relative" data-testid="now-playing-panel">
+                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-orange-600 rounded-2xl blur-xl opacity-20" />
+                <div className="relative bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+                  <HistoryNowPlaying song={activeSong} isPlaying={playerState.isPlaying} />
+                </div>
+              </div>
+            )}
+
           <div className="relative" data-testid="song-list-panel">
             <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-orange-600 rounded-2xl blur-xl opacity-20" />
             <div className="relative bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-white/10 rounded-2xl p-8 max-h-[calc(100vh-180px)] flex flex-col">
@@ -1532,6 +1542,7 @@ export default function CreatePage() {
                 </div>
               )}
             </div>
+          </div>
           </div>
 
             </div>
