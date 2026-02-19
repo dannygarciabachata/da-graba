@@ -306,12 +306,13 @@ def generate_heartmula(song_id, prompt, duration, lyrics, tags, genre, device, w
         return result
 
     except ImportError:
+        safe_prompt = generation_prompt.replace("'", "\\'")
         script = f"""
 import sys
 sys.path.insert(0, "{heartmula_dir}")
 from inference import generate_audio
 generate_audio(
-    prompt='''{generation_prompt.replace("'", "\\'")}''',
+    prompt='''{safe_prompt}''',
     duration={duration},
     output_path="{wav_path}",
     device="{device}",

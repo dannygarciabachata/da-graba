@@ -55,25 +55,31 @@ if [ ! -f "${DEPS_MARKER}" ]; then
     echo "[Init] Installing Python dependencies (first run, cached after)..."
     echo "[Init] This may take 2-5 minutes..."
 
-    echo "[Init] Step 1/2: Installing core dependencies..."
+    echo "[Init] Step 1/3: Installing runpod and core libs..."
     ${PYTHON_BIN} -m pip install --no-cache-dir \
         runpod==1.7.7 \
-        stable-audio-tools==0.0.17 \
         requests==2.32.3 \
-        numpy==1.26.4 \
         soundfile==0.13.1 \
+        safetensors==0.4.5 \
+        huggingface_hub==0.25.0 2>&1 | tail -10
+
+    echo "[Init] Step 2/3: Installing ML dependencies..."
+    ${PYTHON_BIN} -m pip install --no-cache-dir \
+        numpy \
+        scipy \
         librosa==0.10.2 \
         transformers==4.44.0 \
-        accelerate==0.33.0 \
-        safetensors==0.4.5 \
-        huggingface_hub==0.25.0 \
-        scipy==1.14.0 2>&1 | tail -20
+        accelerate==0.33.0 2>&1 | tail -10
+
+    echo "[Init] Step 3/3: Installing stable-audio-tools..."
+    ${PYTHON_BIN} -m pip install --no-cache-dir \
+        stable-audio-tools==0.0.17 2>&1 | tail -10
 
     if [ $? -ne 0 ]; then
-        echo "[WARN] Some core pip packages may have failed."
+        echo "[WARN] Some pip packages may have failed."
     fi
 
-    echo "[Init] Step 2/2: Installing demucs (stem separation)..."
+    echo "[Init] Step 4/4: Installing demucs (stem separation)..."
     ${PYTHON_BIN} -m pip install --no-cache-dir --no-deps demucs==4.0.1 2>&1 | tail -5
     ${PYTHON_BIN} -m pip install --no-cache-dir dora-search lameenc openunmix julius diffq 2>&1 | tail -5
     if [ $? -ne 0 ]; then
