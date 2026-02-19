@@ -101,6 +101,38 @@ export const insertTrackSchema = createInsertSchema(tracks).omit({
 export type Track = typeof tracks.$inferSelect;
 export type InsertTrack = z.infer<typeof insertTrackSchema>;
 
+// === DAW CLIPS TABLE ===
+export const dawClips = pgTable("daw_clips", {
+  id: serial("id").primaryKey(),
+  songId: integer("song_id").notNull().references(() => songs.id, { onDelete: "cascade" }),
+  trackId: integer("track_id").references(() => tracks.id, { onDelete: "set null" }),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull().default("Clip"),
+  audioUrl: text("audio_url"),
+  startTimeMs: integer("start_time_ms").notNull().default(0),
+  durationMs: integer("duration_ms").notNull().default(0),
+  offsetMs: integer("offset_ms").notNull().default(0),
+  laneIndex: integer("lane_index").notNull().default(0),
+  color: text("color").default("#ff751f"),
+  source: text("source").notNull().default("generated"),
+  volume: integer("volume").default(100),
+  isMuted: boolean("is_muted").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const dawClipsRelations = relations(dawClips, ({ one }) => ({
+  song: one(songs, { fields: [dawClips.songId], references: [songs.id] }),
+  track: one(tracks, { fields: [dawClips.trackId], references: [tracks.id] }),
+}));
+
+export const insertDawClipSchema = createInsertSchema(dawClips).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type DawClip = typeof dawClips.$inferSelect;
+export type InsertDawClip = z.infer<typeof insertDawClipSchema>;
+
 // === SAMPLES TABLE ===
 export const samples = pgTable("samples", {
   id: serial("id").primaryKey(),

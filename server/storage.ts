@@ -61,6 +61,8 @@ import {
   type TrainingDataset, type InsertTrainingDataset,
   type TrainingFile, type InsertTrainingFile,
   type GenreStyle, type InsertGenreStyle,
+  dawClips,
+  type DawClip, type InsertDawClip,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 
@@ -86,6 +88,11 @@ export interface IStorage {
   updateTrackStatus(id: number, status: string, audioUrl?: string, error?: string): Promise<Track>;
   updateTrackSettings(id: number, settings: { volume?: number; isMuted?: boolean; isSolo?: boolean }): Promise<Track>;
   deleteTracksBySongId(songId: number): Promise<void>;
+
+  createDawClip(clip: InsertDawClip): Promise<DawClip>;
+  getDawClipsBySongId(songId: number): Promise<DawClip[]>;
+  updateDawClip(id: number, data: Partial<DawClip>): Promise<DawClip>;
+  deleteDawClip(id: number): Promise<void>;
 
   createLyric(lyric: InsertLyric): Promise<Lyric>;
   getLyricsBySongId(songId: number): Promise<Lyric[]>;
@@ -490,6 +497,32 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTracksBySongId(songId: number): Promise<void> {
     await db.delete(tracks).where(eq(tracks.songId, songId));
+  }
+
+  async createDawClip(clip: InsertDawClip): Promise<DawClip> {
+    const [created] = await db.insert(dawClips).values(clip).returning();
+    return created;
+  }
+
+  async getDawClipsBySongId(songId: number): Promise<DawClip[]> {
+    return await db
+      .select()
+      .from(dawClips)
+      .where(eq(dawClips.songId, songId))
+      .orderBy(dawClips.laneIndex, dawClips.startTimeMs);
+  }
+
+  async updateDawClip(id: number, data: Partial<DawClip>): Promise<DawClip> {
+    const [updated] = await db
+      .update(dawClips)
+      .set(data)
+      .where(eq(dawClips.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDawClip(id: number): Promise<void> {
+    await db.delete(dawClips).where(eq(dawClips.id, id));
   }
 
   async createLyric(insertLyric: InsertLyric): Promise<Lyric> {

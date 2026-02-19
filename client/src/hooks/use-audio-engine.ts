@@ -582,10 +582,68 @@ export function useAudioEngine() {
     };
   }, []);
 
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordChunksRef = useRef<Blob[]>([]);
+  const recordStreamRef = useRef<MediaStream | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const recordStartTimeRef = useRef(0);
+
+  const startRecording = useCallback(async (): Promise<void> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      recordStreamRef.current = stream;
+      recordChunksRef.current = [];
+
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm";
+      const recorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordChunksRef.current.push(e.data);
+      };
+
+      recorder.start(100);
+      recordStartTimeRef.current = Date.now();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("[AudioEngine] Failed to start recording:", err);
+      throw err;
+    }
+  }, []);
+
+  const stopRecording = useCallback((): Promise<{ blob: Blob; durationMs: number }> => {
+    return new Promise((resolve, reject) => {
+      const recorder = mediaRecorderRef.current;
+      if (!recorder || recorder.state === "inactive") {
+        reject(new Error("No active recording"));
+        return;
+      }
+
+      recorder.onstop = () => {
+        const blob = new Blob(recordChunksRef.current, { type: recorder.mimeType });
+        const durationMs = Date.now() - recordStartTimeRef.current;
+        recordChunksRef.current = [];
+        setIsRecording(false);
+
+        if (recordStreamRef.current) {
+          recordStreamRef.current.getTracks().forEach((t) => t.stop());
+          recordStreamRef.current = null;
+        }
+        mediaRecorderRef.current = null;
+        resolve({ blob, durationMs });
+      };
+
+      recorder.stop();
+    });
+  }, []);
+
   return {
     tracks,
     transport,
     masterSettings,
+    isRecording,
     loadTrack,
     removeTrack,
     togglePlayPause,
@@ -607,5 +665,7 @@ export function useAudioEngine() {
     getMasterMeter,
     getTrackBuffer,
     getContext,
+    startRecording,
+    stopRecording,
   };
 }

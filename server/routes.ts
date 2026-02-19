@@ -1432,6 +1432,84 @@ export async function registerRoutes(
     }
   });
 
+  // ========== DAW CLIPS ROUTES ==========
+
+  app.get("/api/songs/:id/clips", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const songId = Number(req.params.id);
+    const song = await storage.getSong(songId);
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    const clips = await storage.getDawClipsBySongId(songId);
+    res.json(clips);
+  });
+
+  const createClipSchema = z.object({
+    songId: z.number(),
+    trackId: z.number().nullable().optional(),
+    name: z.string().min(1).max(200),
+    audioUrl: z.string().nullable().optional(),
+    startTimeMs: z.number().min(0).default(0),
+    durationMs: z.number().min(0).default(0),
+    offsetMs: z.number().min(0).default(0),
+    laneIndex: z.number().min(0).default(0),
+    color: z.string().optional(),
+    source: z.string().default("generated"),
+    volume: z.number().min(0).max(100).default(100),
+  });
+
+  app.post("/api/daw/clips", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const data = createClipSchema.parse(req.body);
+      const song = await storage.getSong(data.songId);
+      if (!song || song.userId !== userId) return res.sendStatus(403);
+      const clip = await storage.createDawClip({ ...data, userId, trackId: data.trackId ?? null });
+      res.json(clip);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      res.status(500).json({ message: "Failed to create clip" });
+    }
+  });
+
+  const updateClipSchema = z.object({
+    name: z.string().min(1).max(200).optional(),
+    startTimeMs: z.number().min(0).optional(),
+    durationMs: z.number().min(0).optional(),
+    offsetMs: z.number().min(0).optional(),
+    laneIndex: z.number().min(0).optional(),
+    color: z.string().optional(),
+    volume: z.number().min(0).max(100).optional(),
+    isMuted: z.boolean().optional(),
+  });
+
+  app.patch("/api/daw/clips/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const clipId = Number(req.params.id);
+    try {
+      const data = updateClipSchema.parse(req.body);
+      const updated = await storage.updateDawClip(clipId, data);
+      res.json(updated);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      res.status(500).json({ message: "Failed to update clip" });
+    }
+  });
+
+  app.delete("/api/daw/clips/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const clipId = Number(req.params.id);
+    try {
+      await storage.deleteDawClip(clipId);
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to delete clip" });
+    }
+  });
+
   // ========== LYRICS ROUTES ==========
 
   app.post(api.lyrics.generate.path, async (req, res) => {
@@ -1556,6 +1634,35 @@ export async function registerRoutes(
         cb(new Error("Only audio files are allowed"));
       }
     },
+  });
+
+  app.post("/api/daw/record", upload.single("audio"), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    if (!req.file) return res.status(400).json({ message: "No audio file provided" });
+    try {
+      const songId = Number(req.body.songId);
+      const laneIndex = Number(req.body.laneIndex || 0);
+      const startTimeMs = Number(req.body.startTimeMs || 0);
+      const name = req.body.name || "Recording";
+
+      const song = await storage.getSong(songId);
+      if (!song || song.userId !== userId) return res.sendStatus(403);
+
+      const audioUrl = `/audio/${req.file.filename}`;
+      const track = await storage.createTrack({ songId, userId, name, type: "recording", volume: 100 });
+      await storage.updateTrackStatus(track.id, "completed", audioUrl);
+
+      const clip = await storage.createDawClip({
+        songId, trackId: track.id, userId, name, audioUrl,
+        startTimeMs, durationMs: Number(req.body.durationMs || 0),
+        laneIndex, color: "#FF6B9D", source: "recording", volume: 100,
+      });
+      res.json({ track, clip });
+    } catch (err: any) {
+      console.error("[DAW Record] Error:", err);
+      res.status(500).json({ message: "Failed to save recording" });
+    }
   });
 
   app.get("/api/samples", async (req, res) => {
