@@ -7,9 +7,12 @@ import { eq } from "drizzle-orm";
 
 const POLL_INTERVAL_MS = 30_000;
 const MAX_PROCESSING_AGE_MS = 24 * 60 * 60 * 1000;
+const UNDELIVERED_GRACE_MS = 120_000;
 
 let watchdogTimer: ReturnType<typeof setInterval> | null = null;
 let isRunning = false;
+
+const undeliveredSeen = new Map<number, number>();
 
 export function startRunPodWatchdog() {
   if (watchdogTimer) {
@@ -101,6 +104,7 @@ async function checkSongJob(song: any) {
     const freshSong = await storage.getSong(song.id);
     if (freshSong?.status === "completed") {
       console.log(`[RunPod Watchdog] Song ${song.id} already completed (likely via file upload), skipping`);
+      undeliveredSeen.delete(song.id);
       return;
     }
 
@@ -115,6 +119,7 @@ async function checkSongJob(song: any) {
       const uploadedSong = await storage.getSong(song.id);
       if (uploadedSong?.status === "completed" && uploadedSong?.audioUrl) {
         console.log(`[RunPod Watchdog] Song ${song.id} confirmed completed via upload: ${uploadedSong.audioUrl}`);
+        undeliveredSeen.delete(song.id);
       } else {
         console.log(`[RunPod Watchdog] Song ${song.id} marked delivered but not in DB yet, waiting...`);
       }
@@ -133,14 +138,9 @@ async function checkSongJob(song: any) {
       }
 
       console.log(`[RunPod Watchdog] Song ${song.id} recovered and saved: ${localUrl}`);
+      undeliveredSeen.delete(song.id);
     } else if (output.status === "completed" || output.audio_path) {
-      console.log(`[RunPod Watchdog] Song ${song.id} completed on RunPod but no audio delivered. Audio path: ${output.audio_path}`);
-      const age = Date.now() - new Date(song.createdAt).getTime();
-      if (age > 600000) {
-        await storage.updateSongStatus(song.id, "failed", undefined, "Audio generated but could not be delivered to server. Try again.");
-      } else {
-        console.log(`[RunPod Watchdog] Song ${song.id} waiting for upload delivery (age: ${(age / 60000).toFixed(0)}min)`);
-      }
+      await handleUndeliveredAudio(song, output);
     } else {
       console.log(`[RunPod Watchdog] Song ${song.id} COMPLETED but unexpected output:`, JSON.stringify(output).substring(0, 200));
       await storage.updateSongStatus(song.id, "failed", undefined, "Unexpected output format from generation");
@@ -158,5 +158,30 @@ async function checkSongJob(song: any) {
       console.log(`[RunPod Watchdog] Song ${song.id} exceeded max age, marking failed`);
       await storage.updateSongStatus(song.id, "failed", undefined, `Generation timed out after ${ageMin} minutes`);
     }
+  }
+}
+
+async function handleUndeliveredAudio(song: any, output: any) {
+  const audioPath = output.audio_path;
+  const firstSeen = undeliveredSeen.get(song.id) || Date.now();
+  
+  if (!undeliveredSeen.has(song.id)) {
+    undeliveredSeen.set(song.id, firstSeen);
+  }
+
+  const waitTime = Date.now() - firstSeen;
+  console.log(`[RunPod Watchdog] Song ${song.id} completed on RunPod but audio not delivered. Path: ${audioPath}, waited: ${(waitTime / 1000).toFixed(0)}s`);
+
+  if (waitTime > UNDELIVERED_GRACE_MS) {
+    console.log(`[RunPod Watchdog] Song ${song.id} audio delivery failed after grace period. Marking as failed with retry option.`);
+    await storage.updateSongStatus(
+      song.id,
+      "failed",
+      undefined,
+      "Audio was generated successfully but delivery to server failed. Please try generating again."
+    );
+    undeliveredSeen.delete(song.id);
+  } else {
+    console.log(`[RunPod Watchdog] Song ${song.id} waiting for upload delivery (${((UNDELIVERED_GRACE_MS - waitTime) / 1000).toFixed(0)}s remaining)`);
   }
 }

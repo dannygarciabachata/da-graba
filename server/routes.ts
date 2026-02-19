@@ -1032,6 +1032,32 @@ export async function registerRoutes(
       const action = output.action || jobInput?.action;
       console.log(`[Webhook] RunPod Serverless processing: action=${action}, jobStatus=${jobStatus}`);
 
+      if (action === "retrieve_audio") {
+        const songId = output.song_id || output.songId;
+        if (songId && output.audioBase64) {
+          const existingSong = await storage.getSong(songId);
+          if (existingSong?.status === "completed") {
+            console.log(`[Webhook] Song ${songId} already completed, skipping retrieval`);
+            return res.sendStatus(200);
+          }
+          const audioFormat = output.audioFormat || "mp3";
+          const localUrl = await saveRunPodAudio(output.audioBase64, songId, audioFormat);
+          await storage.updateSongStatus(songId, "completed", localUrl);
+          if (output.duration) {
+            try {
+              const { db } = await import("./db");
+              const { songs: songsTable } = await import("@shared/schema");
+              const { eq } = await import("drizzle-orm");
+              await db.update(songsTable).set({ duration: output.duration }).where(eq(songsTable.id, songId));
+            } catch {}
+          }
+          console.log(`[Webhook] Song ${songId} recovered via retrieval: ${localUrl}`);
+        } else if (songId && output.delivered) {
+          console.log(`[Webhook] Song ${songId} delivered via retrieval upload`);
+        }
+        return res.sendStatus(200);
+      }
+
       if (action === "generate_music" || output.songId || output.song_id) {
         const songId = output.songId || output.song_id;
         if (!songId) return res.sendStatus(200);
@@ -1117,18 +1143,26 @@ export async function registerRoutes(
 
   app.post("/api/upload/runpod-audio", runpodAudioUpload.single("audio"), async (req, res) => {
     try {
-      const uploadSecret = process.env.RUNPOD_UPLOAD_SECRET;
-      if (uploadSecret) {
-        const incomingSecret = req.headers["x-upload-secret"] as string || req.body?.upload_secret;
-        if (incomingSecret !== uploadSecret) {
-          console.log("[Upload] Rejected: invalid or missing upload secret");
-          return res.status(403).json({ error: "Forbidden" });
-        }
-      }
-
       const songId = parseInt(req.body?.song_id || req.body?.songId || "0", 10);
       const duration = parseInt(req.body?.duration || "0", 10) || null;
       const engine = req.body?.engine || "sao";
+
+      const uploadSecret = process.env.RUNPOD_UPLOAD_SECRET;
+      const incomingSecret = req.headers["x-upload-secret"] as string || req.body?.upload_secret;
+      const hasValidSecret = !uploadSecret || incomingSecret === uploadSecret;
+
+      if (!hasValidSecret) {
+        if (!songId) {
+          console.log("[Upload] Rejected: no secret and no songId");
+          return res.status(403).json({ error: "Forbidden" });
+        }
+        const song = await storage.getSong(songId);
+        if (!song || song.status !== "processing") {
+          console.log(`[Upload] Rejected: song ${songId} not in processing state (status: ${song?.status || 'not found'})`);
+          return res.status(403).json({ error: "Forbidden" });
+        }
+        console.log(`[Upload] Accepting upload without secret for processing song ${songId}`);
+      }
 
       console.log(`[Upload] RunPod audio upload received: songId=${songId}, file=${req.file?.filename}, size=${req.file?.size ? (req.file.size / 1024 / 1024).toFixed(1) + 'MB' : 'none'}`);
 

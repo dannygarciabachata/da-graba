@@ -398,6 +398,17 @@ export interface MusicGenerationInput {
   genre?: string;
   sao_model?: "instrumental_finetune" | "base";
   webhook_url: string;
+  upload_url?: string;
+  upload_secret?: string;
+}
+
+export interface AudioRetrievalInput {
+  action: "retrieve_audio";
+  audio_path: string;
+  song_id: number;
+  convert_to_mp3?: boolean;
+  upload_url?: string;
+  upload_secret?: string;
 }
 
 export interface TrainingInput {
@@ -441,6 +452,8 @@ export async function submitMusicGeneration(params: {
   saoModel?: "instrumental_finetune" | "base";
 }): Promise<{ jobId: string; status: string }> {
   const webhookUrl = getWebhookUrl("/api/webhooks/runpod-serverless");
+  const uploadUrl = getWebhookUrl("/api/upload/runpod-audio");
+  const uploadSecret = process.env.RUNPOD_UPLOAD_SECRET || "";
 
   const input: MusicGenerationInput = {
     action: "generate_music",
@@ -450,6 +463,8 @@ export async function submitMusicGeneration(params: {
     duration_seconds: params.duration,
     sao_model: params.saoModel || "instrumental_finetune",
     webhook_url: webhookUrl,
+    upload_url: uploadUrl,
+    upload_secret: uploadSecret,
   };
 
   if (params.lyrics) input.lyrics = params.lyrics;
@@ -458,6 +473,24 @@ export async function submitMusicGeneration(params: {
   if (params.genre) input.genre = params.genre;
 
   const result = await submitJob("music", input, webhookUrl);
+  return { jobId: result.id, status: result.status };
+}
+
+export async function submitAudioRetrieval(audioPath: string, songId: number): Promise<{ jobId: string; status: string }> {
+  const uploadUrl = getWebhookUrl("/api/upload/runpod-audio");
+  const uploadSecret = process.env.RUNPOD_UPLOAD_SECRET || "";
+
+  const input: AudioRetrievalInput = {
+    action: "retrieve_audio",
+    audio_path: audioPath,
+    song_id: songId,
+    convert_to_mp3: true,
+    upload_url: uploadUrl,
+    upload_secret: uploadSecret,
+  };
+
+  console.log(`[RunPod Serverless] Submitting audio retrieval for song ${songId} from ${audioPath}`);
+  const result = await submitJob("music", input);
   return { jobId: result.id, status: result.status };
 }
 
