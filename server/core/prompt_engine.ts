@@ -151,33 +151,28 @@ export function buildStyleKitPrompt(
 ): string {
   const genreLabel = genre.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-  const styleDescription = kitData?.trainingPrompt || kitData?.description || "";
+  const instrumentNames = instruments
+    .map(i => i.generatedPrompt || i.name)
+    .join(", ");
 
-  let ensembleHint = "";
-  if (styleDescription) {
-    const lines = styleDescription.split("\n").filter(l => l.trim().length > 0);
-    const ensembleLine = lines.find(l =>
-      /RHYTHM|MELODY|HARMONY|FOUNDATION|playing as ONE|UNIFIED|LOCKED|INTERLOCK|ensemble/i.test(l)
-    );
-    if (ensembleLine) {
-      ensembleHint = ensembleLine.trim();
-      if (ensembleHint.length > 200) ensembleHint = ensembleHint.substring(0, 197) + "...";
-    } else {
-      const sentences = styleDescription.split(/[.,;]/).filter(s => s.trim().length > 10);
-      ensembleHint = sentences.slice(0, 2).join(", ").trim();
-      if (ensembleHint.length > 150) ensembleHint = ensembleHint.substring(0, 147) + "...";
-    }
+  const styleHint = kitData?.trainingPrompt || kitData?.description || "";
+  const moodMatch = styleHint.match(/mood[s]?[:=]\s*([^.|\n]+)/i);
+  const bpmMatch = styleHint.match(/(\d{2,3})\s*BPM/i);
+  const keyMatch = styleHint.match(/(?:key|set in)\s*:?\s*([A-G][#b]?\s*(?:Minor|Major|minor|major))/i);
+
+  const moods = moodMatch ? moodMatch[1].trim() : "warm, professional";
+  const bpmPart = bpmMatch ? ` at ${bpmMatch[1]} BPM` : "";
+  const keyPart = keyMatch ? `Set in ${keyMatch[1]}` : "";
+  const technicalPart = keyPart && bpmPart ? `${keyPart}${bpmPart}` : keyPart ? keyPart : bpmPart ? `${bpmPart.trim()}` : "";
+
+  let prompt = `Format: Band | Subgenre: ${genreLabel} ${kitName} | Instruments: ${instrumentNames} | Moods: ${moods}${technicalPart ? ` | ${technicalPart}` : ""}, professional studio recording`;
+
+  if (prompt.length > 500) {
+    const shortInstruments = instruments.slice(0, 5).map(i => i.name).join(", ");
+    prompt = `Format: Band | Subgenre: ${genreLabel} | Instruments: ${shortInstruments} | Moods: ${moods}${technicalPart ? ` | ${technicalPart}` : ""}, studio quality`;
   }
-
-  const instrumentCount = instruments.length;
-
-  let prompt = `${userPrompt}. ${ensembleHint || `${genreLabel} ensemble`}, ${instrumentCount} instruments playing together as one tight cohesive band, professional studio quality, ${genreLabel}`;
-
-  if (prompt.length > 1000) {
-    prompt = `${userPrompt}, ${genreLabel} tight ensemble with ${instrumentCount} instruments playing in sync, studio quality`;
-  }
-  if (prompt.length > 1000) {
-    prompt = prompt.substring(0, 997) + "...";
+  if (prompt.length > 500) {
+    prompt = prompt.substring(0, 497) + "...";
   }
 
   return prompt;
@@ -185,46 +180,71 @@ export function buildStyleKitPrompt(
 
 export async function generateStructuredPrompt(userInput: string): Promise<MusicPromptConfig> {
   const isBachata = /bachata|bongo|guira|dominican|latino|requinto|heart mula/i.test(userInput);
+  const isBolero = /bolero|ballad|slow.*romantic/i.test(userInput);
+  const isSalsa = /salsa|montuno|tumbao/i.test(userInput);
   const isDance = /dance|party|fiesta|bailable|upbeat/i.test(userInput);
   const isSad = /sad|triste|heartbreak|llorar|dolor|cry/i.test(userInput);
 
-  let mood = "emotional, intimate, nostalgic";
-  let tempo = "128";
-  let key = "Am";
-  let dynamics = "Gradual build from soft intro to emotional peak at final chorus, gentle fade. All instruments play as a tight cohesive ensemble.";
+  let mood = "romantic, warm, intimate";
+  let tempo = "130";
+  let key = "D Minor";
+  let dynamics = "Intro with requinto melody, verse builds with full rhythm section, chorus at full intensity, instrumental break, emotional outro fade";
 
-  if (isDance) {
-    mood = "energetic, fun, party";
+  if (isBolero) {
+    mood = "deeply emotional, intimate, sorrowful";
+    tempo = "75";
+    key = "A Minor";
+    dynamics = "Soft intro with guitar arpeggios, gradual string entry, emotional peak at bridge with full orchestra, gentle fade";
+  } else if (isSalsa) {
+    mood = "energetic, fiery, danceable";
+    tempo = "180";
+    key = "B-flat Major";
+    dynamics = "Driving montuno intro, brass hits on chorus, percussion break, high-energy coda";
+  } else if (isDance) {
+    mood = "energetic, festive, joyful";
     tempo = "140";
-    key = "C";
-    dynamics = "High energy throughout with tight ensemble groove, build to dance break, instruments locked together";
+    key = "C Major";
+    dynamics = "High energy intro, build through verse, explosive chorus, dance break with percussion";
   } else if (isSad) {
-    mood = "melancholic, sorrowful, deep";
-    tempo = "108";
-    key = "Dm";
-    dynamics = "Start intimate and soft, instruments enter gradually and blend together, raw emotional peak at bridge";
+    mood = "melancholic, sorrowful, deeply emotional";
+    tempo = "78";
+    key = "D Minor";
+    dynamics = "Intimate soft intro, instruments enter gradually, raw emotional peak at bridge, gentle heartbreaking outro";
   }
 
   return {
-    genre: isBachata ? "Bachata / Latin Trio" : "Latin Pop / Bachata Fusion",
+    genre: isBolero ? "Bolero" : isSalsa ? "Salsa" : isBachata ? "Bachata" : "Latin Pop",
     mood,
     tempo: `${tempo} BPM`,
     key,
     structure: [
-      "Intro - requinto solo with light guitar (4 bars)",
-      "Verse 1 - guitar rhythm + bass + light bongo groove (8 bars)",
-      "Chorus - full ensemble playing together cohesively (8 bars)",
-      "Instrumental - requinto + piano melodic interplay (8 bars)",
-      "Verse 2 - guitar rhythm + bass variation (8 bars)",
-      "Chorus - emotional peak, all instruments balanced (8 bars)",
-      "Outro - fade with guitar arpeggios (4 bars)",
+      "Intro - melodic lead with light accompaniment (4 bars)",
+      "Verse 1 - full rhythm section enters (8 bars)",
+      "Chorus - full band at intensity peak (8 bars)",
+      "Instrumental break - solo/melodic interplay (8 bars)",
+      "Verse 2 - rhythm variation (8 bars)",
+      "Chorus - emotional peak, full arrangement (8 bars)",
+      "Outro - melodic fade (4 bars)",
     ],
-    instrumentation: [
-      "Acoustic guitar (rhythmic foundation)",
-      "Requinto (melodic lead in breaks only)",
-      "Piano (harmonic support pads)",
-      "Bass (warm groove, locked with bongo)",
-      "Bongo + Guira (steady rhythm section)",
+    instrumentation: isBolero ? [
+      "Nylon requinto guitar (arpeggios melody)",
+      "Nylon segunda guitar (harmonic rhythm)",
+      "Upright bass (quarter note pulse)",
+      "Grand piano (chord voicings)",
+      "Violin and cello strings (legato sustain)",
+      "Soft bongo drums (subtle rhythm)",
+    ] : isSalsa ? [
+      "Grand piano (montuno pattern)",
+      "Trumpet section (melody and hits)",
+      "Trombone (harmonic support)",
+      "Timbales and congas (driving rhythm)",
+      "Upright bass (tumbao pattern)",
+    ] : [
+      "Nylon requinto guitar (melodic lead)",
+      "Nylon segunda guitar (rhythmic strumming)",
+      "Bongo drums (derecho pattern)",
+      "Guira (metallic pulse)",
+      "Electric bass (walking line)",
     ],
     dynamics,
     notes: userInput,

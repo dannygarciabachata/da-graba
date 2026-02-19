@@ -3690,7 +3690,7 @@ export async function registerRoutes(
       const results: { id: number; name: string; status: string; error?: string }[] = [];
 
       for (const instr of pending) {
-        const prompt = `${instr.name} solo, ${kit.genre} style, instrumental only, studio quality, isolated ${instr.type} sound, professional recording, bolero bachata modern arrangement, no vocals, clean mix`;
+        const prompt = `Format: Solo | Subgenre: ${kit.genre} | Instruments: ${instr.name} solo ${instr.type} | Moods: warm, professional | isolated ${instr.type} sound, studio quality recording, no vocals, clean mix`;
         try {
           console.log(`[Virtual Instrument] Generating "${instr.name}" for kit ${kitId}`);
           const { taskId } = await submitKieMusicGeneration(prompt, `${kit.genre} instrumental`, {
@@ -7164,8 +7164,9 @@ IMPORTANT GUIDELINES:
         ];
 
         for (const variation of variations) {
-          const promptText = `${style.genre} ${style.name} - ${variation.mood} ${variation.energy} feel, ${variation.tempo} tempo. ${style.promptHint || hintFromMap}. Instruments: ${allInstruments.join(", ")}`;
-          const bpmHint = style.promptHint?.match(/\d{2,3}\s*BPM/i)?.[0] || hintFromMap.match(/\d{2,3}\s*BPM/i)?.[0] || "";
+          const bpmHint = style.promptHint?.match(/\d{2,3}\s*BPM/i)?.[0] || hintFromMap.match(/\d{2,3}\s*BPM/i)?.[0] || "120 BPM";
+          const keyHint = style.promptHint?.match(/([A-G][#b]?\s*(?:Minor|Major|minor|major))/)?.[0] || "D Minor";
+          const promptText = `Format: Band | Subgenre: ${style.genre} ${style.name} | Instruments: ${allInstruments.join(", ")} | Moods: ${variation.mood}, ${variation.energy} | Set in ${keyHint} at ${bpmHint}, ${variation.tempo} tempo, professional studio recording`;
           prompts.push({
             genre: style.genre,
             style: style.name,
