@@ -777,15 +777,18 @@ export default function CreatePage() {
   return (
     <div className="h-full flex flex-col">
 
-        {/* ====== LEFT + CENTER + RIGHT: 3-column desktop layout ====== */}
-        <div className="hidden lg:grid lg:grid-cols-[320px_1fr_320px] flex-1 overflow-hidden" data-testid="desktop-layout">
+        {/* ====== DESKTOP: 2-column Figma-style layout ====== */}
+        <div className="hidden lg:block flex-1 overflow-y-auto" data-testid="desktop-layout">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="grid lg:grid-cols-2 gap-8">
 
-          {/* ===== LEFT: Creation Panel (Suno-style) ===== */}
-          <div className="border-r border-white/5 bg-background/90 overflow-y-auto" data-testid="creation-panel">
-            <div className="p-4">
-              <div className="flex items-center gap-2 mb-5">
-                <CheckSquare className="h-4 w-4 text-primary" />
-                <h2 className="text-sm font-semibold" data-testid="text-create-heading">{t('create.pageTitle')}</h2>
+          {/* ===== LEFT: Create Panel with glow ===== */}
+          <div className="relative" data-testid="creation-panel">
+            <div className="absolute -inset-1 bg-gradient-to-r from-orange-600 to-indigo-600 rounded-2xl blur-xl opacity-20" />
+            <div className="relative bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-white/10 rounded-2xl p-8 overflow-y-auto max-h-[calc(100vh-180px)]">
+              <div className="flex items-center gap-2 mb-6">
+                <Wand2 className="h-5 w-5 text-orange-400" />
+                <h2 className="text-xl font-semibold text-white" data-testid="text-create-heading">{t('create.pageTitle', 'Crea tu Sonido')}</h2>
               </div>
 
               <div className="grid grid-cols-2 gap-2 mb-4" data-testid="dna-flows">
@@ -976,11 +979,17 @@ export default function CreatePage() {
                 <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileChange} data-testid="input-file-upload" />
 
                 {activeCreationMode === "song" && (
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-orange-300 flex items-center gap-2">
+                      <Music className="w-4 h-4" />
+                      {t('create.describeMusic', 'Describe tu música')}
+                    </label>
+                    <div className="relative">
                   <Textarea
                     placeholder={activePromptSuggestions[placeholderIdx % activePromptSuggestions.length]}
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    className="bg-white/[0.03] border-white/10 focus:border-primary/40 min-h-[100px] resize-none text-sm placeholder:text-muted-foreground/40"
+                    className="min-h-[120px] bg-black/40 border-orange-500/30 text-white placeholder:text-orange-300/40 focus:border-orange-500/60 focus:ring-orange-500/20 rounded-xl resize-none"
                     data-testid="input-prompt"
                     maxLength={500}
                     onKeyDown={(e) => {
@@ -989,6 +998,9 @@ export default function CreatePage() {
                       }
                     }}
                   />
+                  <div className="absolute bottom-3 right-3 text-xs text-orange-300/40">{prompt.length}/500</div>
+                    </div>
+                  </div>
                 )}
                 {activeCreationMode === "sound" && (
                   <div className="space-y-3">
@@ -1101,16 +1113,26 @@ export default function CreatePage() {
                 </div>
               )}
 
+              <div className="space-y-3 mb-4">
+                <label className="text-sm font-medium text-orange-300 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  {t('create.duration', 'Duración')}
+                  <span className="ml-auto text-orange-400">{Math.floor(songDuration / 60)}:{String(songDuration % 60).padStart(2, "0")}</span>
+                </label>
+                <Slider value={[songDuration]} onValueChange={(v) => setSongDuration(v[0])} min={30} max={300} step={10} className="py-2" data-testid="slider-duration" />
+                <div className="flex justify-between text-xs text-orange-300/60"><span>0:30</span><span>5:00</span></div>
+              </div>
+
               <div className="flex items-center gap-1.5 flex-wrap mb-2">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Inspiration</span>
-                <span className="px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/10 text-[11px] text-foreground flex items-center gap-1.5">
+                <span className="text-[10px] text-orange-300/60 uppercase tracking-wider mr-1">Inspiration</span>
+                <span className="px-2.5 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 text-[11px] text-orange-300 flex items-center gap-1.5">
                   {selectedGenre}
-                  <button onClick={() => setSelectedGenre("Bachata")} className="text-muted-foreground">
+                  <button onClick={() => setSelectedGenre("Bachata")} className="text-orange-300/60">
                     <X className="h-2.5 w-2.5" />
                   </button>
                 </span>
                 <button
-                  className="px-2.5 py-1 rounded-full border border-dashed border-white/15 text-[11px] text-muted-foreground flex items-center gap-1"
+                  className="px-2.5 py-1 rounded-full border border-dashed border-orange-500/30 text-[11px] text-orange-300/60 flex items-center gap-1 hover:border-orange-500/60 transition-colors"
                   onClick={handleRandomPrompt}
                   data-testid="chip-random"
                 >
@@ -1224,21 +1246,17 @@ export default function CreatePage() {
                 </button>
               </div>
 
-              <Button
+              <button
                 onClick={handleSubmit}
                 disabled={isAnyPending || !canCreate}
                 className={cn(
-                  "w-full font-semibold text-sm",
-                  canCreate && !isAnyPending
-                    ? "bg-gradient-to-r from-primary to-orange-500 text-white border-primary shadow-[0_0_20px_rgba(255,20,147,0.25)]"
-                    : ""
+                  "w-full py-4 rounded-xl bg-gradient-to-r from-orange-600 to-orange-500 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-2xl hover:shadow-orange-500/50 transition-all relative overflow-hidden flex items-center justify-center gap-2"
                 )}
-                size="lg"
                 data-testid="button-submit"
               >
-                {isAnyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {isAnyPending ? t('create.generating', 'Creating...') : t('create.createButton', 'Create')}
-              </Button>
+                {isAnyPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
+                {isAnyPending ? t('create.generating', 'Generando tu obra maestra...') : t('create.createButton', 'Generar Música')}
+              </button>
 
               <div className="flex items-center gap-1.5 mt-3 mb-3">
                 <Shield className="h-3 w-3 text-primary/60 flex-shrink-0" />
@@ -1329,238 +1347,159 @@ export default function CreatePage() {
             </div>
           </div>
 
-          {/* ===== CENTER: Workspace ===== */}
-          <div className="overflow-y-auto" data-testid="song-list-panel">
-            <div className="border-b border-white/5 px-5 py-3">
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <span>Workspaces</span>
-                <ChevronRight className="h-3 w-3" />
-                <span className="text-foreground font-medium">Mi Workspace</span>
+          {/* ===== RIGHT: Track List with glow ===== */}
+          <div className="relative" data-testid="song-list-panel">
+            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-orange-600 rounded-2xl blur-xl opacity-20" />
+            <div className="relative bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-white/10 rounded-2xl p-8 max-h-[calc(100vh-180px)] flex flex-col">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-white">{t('create.yourCreations', 'Tus Creaciones')}</h2>
+                <span className="text-sm text-orange-300/60">{allSongs.length} {allSongs.length === 1 ? t('create.track', 'pista') : t('create.tracks', 'pistas')}</span>
               </div>
-            </div>
 
-            <div className="px-5 py-3 border-b border-white/5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex-1 min-w-[140px] relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    placeholder="Search songs..."
-                    className="bg-white/[0.03] border-white/10 text-sm pl-8"
-                    data-testid="input-search-songs"
-                  />
-                </div>
-                <Badge variant="outline" className="border-white/10 text-muted-foreground text-[11px] gap-1 cursor-pointer">
-                  <Filter className="h-3 w-3" />Filters
-                </Badge>
-                <Badge variant="outline" className="border-white/10 text-muted-foreground text-[11px] gap-1 cursor-pointer">
-                  Newest <ChevronDown className="h-3 w-3" />
-                </Badge>
-              </div>
-            </div>
-
-            {isPending && (
-              <div className="px-5 py-3">
-                <div className="flex items-center gap-3 p-3 rounded-lg border border-primary/20 bg-primary/5">
-                  <Loader2 className="h-5 w-5 text-primary animate-spin flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium">{t('create.generating2Versions')}</p>
-                    <p className="text-[11px] text-muted-foreground">{t('create.firstTimeTip')}</p>
+              {isPending && (
+                <div className="mb-4">
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-orange-500/30 bg-orange-600/10">
+                    <Loader2 className="h-5 w-5 text-orange-400 animate-spin flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-white">{t('create.generating2Versions')}</p>
+                      <p className="text-[11px] text-orange-300/60">{t('create.firstTimeTip')}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div className="px-5 py-3">
-              {songsLoading ? (
-                <div className="flex items-center justify-center py-16">
-                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                </div>
-              ) : groupedSongs.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="h-16 w-16 rounded-2xl bg-white/[0.03] flex items-center justify-center mb-4">
-                    <Music className="h-8 w-8 text-muted-foreground/20" />
+              <div className="space-y-4 overflow-y-auto flex-1 pr-2 custom-scrollbar">
+                {songsLoading ? (
+                  <div className="flex items-center justify-center py-16">
+                    <Loader2 className="h-8 w-8 text-orange-400 animate-spin" />
                   </div>
-                  <h3 className="text-base font-medium mb-1">{t('create.noSongsYet', 'No hay canciones aún')}</h3>
-                  <p className="text-sm text-muted-foreground max-w-sm">{t('create.noSongsDesc', 'Describe tu canción en el panel de la izquierda y presiona crear para empezar.')}</p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {groupedSongs.map((group) => {
+                ) : groupedSongs.length === 0 ? (
+                  <div className="text-center py-12 text-orange-300/60">
+                    <Music className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p>{t('create.noSongsYet', 'No hay pistas todavía. ¡Crea tu primera!')}</p>
+                  </div>
+                ) : (
+                  groupedSongs.map((group) => {
                     const isPair = group.songs.length > 1;
                     return (
                       <div key={group.pairId || group.songs[0]?.id} data-testid={`group-${group.pairId || group.songs[0]?.id}`}>
                         {isPair && (
-                          <div className="flex items-center gap-2 mb-1 px-1">
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">
-                              <Zap className="h-2.5 w-2.5 mr-1" />{t('create.twoVersions')}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground truncate">{group.songs[0]?.title || group.songs[0]?.prompt}</span>
+                          <div className="flex items-center gap-2 mb-2 px-1">
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30">
+                              <Zap className="h-2.5 w-2.5 inline mr-1" />{t('create.twoVersions')}
+                            </span>
                           </div>
                         )}
-                        <div className="space-y-0.5">
+                        <div className="space-y-2">
                           {group.songs.map((song: any) => (
                             <div
                               key={song.id}
                               className={cn(
-                                "flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all group/song",
+                                "group/song relative rounded-xl overflow-hidden transition-all cursor-pointer",
                                 playerState.currentSong?.id === song.id
-                                  ? "bg-primary/10 border border-primary/20"
-                                  : "border border-transparent hover:bg-white/[0.03]"
+                                  ? "bg-gradient-to-r from-orange-600/30 to-indigo-600/30 border border-orange-500/50"
+                                  : "bg-black/30 border border-white/10 hover:border-orange-500/30"
                               )}
                               onClick={() => handleSongClick(song)}
                               data-testid={`card-recent-song-${song.id}`}
                             >
-                              <div className="h-12 w-12 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-                                {playerState.currentSong?.id === song.id && playerState.isPlaying ? (
-                                  <AudioSpectrum songId={song.id} />
-                                ) : song.imageUrl ? (
-                                  <img src={song.imageUrl} alt={song.title} className="h-12 w-12 rounded-md object-cover" />
-                                ) : song.status === "processing" || song.status === "pending" ? (
-                                  <Loader2 className="h-4 w-4 text-primary animate-spin" />
-                                ) : song.status === "completed" ? (
-                                  <Play className="h-4 w-4 text-primary fill-current" />
-                                ) : (
-                                  <AlertCircle className="h-4 w-4 text-destructive" />
-                                )}
-                                {song.duration && song.status === "completed" && (
-                                  <span className="absolute bottom-0.5 right-0.5 px-1 py-0 rounded text-[9px] font-mono bg-black/70 text-white">
-                                    {formatDuration(song.duration)}
-                                  </span>
-                                )}
-                                {song.variationLabel && (
-                                  <span className="absolute top-0 left-0 h-4 w-4 rounded-br bg-primary text-black text-[9px] font-bold flex items-center justify-center">{song.variationLabel}</span>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <h4 className="text-sm font-medium truncate">
+                              <div className="flex items-center gap-4 p-4">
+                                <div className="relative flex-shrink-0">
+                                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-white/5 flex items-center justify-center">
+                                    {song.imageUrl ? (
+                                      <img src={song.imageUrl} alt={song.title} className="w-16 h-16 rounded-lg object-cover" />
+                                    ) : song.status === "processing" || song.status === "pending" ? (
+                                      <Loader2 className="h-5 w-5 text-orange-400 animate-spin" />
+                                    ) : song.status === "completed" ? (
+                                      <Play className="h-5 w-5 text-white" />
+                                    ) : (
+                                      <AlertCircle className="h-5 w-5 text-destructive" />
+                                    )}
+                                  </div>
+                                  {song.status === "completed" && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover/song:opacity-100 transition-opacity rounded-lg">
+                                      {playerState.currentSong?.id === song.id && playerState.isPlaying ? (
+                                        <Pause className="w-6 h-6 text-white" />
+                                      ) : (
+                                        <Play className="w-6 h-6 text-white" />
+                                      )}
+                                    </div>
+                                  )}
+                                  {song.variationLabel && (
+                                    <span className="absolute top-0 left-0 h-5 w-5 rounded-br-lg rounded-tl-lg bg-orange-500 text-black text-[10px] font-bold flex items-center justify-center">{song.variationLabel}</span>
+                                  )}
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="text-white font-medium truncate">
                                     {song.variationLabel ? `${t('create.version')} ${song.variationLabel}` : (song.title || song.prompt || t('create.untitledTrack'))}
-                                  </h4>
-                                  {song.engine && (
-                                    <Badge variant="outline" className="text-[9px] px-1 py-0 border-white/10 text-muted-foreground flex-shrink-0">
-                                      {song.engine}
-                                    </Badge>
-                                  )}
+                                  </h3>
+                                  <p className="text-sm text-orange-300/60 truncate">{song.prompt}</p>
+                                  <div className="flex items-center gap-3 mt-1">
+                                    {song.genre && (
+                                      <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30">
+                                        {song.genre}
+                                      </span>
+                                    )}
+                                    {song.duration && song.status === "completed" && (
+                                      <span className="text-xs text-orange-300/60">{formatDuration(song.duration)}</span>
+                                    )}
+                                    {(song.status === "processing" || song.status === "pending") ? (
+                                      <span className="text-xs text-orange-400 animate-pulse">{t('create.generating')}</span>
+                                    ) : (
+                                      <span className="text-xs text-orange-300/40">{song.createdAt && formatDistanceToNow(new Date(song.createdAt), { addSuffix: true })}</span>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  {song.genre && <span className="text-[10px] text-muted-foreground">{song.genre}</span>}
-                                  {(song.status === "processing" || song.status === "pending") ? (
-                                    <span className="text-[10px] text-primary animate-pulse">{t('create.generating')}</span>
-                                  ) : (
-                                    <span className="text-[10px] text-muted-foreground/60">{song.createdAt && formatDistanceToNow(new Date(song.createdAt), { addSuffix: true })}</span>
-                                  )}
+
+                                <div className="flex items-center gap-2 opacity-0 group-hover/song:opacity-100 transition-opacity">
+                                  <button className="p-2 rounded-lg hover:bg-white/10 transition-colors" onClick={(e) => { e.stopPropagation(); const a = document.createElement("a"); a.href = song.audioUrl; a.download = `${song.title || "song"}.mp3`; a.click(); }} data-testid={`button-download-${song.id}`}>
+                                    <Download className="w-4 h-4 text-orange-300" />
+                                  </button>
+                                  <button className="p-2 rounded-lg hover:bg-white/10 transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`${window.location.origin}/discover?song=${song.id}`); toast({ title: t('create.linkCopied', 'Enlace copiado') }); }} data-testid={`button-share-${song.id}`}>
+                                    <Share2 className="w-4 h-4 text-orange-300" />
+                                  </button>
+                                  <button className="p-2 rounded-lg hover:bg-white/10 transition-colors" onClick={(e) => { e.stopPropagation(); deleteSong(song.id); }} data-testid={`button-delete-${song.id}`}>
+                                    <Trash2 className="w-4 h-4 text-orange-300" />
+                                  </button>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-0.5 flex-shrink-0 invisible group-hover/song:visible">
-                                <Button size="icon" variant="ghost" className="h-7 w-7" data-testid={`button-like-${song.id}`}>
-                                  <ThumbsUp className="h-3 w-3" />
-                                </Button>
-                                <Button size="icon" variant="ghost" className="h-7 w-7" data-testid={`button-dislike-${song.id}`}>
-                                  <ThumbsDown className="h-3 w-3" />
-                                </Button>
-                                <Button size="icon" variant="ghost" className="h-7 w-7" data-testid={`button-share-${song.id}`}>
-                                  <Share2 className="h-3 w-3" />
-                                </Button>
-                                {song.status === "completed" && (
-                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setLocation("/studio"); }} data-testid={`button-studio-${song.id}`}>
-                                    <Scissors className="h-3 w-3" />
-                                  </Button>
-                                )}
-                                <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" onClick={(e) => { e.stopPropagation(); deleteSong(song.id); }} data-testid={`button-delete-${song.id}`}>
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
+
+                              {playerState.currentSong?.id === song.id && playerState.isPlaying && (
+                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-orange-500 to-indigo-500">
+                                  <motion.div className="h-full bg-white/50" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 3, repeat: Infinity }} />
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
                       </div>
                     );
-                  })}
-                </div>
-              )}
+                  })
+                )}
+              </div>
 
               {groupedSongs.length > 0 && (
-                <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-white/5 flex-wrap">
-                  <span className="text-xs text-muted-foreground">{allSongs.length} {allSongs.length === 1 ? "song" : "songs"}</span>
-                  <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setLocation("/library")} data-testid="button-view-all">
-                    {t('create.viewAll')}<ChevronRight className="h-3 w-3 ml-1" />
-                  </Button>
+                <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-white/10">
+                  <span className="text-xs text-orange-300/60">{allSongs.length} {allSongs.length === 1 ? "song" : "songs"}</span>
+                  <button className="text-xs text-orange-300 hover:text-white transition-colors flex items-center gap-1" onClick={() => setLocation("/library")} data-testid="button-view-all">
+                    {t('create.viewAll')}<ChevronRight className="h-3 w-3" />
+                  </button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* ===== RIGHT: History Panel ===== */}
-          <div className="border-l border-white/5 overflow-y-auto bg-background/85 flex flex-col" data-testid="history-panel">
-            <div className="p-3 border-b border-white/5 flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <h2 className="text-sm font-semibold">{t('create.history', 'Historial')}</h2>
-                {history.length > 0 && (
-                  <span className="text-[10px] bg-white/5 text-muted-foreground px-1.5 rounded-full">{history.length}</span>
-                )}
-              </div>
-              {history.length > 0 && (
-                <Button variant="ghost" size="sm" className="text-[11px] text-muted-foreground" onClick={clearHistory} data-testid="button-clear-history">
-                  <Trash2 className="h-3 w-3 mr-1" />{t('create.clearHistory', 'Borrar')}
-                </Button>
-              )}
-            </div>
-
-            {playerState.currentSong && (
-              <HistoryNowPlaying song={playerState.currentSong} isPlaying={playerState.isPlaying} />
-            )}
-
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-3">
-                {history.length > 0 ? (
-                  <div className="space-y-0.5">
-                    {history.map((entry) => (
-                      <div
-                        key={`${entry.song.id}-${entry.playedAt}`}
-                        className={cn(
-                          "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
-                          playerState.currentSong?.id === entry.song.id
-                            ? "bg-primary/10 border border-primary/20"
-                            : "border border-transparent hover:bg-white/[0.03]"
-                        )}
-                        onClick={() => {
-                          const historyQueue = history.map(h => h.song);
-                          globalPlay(entry.song, historyQueue);
-                        }}
-                        data-testid={`history-song-${entry.song.id}`}
-                      >
-                        <div className="h-10 w-10 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden relative">
-                          {playerState.currentSong?.id === entry.song.id && playerState.isPlaying ? (
-                            <AudioSpectrum songId={entry.song.id} />
-                          ) : entry.song.imageUrl ? (
-                            <img src={entry.song.imageUrl} alt="" className="h-10 w-10 object-cover rounded-md" />
-                          ) : (
-                            <Music className="h-3.5 w-3.5 text-muted-foreground/30" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-xs font-medium truncate">{entry.song.title || entry.song.prompt || t('create.untitledTrack')}</h4>
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-[10px] text-muted-foreground truncate">{entry.song.genre}</p>
-                            <span className="text-[9px] text-muted-foreground/50">{formatDistanceToNow(new Date(entry.playedAt), { addSuffix: true })}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="h-16 w-16 rounded-2xl bg-white/[0.03] flex items-center justify-center mb-4">
-                      <Clock className="h-8 w-8 text-muted-foreground/20" />
-                    </div>
-                    <p className="text-xs text-muted-foreground">{t('create.noHistory', 'Tu historial aparecerá aquí')}</p>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
+
+        <style>{`
+          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 10px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(249, 115, 22, 0.4); border-radius: 10px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(249, 115, 22, 0.6); }
+        `}</style>
 
         {/* ====== MOBILE / TABLET LAYOUT ====== */}
         <ScrollArea className="lg:hidden flex-1">
