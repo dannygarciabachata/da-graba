@@ -109,7 +109,19 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = (req.user as any).claims.sub;
     const songs = await storage.getUserSongs(userId);
-    res.json(songs);
+    const songIds = songs.map(s => s.id);
+    const likesMap = songIds.length > 0 ? await storage.getSongLikeCountsBatch(songIds) : {};
+    const userLikesMap: Record<number, number> = {};
+    if (songIds.length > 0) {
+      const userLikes = await storage.getUserSongLikesBatch(songIds, userId);
+      for (const [id, val] of Object.entries(userLikes)) userLikesMap[Number(id)] = val;
+    }
+    const songsWithLikes = songs.map(s => ({
+      ...s,
+      likes: likesMap[s.id] || 0,
+      userLikeValue: userLikesMap[s.id] || 0,
+    }));
+    res.json(songsWithLikes);
   });
 
   app.get(api.songs.get.path, async (req, res) => {

@@ -152,6 +152,7 @@ export function useToggleSongLike() {
     },
     onSuccess: (_data: any, variables: { songId: number; value: 1 | -1 }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/songs", variables.songId, "likes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/songs"] });
     },
   });
 }

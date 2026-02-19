@@ -244,6 +244,7 @@ export interface IStorage {
   getSongLikeStatus(songId: number, userId: string): Promise<{ value: number } | null>;
   getSongLikeCounts(songId: number): Promise<{ likes: number; dislikes: number }>;
   getSongLikeCountsBatch(songIds: number[]): Promise<Record<number, number>>;
+  getUserSongLikesBatch(songIds: number[], userId: string): Promise<Record<number, number>>;
 
   getArtistProfile(userId: string): Promise<ArtistProfile | undefined>;
   getArtistProfileById(id: number): Promise<ArtistProfile | undefined>;
@@ -1425,6 +1426,18 @@ export class DatabaseStorage implements IStorage {
       .groupBy(songLikes.songId);
     const map: Record<number, number> = {};
     for (const r of results) map[r.songId] = r.count;
+    return map;
+  }
+
+  async getUserSongLikesBatch(songIds: number[], userId: string): Promise<Record<number, number>> {
+    if (songIds.length === 0) return {};
+    const results = await db.select({
+      songId: songLikes.songId,
+      value: songLikes.value,
+    }).from(songLikes)
+      .where(and(inArray(songLikes.songId, songIds), eq(songLikes.userId, userId)));
+    const map: Record<number, number> = {};
+    for (const r of results) map[r.songId] = r.value;
     return map;
   }
 

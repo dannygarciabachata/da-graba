@@ -69,7 +69,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
-import { useDeleteSong, useSongLike, useToggleSongLike } from "@/hooks/use-songs";
+import { useDeleteSong, useToggleSongLike } from "@/hooks/use-songs";
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { usePlayer, type PlayerSong } from "@/contexts/PlayerContext";
 import { AudioSpectrum } from "@/components/AudioSpectrum";
@@ -306,7 +306,7 @@ function formatDuration(seconds: number | null | undefined): string {
 
 function HistoryNowPlaying({ song, isPlaying }: { song: PlayerSong; isPlaying: boolean }) {
   const { t } = useTranslation();
-  const likeQuery = useSongLike(song.id);
+  const likeData = { likes: (song as any).likes || 0, dislikes: 0, userValue: (song as any).userLikeValue || 0 };
   const likeMutation = useToggleSongLike();
   const { toast } = useToast();
   const [showLyrics, setShowLyrics] = useState(false);
@@ -335,7 +335,7 @@ function HistoryNowPlaying({ song, isPlaying }: { song: PlayerSong; isPlaying: b
 
   const handleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const newValue = likeQuery.data?.userValue === 1 ? -1 : 1;
+    const newValue = likeData.userValue === 1 ? -1 : 1;
     likeMutation.mutate({ songId: song.id, value: newValue as 1 | -1 });
   };
 
@@ -402,13 +402,13 @@ function HistoryNowPlaying({ song, isPlaying }: { song: PlayerSong; isPlaying: b
                 variant="ghost"
                 size="icon"
                 onClick={handleLike}
-                className={cn(likeQuery.data?.userValue === 1 && "text-primary")}
+                className={cn(likeData.userValue === 1 && "text-primary")}
                 data-testid="button-like-song"
               >
-                <Heart className={cn("h-4 w-4", likeQuery.data?.userValue === 1 && "fill-current")} />
+                <Heart className={cn("h-4 w-4", likeData.userValue === 1 && "fill-current")} />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t('create.like', 'Me gusta')}{likeQuery.data?.likes ? ` (${likeQuery.data.likes})` : ""}</TooltipContent>
+            <TooltipContent>{t('create.like', 'Me gusta')}{likeData.likes ? ` (${likeData.likes})` : ""}</TooltipContent>
           </Tooltip>
 
           <Tooltip>

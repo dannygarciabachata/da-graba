@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { useDeleteSong, useTogglePublish, useToggleSongLike, useSongLike, useStemSeparation } from "@/hooks/use-songs";
+import { useDeleteSong, useTogglePublish, useToggleSongLike, useStemSeparation } from "@/hooks/use-songs";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,7 +67,7 @@ export function SongActionMenu({ song, onDesignCover, onOpenStudio, onMashup, sh
   const { mutate: togglePublish } = useTogglePublish();
   const { mutate: toggleLike } = useToggleSongLike();
   const { mutate: startStems, isPending: stemsLoading } = useStemSeparation();
-  const { data: likeData } = useSongLike(showLikeButtons ? song.id : null);
+  const likeData = { likes: (song as any).likes || 0, dislikes: 0, userValue: (song as any).userLikeValue || 0 };
 
   const isCompleted = song.status === "completed";
   const hasAudio = !!song.audioUrl;
