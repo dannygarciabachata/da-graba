@@ -1,0 +1,34 @@
+nucptk0odf95gk[info]Finished.
+nucptk0odf95gk[info][DAGRABA Serverless] GPU: NVIDIA L4\n
+nucptk0odf95gk[info][DAGRABA Serverless] GPU available: True\n
+nucptk0odf95gk[info][DAGRABA Serverless] Job received | Action: health_check\n
+nucptk0odf95gk[info]Started.
+nucptk0odf95gk[info]Jobs in progress: 1
+nucptk0odf95gk[info]Jobs in queue: 1
+nucptk0odf95gk[info]--- Starting Serverless Worker |  Version 1.7.7 ---\n
+nucptk0odf95gk[info][DAGRABA Serverless] Starting RunPod handler...\n
+nucptk0odf95gk[info][Init] SAO Instrumental Finetune NOT cached. Will download on first use from santifiorino/SAO-Instrumental-Finetune\n
+nucptk0odf95gk[info][Init] No fine-tuned models found (will use base SAO model)\n
+nucptk0odf95gk[info][Init] Workspace: /runpod-volume | Models: /runpod-volume/models\n
+nucptk0odf95gk[info][Init] Worker ready | torch=True | numpy=True\n
+nucptk0odf95gk[info][Init] GPU: NVIDIA L4 | VRAM: 22.0 GB\n
+nucptk0odf95gk[info][Init] PyTorch 2.4.1+cu124 loaded | CUDA: True\n
+nucptk0odf95gk[info][Init] Using workspace: /runpod-volume (network volume: True)\n
+nucptk0odf95gk[info]\n
+nucptk0odf95gk[info]=============================================================\n
+nucptk0odf95gk[info][Init] Starting DAGRABA handler...\n
+nucptk0odf95gk[info]\n
+nucptk0odf95gk[info][Init] SAO Instrumental Finetune: NOT cached (will download on first use)\n
+nucptk0odf95gk[info]\n
+nucptk0odf95gk[info]  TORCH_HOME=/runpod-volume/.cache/torch\n
+nucptk0odf95gk[info]  HF_HOME=/runpod-volume/.cache/huggingface\n
+nucptk0odf95gk[info][Init] Environment:\n
+nucptk0odf95gk[info]\n
+nucptk0odf95gk[info][Init] HF_TOKEN configured\n
+nucptk0odf95gk[info][Init] Dependencies installed successfully\n
+nucptk0odf95gk[info][Init] Core imports OK\n
+nucptk0odf95gk[info][Init] Verifying critical imports...\n
+nucptk0odf95gk[info][notice] To update, run: python3 -m pip install --upgrade pip\n
+nucptk0odf95gk[info][notice] A new release of pip is available: 24.2 -> 26.0.1\n
+nucptk0odf95gk[info]\n
+nucptk0odf95gk[warning]WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable.It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\n
