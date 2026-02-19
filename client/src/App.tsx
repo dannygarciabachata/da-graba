@@ -3,15 +3,11 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/hooks/use-auth";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { FooterPlayerBar } from "@/components/FooterPlayerBar";
 import Landing from "@/pages/Landing";
-import palettaBg from "@assets/palettabg_1771282011333.png";
-import dgbLogo from "@assets/Logo_1771474005704.png";
-import dgbMobileLogo from "@assets/Logomobil2_1771474745681.png";
 import HomePage from "@/pages/HomePage";
 import CreatePage from "@/pages/CreatePage";
 import LibraryPage from "@/pages/LibraryPage";
@@ -64,73 +60,49 @@ function useServiceContext(): string | undefined {
 
 function AuthenticatedLayout() {
   const serviceContext = useServiceContext();
-  const style = {
-    "--sidebar-width": "15rem",
-    "--sidebar-width-icon": "3rem",
-  };
 
   return (
-    <SidebarProvider style={style as React.CSSProperties}>
-      <div className="flex h-screen w-full">
-        <AppSidebar />
-        <div className="flex flex-col flex-1 min-w-0">
-          <header className="h-14 flex items-center px-3 gap-3 border-b border-white/5 bg-background/90 backdrop-blur-md sticky top-0 z-40 lg:hidden">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <img src={dgbMobileLogo} alt="DA GRABA Studio" className="h-9 w-auto object-contain" data-testid="img-mobile-logo" />
-          </header>
-          <main
-            className="flex-1 overflow-auto relative"
-            style={{
-              backgroundImage: `url(${palettaBg})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
-              backgroundAttachment: "fixed",
-            }}
-          >
-            <div className="absolute inset-0 bg-[#0a0a12]/97 pointer-events-none" />
-            <div className="relative z-10 min-h-full pb-[72px]">
-            <Switch>
-              <Route path="/home" component={HomePage} />
-              <Route path="/create" component={CreatePage} />
-              <Route path="/dashboard"><Redirect to="/home" /></Route>
-              <Route path="/discover/:genre" component={PlaylistPage} />
-              <Route path="/discover" component={DiscoverPage} />
-              <Route path="/library" component={LibraryPage} />
-              <Route path="/my-playlists/:id" component={MyPlaylistDetailPage} />
-              <Route path="/my-playlists" component={MyPlaylistsPage} />
-              <Route path="/lyrics" component={LyricsPage} />
-              <Route path="/quiz" component={QuizPage} />
-              <Route path="/studio" component={StudioPage} />
-              <Route path="/sample-lab" component={SampleLab} />
-              <Route path="/audio-tools" component={AudioToolsPage} />
-              <Route path="/style-kits" component={StyleKitsPage} />
-              <Route path="/producer-store" component={ProducerStorePage} />
-              <Route path="/pricing" component={PricingPage} />
-              <Route path="/blog/:slug" component={BlogPage} />
-              <Route path="/blog" component={BlogPage} />
-              <Route path="/cover-designer" component={CoverDesignerPage} />
-              <Route path="/copyright" component={CopyrightHubPage} />
-              <Route path="/artist-dashboard" component={ArtistDashboardPage} />
-              <Route path="/artist-onboarding" component={ArtistOnboardingPage} />
-              <Route path="/discography" component={DiscographyPage} />
-              <Route path="/playlist/:id" component={PublicPlaylistViewPage} />
-              <Route path="/artist/:id" component={ArtistProfilePage} />
-              <Route path="/admin" component={AdminPage} />
-              <Route path="/terms">{() => <LegalPage section="terms" />}</Route>
-              <Route path="/privacy">{() => <LegalPage section="privacy" />}</Route>
-              <Route path="/cookies">{() => <LegalPage section="cookies" />}</Route>
-              <Route component={NotFound} />
-            </Switch>
-            <SupportChat serviceContext={serviceContext} />
-            </div>
-          </main>
-          <div className="flex-shrink-0 sticky bottom-0 z-50">
-            <FooterPlayerBar onOpenStudio={() => window.location.href = "/studio"} />
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 flex flex-col">
+      <AppHeader />
+      <main className="flex-1 overflow-auto pb-[80px]">
+        <Switch>
+          <Route path="/home" component={HomePage} />
+          <Route path="/create" component={CreatePage} />
+          <Route path="/dashboard"><Redirect to="/home" /></Route>
+          <Route path="/discover/:genre" component={PlaylistPage} />
+          <Route path="/discover" component={DiscoverPage} />
+          <Route path="/library" component={LibraryPage} />
+          <Route path="/my-playlists/:id" component={MyPlaylistDetailPage} />
+          <Route path="/my-playlists" component={MyPlaylistsPage} />
+          <Route path="/lyrics" component={LyricsPage} />
+          <Route path="/quiz" component={QuizPage} />
+          <Route path="/studio" component={StudioPage} />
+          <Route path="/sample-lab" component={SampleLab} />
+          <Route path="/audio-tools" component={AudioToolsPage} />
+          <Route path="/style-kits" component={StyleKitsPage} />
+          <Route path="/producer-store" component={ProducerStorePage} />
+          <Route path="/pricing" component={PricingPage} />
+          <Route path="/blog/:slug" component={BlogPage} />
+          <Route path="/blog" component={BlogPage} />
+          <Route path="/cover-designer" component={CoverDesignerPage} />
+          <Route path="/copyright" component={CopyrightHubPage} />
+          <Route path="/artist-dashboard" component={ArtistDashboardPage} />
+          <Route path="/artist-onboarding" component={ArtistOnboardingPage} />
+          <Route path="/discography" component={DiscographyPage} />
+          <Route path="/playlist/:id" component={PublicPlaylistViewPage} />
+          <Route path="/artist/:id" component={ArtistProfilePage} />
+          <Route path="/admin" component={AdminPage} />
+          <Route path="/terms">{() => <LegalPage section="terms" />}</Route>
+          <Route path="/privacy">{() => <LegalPage section="privacy" />}</Route>
+          <Route path="/cookies">{() => <LegalPage section="cookies" />}</Route>
+          <Route component={NotFound} />
+        </Switch>
+        <SupportChat serviceContext={serviceContext} />
+      </main>
+      <div className="fixed bottom-0 left-0 right-0 z-50">
+        <FooterPlayerBar onOpenStudio={() => window.location.href = "/studio"} />
       </div>
-    </SidebarProvider>
+    </div>
   );
 }
 
@@ -140,8 +112,11 @@ function Router() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center text-primary">
-        {t('common.loading')}
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-orange-300/70">{t('common.loading')}</span>
+        </div>
       </div>
     );
   }
