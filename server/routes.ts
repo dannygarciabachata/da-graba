@@ -6840,13 +6840,13 @@ IMPORTANT GUIDELINES:
 
   app.get("/api/runpod-deploy/:file", (req, res) => {
     const file = req.params.file;
-    const path = require("path");
     const allowed: Record<string, string> = {
-      "handler.py": path.join(process.cwd(), "scripts/runpod_serverless/handler.py"),
-      "start.sh": path.join(process.cwd(), "scripts/runpod_serverless/start.sh"),
+      "handler.py": "scripts/runpod_serverless/handler.py",
+      "start.sh": "scripts/runpod_serverless/start.sh",
     };
     if (!allowed[file]) return res.status(404).send("Not found");
-    res.sendFile(allowed[file]);
+    const filePath = `${process.cwd()}/${allowed[file]}`;
+    res.sendFile(filePath);
   });
 
   app.use((err: any, _req: any, res: any, next: any) => {
