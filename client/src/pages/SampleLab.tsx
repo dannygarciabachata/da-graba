@@ -22,7 +22,7 @@ const STYLE_OPTIONS = [
   { value: "heart-mula", labelKey: "sampleLab.styles.signature" },
   { value: "bachata-romantic", label: "Romantic" },
   { value: "bachata-dance", label: "Dance" },
-  { value: "bachata-bolero", label: "DAGRABOLERO" },
+  { value: "bachata-bolero", label: "DA GRABOLERO" },
   { value: "bachata-urbana", label: "Urbana" },
   { value: "trio-serenade", label: "Serenade" },
 ];

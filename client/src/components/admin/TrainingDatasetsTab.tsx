@@ -249,7 +249,7 @@ function InstrumentStatusCard() {
       const data = await res.json();
       setBuildOutput(data.output);
       if (data.success) {
-        toast({ title: "VST3 Compilado", description: "DAGRABA Sampler compilado y desplegado exitosamente." });
+        toast({ title: "VST3 Compilado", description: "DA GRABA Sampler compilado y desplegado exitosamente." });
         checkStatus();
       } else {
         toast({ title: "Error de Compilacion", description: "Revisa el log de salida para detalles.", variant: "destructive" });
@@ -287,7 +287,7 @@ function InstrumentStatusCard() {
           </div>
         </div>
         <CardDescription>
-          FluidSynth (GM SoundFont) + SAO Instrumental Finetune + DAGRABA Sampler VST3
+          FluidSynth (GM SoundFont) + SAO Instrumental Finetune + DA GRABA Sampler VST3
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -348,7 +348,7 @@ function InstrumentStatusCard() {
                   ) : (
                     <XCircle className="h-4 w-4 text-muted-foreground" />
                   )}
-                  <span className="text-sm font-medium">DAGRABA Sampler</span>
+                  <span className="text-sm font-medium">DA GRABA Sampler</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {status.vst3Installed ? "VST3 compilado" : "No compilado"}

@@ -543,7 +543,7 @@ export default function ArtistOnboardingPage() {
                 />
               </div>
               <div className="flex items-center gap-3">
-                <SiInstagram className="h-5 w-5 text-pink-500 flex-shrink-0" />
+                <SiInstagram className="h-5 w-5 text-orange-500 flex-shrink-0" />
                 <Input
                   value={form.socialLinks.instagram || ""}
                   onChange={(e) => updateSocial("instagram", e.target.value)}

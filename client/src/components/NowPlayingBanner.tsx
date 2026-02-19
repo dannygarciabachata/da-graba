@@ -167,7 +167,7 @@ export function NowPlayingBanner({ song, onClose, onTogglePublish, onDownload }:
     const shareUrl = window.location.href;
     if (navigator.share) {
       try {
-        await navigator.share({ title: `${song.title} - DAGRABA Studio`, url: shareUrl });
+        await navigator.share({ title: `${song.title} - DA GRABA Studio`, url: shareUrl });
       } catch {}
     } else {
       await navigator.clipboard.writeText(shareUrl);
@@ -199,7 +199,7 @@ export function NowPlayingBanner({ song, onClose, onTogglePublish, onDownload }:
   if (!song.audioUrl) return null;
 
   const artistDisplay = song.artistName || "Unknown Artist";
-  const copyrightDisplay = song.copyrightHolder || "DAGRABA Studio";
+  const copyrightDisplay = song.copyrightHolder || "DA GRABA Studio";
 
   return (
     <motion.div
@@ -333,7 +333,7 @@ export function NowPlayingBanner({ song, onClose, onTogglePublish, onDownload }:
             variant="ghost"
             size="icon"
             onClick={handleLike}
-            className={`h-8 w-8 ${liked ? "text-pink-500" : "text-muted-foreground"}`}
+            className={`h-8 w-8 ${liked ? "text-orange-500" : "text-muted-foreground"}`}
             data-testid="button-banner-like"
           >
             <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />

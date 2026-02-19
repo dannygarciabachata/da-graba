@@ -374,7 +374,7 @@ export default function MyPlaylistDetailPage() {
                           {song.title || song.prompt}
                         </h3>
                         <p className="text-xs text-muted-foreground truncate">
-                          {song.artistName || "DGB AUDIO"}
+                          {song.artistName || "DA GRABA"}
                         </p>
                       </div>
                       <span className="text-xs text-muted-foreground w-12 text-right">
@@ -416,7 +416,7 @@ export default function MyPlaylistDetailPage() {
                   {currentSong.title}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {currentSong.artistName || "DGB AUDIO"}
+                  {currentSong.artistName || "DA GRABA"}
                 </p>
               </div>
               <Button

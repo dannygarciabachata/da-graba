@@ -1,10 +1,10 @@
 {
   "common": {
-    "loading": "Cargando DGB AUDIO...",
-    "brandName": "DGB AUDIO",
-    "engineActivated": "DGB AUDIO Activado",
-    "engineSignature": "DGB AUDIO Signature",
-    "musicEngine": "Motor de Música DGB AUDIO",
+    "loading": "Cargando DA GRABA...",
+    "brandName": "DA GRABA",
+    "engineActivated": "DA GRABA Activado",
+    "engineSignature": "DA GRABA Signature",
+    "musicEngine": "Motor de Música DA GRABA",
     "login": "Iniciar Sesión",
     "logout": "Cerrar Sesión",
     "credits": "Créditos",
@@ -34,9 +34,9 @@
     "success": "Éxito",
     "noResults": "Sin resultados",
     "poweredBy": "Desarrollado por",
-    "engineName": "DGB AUDIO Engine",
+    "engineName": "DA GRABA Engine",
     "demoSongTitle": "Regreso al Edén",
-    "demoSongArtist": "DGB AUDIO AI",
+    "demoSongArtist": "DA GRABA AI",
     "aiGenerated": "Generado por IA",
     "beta": "BETA",
     "mostPopular": "Más Popular",
@@ -73,7 +73,7 @@
   },
   "discover": {
     "title": "Descubrir",
-    "subtitle": "Las mejores canciones creadas con IA en DGB AUDIO",
+    "subtitle": "Las mejores canciones creadas con IA en DA GRABA",
     "playlists": "Playlists",
     "trending": "Tendencias",
     "noSongs": "Aún no hay canciones publicadas",
@@ -93,7 +93,7 @@
   },
   "landing": {
     "badge": "La Pura Sangre de la Bachata",
-    "heroTitle": "DGB AUDIO: La Pura Sangre de la Bachata con el",
+    "heroTitle": "DA GRABA: La Pura Sangre de la Bachata con el",
     "useCases": {
       "title": "Crea Música Para Todo",
       "subtitle": "Tú pones tus ideas, tus letras, y nosotros te hacemos realidad tus historias en canciones.",
@@ -133,7 +133,7 @@
     "heroTitleHighlight": "ADN de Danny Garcia y los Grandes Músicos Dominicanos",
     "heroSubtitle": "El primer ecosistema impulsado por IA que integra el ADN musical de Danny Garcia junto al virtuosismo de los músicos más emblemáticos de la República Dominicana. Crea producciones con calidad profesional y el corazón de la ejecución dominicana.",
     "aboutTitle": "Acerca de Nosotros",
-    "aboutText": "DGB AUDIO es el primer ecosistema impulsado por IA que integra el ADN musical de Danny Garcia junto al virtuosismo de los músicos más emblemáticos de la República Dominicana. Llevamos el alma del requinto y el sentimiento del bolero a una nueva era, permitiendo que artistas de todo el mundo creen producciones con calidad profesional y el corazón de la ejecución dominicana, eliminando las barreras de presupuesto.",
+    "aboutText": "DA GRABA es el primer ecosistema impulsado por IA que integra el ADN musical de Danny Garcia junto al virtuosismo de los músicos más emblemáticos de la República Dominicana. Llevamos el alma del requinto y el sentimiento del bolero a una nueva era, permitiendo que artistas de todo el mundo creen producciones con calidad profesional y el corazón de la ejecución dominicana, eliminando las barreras de presupuesto.",
     "comingSoonTitle": "Próximamente",
     "comingSoonGenreHistory": "Historia del Género",
     "comingSoonGenreHistoryDesc": "Sección dedicada a la evolución, detalles y figuras icónicas que dieron forma a la Bachata y el Bolero.",
@@ -148,7 +148,7 @@
       "apiCosts": "Costos de API"
     },
     "featuresTitle": "Todo Lo Que Necesitas Para Crear",
-    "featuresSubtitle": "Desde generación de música con IA hasta herramientas de masterización profesional, DGB AUDIO te ofrece una suite completa de producción musical.",
+    "featuresSubtitle": "Desde generación de música con IA hasta herramientas de masterización profesional, DA GRABA te ofrece una suite completa de producción musical.",
     "features": {
       "aiMusic": {
         "title": "Generación de Música con IA",
@@ -206,7 +206,7 @@
     "perYear": "/año",
     "save": "Ahorras",
     "ctaTitle": "¿Listo Para Crear Tu Primer Track?",
-    "ctaSubtitle": "Únete a DGB AUDIO hoy y obtén 12 créditos gratis para empezar a hacer música con IA. Sin tarjeta de crédito.",
+    "ctaSubtitle": "Únete a DA GRABA hoy y obtén 12 créditos gratis para empezar a hacer música con IA. Sin tarjeta de crédito.",
     "ctaButton": "Crea Tu Cuenta Gratis",
     "plans": {
       "free": {
@@ -227,7 +227,7 @@
       }
     },
     "footer": {
-      "copyright": "DGB AUDIO. Todos los derechos reservados.",
+      "copyright": "DA GRABA. Todos los derechos reservados.",
       "builtWith": "Construido con IA para creadores de música latina.",
       "product": "Producto",
       "tools": "Herramientas",
@@ -244,7 +244,7 @@
       "cookiesLink": "Política de Cookies",
       "faqTitle": "Preguntas Frecuentes",
       "faq": [
-        {"q": "¿Quién es dueño de la música que genero?", "a": "Si tienes membresía activa, eres dueño del 100% de los derechos (Royalty Free). Los usuarios del plan gratuito retienen el 40%, mientras DAGRABA Studio/ODGMUSIC retiene el 60%."},
+        {"q": "¿Quién es dueño de la música que genero?", "a": "Si tienes membresía activa, eres dueño del 100% de los derechos (Royalty Free). Los usuarios del plan gratuito retienen el 40%, mientras DA GRABA Studio/ODGMUSIC retiene el 60%."},
         {"q": "¿Mi voz está protegida?", "a": "Sí. Tu ADN Vocal se procesa de forma encriptada y es estrictamente privado. Nunca se comparte sin tu consentimiento expreso."},
         {"q": "¿Cómo funciona la distribución con ODGMUSIC?", "a": "Al elegir distribuir con nosotros, se aplica un reparto 50/50 sobre ingresos netos. ODGMUSIC (afiliada a ASCAP) administra tus derechos editoriales a nivel mundial."},
         {"q": "¿Puedo registrar mis canciones en una PRO?", "a": "Sí. Desde el Copyright Hub puedes preparar y exportar tus registros para ASCAP, BMI, SESAC u otras organizaciones de derechos."},
@@ -397,7 +397,7 @@
         "moderno": { "label": "Moderno", "desc": "Contemporáneo con maracas y arreglos" }
       },
       "orchestration": {
-        "title": "Orquestación DAGRABOLERO",
+        "title": "Orquestación DA GRABOLERO",
         "baseLabel": "Base (siempre incluidos)",
         "extrasLabel": "Adornos y orquestación (opcional)",
         "instruments": {
@@ -421,8 +421,8 @@
     },
     "unlockCustomization": "Desbloquea personalización con Pro",
     "genres": {
-      "bachata": "DAGRABACHATA",
-      "bolero": "DAGRABOLERO",
+      "bachata": "DA GRABACHATA",
+      "bolero": "DA GRABOLERO",
       "salsa": "Salsa",
       "merengue": "Merengue",
       "cumbia": "Cumbia",
@@ -499,10 +499,10 @@
       "noSamplesSubtitle": "Graba o sube audio para comenzar"
     },
     "styles": {
-      "signature": "DGB AUDIO Firma",
+      "signature": "DA GRABA Firma",
       "romantic": "Romántica",
       "dance": "Bailable",
-      "bolero": "DAGRABOLERO",
+      "bolero": "DA GRABOLERO",
       "urbana": "Urbana",
       "serenade": "Serenata"
     }
@@ -520,12 +520,12 @@
     "hideComparison": "Ocultar Comparación Completa"
   },
   "blog": {
-    "title": "Blog DGB AUDIO",
+    "title": "Blog DA GRABA",
     "subtitle": "Noticias, tutoriales y actualizaciones del mundo de la música IA",
     "searchPlaceholder": "Buscar artículos...",
     "noArticles": "No se encontraron artículos",
     "noArticlesYet": "No hay artículos publicados todavía",
-    "defaultAuthor": "DGB AUDIO",
+    "defaultAuthor": "DA GRABA",
     "readMore": "Leer Más",
     "comments": "Comentarios",
     "likes": "Me gusta",
@@ -710,14 +710,14 @@
     "addLyrics": "Agregar Letras",
     "hideLyrics": "Ocultar",
     "stylePreset": "Preset de Estilo",
-    "bachataMode": "Modo DAGRABACHATA",
+    "bachataMode": "Modo DA GRABACHATA",
     "forceDominican": "Forzar instrumentos dominicanos",
     "noCreditsTitle": "Sin créditos restantes",
     "noCreditsSubtitle": "Mejora tu plan para seguir creando música"
   },
   "quiz": {
-    "title": "Quiz de DAGRABACHATA",
-    "subtitle": "Pon a prueba tu conocimiento de la historia, artistas y cultura de la DAGRABACHATA",
+    "title": "Quiz de DA GRABACHATA",
+    "subtitle": "Pon a prueba tu conocimiento de la historia, artistas y cultura de la DA GRABACHATA",
     "question": "Pregunta",
     "of": "de",
     "score": "Puntuación",
@@ -996,7 +996,7 @@
     "onboarding": {
       "title": "Crea tu Perfil de Artista",
       "editTitle": "Editar Perfil de Artista",
-      "subtitle": "Configura tu presencia como artista en DAGRABA Studio",
+      "subtitle": "Configura tu presencia como artista en DA GRABA Studio",
       "step1": "Identidad",
       "step2": "Música",
       "step3": "Derechos",
@@ -1119,7 +1119,7 @@
     },
     "success": {
       "title": "¡Obra Registrada Exitosamente!",
-      "description": "Tu obra ha sido registrada en DAGRABA Studio. Sigue estos pasos para completar el registro:",
+      "description": "Tu obra ha sido registrada en DA GRABA Studio. Sigue estos pasos para completar el registro:",
       "nextSteps": "Próximos Pasos",
       "step1": "Descarga los datos de registro usando el botón 'Exportar'",
       "step2": "Inicia sesión en el portal de tu PRO (ASCAP, BMI, etc.)",
@@ -1212,32 +1212,32 @@
     },
     "footer": "Todos los derechos reservados.",
     "terms": {
-      "mainTitle": "TÉRMINOS DE SERVICIO Y ACUERDO DE LICENCIA DE DAGRABA STUDIO CLOUD ENGINE",
+      "mainTitle": "TÉRMINOS DE SERVICIO Y ACUERDO DE LICENCIA DE DA GRABA STUDIO CLOUD ENGINE",
       "lastUpdated": "Última actualización: 16 de febrero de 2026",
-      "operatedBy": "Operado por: DAGRABA STUDIO & ODGMUSIC LATIN WORLDWIDE PUBLISHING",
-      "intro": "Al acceder o utilizar el servicio DAGRABA STUDIO Cloud Engine, usted (el \"Usuario\") acepta estar legalmente vinculado por los siguientes términos. Si no está de acuerdo, no utilice el Servicio.",
+      "operatedBy": "Operado por: DA GRABA STUDIO & ODGMUSIC LATIN WORLDWIDE PUBLISHING",
+      "intro": "Al acceder o utilizar el servicio DA GRABA STUDIO Cloud Engine, usted (el \"Usuario\") acepta estar legalmente vinculado por los siguientes términos. Si no está de acuerdo, no utilice el Servicio.",
       "section1": {
         "title": "1. MODELO DE PROPIEDAD Y MEMBRESÍA (REGLA 60/40)",
         "activeMembership": "Usuarios con Membresía Activa:",
         "activeMembershipDesc": "Los usuarios que mantengan una suscripción paga tienen plenos derechos comerciales sobre el contenido generado. La música es \"Libre de Regalías\" (Royalty Free) para el usuario bajo este plan.",
         "freePlan": "Usuarios sin Membresía (Plan Free):",
-        "freePlanDesc": "Para compensar el uso de nuestra infraestructura y librerías de instrumentos exclusivos, el Usuario acepta que DAGRABA STUDIO / ODGMUSIC retendrá automáticamente el 60% de los derechos de autor y derechos conexos sobre cada obra generada."
+        "freePlanDesc": "Para compensar el uso de nuestra infraestructura y librerías de instrumentos exclusivos, el Usuario acepta que DA GRABA STUDIO / ODGMUSIC retendrá automáticamente el 60% de los derechos de autor y derechos conexos sobre cada obra generada."
       },
       "section2": {
         "title": "2. PRIVACIDAD DEL ADN VOCAL Y MODELOS RVC",
         "privateUse": "Uso Privado:",
         "privateUseDesc": "Los audios subidos para entrenar voces son procesados de forma encriptada. El modelo de voz resultante pertenece al Usuario y es estrictamente privado.",
         "thirdParty": "Prohibición de Uso por Terceros:",
-        "thirdPartyDesc": "DAGRABA STUDIO no compartirá, regalará ni utilizará su ADN vocal para otros usuarios sin su consentimiento expreso a través de la sección \"Discover\"."
+        "thirdPartyDesc": "DA GRABA STUDIO no compartirá, regalará ni utilizará su ADN vocal para otros usuarios sin su consentimiento expreso a través de la sección \"Discover\"."
       },
       "section3": {
         "title": "3. INSTRUMENTACIÓN Y ADN DE EJECUCIÓN (LÍMITE DE RESPONSABILIDAD)",
         "originalInstruments": "Instrumentos Originales DGB:",
         "originalInstrumentsDesc": "El sistema utiliza modelos entrenados con instrumentos reales grabados por Danny Garcia y maestros dominicanos.",
         "thirdPartyInstruments": "Instrumentos de Terceros:",
-        "thirdPartyInstrumentsDesc": "DAGRABA STUDIO permite la integración de modelos externos. Sin embargo, el sistema no se responsabiliza si el audio generado infringe el \"ADN de ejecución\" de un músico real.",
+        "thirdPartyInstrumentsDesc": "DA GRABA STUDIO permite la integración de modelos externos. Sin embargo, el sistema no se responsabiliza si el audio generado infringe el \"ADN de ejecución\" de un músico real.",
         "creatorResponsibility": "Responsabilidad del Creador:",
-        "creatorResponsibilityDesc": "Si un artista publica o distribuye una canción que genere reclamos de propiedad intelectual por su estilo de ejecución, la responsabilidad legal recae íntegramente sobre el Artista/Usuario, deslindando a DAGRABA STUDIO de cualquier litigio."
+        "creatorResponsibilityDesc": "Si un artista publica o distribuye una canción que genere reclamos de propiedad intelectual por su estilo de ejecución, la responsabilidad legal recae íntegramente sobre el Artista/Usuario, deslindando a DA GRABA STUDIO de cualquier litigio."
       },
       "section4": {
         "title": "4. ACUERDO DE PUBLISHING Y DISTRIBUCIÓN (ODGMUSIC)",
@@ -1254,7 +1254,7 @@
     },
     "privacy": {
       "mainTitle": "POLÍTICA DE PRIVACIDAD",
-      "subtitle": "DAGRABA STUDIO Cloud Engine & ODGMUSIC",
+      "subtitle": "DA GRABA STUDIO Cloud Engine & ODGMUSIC",
       "lastUpdated": "Última actualización: 16 de febrero de 2026",
       "section1": {
         "title": "1.1. Información que Recopilamos",
@@ -1268,7 +1268,7 @@
       "section2": {
         "title": "1.2. Uso de los Datos y \"ADN Vocal\"",
         "privacyByDesign": "Privacidad por Diseño:",
-        "privacyByDesignDesc": "Tus audios de entrenamiento se utilizan exclusivamente para procesar tu modelo personal. DAGRABA STUDIO no vende, regala ni utiliza tus voces para entrenar modelos públicos sin tu permiso expreso.",
+        "privacyByDesignDesc": "Tus audios de entrenamiento se utilizan exclusivamente para procesar tu modelo personal. DA GRABA STUDIO no vende, regala ni utiliza tus voces para entrenar modelos públicos sin tu permiso expreso.",
         "security": "Seguridad:",
         "securityDesc": "Utilizamos cifrado de alto nivel para asegurar que tu modelo de voz solo sea accesible desde tu cuenta.",
         "serviceImprovement": "Mejora del Servicio:",
@@ -1294,10 +1294,10 @@
     },
     "cookies": {
       "mainTitle": "POLÍTICA DE COOKIES",
-      "subtitle": "DAGRABA STUDIO Cloud Engine",
+      "subtitle": "DA GRABA STUDIO Cloud Engine",
       "section1": {
         "title": "2.1. ¿Qué son las Cookies?",
-        "description": "Las cookies son pequeños archivos de texto que nos ayudan a que tu experiencia en el DAGRABA STUDIO Cloud Engine sea fluida y profesional."
+        "description": "Las cookies son pequeños archivos de texto que nos ayudan a que tu experiencia en el DA GRABA STUDIO Cloud Engine sea fluida y profesional."
       },
       "section2": {
         "title": "2.2. Tipos de Cookies que Utilizamos",

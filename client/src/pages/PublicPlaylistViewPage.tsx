@@ -312,7 +312,7 @@ export default function PublicPlaylistViewPage() {
                           {song.title}
                         </h3>
                         <p className="text-xs text-muted-foreground truncate">
-                          {song.artistName || "DGB AUDIO"}
+                          {song.artistName || "DA GRABA"}
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -359,7 +359,7 @@ export default function PublicPlaylistViewPage() {
               </div>
               <div className="min-w-0 w-28">
                 <p className="text-sm font-medium truncate" data-testid="text-now-playing-title">{currentSong.title}</p>
-                <p className="text-xs text-muted-foreground truncate">{currentSong.artistName || "DGB AUDIO"}</p>
+                <p className="text-xs text-muted-foreground truncate">{currentSong.artistName || "DA GRABA"}</p>
               </div>
               <Button
                 variant="ghost"

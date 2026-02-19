@@ -15,19 +15,19 @@ import { useLocation } from "wouter";
 
 const STYLE_OPTIONS = [
   { value: "heart-mula", labelKey: "common.engineSignature" },
-  { value: "bachata-romantic", label: "Romantic DAGRABACHATA" },
-  { value: "bachata-dance", label: "Dance DAGRABACHATA" },
-  { value: "bachata-bolero", label: "DAGRABACHATA DAGRABOLERO" },
+  { value: "bachata-romantic", label: "Romantic DA GRABACHATA" },
+  { value: "bachata-dance", label: "Dance DA GRABACHATA" },
+  { value: "bachata-bolero", label: "DA GRABACHATA DA GRABOLERO" },
   { value: "trio-serenade", label: "Trio Serenade" },
-  { value: "bachata-urbana", label: "DAGRABACHATA Urbana" },
+  { value: "bachata-urbana", label: "DA GRABACHATA Urbana" },
 ];
 
 const GENRE_OPTIONS = [
-  { value: "Bachata", label: "DAGRABACHATA" },
+  { value: "Bachata", label: "DA GRABACHATA" },
   { value: "Merengue", label: "Merengue" },
   { value: "Salsa", label: "Salsa" },
   { value: "Reggaeton", label: "Reggaeton" },
-  { value: "Bolero", label: "DAGRABOLERO" },
+  { value: "Bolero", label: "DA GRABOLERO" },
   { value: "Cumbia", label: "Cumbia" },
   { value: "Latin Pop", label: "Latin Pop" },
   { value: "R&B Latino", label: "R&B Latino" },
@@ -257,7 +257,7 @@ export function MusicGenerator() {
                   data-testid="input-music-lyrics"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Leave empty for auto-generated DAGRABACHATA lyrics
+                  Leave empty for auto-generated DA GRABACHATA lyrics
                 </p>
               </motion.div>
             )}

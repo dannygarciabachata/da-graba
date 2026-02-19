@@ -8,7 +8,7 @@ interface AudioSpectrumProps {
   barColor?: string;
 }
 
-export function AudioSpectrum({ songId, className = "", barCount = 5, barColor = "#FF1493" }: AudioSpectrumProps) {
+export function AudioSpectrum({ songId, className = "", barCount = 5, barColor = "#ff751f" }: AudioSpectrumProps) {
   const { state, analyserNode } = usePlayer();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef(0);

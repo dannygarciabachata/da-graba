@@ -81,7 +81,7 @@ function formatYear(date: string | null | undefined): string {
 function StreamingLinks({ album }: { album: DiscographyAlbum }) {
   const links = [
     { url: album.spotifyUrl, icon: SiSpotify, label: "Spotify", color: "hover:text-green-400" },
-    { url: album.appleMusicUrl, icon: SiApplemusic, label: "Apple Music", color: "hover:text-pink-400" },
+    { url: album.appleMusicUrl, icon: SiApplemusic, label: "Apple Music", color: "hover:text-orange-400" },
     { url: album.amazonMusicUrl, icon: SiAmazon, label: "Amazon Music", color: "hover:text-orange-400" },
     { url: album.youtubeMusicUrl, icon: SiYoutube, label: "YouTube Music", color: "hover:text-red-400" },
     { url: album.deezerUrl, icon: Music, label: "Deezer", color: "hover:text-blue-400" },

@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 
 const GENRE_COLORS: Record<string, string> = {
-  bachata: "from-pink-600 to-blue-800",
+  bachata: "from-orange-600 to-blue-800",
   bolero: "from-amber-700 to-red-900",
   "dgb_bachata": "from-cyan-500 to-blue-800",
   "dgb_bolero": "from-amber-500 to-rose-800",
@@ -42,7 +42,7 @@ const GENRE_COLORS: Record<string, string> = {
   "r&b": "from-violet-600 to-indigo-800",
   edm: "from-blue-500 to-blue-700",
   reggaeton: "from-yellow-500 to-orange-700",
-  salsa: "from-red-500 to-pink-700",
+  salsa: "from-red-500 to-orange-700",
   merengue: "from-green-600 to-emerald-800",
   jazz: "from-indigo-500 to-blue-900",
   rock: "from-gray-600 to-slate-900",
@@ -109,7 +109,7 @@ function GenreCarousel() {
       <div ref={scrollRef} className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 snap-x snap-mandatory">
         {allPlaylists.map((p) => {
           const isTop100 = p.genre === "top100";
-          const label = isTop100 ? "Top 100" : p.genre === "Bachata" ? "DAGRABACHATA" : p.genre === "Bolero" ? "DAGRABOLERO" : p.genre;
+          const label = isTop100 ? "Top 100" : p.genre === "Bachata" ? "DA GRABACHATA" : p.genre === "Bolero" ? "DA GRABOLERO" : p.genre;
           const gradient = isTop100 ? "from-primary to-blue-700" : getGenreColor(p.genre);
           return (
             <div
@@ -267,7 +267,7 @@ function SongCard({ song, rank, onPlay }: SongCardProps) {
         <div className="flex-1 min-w-0">
           <h3 className={`text-sm font-medium truncate ${isCurrent ? "text-primary" : ""}`} data-testid={`text-song-title-${song.id}`}>{song.title}</h3>
           <p className="text-xs text-muted-foreground truncate" data-testid={`text-song-artist-${song.id}`}>
-            {song.artistName || "DGB AUDIO"}
+            {song.artistName || "DA GRABA"}
           </p>
         </div>
 
@@ -345,7 +345,7 @@ export default function DiscoverPage() {
       audioUrl: s.audioUrl,
       imageUrl: s.imageUrl,
       genre: s.genre,
-      artistName: s.artistName || "DGB AUDIO",
+      artistName: s.artistName || "DA GRABA",
       duration: s.duration,
     }));
     const playerSong = queue.find(q => q.id === song.id) || queue[0];

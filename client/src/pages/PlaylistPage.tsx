@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 const GENRE_COLORS: Record<string, string> = {
-  bachata: "from-pink-600 to-blue-800",
+  bachata: "from-orange-600 to-blue-800",
   bolero: "from-amber-700 to-red-900",
   "dgb_bachata": "from-cyan-500 to-blue-800",
   "dgb_bolero": "from-amber-500 to-rose-800",
@@ -34,7 +34,7 @@ const GENRE_COLORS: Record<string, string> = {
   "r&b": "from-violet-600 to-indigo-800",
   edm: "from-blue-500 to-blue-700",
   reggaeton: "from-yellow-500 to-orange-700",
-  salsa: "from-red-500 to-pink-700",
+  salsa: "from-red-500 to-orange-700",
   merengue: "from-green-600 to-emerald-800",
   jazz: "from-indigo-500 to-blue-900",
   rock: "from-gray-600 to-slate-900",
@@ -200,7 +200,7 @@ export default function PlaylistPage() {
   const handleShare = () => {
     if (!currentSong) return;
     const url = `${window.location.origin}/discover/${encodeURIComponent(genre)}`;
-    const text = `${currentSong.title} - ${currentSong.artistName || "DGB AUDIO"}`;
+    const text = `${currentSong.title} - ${currentSong.artistName || "DA GRABA"}`;
     if (navigator.share) {
       navigator.share({ title: text, url });
     } else {
@@ -337,7 +337,7 @@ export default function PlaylistPage() {
                       {song.title}
                     </h3>
                     <p className="text-xs text-muted-foreground truncate">
-                      {song.artistName || "DGB AUDIO"}
+                      {song.artistName || "DA GRABA"}
                     </p>
                   </div>
 
@@ -404,7 +404,7 @@ export default function PlaylistPage() {
               </div>
               <div className="min-w-0 w-28">
                 <p className="text-sm font-medium truncate" data-testid="text-now-playing-title">{currentSong.title}</p>
-                <p className="text-xs text-muted-foreground truncate">{currentSong.artistName || "DGB AUDIO"}</p>
+                <p className="text-xs text-muted-foreground truncate">{currentSong.artistName || "DA GRABA"}</p>
               </div>
 
               <Button

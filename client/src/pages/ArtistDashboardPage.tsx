@@ -314,7 +314,7 @@ export default function ArtistDashboardPage() {
               <Wallet className="h-3.5 w-3.5" />
               {t('artist.wallet.balance')}
             </div>
-            <p className="text-xl font-bold text-pink-400">{formatCents(wallet?.balanceCents || 0)}</p>
+            <p className="text-xl font-bold text-orange-400">{formatCents(wallet?.balanceCents || 0)}</p>
             <p className="text-xs text-muted-foreground mt-1">
               {gifts.filter((g: any) => g.status === "completed").length} {t('artist.gift.gifts')}
             </p>
@@ -401,8 +401,8 @@ export default function ArtistDashboardPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3 bg-white/[0.02] rounded-lg p-3">
-                  <div className="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center flex-shrink-0">
-                    <Gift className="h-4 w-4 text-pink-400" />
+                  <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                    <Gift className="h-4 w-4 text-orange-400" />
                   </div>
                   <div>
                     <p className="font-medium">{t('artist.dashboard.howItWorks.gifts')}</p>
@@ -433,12 +433,12 @@ export default function ArtistDashboardPage() {
 
           <TabsContent value="gifts" className="space-y-4 mt-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Card className="bg-gradient-to-br from-pink-500/10 to-blue-600/10 border-pink-500/20 p-4">
-                <div className="flex items-center gap-2 text-pink-400 text-xs mb-1">
+              <Card className="bg-gradient-to-br from-orange-500/10 to-blue-600/10 border-orange-500/20 p-4">
+                <div className="flex items-center gap-2 text-orange-400 text-xs mb-1">
                   <Wallet className="h-3.5 w-3.5" />
                   {t('artist.wallet.availableBalance')}
                 </div>
-                <p className="text-2xl font-bold text-pink-400" data-testid="text-wallet-balance">
+                <p className="text-2xl font-bold text-orange-400" data-testid="text-wallet-balance">
                   {formatCents(wallet?.balanceCents || 0)}
                 </p>
               </Card>
@@ -465,7 +465,7 @@ export default function ArtistDashboardPage() {
 
             <Card className="bg-white/[0.03] border-white/[0.06] p-5">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <Gift className="h-4 w-4 text-pink-400" />
+                <Gift className="h-4 w-4 text-orange-400" />
                 {t('artist.wallet.recentGifts')}
               </h3>
               {gifts.length > 0 ? (
@@ -473,8 +473,8 @@ export default function ArtistDashboardPage() {
                   {gifts.map((gift: any) => (
                     <div key={gift.id} className="flex items-center justify-between bg-white/[0.02] rounded-lg p-3" data-testid={`gift-row-${gift.id}`}>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center flex-shrink-0">
-                          <Heart className="h-4 w-4 text-pink-400" />
+                        <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                          <Heart className="h-4 w-4 text-orange-400" />
                         </div>
                         <div>
                           <p className="text-sm font-medium">{gift.fanDisplayName || "Anonymous"}</p>
@@ -482,7 +482,7 @@ export default function ArtistDashboardPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-bold text-pink-400">{formatCents(gift.amountCents)}</p>
+                        <p className="text-sm font-bold text-orange-400">{formatCents(gift.amountCents)}</p>
                         <div className="flex items-center gap-1">
                           <Badge
                             variant="outline"

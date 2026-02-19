@@ -440,10 +440,10 @@ export default function ArtistProfilePage() {
               variant="ghost"
               size="sm"
               onClick={() => user ? likeMutation.mutate() : toast({ title: t('artist.profile.loginToLike'), variant: "destructive" })}
-              className={`gap-1 ${likesData?.userIds?.includes(user?.id) ? "text-pink-400" : ""}`}
+              className={`gap-1 ${likesData?.userIds?.includes(user?.id) ? "text-orange-400" : ""}`}
               data-testid="button-like-profile"
             >
-              <ThumbsUp className={`h-4 w-4 ${likesData?.userIds?.includes(user?.id) ? "fill-pink-400" : ""}`} />
+              <ThumbsUp className={`h-4 w-4 ${likesData?.userIds?.includes(user?.id) ? "fill-orange-400" : ""}`} />
               {likesData?.count || 0}
             </Button>
 
@@ -475,7 +475,7 @@ export default function ArtistProfilePage() {
           <Button
             variant="outline"
             size="sm"
-            className="border-pink-500/40 text-pink-400 hover:bg-pink-500/10"
+            className="border-orange-500/40 text-orange-400 hover:bg-orange-500/10"
             onClick={() => setShowGiftForm(!showGiftForm)}
             data-testid="button-send-gift"
           >
@@ -517,10 +517,10 @@ export default function ArtistProfilePage() {
         </div>
 
         {showGiftForm && (
-          <Card className="bg-gradient-to-br from-pink-500/10 to-blue-600/10 border-pink-500/20 p-5 mb-6" data-testid="gift-form">
+          <Card className="bg-gradient-to-br from-orange-500/10 to-blue-600/10 border-orange-500/20 p-5 mb-6" data-testid="gift-form">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold flex items-center gap-2">
-                <Gift className="h-5 w-5 text-pink-400" />
+                <Gift className="h-5 w-5 text-orange-400" />
                 {t('artist.gift.title', { name: artist.artistName })}
               </h3>
               <Button variant="ghost" size="icon" onClick={() => setShowGiftForm(false)} data-testid="button-close-gift">
@@ -534,7 +534,7 @@ export default function ArtistProfilePage() {
                   key={amt}
                   variant={giftAmount === amt && !customAmount ? "default" : "outline"}
                   size="sm"
-                  className={giftAmount === amt && !customAmount ? "bg-pink-500 hover:bg-pink-600 text-white" : ""}
+                  className={giftAmount === amt && !customAmount ? "bg-orange-500 hover:bg-orange-600 text-white" : ""}
                   onClick={() => { setGiftAmount(amt); setCustomAmount(""); }}
                   data-testid={`button-gift-${amt}`}
                 >
@@ -596,12 +596,12 @@ export default function ArtistProfilePage() {
             <div className="flex items-center justify-between">
               <div className="text-sm">
                 <span className="text-muted-foreground">{t('artist.gift.total')}:</span>{" "}
-                <span className="text-lg font-bold text-pink-400">
+                <span className="text-lg font-bold text-orange-400">
                   ${(activeAmount / 100).toFixed(2)}
                 </span>
               </div>
               <Button
-                className="bg-gradient-to-r from-pink-500 to-blue-600 text-white"
+                className="bg-gradient-to-r from-orange-500 to-blue-600 text-white"
                 onClick={() => giftMutation.mutate()}
                 disabled={giftMutation.isPending || activeAmount < 100 || activeAmount > 100000 || !cardReady}
                 data-testid="button-confirm-gift"
@@ -624,18 +624,18 @@ export default function ArtistProfilePage() {
         {giftSummary && giftSummary.totalGifts > 0 && (
           <Card className="bg-white/[0.03] border-white/[0.06] p-4 mb-6" data-testid="gift-summary">
             <div className="flex items-center gap-2 mb-3">
-              <Gift className="h-4 w-4 text-pink-400" />
+              <Gift className="h-4 w-4 text-orange-400" />
               <span className="text-sm font-medium">{t('artist.gift.recentGifts')}</span>
-              <Badge variant="outline" className="text-xs text-pink-400 border-pink-400/30">
+              <Badge variant="outline" className="text-xs text-orange-400 border-orange-400/30">
                 {giftSummary.totalGifts} {t('artist.gift.gifts')}
               </Badge>
             </div>
             <div className="space-y-2">
               {giftSummary.recentGifts?.map((g: any, i: number) => (
                 <div key={i} className="flex items-center gap-3 text-sm">
-                  <Heart className="h-3 w-3 text-pink-400 flex-shrink-0" />
+                  <Heart className="h-3 w-3 text-orange-400 flex-shrink-0" />
                   <span className="font-medium">{g.fanDisplayName || "Anonymous"}</span>
-                  <span className="text-pink-400 font-mono">${(g.amountCents / 100).toFixed(2)}</span>
+                  <span className="text-orange-400 font-mono">${(g.amountCents / 100).toFixed(2)}</span>
                   {g.message && <span className="text-muted-foreground truncate">— {g.message}</span>}
                 </div>
               ))}

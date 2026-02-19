@@ -314,7 +314,7 @@ export function MashupDialog({ open, onOpenChange, preSelectedSongId }: MashupDi
           <Button
             onClick={handleSubmit}
             disabled={selectedSongs.length !== 2 || mashupMutation.isPending}
-            className="bg-gradient-to-r from-[#FF1493] to-[#FF8C00]"
+            className="bg-gradient-to-r from-[#ff751f] to-[#FF8C00]"
             data-testid="button-mashup-create"
           >
             {mashupMutation.isPending ? (

@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
-import dgbLogo from "@assets/IMG_4933_1771383067858.png";
+import dgbLogo from "@assets/Logo_1771474005704.png";
 import {
   Sidebar,
   SidebarContent,
@@ -101,7 +101,7 @@ export function AppSidebar() {
     <Sidebar
       className="relative overflow-hidden"
       style={{
-        backgroundColor: "#0a0a0a",
+        backgroundColor: "hsl(247, 82%, 18%)",
       }}
     >
       <SidebarHeader className="relative z-10 p-4 pb-2">
@@ -112,8 +112,8 @@ export function AppSidebar() {
         >
           <img
             src={dgbLogo}
-            alt="DAGRABA Studio"
-            className="h-28 w-auto max-w-[180px] drop-shadow-[0_0_25px_rgba(255,20,147,0.4)] group-hover:drop-shadow-[0_0_35px_rgba(255,20,147,0.6)] transition-all duration-300 object-contain"
+            alt="DA GRABA Studio"
+            className="h-28 w-auto max-w-[180px] drop-shadow-[0_0_25px_rgba(255,117,31,0.4)] group-hover:drop-shadow-[0_0_35px_rgba(255,117,31,0.6)] transition-all duration-300 object-contain"
           />
         </div>
         <div className="h-px mt-2 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
@@ -131,7 +131,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className={isActive ? "bg-gradient-to-r from-[#FF1493]/15 to-[#FF69B4]/15 border-l-2 border-[#FF1493] text-[#FF1493]" : "hover:bg-gradient-to-r hover:from-[#FF1493]/5 hover:to-[#FF69B4]/5 transition-all duration-200"}
+                      className={isActive ? "bg-gradient-to-r from-[#ff751f]/15 to-[#FF8C00]/15 border-l-2 border-[#ff751f] text-[#ff751f]" : "hover:bg-gradient-to-r hover:from-[#ff751f]/5 hover:to-[#FF8C00]/5 transition-all duration-200"}
                       data-testid={`link-sidebar-${item.titleKey.split(".").pop()?.toLowerCase()}`}
                     >
                       <a
@@ -141,7 +141,7 @@ export function AppSidebar() {
                           setLocation(item.url);
                         }}
                       >
-                        <item.icon className={`h-4 w-4 ${isActive ? "text-[#FF1493]" : "text-[#FF69B4]/60"}`} />
+                        <item.icon className={`h-4 w-4 ${isActive ? "text-[#ff751f]" : "text-[#FF8C00]/60"}`} />
                         <span>{t(item.titleKey)}</span>
                       </a>
                     </SidebarMenuButton>
@@ -152,10 +152,10 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <div className="mx-4 h-px bg-gradient-to-r from-transparent via-[#FF69B4]/20 to-transparent" />
+        <div className="mx-4 h-px bg-gradient-to-r from-transparent via-[#FF8C00]/20 to-transparent" />
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[#FF69B4]/70 font-semibold uppercase tracking-wider text-[10px]">{t("nav.artist")}</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[#FF8C00]/70 font-semibold uppercase tracking-wider text-[10px]">{t("nav.artist")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {ARTIST_ITEMS.map((item) => {
@@ -165,7 +165,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className={isActive ? "bg-gradient-to-r from-[#FF1493]/15 to-[#FF69B4]/15 border-l-2 border-[#FF69B4] text-[#FF69B4]" : "hover:bg-gradient-to-r hover:from-[#FF1493]/5 hover:to-[#FF69B4]/5 transition-all duration-200"}
+                      className={isActive ? "bg-gradient-to-r from-[#ff751f]/15 to-[#FF8C00]/15 border-l-2 border-[#FF8C00] text-[#FF8C00]" : "hover:bg-gradient-to-r hover:from-[#ff751f]/5 hover:to-[#FF8C00]/5 transition-all duration-200"}
                       data-testid={`link-sidebar-${item.titleKey.split(".").pop()?.toLowerCase()}`}
                     >
                       <a
@@ -175,7 +175,7 @@ export function AppSidebar() {
                           setLocation(item.url);
                         }}
                       >
-                        <item.icon className={`h-4 w-4 ${isActive ? "text-[#FF69B4]" : "text-amber-400/70"}`} />
+                        <item.icon className={`h-4 w-4 ${isActive ? "text-[#FF8C00]" : "text-amber-400/70"}`} />
                         <span>{t(item.titleKey)}</span>
                       </a>
                     </SidebarMenuButton>
@@ -186,10 +186,10 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <div className="mx-4 h-px bg-gradient-to-r from-transparent via-[#FF69B4]/20 to-transparent" />
+        <div className="mx-4 h-px bg-gradient-to-r from-transparent via-[#FF8C00]/20 to-transparent" />
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[#FF69B4]/70 font-semibold uppercase tracking-wider text-[10px]">{t("nav.tools")}</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[#FF8C00]/70 font-semibold uppercase tracking-wider text-[10px]">{t("nav.tools")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {TOOLS_ITEMS.map((item) => {
@@ -199,7 +199,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className={isActive ? "bg-gradient-to-r from-[#FF1493]/15 to-[#FF69B4]/15 border-l-2 border-[#FF69B4] text-[#FF69B4]" : "hover:bg-gradient-to-r hover:from-[#FF1493]/5 hover:to-[#FF69B4]/5 transition-all duration-200"}
+                      className={isActive ? "bg-gradient-to-r from-[#ff751f]/15 to-[#FF8C00]/15 border-l-2 border-[#FF8C00] text-[#FF8C00]" : "hover:bg-gradient-to-r hover:from-[#ff751f]/5 hover:to-[#FF8C00]/5 transition-all duration-200"}
                       data-testid={`link-sidebar-${item.titleKey.split(".").pop()?.toLowerCase()}`}
                     >
                       <a
@@ -209,7 +209,7 @@ export function AppSidebar() {
                           setLocation(item.url);
                         }}
                       >
-                        <item.icon className={`h-4 w-4 ${isActive ? "text-[#FF69B4]" : "text-[#FF1493]/50"}`} />
+                        <item.icon className={`h-4 w-4 ${isActive ? "text-[#FF8C00]" : "text-[#ff751f]/50"}`} />
                         <span>{t(item.titleKey)}</span>
                       </a>
                     </SidebarMenuButton>
@@ -221,16 +221,16 @@ export function AppSidebar() {
         </SidebarGroup>
         {adminCheck?.isAdmin && (
           <>
-            <div className="mx-4 h-px bg-gradient-to-r from-transparent via-[#FF69B4]/20 to-transparent" />
+            <div className="mx-4 h-px bg-gradient-to-r from-transparent via-[#FF8C00]/20 to-transparent" />
             <SidebarGroup>
-              <SidebarGroupLabel className="text-[#FF69B4]/70 font-semibold uppercase tracking-wider text-[10px]">{t("nav.admin")}</SidebarGroupLabel>
+              <SidebarGroupLabel className="text-[#FF8C00]/70 font-semibold uppercase tracking-wider text-[10px]">{t("nav.admin")}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
                       isActive={location === "/admin"}
-                      className={location === "/admin" ? "bg-gradient-to-r from-[#FF1493]/15 to-[#FF69B4]/15 border-l-2 border-[#FF1493] text-[#FF1493]" : "hover:bg-gradient-to-r hover:from-[#FF1493]/5 hover:to-[#FF69B4]/5 transition-all duration-200"}
+                      className={location === "/admin" ? "bg-gradient-to-r from-[#ff751f]/15 to-[#FF8C00]/15 border-l-2 border-[#ff751f] text-[#ff751f]" : "hover:bg-gradient-to-r hover:from-[#ff751f]/5 hover:to-[#FF8C00]/5 transition-all duration-200"}
                       data-testid="link-sidebar-admin"
                     >
                       <a
@@ -240,7 +240,7 @@ export function AppSidebar() {
                           setLocation("/admin");
                         }}
                       >
-                        <Settings className={`h-4 w-4 ${location === "/admin" ? "text-[#FF1493]" : "text-[#FF69B4]/60"}`} />
+                        <Settings className={`h-4 w-4 ${location === "/admin" ? "text-[#ff751f]" : "text-[#FF8C00]/60"}`} />
                         <span>{t("nav.adminPanel")}</span>
                       </a>
                     </SidebarMenuButton>
@@ -256,16 +256,16 @@ export function AppSidebar() {
         <SidebarFooter className="relative z-10 p-3 space-y-2">
           {creditsData && (
             <div
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-[#FF1493]/5 to-[#FF69B4]/5 border border-[#FF69B4]/15 cursor-pointer hover:from-[#FF1493]/10 hover:to-[#FF69B4]/10 transition-all duration-200"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-[#ff751f]/5 to-[#FF8C00]/5 border border-[#FF8C00]/15 cursor-pointer hover:from-[#ff751f]/10 hover:to-[#FF8C00]/10 transition-all duration-200"
               onClick={() => setLocation("/pricing")}
               data-testid="link-credits-display"
             >
-              <Zap className="h-4 w-4 text-[#FF1493] shrink-0" />
+              <Zap className="h-4 w-4 text-[#ff751f] shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] text-muted-foreground">{t("common.credits")}</p>
-                <p className="text-sm font-bold bg-gradient-to-r from-[#FF1493] to-[#FF69B4] bg-clip-text text-transparent" data-testid="text-credits-balance">
+                <p className="text-sm font-bold bg-gradient-to-r from-[#ff751f] to-[#FF8C00] bg-clip-text text-transparent" data-testid="text-credits-balance">
                   {creditsData.isUnlimited ? (
-                    <span className="flex items-center gap-1"><Infinity className="h-4 w-4 text-[#FF1493]" /> {t("common.unlimited")}</span>
+                    <span className="flex items-center gap-1"><Infinity className="h-4 w-4 text-[#ff751f]" /> {t("common.unlimited")}</span>
                   ) : (
                     <span>{creditsData.credits} {t("common.remaining")}</span>
                   )}
@@ -285,10 +285,10 @@ export function AppSidebar() {
               <Popover>
                 <PopoverTrigger asChild>
                   <SidebarMenuButton
-                    className="hover:bg-gradient-to-r hover:from-[#FF1493]/5 hover:to-[#FF69B4]/5 transition-all duration-200"
+                    className="hover:bg-gradient-to-r hover:from-[#ff751f]/5 hover:to-[#FF8C00]/5 transition-all duration-200"
                     data-testid="button-sidebar-more"
                   >
-                    <MoreHorizontal className="h-4 w-4 text-[#FF69B4]/60" />
+                    <MoreHorizontal className="h-4 w-4 text-[#FF8C00]/60" />
                     <span>{t("nav.more", "More")}</span>
                   </SidebarMenuButton>
                 </PopoverTrigger>
@@ -327,20 +327,20 @@ export function AppSidebar() {
           </SidebarMenu>
 
           <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-[#FF69B4]/5 transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-[#FF8C00]/5 transition-colors"
             onClick={toggleLanguage}
             data-testid="button-language-toggle"
           >
-            <Globe className="h-4 w-4 text-[#FF69B4]/60 shrink-0" />
+            <Globe className="h-4 w-4 text-[#FF8C00]/60 shrink-0" />
             <span className="text-xs text-muted-foreground">
               {t("language.label")}: {i18n.language === "es" ? t("language.es") : t("language.en")}
             </span>
           </div>
 
-          <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-gradient-to-r from-[#FF1493]/5 to-[#FF69B4]/10 border border-white/5">
-            <Avatar className="h-7 w-7 ring-1 ring-[#FF69B4]/30">
+          <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-gradient-to-r from-[#ff751f]/5 to-[#FF8C00]/10 border border-white/5">
+            <Avatar className="h-7 w-7 ring-1 ring-[#FF8C00]/30">
               <AvatarImage src={user.profileImageUrl || undefined} />
-              <AvatarFallback className="text-xs bg-gradient-to-br from-[#FF1493] to-[#FF69B4] text-white font-bold">
+              <AvatarFallback className="text-xs bg-gradient-to-br from-[#ff751f] to-[#FF8C00] text-white font-bold">
                 {user.firstName?.[0]}{user.lastName?.[0]}
               </AvatarFallback>
             </Avatar>
@@ -351,7 +351,7 @@ export function AppSidebar() {
               variant="ghost"
               size="icon"
               onClick={() => logout()}
-              className="text-muted-foreground hover:text-[#FF69B4]"
+              className="text-muted-foreground hover:text-[#FF8C00]"
               data-testid="button-sidebar-logout"
             >
               <LogOut className="h-3.5 w-3.5" />

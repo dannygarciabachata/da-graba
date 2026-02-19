@@ -87,8 +87,8 @@ import { useToast } from "@/hooks/use-toast";
 
 
 const GENRE_CARDS = [
-  { value: "Bachata", label: "DAGRABACHATA", likes: "97K", accent: true },
-  { value: "Bolero", label: "DAGRABOLERO", likes: "42K", accent: true },
+  { value: "Bachata", label: "DA GRABACHATA", likes: "97K", accent: true },
+  { value: "Bolero", label: "DA GRABOLERO", likes: "42K", accent: true },
   { value: "Salsa", label: "Salsa", likes: "72K" },
   { value: "Merengue", label: "Merengue", likes: "58K" },
   { value: "Cumbia", label: "Cumbia", likes: "54K" },
@@ -350,7 +350,7 @@ function HistoryNowPlaying({ song, isPlaying }: { song: PlayerSong; isPlaying: b
             {song.title || song.prompt || t('create.untitledTrack')}
           </h3>
           <p className="text-xs text-muted-foreground truncate" data-testid="text-now-playing-artist">
-            {song.artistName || song.copyrightHolder || "DAGRABA Studio"}
+            {song.artistName || song.copyrightHolder || "DA GRABA Studio"}
           </p>
         </div>
 
@@ -463,7 +463,7 @@ export default function CreatePage() {
   const [activeCreationMode, setActiveCreationMode] = useState<CreationMode>("song");
   const [selectedStyleKit, setSelectedStyleKit] = useState<number | undefined>(undefined);
   const [artistName, setArtistName] = useState("");
-  const [copyrightHolder, setCopyrightHolder] = useState("DGB AUDIO");
+  const [copyrightHolder, setCopyrightHolder] = useState("DA GRABA");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [attachPopoverOpen, setAttachPopoverOpen] = useState(false);
 
@@ -813,7 +813,7 @@ export default function CreatePage() {
                 >
                   <div className="flex items-center gap-1.5">
                     <Guitar className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-xs font-bold">DAGRABACHATA</span>
+                    <span className="text-xs font-bold">DA GRABACHATA</span>
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{t('create.dnaFlow.bachataDesc')}</p>
                 </button>
@@ -842,7 +842,7 @@ export default function CreatePage() {
                 >
                   <div className="flex items-center gap-1.5">
                     <Music className="h-3.5 w-3.5 text-orange-400" />
-                    <span className="text-xs font-bold">DAGRABOLERO</span>
+                    <span className="text-xs font-bold">DA GRABOLERO</span>
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{t('create.dnaFlow.boleroDesc')}</p>
                 </button>
@@ -1230,7 +1230,7 @@ export default function CreatePage() {
                 className={cn(
                   "w-full font-semibold text-sm",
                   canCreate && !isAnyPending
-                    ? "bg-gradient-to-r from-primary to-pink-500 text-white border-primary shadow-[0_0_20px_rgba(255,20,147,0.25)]"
+                    ? "bg-gradient-to-r from-primary to-orange-500 text-white border-primary shadow-[0_0_20px_rgba(255,20,147,0.25)]"
                     : ""
                 )}
                 size="lg"
@@ -1300,7 +1300,7 @@ export default function CreatePage() {
                         </div>
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2"><Copyright className="h-3.5 w-3.5 text-muted-foreground" /><Label className="text-sm font-medium">{t('create.copyrightHolder')}</Label></div>
-                          <Input placeholder="DGB AUDIO" value={copyrightHolder} onChange={(e) => setCopyrightHolder(e.target.value)} className="bg-background/50 border-white/10" data-testid="input-copyright-holder" />
+                          <Input placeholder="DA GRABA" value={copyrightHolder} onChange={(e) => setCopyrightHolder(e.target.value)} className="bg-background/50 border-white/10" data-testid="input-copyright-holder" />
                         </div>
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2"><Clock className="h-3.5 w-3.5 text-muted-foreground" /><Label className="text-sm font-medium">{t('create.songDuration')}</Label></div>
@@ -1604,7 +1604,7 @@ export default function CreatePage() {
                   onClick={() => { if (dnaFlow === "bachata") { setDnaFlow(null); setSelectedSubStyle(null); setSelectedStyleKit(undefined); } else { setDnaFlow("bachata"); setSelectedSubStyle(null); setSelectedGenre("Bachata"); const k = styleKits?.find(k => k.genre === "bachata"); if (k) setSelectedStyleKit(k.id); } }}
                   data-testid="mobile-dna-bachata"
                 >
-                  <div className="flex items-center gap-2"><Guitar className="h-5 w-5 text-primary" /><span className="text-sm font-bold">DAGRABACHATA</span></div>
+                  <div className="flex items-center gap-2"><Guitar className="h-5 w-5 text-primary" /><span className="text-sm font-bold">DA GRABACHATA</span></div>
                   <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{t('create.dnaFlow.bachataDesc')}</p>
                 </button>
                 <button
@@ -1612,7 +1612,7 @@ export default function CreatePage() {
                   onClick={() => { if (dnaFlow === "bolero") { setDnaFlow(null); setSelectedSubStyle(null); setSelectedStyleKit(undefined); } else { setDnaFlow("bolero"); setSelectedSubStyle(null); setSelectedGenre("Bolero"); const k = styleKits?.find(k => k.genre === "dgb_bolero"); if (k) setSelectedStyleKit(k.id); } }}
                   data-testid="mobile-dna-bolero"
                 >
-                  <div className="flex items-center gap-2"><Music className="h-5 w-5 text-orange-400" /><span className="text-sm font-bold">DAGRABOLERO</span></div>
+                  <div className="flex items-center gap-2"><Music className="h-5 w-5 text-orange-400" /><span className="text-sm font-bold">DA GRABOLERO</span></div>
                   <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{t('create.dnaFlow.boleroDesc')}</p>
                 </button>
               </div>
@@ -1787,7 +1787,7 @@ export default function CreatePage() {
               className={cn(
                 "w-full font-bold text-base h-12",
                 canCreate && !isAnyPending
-                  ? "bg-gradient-to-r from-primary to-pink-500 text-white border-primary shadow-[0_0_25px_rgba(255,20,147,0.3)]"
+                  ? "bg-gradient-to-r from-primary to-orange-500 text-white border-primary shadow-[0_0_25px_rgba(255,20,147,0.3)]"
                   : ""
               )}
               size="lg"

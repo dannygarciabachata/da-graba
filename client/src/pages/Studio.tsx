@@ -24,8 +24,8 @@ import JSZip from "jszip";
 import { useTranslation } from "react-i18next";
 
 const GENRE_DISPLAY: Record<string, string> = {
-  Bachata: "DAGRABACHATA",
-  Bolero: "DAGRABOLERO",
+  Bachata: "DA GRABACHATA",
+  Bolero: "DA GRABOLERO",
 };
 
 const STEM_COLORS: Record<string, string> = {
@@ -282,7 +282,7 @@ function TimelineRuler({ duration, currentTime }: { duration: number; currentTim
 
     const playX = (currentTime / duration) * w;
     ctx.beginPath();
-    ctx.fillStyle = "#FF1493";
+    ctx.fillStyle = "#ff751f";
     ctx.moveTo(playX - 4, 0);
     ctx.lineTo(playX + 4, 0);
     ctx.lineTo(playX, 6);
@@ -433,7 +433,7 @@ export default function StudioPage() {
     <div className="h-full flex flex-col bg-[#0a0a0a] text-foreground font-sans overflow-hidden">
       <div className="flex items-center gap-3 px-4 py-2 bg-[#111] border-b border-white/5 flex-wrap" data-testid="studio-top-bar">
         <div className="flex items-center gap-2 min-w-0">
-          <Scissors className="w-4 h-4 text-[#FF1493] flex-shrink-0" />
+          <Scissors className="w-4 h-4 text-[#ff751f] flex-shrink-0" />
           <select
             className="bg-[#1a1a1a] border border-white/10 rounded px-2 py-1 text-sm text-foreground min-w-[140px] max-w-[220px] truncate"
             value={selectedSongId ?? ""}
@@ -505,7 +505,7 @@ export default function StudioPage() {
           </span>
           {selectedSong && (
             <Badge variant="secondary" className="text-[10px]" data-testid="badge-song-info">
-              {GENRE_DISPLAY[selectedSong.genre || ""] || selectedSong.genre || "DAGRABACHATA"}
+              {GENRE_DISPLAY[selectedSong.genre || ""] || selectedSong.genre || "DA GRABACHATA"}
             </Badge>
           )}
           <Button
@@ -794,7 +794,7 @@ export default function StudioPage() {
                       })}
 
                       <div
-                        className="flex flex-col items-center gap-1 px-2 border-l border-[#FF1493]/30"
+                        className="flex flex-col items-center gap-1 px-2 border-l border-[#ff751f]/30"
                         style={{ minWidth: 90 }}
                         data-testid="mixer-strip-master"
                       >
@@ -829,7 +829,7 @@ export default function StudioPage() {
                           ))}
                         </div>
 
-                        <span className="text-[8px] font-bold text-[#FF1493] uppercase tracking-wider">
+                        <span className="text-[8px] font-bold text-[#ff751f] uppercase tracking-wider">
                           MASTER
                         </span>
                       </div>
@@ -868,7 +868,7 @@ export default function StudioPage() {
               <ScrollArea className="h-full">
                 <div className="p-3 space-y-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="w-4 h-4 text-[#FF1493]" />
+                    <Sparkles className="w-4 h-4 text-[#ff751f]" />
                     <h3 className="text-sm font-bold" data-testid="text-ai-tools-title">{t("studio.aiTools")}</h3>
                   </div>
 

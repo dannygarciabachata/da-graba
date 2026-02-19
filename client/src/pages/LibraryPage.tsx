@@ -50,7 +50,7 @@ export default function LibraryPage() {
       audioUrl: s.audioUrl,
       imageUrl: s.imageUrl,
       genre: s.genre,
-      artistName: s.artistName || user?.firstName || "DAGRABA",
+      artistName: s.artistName || user?.firstName || "DA GRABA",
       prompt: s.prompt,
       variationLabel: s.variationLabel,
       lyricsText: s.lyricsText,
@@ -155,7 +155,7 @@ export default function LibraryPage() {
                           <span>
                             {song.createdAt && formatDistanceToNow(new Date(song.createdAt), { addSuffix: true })}
                           </span>
-                          {song.genre && <span>{song.genre === "Bachata" ? "DAGRABACHATA" : song.genre === "Bolero" ? "DAGRABOLERO" : song.genre}</span>}
+                          {song.genre && <span>{song.genre === "Bachata" ? "DA GRABACHATA" : song.genre === "Bolero" ? "DA GRABOLERO" : song.genre}</span>}
                           {song.duration && <span>{Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}</span>}
                           {song.isPublic && (
                             <span className="text-primary text-[10px] font-medium">{t('songMenu.public')}</span>

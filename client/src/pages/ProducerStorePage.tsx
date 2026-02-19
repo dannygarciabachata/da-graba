@@ -53,8 +53,8 @@ import {
 import type { StyleKitInstrument } from "@shared/schema";
 
 const GENRE_LABELS: Record<string, string> = {
-  bachata: "DAGRABACHATA",
-  bolero: "DAGRABOLERO",
+  bachata: "DA GRABACHATA",
+  bolero: "DA GRABOLERO",
   latin_pop: "Latin Pop",
   merengue: "Merengue",
   salsa: "Salsa",
