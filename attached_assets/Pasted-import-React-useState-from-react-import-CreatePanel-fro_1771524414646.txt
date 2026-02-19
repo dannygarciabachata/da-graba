@@ -1,0 +1,142 @@
+import React, { useState } from 'react';
+import { CreatePanel } from './components/CreatePanel';
+import { TrackList } from './components/TrackList';
+import { Player } from './components/Player';
+import logoWeb from 'figma:asset/e4461bdf82226bd59a0887e18df9164504c388da.png';
+import logoIcon from 'figma:asset/814bacfbc47d8f211259b57733f9a794c84b8448.png';
+
+interface Track {
+  id: string;
+  title: string;
+  description: string;
+  genre: string;
+  duration: string;
+  imageUrl: string;
+  isPlaying: boolean;
+}
+
+export default function App() {
+  const [tracks, setTracks] = useState<Track[]>([
+    {
+      id: '1',
+      title: 'Sueños de Neón',
+      description: 'Un viaje futurista de synthwave a través de calles iluminadas con neón',
+      genre: 'Synthwave',
+      duration: '3:24',
+      imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400',
+      isPlaying: false,
+    },
+    {
+      id: '2',
+      title: 'Susurros del Océano',
+      description: 'Sonidos ambientales del mar profundo con piano suave',
+      genre: 'Ambient',
+      duration: '4:12',
+      imageUrl: 'https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=400',
+      isPlaying: false,
+    },
+  ]);
+
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerate = async (prompt: string, genre: string, mood: string, duration: string) => {
+    setIsGenerating(true);
+    
+    // Simulación de generación
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    const newTrack: Track = {
+      id: Date.now().toString(),
+      title: `Track Generado ${tracks.length + 1}`,
+      description: prompt,
+      genre: genre,
+      duration: duration,
+      imageUrl: `https://images.unsplash.com/photo-${Math.random() > 0.5 ? '1511379938547-c1f69419868d' : '1470225620780-dba8ba36b745'}?w=400`,
+      isPlaying: false,
+    };
+    
+    setTracks([newTrack, ...tracks]);
+    setIsGenerating(false);
+  };
+
+  const handlePlay = (trackId: string) => {
+    const track = tracks.find(t => t.id === trackId);
+    if (track) {
+      setCurrentTrack(track);
+      setTracks(tracks.map(t => ({
+        ...t,
+        isPlaying: t.id === trackId,
+      })));
+    }
+  };
+
+  const handlePause = () => {
+    setTracks(tracks.map(t => ({ ...t, isPlaying: false })));
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950">
+      {/* Header */}
+      <header className="border-b border-white/10 backdrop-blur-xl bg-black/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {/* Logo con icono en cuadro y texto GRABA */}
+              <div className="flex items-center gap-3">
+                {/* Icono DA en cuadro con borde degradado */}
+                <div className="relative p-[2px] rounded-lg bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700">
+                  <div className="bg-slate-950 rounded-lg p-2">
+                    <img src={logoIcon} alt="DA" className="w-8 h-8" />
+                  </div>
+                </div>
+                
+                {/* Texto GRABA */}
+                <div className="flex flex-col justify-center -space-y-0.5">
+                  <span className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 bg-clip-text text-transparent tracking-tight leading-none">
+                    GRABA
+                  </span>
+                  <span className="text-[10px] sm:text-xs text-orange-300/70 font-medium">AI Music Studio</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <button className="px-4 py-2 rounded-full text-sm text-orange-300 hover:text-white transition-colors">
+                Galería
+              </button>
+              <button className="px-4 py-2 rounded-full text-sm text-orange-300 hover:text-white transition-colors">
+                Biblioteca
+              </button>
+              <button className="px-6 py-2 rounded-full bg-gradient-to-r from-orange-600 to-orange-500 text-white text-sm font-medium hover:shadow-lg hover:shadow-orange-500/50 transition-all">
+                Mejorar Plan
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Left Panel - Create */}
+          <CreatePanel onGenerate={handleGenerate} isGenerating={isGenerating} />
+          
+          {/* Right Panel - Tracks */}
+          <TrackList 
+            tracks={tracks} 
+            onPlay={handlePlay}
+            onPause={handlePause}
+          />
+        </div>
+      </main>
+
+      {/* Bottom Player */}
+      {currentTrack && (
+        <Player 
+          track={currentTrack} 
+          onClose={() => setCurrentTrack(null)}
+        />
+      )}
+    </div>
+  );
+}
