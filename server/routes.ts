@@ -1146,6 +1146,7 @@ export async function registerRoutes(
       const songId = parseInt(req.body?.song_id || req.body?.songId || "0", 10);
       const duration = parseInt(req.body?.duration || "0", 10) || null;
       const engine = req.body?.engine || "sao";
+      const incomingTaskId = req.body?.task_id || req.body?.taskId || "";
 
       const uploadSecret = process.env.RUNPOD_UPLOAD_SECRET;
       const incomingSecret = req.headers["x-upload-secret"] as string || req.body?.upload_secret;
@@ -1161,7 +1162,22 @@ export async function registerRoutes(
           console.log(`[Upload] Rejected: song ${songId} not in processing state (status: ${song?.status || 'not found'})`);
           return res.status(403).json({ error: "Forbidden" });
         }
-        console.log(`[Upload] Accepting upload without secret for processing song ${songId}`);
+        if (song.taskId) {
+          if (!incomingTaskId) {
+            console.log(`[Upload] Rejected: song ${songId} has taskId but none provided in upload`);
+            return res.status(403).json({ error: "Forbidden" });
+          }
+          if (song.taskId !== incomingTaskId) {
+            console.log(`[Upload] Rejected: taskId mismatch for song ${songId} (expected: ${song.taskId}, got: ${incomingTaskId})`);
+            return res.status(403).json({ error: "Forbidden" });
+          }
+        }
+        const songAge = Date.now() - new Date(song.createdAt).getTime();
+        if (songAge > 30 * 60 * 1000) {
+          console.log(`[Upload] Rejected: song ${songId} too old for secretless upload (${(songAge / 60000).toFixed(0)}min)`);
+          return res.status(403).json({ error: "Forbidden" });
+        }
+        console.log(`[Upload] Accepting upload for processing song ${songId} (taskId: ${song.taskId || 'none'}, age: ${(songAge / 60000).toFixed(1)}min)`);
       }
 
       console.log(`[Upload] RunPod audio upload received: songId=${songId}, file=${req.file?.filename}, size=${req.file?.size ? (req.file.size / 1024 / 1024).toFixed(1) + 'MB' : 'none'}`);

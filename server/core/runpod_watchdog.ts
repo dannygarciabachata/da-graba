@@ -1,12 +1,13 @@
 import { storage } from "../storage";
-import { getJobStatus, isServerlessConfigured } from "./runpod_serverless";
+import { getJobStatus, isServerlessConfigured, getEndpointId } from "./runpod_serverless";
 import { saveRunPodAudio } from "./runpod_music_engine";
 import { db } from "../db";
 import { songs as songsTable } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 const POLL_INTERVAL_MS = 30_000;
-const MAX_PROCESSING_AGE_MS = 24 * 60 * 60 * 1000;
+const MAX_PROCESSING_AGE_MS = 2 * 60 * 60 * 1000;
+const NO_TASKID_TIMEOUT_MS = 10 * 60 * 1000;
 const UNDELIVERED_GRACE_MS = 120_000;
 
 let watchdogTimer: ReturnType<typeof setInterval> | null = null;
@@ -77,9 +78,9 @@ async function checkSongJob(song: any) {
   const taskId = song.taskId;
   if (!taskId) {
     const age = Date.now() - new Date(song.createdAt).getTime();
-    if (age > MAX_PROCESSING_AGE_MS) {
-      console.log(`[RunPod Watchdog] Song ${song.id} has no taskId and is ${(age / 3600000).toFixed(1)}h old, marking failed`);
-      await storage.updateSongStatus(song.id, "failed", undefined, "No task ID - generation may not have started");
+    if (age > NO_TASKID_TIMEOUT_MS) {
+      console.log(`[RunPod Watchdog] Song ${song.id} has no taskId and is ${(age / 60000).toFixed(0)}min old, marking failed`);
+      await storage.updateSongStatus(song.id, "failed", undefined, "Generation job could not be submitted. Please try again.");
     }
     return;
   }
@@ -161,6 +162,50 @@ async function checkSongJob(song: any) {
   }
 }
 
+async function tryRecoverFromJobOutput(song: any, taskId: string): Promise<boolean> {
+  try {
+    const jobResult = await getJobStatus("music", taskId);
+    if (jobResult.status !== "COMPLETED" || !jobResult.output) return false;
+
+    const output = jobResult.output;
+    if (output.audioBase64) {
+      const audioFormat = output.audioFormat || "mp3";
+      const localUrl = await saveRunPodAudio(output.audioBase64, song.id, audioFormat);
+      await storage.updateSongStatus(song.id, "completed", localUrl);
+      if (output.duration) {
+        try { await db.update(songsTable).set({ duration: output.duration }).where(eq(songsTable.id, song.id)); } catch {}
+      }
+      console.log(`[RunPod Watchdog] Song ${song.id} recovered from job output base64: ${localUrl}`);
+      return true;
+    }
+
+    if (output.audio_url) {
+      try {
+        const audioRes = await fetch(output.audio_url, { signal: AbortSignal.timeout(60000) });
+        if (audioRes.ok) {
+          const fs = await import("fs");
+          const path = await import("path");
+          const audioDir = path.join(process.cwd(), "uploads", "audio", "songs");
+          if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
+          const filename = `${song.id}_recovered_${Date.now()}.mp3`;
+          const filePath = path.join(audioDir, filename);
+          const buffer = Buffer.from(await audioRes.arrayBuffer());
+          fs.writeFileSync(filePath, buffer);
+          const localUrl = `/audio/songs/${filename}`;
+          await storage.updateSongStatus(song.id, "completed", localUrl);
+          console.log(`[RunPod Watchdog] Song ${song.id} recovered by downloading audio_url: ${localUrl}`);
+          return true;
+        }
+      } catch (dlErr: any) {
+        console.log(`[RunPod Watchdog] Failed to download audio_url for song ${song.id}: ${dlErr.message}`);
+      }
+    }
+  } catch (err: any) {
+    console.log(`[RunPod Watchdog] Recovery attempt failed for song ${song.id}: ${err.message}`);
+  }
+  return false;
+}
+
 async function handleUndeliveredAudio(song: any, output: any) {
   const audioPath = output.audio_path;
   const firstSeen = undeliveredSeen.get(song.id) || Date.now();
@@ -173,7 +218,14 @@ async function handleUndeliveredAudio(song: any, output: any) {
   console.log(`[RunPod Watchdog] Song ${song.id} completed on RunPod but audio not delivered. Path: ${audioPath}, waited: ${(waitTime / 1000).toFixed(0)}s`);
 
   if (waitTime > UNDELIVERED_GRACE_MS) {
-    console.log(`[RunPod Watchdog] Song ${song.id} audio delivery failed after grace period. Marking as failed with retry option.`);
+    console.log(`[RunPod Watchdog] Song ${song.id} grace period expired, attempting active recovery...`);
+    const recovered = await tryRecoverFromJobOutput(song, song.taskId);
+    if (recovered) {
+      undeliveredSeen.delete(song.id);
+      return;
+    }
+
+    console.log(`[RunPod Watchdog] Song ${song.id} recovery failed. Marking as failed with retry option.`);
     await storage.updateSongStatus(
       song.id,
       "failed",
