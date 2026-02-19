@@ -17,12 +17,16 @@ const runpodMusicAdapter: ProviderAdapter = {
     const tags = buildHeartMuLaTags(prompt, style);
 
     const health = await checkHealth("music");
-    if (!health.connected || !health.healthy) {
-      console.log(`[RunPodAdapter] Skipping - workers unhealthy/unavailable (connected: ${health.connected}, healthy: ${health.healthy}, workers: ${health.workers}, unhealthy: ${health.unhealthy}, error: ${health.error || "none"})`);
-      throw new Error(`RunPod workers unavailable: ${health.error || `${health.unhealthy} unhealthy, ${health.workers} ready`}`);
+    if (!health.connected) {
+      console.log(`[RunPodAdapter] Cannot connect to RunPod API (error: ${health.error || "unknown"})`);
+      throw new Error(`RunPod API unreachable: ${health.error || "connection failed"}`);
     }
 
-    console.log(`[RunPodAdapter] Health OK (${health.workers} workers ready, ${health.unhealthy} unhealthy, ${health.queued} queued). Submitting song ${songId} (engine: sao, sao_model: instrumental_finetune, duration: ${duration}s)`);
+    if (health.healthy) {
+      console.log(`[RunPodAdapter] Health OK (${health.workers} workers ready, ${health.unhealthy} unhealthy, ${health.queued} queued). Submitting song ${songId}`);
+    } else {
+      console.log(`[RunPodAdapter] No workers ready yet (workers: ${health.workers}, unhealthy: ${health.unhealthy}, queued: ${health.queued}). Job will queue until a worker spins up.`);
+    }
 
     const result = await submitMusicGeneration({
       songId,
