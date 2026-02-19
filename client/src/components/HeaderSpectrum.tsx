@@ -109,8 +109,9 @@ export function HeaderSpectrum() {
 
       ctx.fillStyle = grad;
       ctx.beginPath();
-      const radius = Math.min(barWidth / 2, 2);
-      ctx.roundRect(x, y, barWidth, barH, [radius, radius, 0, 0]);
+      const safeBarW = Math.max(barWidth, 0.5);
+      const radius = Math.max(Math.min(safeBarW / 2, 2), 0);
+      ctx.roundRect(x, y, safeBarW, barH, [radius, radius, 0, 0]);
       ctx.fill();
 
       ctx.shadowColor = "transparent";

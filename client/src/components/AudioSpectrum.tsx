@@ -53,7 +53,8 @@ export function AudioSpectrum({ songId, className = "", barCount = 5, barColor =
         ctx.fillStyle = barColor;
         ctx.globalAlpha = 0.7 + val * 0.3;
         ctx.beginPath();
-        ctx.roundRect(x, y, barW, barH, 1);
+        const safeW = Math.max(barW, 0.5);
+        ctx.roundRect(x, y, safeW, barH, Math.min(1, safeW / 2));
         ctx.fill();
       }
       ctx.globalAlpha = 1;
