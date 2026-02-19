@@ -11,6 +11,7 @@ import { FooterPlayerBar } from "@/components/FooterPlayerBar";
 import Landing from "@/pages/Landing";
 import palettaBg from "@assets/palettabg_1771282011333.png";
 import dgbLogo from "@assets/Logo_1771474005704.png";
+import dgbMobileLogo from "@assets/Logomobil2_1771474745681.png";
 import HomePage from "@/pages/HomePage";
 import CreatePage from "@/pages/CreatePage";
 import LibraryPage from "@/pages/LibraryPage";
@@ -75,8 +76,7 @@ function AuthenticatedLayout() {
         <div className="flex flex-col flex-1 min-w-0">
           <header className="h-14 flex items-center px-3 gap-3 border-b border-white/5 bg-background/90 backdrop-blur-md sticky top-0 z-40 lg:hidden">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <img src={dgbLogo} alt="DA GRABA Studio" className="h-9 w-auto object-contain" data-testid="img-mobile-logo" />
-            <span className="text-sm font-bold tracking-wide text-foreground">DA GRABA Studio</span>
+            <img src={dgbMobileLogo} alt="DA GRABA Studio" className="h-9 w-auto object-contain" data-testid="img-mobile-logo" />
           </header>
           <main
             className="flex-1 overflow-auto relative"
