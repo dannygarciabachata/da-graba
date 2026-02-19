@@ -485,7 +485,7 @@ export async function registerRoutes(
     const userId = (req.user as any).claims.sub;
     const existing = await storage.getArtistProfile(userId);
     if (existing) return res.status(409).json({ message: "Profile already exists" });
-    const { artistName, bio, genre, country, artistType, proEntity, proMemberId, ipiNumber, monthlySubscriptionPrice } = req.body;
+    const { artistName, bio, genre, country, artistType, proEntity, proMemberId, ipiNumber, monthlySubscriptionPrice, website, socialLinks } = req.body;
     if (!artistName) return res.status(400).json({ message: "Artist name required" });
     const profile = await storage.createArtistProfile({
       userId,
@@ -499,6 +499,8 @@ export async function registerRoutes(
       ipiNumber: ipiNumber || null,
       monthlySubscriptionPrice: monthlySubscriptionPrice || 299,
       onboardingCompleted: true,
+      ...(website !== undefined && { website }),
+      ...(socialLinks !== undefined && { socialLinks }),
     });
     res.json(profile);
   });
@@ -510,6 +512,49 @@ export async function registerRoutes(
     if (!profile) return res.status(404).json({ message: "No artist profile" });
     const updated = await storage.updateArtistProfile(profile.id, req.body);
     res.json(updated);
+  });
+
+  const imageDir = path.join(process.cwd(), "uploads", "images");
+  if (!fs.existsSync(imageDir)) fs.mkdirSync(imageDir, { recursive: true });
+
+  const imageUpload = multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, imageDir),
+      filename: (_req, _file, cb) => {
+        const ext = path.extname(_file.originalname).toLowerCase() || ".jpg";
+        cb(null, `${uuidv4()}${ext}`);
+      },
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const allowed = [".jpg", ".jpeg", ".png", ".webp", ".bmp"];
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (allowed.includes(ext) || file.mimetype.startsWith("image/")) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only image files (JPEG, PNG, WEBP, BMP) are allowed"));
+      }
+    },
+  });
+
+  app.post("/api/artist/profile/upload-image", imageUpload.single("image"), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const profile = await storage.getArtistProfile(userId);
+    if (!profile) return res.status(404).json({ message: "No artist profile" });
+    if (!req.file) return res.status(400).json({ message: "No image file provided" });
+
+    const validTypes = ["avatar", "banner"];
+    const imageType = validTypes.includes(req.body.type) ? req.body.type : "avatar";
+    const imageUrl = `/uploads/images/${req.file.filename}`;
+
+    if (imageType === "banner") {
+      await storage.updateArtistProfile(profile.id, { bannerUrl: imageUrl });
+    } else {
+      await storage.updateArtistProfile(profile.id, { avatarUrl: imageUrl });
+    }
+
+    res.json({ url: imageUrl, type: imageType });
   });
 
   app.get("/api/public/artists", async (req, res) => {

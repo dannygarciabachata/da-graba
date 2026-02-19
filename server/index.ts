@@ -11,6 +11,7 @@ const app = express();
 const httpServer = createServer(app);
 
 app.use("/audio", express.static(path.join(process.cwd(), "public", "audio")));
+app.use("/uploads/images", express.static(path.join(process.cwd(), "uploads", "images")));
 
 declare module "http" {
   interface IncomingMessage {
