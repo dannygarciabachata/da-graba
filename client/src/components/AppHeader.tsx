@@ -43,7 +43,7 @@ import {
   FileText,
   Lock,
 } from "lucide-react";
-import daGrabaLogo from "@assets/Logo_1771525902011.png";
+import daGrabaLogo from "@assets/Logomobil2_1771526285843.png";
 
 export function AppHeader() {
   const [location, setLocation] = useLocation();

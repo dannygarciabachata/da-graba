@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
-import daGrabaLogo from "@assets/Logo_1771525902011.png";
+import daGrabaLogo from "@assets/Logomobil2_1771526285843.png";
 import { MusicGenerator } from "@/components/MusicGenerator";
 import { LyricsGenerator } from "@/components/LyricsGenerator";
 import { AudioPlayer } from "@/components/AudioPlayer";
