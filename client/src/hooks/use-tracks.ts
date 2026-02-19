@@ -22,6 +22,32 @@ export function useSongTracks(songId: number | null) {
   });
 }
 
+export function useCreateTrack() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: { songId: number; name: string; type: string }) => {
+      const res = await apiRequest("POST", "/api/tracks", data);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/songs", data.songId, "tracks"] });
+      toast({
+        title: "Track creado",
+        description: `"${data.name}" se añadió al proyecto.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error al crear track",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
 export function useSeparateStems() {
   const queryClient = useQueryClient();
   const { toast } = useToast();

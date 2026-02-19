@@ -1405,6 +1405,29 @@ export async function registerRoutes(
     res.json(userTracks);
   });
 
+  const createTrackSchema = z.object({
+    songId: z.number({ coerce: true }).int().positive(),
+    name: z.string().min(1).max(100),
+    type: z.string().min(1).max(50).default("instrumental"),
+  });
+
+  app.post("/api/tracks", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const parsed = createTrackSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0].message });
+    const { songId, name, type } = parsed.data;
+    const song = await storage.getSong(songId);
+    if (!song) return res.sendStatus(404);
+    if (song.userId !== userId) return res.sendStatus(403);
+    try {
+      const track = await storage.createTrack({ songId, userId, name, type });
+      res.json(track);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Failed to create track" });
+    }
+  });
+
   const trackSettingsSchema = z.object({
     volume: z.number().min(0).max(100).optional(),
     isMuted: z.boolean().optional(),
