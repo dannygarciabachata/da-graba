@@ -334,7 +334,7 @@ function ClipTimeline({ samples, selectedId }: { samples: Sample[]; selectedId: 
   const pixelsPerSecond = 40;
 
   return (
-    <div className="bg-black/20 border border-white/5 rounded-xl p-4 overflow-hidden">
+    <div className="bg-black/60 border border-white/5 rounded-xl p-4 overflow-hidden">
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Clip Timeline</h4>
         <span className="text-xs text-muted-foreground font-mono">{totalDuration}s</span>

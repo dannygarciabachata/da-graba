@@ -369,7 +369,7 @@ function SubscriptionsTab() {
         </div>
 
         {showCreateProduct && (
-          <Card className="bg-card/50 border-primary/20 mb-4">
+          <Card className="bg-card/90 border-primary/20 mb-4">
             <CardContent className="p-4 space-y-3">
               <h3 className="text-sm font-semibold">Crear Producto en Stripe</h3>
               <Input placeholder="Nombre del producto (ej: DA GRABA Pro)" value={productForm.name} onChange={e => setProductForm(f => ({ ...f, name: e.target.value }))} data-testid="input-new-product-name" />
@@ -389,7 +389,7 @@ function SubscriptionsTab() {
               const isAddingPrice = showAddPrice === pid;
 
               return (
-                <Card key={pid} className="bg-card/50 border-white/10" data-testid={`card-product-${pid}`}>
+                <Card key={pid} className="bg-card/90 border-white/10" data-testid={`card-product-${pid}`}>
                   <CardContent className="p-4">
                     <div>
                       {isEditing ? (
@@ -491,7 +491,7 @@ function SubscriptionsTab() {
         {subs && subs.length > 0 ? (
           <div className="space-y-2">
             {subs.map((s: any) => (
-              <Card key={s.id} className="bg-card/50 border-white/10" data-testid={`card-sub-${s.id}`}>
+              <Card key={s.id} className="bg-card/90 border-white/10" data-testid={`card-sub-${s.id}`}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
@@ -2681,7 +2681,7 @@ function BlogAdminTab() {
           </div>
 
           <div className="space-y-4">
-            <Card className="bg-card/50 border-white/10">
+            <Card className="bg-card/90 border-white/10">
               <CardContent className="p-4 space-y-3">
                 <h3 className="text-sm font-semibold">Publicación</h3>
                 <select className="w-full bg-background border border-white/10 rounded-md p-2 text-sm" value={postForm.status} onChange={e => setPostForm(p => ({ ...p, status: e.target.value }))} data-testid="select-blog-status">
@@ -2732,7 +2732,7 @@ function BlogAdminTab() {
               </CardContent>
             </Card>
 
-            <Card className="bg-card/50 border-white/10">
+            <Card className="bg-card/90 border-white/10">
               <CardContent className="p-4 space-y-3">
                 <h3 className="text-sm font-semibold">SEO</h3>
                 <Input placeholder="SEO Title" value={postForm.seoTitle} onChange={e => setPostForm(p => ({ ...p, seoTitle: e.target.value }))} data-testid="input-blog-seo-title" />
@@ -2765,7 +2765,7 @@ function BlogAdminTab() {
       </div>
 
       {showCategoryForm && (
-        <Card className="bg-card/50 border-white/10">
+        <Card className="bg-card/90 border-white/10">
           <CardContent className="p-4 space-y-3">
             <h3 className="text-sm font-semibold">Categorías</h3>
             <div className="flex gap-2">
@@ -2792,7 +2792,7 @@ function BlogAdminTab() {
 
       <div className="space-y-3">
         {posts?.map((post: any) => (
-          <Card key={post.id} className="bg-card/50 border-white/10" data-testid={`card-admin-blog-post-${post.id}`}>
+          <Card key={post.id} className="bg-card/90 border-white/10" data-testid={`card-admin-blog-post-${post.id}`}>
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
@@ -3118,7 +3118,7 @@ function BillingAdminTab() {
       </div>
 
       {showForm && (
-        <Card className="bg-card/50 border-white/10">
+        <Card className="bg-card/90 border-white/10">
           <CardContent className="p-4 space-y-4">
             <h3 className="font-semibold text-sm">{editingPlan ? "Editar Plan" : "Nuevo Plan de Precio"}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -3170,7 +3170,7 @@ function BillingAdminTab() {
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-muted-foreground">Planes de Precio</h3>
         {plans?.map((plan: any) => (
-          <Card key={plan.id} className="bg-card/50 border-white/10" data-testid={`card-pricing-plan-${plan.id}`}>
+          <Card key={plan.id} className="bg-card/90 border-white/10" data-testid={`card-pricing-plan-${plan.id}`}>
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">

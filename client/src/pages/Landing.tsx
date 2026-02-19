@@ -836,7 +836,7 @@ export default function Landing() {
                   viewport={{ once: true }}
                   transition={{ delay: idx * 0.1, duration: 0.5 }}
                 >
-                  <Card className="bg-card/50 border-white/5 overflow-hidden group hover:border-primary/30 transition-all" data-testid={`card-public-song-${song.id}`}>
+                  <Card className="bg-card/90 border-white/5 overflow-hidden group hover:border-primary/30 transition-all" data-testid={`card-public-song-${song.id}`}>
                     <div className="relative h-40 overflow-hidden">
                       {song.imageUrl ? (
                         <img src={song.imageUrl} alt={song.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -904,7 +904,7 @@ export default function Landing() {
         }}
         data-testid="footer-landing"
       >
-        <div className="absolute inset-0 bg-background/85 pointer-events-none" />
+        <div className="absolute inset-0 bg-background/95 pointer-events-none" />
         <div className="container mx-auto relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
             <div className="col-span-2 md:col-span-1">

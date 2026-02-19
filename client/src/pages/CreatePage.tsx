@@ -781,7 +781,7 @@ export default function CreatePage() {
         <div className="hidden lg:grid lg:grid-cols-[320px_1fr_320px] flex-1 overflow-hidden" data-testid="desktop-layout">
 
           {/* ===== LEFT: Creation Panel (Suno-style) ===== */}
-          <div className="border-r border-white/5 bg-background/50 overflow-y-auto" data-testid="creation-panel">
+          <div className="border-r border-white/5 bg-background/90 overflow-y-auto" data-testid="creation-panel">
             <div className="p-4">
               <div className="flex items-center gap-2 mb-5">
                 <CheckSquare className="h-4 w-4 text-primary" />
@@ -1491,7 +1491,7 @@ export default function CreatePage() {
           </div>
 
           {/* ===== RIGHT: History Panel ===== */}
-          <div className="border-l border-white/5 overflow-y-auto bg-background/30 flex flex-col" data-testid="history-panel">
+          <div className="border-l border-white/5 overflow-y-auto bg-background/85 flex flex-col" data-testid="history-panel">
             <div className="p-3 border-b border-white/5 flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground" />

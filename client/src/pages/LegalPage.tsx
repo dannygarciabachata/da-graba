@@ -201,7 +201,7 @@ export default function LegalPage({ section = "terms" }: { section?: LegalSectio
           </Link>
         </div>
 
-        <div className="bg-card/50 border border-white/5 rounded-xl p-6 md:p-8">
+        <div className="bg-card/90 border border-white/5 rounded-xl p-6 md:p-8">
           {section === "terms" && <TermsContent />}
           {section === "privacy" && <PrivacyContent />}
           {section === "cookies" && <CookiesContent />}

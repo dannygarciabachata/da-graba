@@ -79,7 +79,7 @@ export default function MyPlaylistsPage() {
 
   return (
     <div className="h-full overflow-auto">
-      <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-6 bg-[#0a0a12]/80 rounded-xl my-2">
+      <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-6 bg-[#0a0a12]/95 rounded-xl my-2">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-3">
             <ListMusic className="h-6 w-6 text-primary" />

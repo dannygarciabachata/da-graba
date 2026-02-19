@@ -268,7 +268,7 @@ export default function PublicPlaylistViewPage() {
             </div>
           </div>
 
-          <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 bg-[#0a0a12]/80 rounded-xl my-2">
+          <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 bg-[#0a0a12]/95 rounded-xl my-2">
             {!songs.length ? (
               <div className="text-center py-16 text-muted-foreground">
                 <Music className="h-12 w-12 mx-auto mb-3 opacity-40" />

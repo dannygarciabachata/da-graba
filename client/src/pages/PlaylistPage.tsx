@@ -285,7 +285,7 @@ export default function PlaylistPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 bg-[#0a0a12]/80 rounded-xl my-2">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 bg-[#0a0a12]/95 rounded-xl my-2">
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 10 }).map((_, i) => (

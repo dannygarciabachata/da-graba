@@ -452,7 +452,7 @@ function BlogPostView() {
   if (error || !post) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Card className="bg-card/50 border-white/10 p-8 text-center">
+        <Card className="bg-card/90 border-white/10 p-8 text-center">
           <h2 className="text-xl font-bold text-white mb-2">
             Post no encontrado
           </h2>
