@@ -1166,7 +1166,7 @@ export async function registerRoutes(
           console.log(`[Upload] Rejected: taskId mismatch for song ${songId} (expected: ${song.taskId}, got: ${incomingTaskId})`);
           return res.status(403).json({ error: "Forbidden" });
         }
-        const songAge = Date.now() - new Date(song.createdAt).getTime();
+        const songAge = Date.now() - new Date(song.createdAt!).getTime();
         if (songAge > 30 * 60 * 1000) {
           console.log(`[Upload] Rejected: song ${songId} too old for secretless upload (${(songAge / 60000).toFixed(0)}min)`);
           return res.status(403).json({ error: "Forbidden" });
