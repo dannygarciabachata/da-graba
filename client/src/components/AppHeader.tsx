@@ -44,6 +44,7 @@ import {
   Lock,
 } from "lucide-react";
 import daGrabaLogo from "@assets/Logomobil2_1771526285843.png";
+import { HeaderSpectrum } from "@/components/HeaderSpectrum";
 
 export function AppHeader() {
   const [location, setLocation] = useLocation();
@@ -70,6 +71,10 @@ export function AppHeader() {
               data-testid="link-header-logo"
             >
               <img src={daGrabaLogo} alt="DA GRABA" className="h-[80px] w-[225px] object-contain drop-shadow-[0_0_12px_rgba(255,117,31,0.4)]" />
+            </div>
+
+            <div className="hidden sm:block" data-testid="header-spectrum-container">
+              <HeaderSpectrum />
             </div>
 
             <nav className="hidden md:flex items-center gap-1" data-testid="nav-main">
