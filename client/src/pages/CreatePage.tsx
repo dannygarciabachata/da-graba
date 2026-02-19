@@ -214,84 +214,43 @@ type CreationMode = "song" | "sound" | "speak";
 
 function GenreCarousel({ selectedGenre, onSelect }: { selectedGenre: string; onSelect: (v: string) => void }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollUp, setCanScrollUp] = useState(false);
-  const [canScrollDown, setCanScrollDown] = useState(true);
-
-  const checkScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setCanScrollUp(el.scrollTop > 2);
-    setCanScrollDown(el.scrollTop < el.scrollHeight - el.clientHeight - 2);
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    checkScroll();
-    el.addEventListener("scroll", checkScroll, { passive: true });
-    window.addEventListener("resize", checkScroll);
-    return () => {
-      el.removeEventListener("scroll", checkScroll);
-      window.removeEventListener("resize", checkScroll);
-    };
-  }, [checkScroll]);
-
-  const scroll = (dir: "up" | "down") => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const amount = 120;
-    el.scrollBy({ top: dir === "up" ? -amount : amount, behavior: "smooth" });
-  };
 
   return (
     <div className="relative" data-testid="genre-carousel">
-      {canScrollUp && (
-        <div className="absolute top-0 left-0 right-0 z-10 h-8 bg-gradient-to-b from-background via-background/80 to-transparent flex items-start justify-center pt-0.5 pointer-events-none">
-          <button onClick={() => scroll("up")} className="pointer-events-auto h-6 w-6 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm" data-testid="genre-scroll-up">
-            <ChevronDown className="h-3 w-3 rotate-180" />
-          </button>
-        </div>
-      )}
-      {canScrollDown && (
-        <div className="absolute bottom-0 left-0 right-0 z-10 h-8 bg-gradient-to-t from-background via-background/80 to-transparent flex items-end justify-center pb-0.5 pointer-events-none">
-          <button onClick={() => scroll("down")} className="pointer-events-auto h-6 w-6 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm" data-testid="genre-scroll-down">
-            <ChevronDown className="h-3 w-3" />
-          </button>
-        </div>
-      )}
       <div
         ref={scrollRef}
-        className="max-h-[280px] sm:max-h-[320px] overflow-y-auto space-y-3 py-1 px-0.5"
+        className="overflow-x-auto pb-2"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        {GENRE_CATEGORIES.map((cat) => (
-          <div key={cat.category} data-testid={`genre-category-${cat.category}`}>
-            <div className="flex items-center gap-1.5 mb-1.5 px-1">
-              <span className="text-sm">{cat.icon}</span>
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{cat.category}</span>
+        <div className="flex gap-3 min-w-max px-0.5">
+          {GENRE_CATEGORIES.map((cat) => (
+            <div key={cat.category} className="flex-shrink-0" data-testid={`genre-category-${cat.category}`}>
+              <div className="flex items-center gap-1.5 mb-2 px-1">
+                <span className="text-sm">{cat.icon}</span>
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{cat.category}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+                {cat.genres.map((genre) => (
+                  <button
+                    key={genre.value}
+                    className={cn(
+                      "px-3 py-2 rounded-lg border text-xs font-medium transition-all whitespace-nowrap text-center min-w-[90px]",
+                      selectedGenre === genre.value
+                        ? (genre as any).accent
+                          ? "border-primary bg-primary/15 text-primary shadow-[0_0_12px_rgba(255,117,31,0.2)]"
+                          : "border-primary bg-primary/10 text-primary"
+                        : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground hover:bg-white/[0.04]"
+                    )}
+                    onClick={() => onSelect(genre.value)}
+                    data-testid={`genre-chip-${genre.value}`}
+                  >
+                    {genre.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {cat.genres.map((genre) => (
-                <button
-                  key={genre.value}
-                  className={cn(
-                    "px-3 py-1.5 rounded-full border text-xs font-medium transition-all whitespace-nowrap",
-                    selectedGenre === genre.value
-                      ? (genre as any).accent
-                        ? "border-primary bg-primary/15 text-primary shadow-[0_0_12px_rgba(255,117,31,0.2)]"
-                        : "border-primary bg-primary/10 text-primary"
-                      : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground hover:bg-white/[0.04]"
-                  )}
-                  onClick={() => onSelect(genre.value)}
-                  data-testid={`genre-chip-${genre.value}`}
-                >
-                  {genre.label}
-                  <span className="ml-1 text-[9px] opacity-50">{genre.likes}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -1397,7 +1356,7 @@ export default function CreatePage() {
               <div className="relative" data-testid="now-playing-panel">
                 <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-orange-600 rounded-2xl blur-xl opacity-20" />
                 <div className="relative bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
-                  <HistoryNowPlaying song={activeSong} isPlaying={playerState.isPlaying} />
+                  <HistoryNowPlaying song={activeSong as PlayerSong} isPlaying={playerState.isPlaying} />
                 </div>
               </div>
             )}
