@@ -59,16 +59,16 @@ export async function generateFullCreativePackage(
 }
 
 const GENRE_INSTRUMENT_MAP: Record<string, string> = {
-  "bachata": "tight Dominican bachata band, warm nylon requinto guitar melodic picking over syncopated segunda rhythm, bongó derecho groove with güira metallic pulse, electric bass walking lines, romantic intimate feel, cohesive ensemble, professional studio, 130 BPM, 4/4",
-  "bachata tradicional": "authentic Dominican bachata tradicional, requinto nylon guitar melodic phrasing, segunda guitarra syncopated strumming, bongó with hand-played derecho pattern, güira metallic scraping rhythm, electric bass walking lines, warm romantic intimate feel, classic Dominican sound, 130 BPM, 4/4",
-  "bachata moderna": "modern bachata fusion with R&B influence, requinto guitar over contemporary chord voicings, segunda rhythm with modern feel, bongó groove, güira pulse, electric bass with funk influence, lush pad atmospherics, violin string arrangement, polished production, 125 BPM, 4/4",
-  "bachata sensual": "slow sensual bachata, soft melodic requinto guitar arpeggios, gentle segunda rhythm, subtle bongó groove, light güira shimmer, prominent bass line, warm pad layers, smooth violin strings, intimate romantic atmosphere, slow tempo, 115 BPM, 4/4",
-  "bachata urbana": "urban bachata with trap influence, requinto guitar with effects processing, segunda rhythm over modern production, bongó with electronic enhancement, punchy bass, synth pad atmosphere, contemporary Latin urban sound, 120 BPM, 4/4",
-  "bachata rosa": "bachata rosa ballad, delicate requinto guitar melodic lines, soft segunda strumming, gentle bongó, light güira, warm bass, lush violin and cello strings, piano embellishments, dreamy romantic atmosphere, sweet and tender, 120 BPM, 4/4",
-  "bolero": "intimate bolero ballad, expressive nylon requinto guitar arpeggios with tremolo, gentle segunda accompaniment, soft bongó brushwork, warm piano chords, lush violin and cello string arrangement, emotional and romantic, slow tempo, 78 BPM, 4/4",
-  "bolero romantico": "classic romantic bolero, expressive requinto with vibrato and tremolo, segunda guitar warm harmonic support, soft bongó and conga, piano with rich voicings, full violin and cello orchestral strings, pad atmosphere, intimate and deeply emotional, 75 BPM, 4/4",
-  "bolero moderno": "modern bolero with contemporary arrangement, requinto melodic phrasing, segunda support, piano with elegant voicings, cinematic string section, atmospheric pad layers, polished production maintaining romantic essence, 80 BPM, 4/4",
-  "bolero son": "bolero with Cuban son flavor, requinto guitar over tres-inspired guajeo, bongó with martillo pattern, claves 3-2, bass walking line, warm Caribbean romantic feel, Afro-Cuban groove, 85 BPM, 4/4",
+  "bachata": "tight Dominican bachata band playing together in sync at 130 BPM 4/4, requinto guitar plays melodic phrases on top while segunda keeps the syncopated strumming pattern on every beat, bongó plays derecho groove locked with güira metallic pulse on the upbeats, bass walks quarter notes anchoring the harmony, all five instruments interlocking as one unified rhythm section, warm romantic intimate feel, professional studio recording",
+  "bachata tradicional": "authentic Dominican bachata ensemble locked in groove at 130 BPM 4/4, requinto nylon guitar melodic phrasing over segunda syncopated rhythm strumming every beat, bongó derecho hand pattern synchronized with güira scraping on upbeats, bass walking lines following chord changes, all instruments playing as tight interlocking unit creating classic Dominican sound, warm romantic intimate feel, professional recording",
+  "bachata moderna": "modern bachata fusion ensemble synchronized at 125 BPM 4/4, requinto guitar contemporary melodic lines over segunda modern rhythm, bongó groove locked with güira pulse, bass with funk-influenced walking lines, pad atmospherics and violin strings sustaining above the rhythm section, all instruments playing as one cohesive unit, polished R&B-influenced production",
+  "bachata sensual": "slow sensual bachata ensemble breathing together at 115 BPM 4/4, requinto guitar soft arpeggios lead the melody, segunda gentle rhythm underneath, bongó subtle groove locked with bass prominent walking line, pad layers and smooth violin strings sustaining above, all instruments playing softly together as one intimate unit, romantic slow-dance atmosphere, professional recording",
+  "bachata urbana": "urban bachata ensemble with modern production at 120 BPM 4/4, requinto guitar with effects over segunda rhythm pattern, bongó groove with electronic enhancement locked to punchy bass, synth pad atmosphere, all instruments synchronized as tight unit, contemporary Latin urban sound",
+  "bachata rosa": "bachata rosa ballad ensemble at 120 BPM 4/4, delicate requinto guitar melodic lines over soft segunda strumming on every beat, gentle bongó locked with güira, warm bass walking underneath, piano fills between guitar phrases, lush violin and cello strings sustaining long notes above, all instruments playing gently together as one sweet tender unit, dreamy romantic atmosphere",
+  "bolero": "intimate bolero ballad ensemble playing in sync at 78 BPM 4/4, requinto guitar leads the melody with arpeggios while segunda keeps steady harmonic rhythm underneath, bongó plays soft syncopated patterns locked to the bass walking quarter notes, piano fills harmonic spaces between guitar phrases, violins and cellos sustain long legato lines over the rhythm section, all instruments breathing together as one tight cohesive band, warm romantic studio recording",
+  "bolero romantico": "classic romantic bolero ensemble locked together at 75 BPM 4/4, requinto guitar plays expressive tremolo melody on beats 1 and 3 while segunda strums gentle rhythm on every beat, bongó and conga play interlocking soft patterns following the bass pulse, piano provides rich chord voicings on beats 2 and 4 filling the space, full violin and cello strings sustain lush pads above the rhythm, all instruments perfectly synchronized creating one unified emotional sound, deeply intimate professional recording",
+  "bolero moderno": "modern bolero ensemble tightly synchronized at 80 BPM 4/4, requinto guitar melodic phrasing over segunda steady support, piano elegant voicings locked to bass rhythm, atmospheric pad layers blending with cinematic strings, all instruments playing as one cohesive unit with clear musical arrangement, polished contemporary production maintaining romantic essence, professional studio quality",
+  "bolero son": "bolero-son fusion ensemble locked in groove at 85 BPM 4/4, requinto guitar over tres-inspired guajeo pattern, bongó playing martillo synchronized with clave 3-2, bass walking line anchoring the whole ensemble, all instruments following the clave rhythm together as tight unit, warm Caribbean romantic feel with Afro-Cuban groove, cohesive band sound",
   "salsa": "tight salsa band with driving piano montuno and brass hits, energetic Latin dance groove, professional big band sound, all instruments locked in together, 180 BPM",
   "merengue": "fast energetic merengue band, driving accordion melody with tight drum pattern, upbeat Caribbean dance music, cohesive festive sound, 160 BPM",
   "reggaeton": "modern reggaeton beat with deep bass and crisp hi-hats, urban Latin groove, polished club production, tight rhythm section, 90 BPM",
@@ -139,24 +139,25 @@ export async function enrichPromptForMusicGen(
           content: `You are a music prompt engineer for Stable Audio Open (SAO), an AI music generation model trained on instrumental audio.
 
 CRITICAL RULES:
-- Output ONLY a short English music description (max 200 chars)
-- START with the genre name and its signature rhythm feel (e.g. "bachata groove", "bolero ballad")
-- Describe the OVERALL SOUND as a cohesive ensemble playing together
+- Output ONLY a short English music description (max 250 chars)
+- START with the genre name and rhythm feel (e.g. "bachata groove", "bolero ballad")
+- MOST IMPORTANT: Describe instruments playing TOGETHER as ONE BAND, not separately
+- Describe HOW instruments interact: "guitar melody OVER steady rhythm, percussion LOCKED WITH bass"
+- Use ensemble language: "tight ensemble", "all instruments in sync", "locked together", "unified groove", "breathing as one band"
 - Include BPM and time signature from the genre reference
-- Focus on FEEL (tight, warm, groovy, intimate, energetic), TEXTURE (warm, bright, lush), and RHYTHM PATTERN
-- Mention 2-3 key sonic elements that define the genre (e.g. "nylon guitar rhythm with hand percussion")
+- Focus on: GROOVE (how the rhythm feels), INTERACTION (how parts lock together), FEEL (warm, intimate, energetic)
 - Translate Spanish/other languages to English
 - NO lyrics, NO singing, NO vocal descriptions — this is INSTRUMENTAL ONLY
-- NO long instrument lists — describe the BAND SOUND, not individual parts
+- NEVER list instruments separately — always describe them as interacting parts of ONE sound
 
 GOOD examples:
-- "romantic bachata groove, warm nylon guitar rhythm with syncopated hand percussion, intimate Dominican feel, tight ensemble, 130 BPM, studio quality"
-- "slow bolero ballad, gentle guitar arpeggios with lush string arrangement, deeply emotional and intimate, 78 BPM, professional orchestral recording"
-- "energetic salsa dance groove, driving piano montuno with tight brass and percussion, clave rhythm, 180 BPM, big band sound"
-- "sensual bachata, soft melodic guitar over gentle percussion groove, warm pad layers with smooth strings, intimate slow-dance feel, 115 BPM"
+- "romantic bachata groove, nylon guitar melody over syncopated rhythm section, percussion locked with walking bass, all instruments tight as one band, intimate Dominican feel, 130 BPM, studio quality"
+- "slow bolero ballad, gentle guitar arpeggios leading while rhythm section pulses underneath, strings sustaining above the groove, all parts breathing together, deeply emotional, 78 BPM"
+- "energetic salsa groove, piano montuno driving while percussion and brass lock together in clave, tight big band sound, 180 BPM"
 
-BAD examples:
-- "requinto guitar arpeggios, segunda guitar strumming, bongo drums, guira scraping, electric bass" (instrument laundry list)
+BAD examples (DO NOT produce these):
+- "requinto guitar arpeggios, segunda guitar strumming, bongo drums, guira scraping, electric bass" (instrument laundry list — sounds DISORGANIZED)
+- "featuring bongos, congas, guitar, piano, strings" (listing parts — NOT describing a band)
 - "a beautiful song with vocals singing about love" (has vocals — SAO is instrumental only)
 
 Genre reference: ${genreHints}`
@@ -166,7 +167,7 @@ Genre reference: ${genreHints}`
           content: userPrompt
         }
       ],
-      max_completion_tokens: 150,
+      max_completion_tokens: 200,
     });
 
     const enriched = completion.choices[0].message.content?.trim();

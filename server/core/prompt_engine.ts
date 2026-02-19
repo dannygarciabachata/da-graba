@@ -151,34 +151,30 @@ export function buildStyleKitPrompt(
 ): string {
   const genreLabel = genre.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-  const instrumentNames = instruments.map(i => i.name).join(", ");
-
-  const keyInstrumentPrompts = instruments
-    .filter(i => i.generatedPrompt)
-    .slice(0, 6)
-    .map(i => {
-      const shortPrompt = i.generatedPrompt!.split(".")[0];
-      return shortPrompt;
-    });
-
   const styleDescription = kitData?.trainingPrompt || kitData?.description || "";
 
-  let styleHint = "";
+  let ensembleHint = "";
   if (styleDescription) {
-    const sentences = styleDescription.split(/[.,;]/).filter(s => s.trim().length > 10);
-    styleHint = sentences.slice(0, 2).join(", ").trim();
-    if (styleHint.length > 120) styleHint = styleHint.substring(0, 117) + "...";
+    const lines = styleDescription.split("\n").filter(l => l.trim().length > 0);
+    const ensembleLine = lines.find(l =>
+      /RHYTHM|MELODY|HARMONY|FOUNDATION|playing as ONE|UNIFIED|LOCKED|INTERLOCK|ensemble/i.test(l)
+    );
+    if (ensembleLine) {
+      ensembleHint = ensembleLine.trim();
+      if (ensembleHint.length > 200) ensembleHint = ensembleHint.substring(0, 197) + "...";
+    } else {
+      const sentences = styleDescription.split(/[.,;]/).filter(s => s.trim().length > 10);
+      ensembleHint = sentences.slice(0, 2).join(", ").trim();
+      if (ensembleHint.length > 150) ensembleHint = ensembleHint.substring(0, 147) + "...";
+    }
   }
 
-  const instrumentHints = keyInstrumentPrompts.join("; ");
+  const instrumentCount = instruments.length;
 
-  let prompt = `${userPrompt}. Style: ${styleHint || genreLabel}. Instruments: ${instrumentNames}. ${instrumentHints}. Professional studio quality, tight cohesive ensemble, ${genreLabel}`;
+  let prompt = `${userPrompt}. ${ensembleHint || `${genreLabel} ensemble`}, ${instrumentCount} instruments playing together as one tight cohesive band, professional studio quality, ${genreLabel}`;
 
   if (prompt.length > 1000) {
-    prompt = `${userPrompt}. ${styleHint || genreLabel} style with ${instrumentNames}. Professional studio quality, tight ensemble`;
-  }
-  if (prompt.length > 1000) {
-    prompt = `${userPrompt}, ${genreLabel} style, ${kitName} with ${instruments.length} instruments, studio quality`;
+    prompt = `${userPrompt}, ${genreLabel} tight ensemble with ${instrumentCount} instruments playing in sync, studio quality`;
   }
   if (prompt.length > 1000) {
     prompt = prompt.substring(0, 997) + "...";

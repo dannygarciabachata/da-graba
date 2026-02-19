@@ -50,8 +50,8 @@ function mapStyleToLyricsStyle(style: string): "romantic" | "dance" | "heartbrea
 
 export function buildHeartMuLaTags(prompt: string, style: string): string {
   const genreTagMap: Record<string, string[]> = {
-    bachata: ["bachata", "latin", "romantic", "nylon guitar", "bongo", "guira", "bass guitar", "Dominican rhythm", "130 BPM", "4/4 time", "syncopated", "studio quality"],
-    bolero: ["bolero", "latin", "romantic ballad", "nylon guitar arpeggios", "soft percussion", "intimate", "slow tempo", "80 BPM", "4/4 time", "emotional", "studio quality"],
+    bachata: ["bachata", "latin", "romantic", "tight ensemble", "interlocking rhythm section", "cohesive band", "Dominican groove", "130 BPM", "4/4 time", "syncopated", "studio quality"],
+    bolero: ["bolero", "latin", "romantic ballad", "unified ensemble", "interlocking rhythm", "cohesive orchestra", "intimate", "slow tempo", "78 BPM", "4/4 time", "emotional", "studio quality"],
     salsa: ["salsa", "latin", "energetic", "brass section", "piano montuno", "congas", "timbales", "clave rhythm", "180 BPM", "dance", "tight arrangement", "studio quality"],
     merengue: ["merengue", "latin", "energetic", "accordion", "tambora", "guira", "fast tempo", "160 BPM", "2/4 time", "Caribbean dance", "studio quality"],
     cumbia: ["cumbia", "latin", "tropical", "accordion", "rhythmic percussion", "dance groove", "100 BPM", "4/4 time", "Colombian", "studio quality"],
