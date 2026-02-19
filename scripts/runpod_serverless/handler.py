@@ -261,7 +261,15 @@ def generate_sao(song_id, prompt, duration, style_kit_id, device, wav_path, sao_
     if audio.dim() == 1:
         audio = audio.unsqueeze(0)
 
-    torchaudio.save(wav_path, audio, sample_rate)
+    try:
+        torchaudio.save(wav_path, audio, sample_rate, backend="soundfile")
+    except Exception:
+        import soundfile as sf
+        import numpy as np
+        audio_np = audio.numpy()
+        if audio_np.ndim == 2:
+            audio_np = audio_np.T
+        sf.write(wav_path, audio_np, sample_rate)
     print(f"[SAO] Audio saved: {wav_path} (variant={variant_used})")
 
     del model, output, audio
