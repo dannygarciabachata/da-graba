@@ -43,7 +43,7 @@ import {
   FileText,
   Lock,
 } from "lucide-react";
-import daIcon from "@assets/Icon_1771525459723.png";
+import daGrabaLogo from "@assets/Logo_1771525902011.png";
 
 export function AppHeader() {
   const [location, setLocation] = useLocation();
@@ -69,13 +69,7 @@ export function AppHeader() {
               onClick={() => setLocation("/home")}
               data-testid="link-header-logo"
             >
-              <img src={daIcon} alt="DA" className="h-9 sm:h-10 w-auto object-contain drop-shadow-[0_0_8px_rgba(255,117,31,0.4)]" />
-              <div className="flex flex-col justify-center -space-y-0.5">
-                <span className="text-xl sm:text-2xl font-bold text-gray-200 tracking-tight leading-none">
-                  GRABA
-                </span>
-                <span className="text-[9px] sm:text-[10px] text-orange-300/70 font-medium">AI Music Studio</span>
-              </div>
+              <img src={daGrabaLogo} alt="DA GRABA" className="h-10 sm:h-12 w-auto object-contain drop-shadow-[0_0_12px_rgba(255,117,31,0.4)]" />
             </div>
 
             <nav className="hidden md:flex items-center gap-1" data-testid="nav-main">
