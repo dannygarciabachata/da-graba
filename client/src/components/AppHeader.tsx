@@ -43,7 +43,7 @@ import {
   FileText,
   Lock,
 } from "lucide-react";
-import dgbLogo from "@assets/Logo_1771474005704.png";
+import daIcon from "@assets/Icon_1771525459723.png";
 
 export function AppHeader() {
   const [location, setLocation] = useLocation();
@@ -69,13 +69,9 @@ export function AppHeader() {
               onClick={() => setLocation("/home")}
               data-testid="link-header-logo"
             >
-              <div className="relative p-[2px] rounded-lg bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700">
-                <div className="bg-slate-950 rounded-lg p-1.5">
-                  <img src={dgbLogo} alt="DA" className="w-7 h-7 object-contain" />
-                </div>
-              </div>
+              <img src={daIcon} alt="DA" className="h-9 sm:h-10 w-auto object-contain drop-shadow-[0_0_8px_rgba(255,117,31,0.4)]" />
               <div className="flex flex-col justify-center -space-y-0.5">
-                <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 bg-clip-text text-transparent tracking-tight leading-none">
+                <span className="text-xl sm:text-2xl font-bold text-gray-200 tracking-tight leading-none">
                   GRABA
                 </span>
                 <span className="text-[9px] sm:text-[10px] text-orange-300/70 font-medium">AI Music Studio</span>

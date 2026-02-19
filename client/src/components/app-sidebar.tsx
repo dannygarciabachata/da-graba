@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
-import dgbLogo from "@assets/Logo_1771474005704.png";
+import daIcon from "@assets/Icon_1771525459723.png";
 import {
   Sidebar,
   SidebarContent,
@@ -111,7 +111,7 @@ export function AppSidebar() {
           data-testid="link-sidebar-logo"
         >
           <img
-            src={dgbLogo}
+            src={daIcon}
             alt="DA GRABA Studio"
             className="h-28 w-auto max-w-[180px] drop-shadow-[0_0_25px_rgba(255,117,31,0.4)] group-hover:drop-shadow-[0_0_35px_rgba(255,117,31,0.6)] transition-all duration-300 object-contain"
           />
