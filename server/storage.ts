@@ -308,6 +308,7 @@ export interface IStorage {
   updatePayoutRequest(id: number, data: Partial<PayoutRequest>): Promise<PayoutRequest>;
   getPayoutRequests(artistId: number, limit?: number): Promise<PayoutRequest[]>;
   getPayoutRequest(id: number): Promise<PayoutRequest | undefined>;
+  getAllPayoutRequests(limit?: number, statusFilter?: string): Promise<(PayoutRequest & { artistName?: string | null })[]>;
   updateArtistConnectStatus(artistId: number, data: { stripeConnectAccountId?: string; stripeConnectStatus?: string; stripeConnectDetailsSubmitted?: boolean; stripeConnectPayoutsEnabled?: boolean }): Promise<ArtistProfile>;
   deductWalletBalance(artistId: number, amountCents: number): Promise<ArtistWallet>;
 
@@ -1779,6 +1780,29 @@ export class DatabaseStorage implements IStorage {
   async getPayoutRequest(id: number): Promise<PayoutRequest | undefined> {
     const [request] = await db.select().from(payoutRequests).where(eq(payoutRequests.id, id));
     return request;
+  }
+
+  async getAllPayoutRequests(limit = 100, statusFilter?: string): Promise<(PayoutRequest & { artistName?: string | null })[]> {
+    const conditions = statusFilter ? [eq(payoutRequests.status, statusFilter)] : [];
+    const rows = await db.select({
+      id: payoutRequests.id,
+      artistId: payoutRequests.artistId,
+      amountCents: payoutRequests.amountCents,
+      method: payoutRequests.method,
+      status: payoutRequests.status,
+      stripeTransferId: payoutRequests.stripeTransferId,
+      stripePayoutId: payoutRequests.stripePayoutId,
+      failureReason: payoutRequests.failureReason,
+      processedAt: payoutRequests.processedAt,
+      createdAt: payoutRequests.createdAt,
+      artistName: artistProfiles.artistName,
+    })
+      .from(payoutRequests)
+      .leftJoin(artistProfiles, eq(payoutRequests.artistId, artistProfiles.id))
+      .where(conditions.length > 0 ? conditions[0] : undefined)
+      .orderBy(desc(payoutRequests.createdAt))
+      .limit(limit);
+    return rows;
   }
 
   async updateArtistConnectStatus(artistId: number, data: { stripeConnectAccountId?: string; stripeConnectStatus?: string; stripeConnectDetailsSubmitted?: boolean; stripeConnectPayoutsEnabled?: boolean }): Promise<ArtistProfile> {

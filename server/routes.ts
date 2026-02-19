@@ -2502,6 +2502,59 @@ export async function registerRoutes(
     res.json({ isAdmin: isAdminUser, role });
   });
 
+  app.get("/api/admin/payouts", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    const status = req.query.status as string | undefined;
+    const payouts = await storage.getAllPayoutRequests(200, status || undefined);
+    res.json(payouts);
+  });
+
+  app.post("/api/admin/payouts/:id/approve", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    const payout = await storage.getPayoutRequest(Number(req.params.id));
+    if (!payout) return res.status(404).json({ message: "Payout request not found" });
+    if (payout.status !== "pending") return res.status(400).json({ message: `Cannot approve a ${payout.status} payout` });
+
+    const wallet = await storage.getArtistWallet(payout.artistId);
+    if (!wallet || (wallet.balanceCents ?? 0) < payout.amountCents) {
+      return res.status(400).json({ message: "Artist has insufficient balance" });
+    }
+
+    await storage.deductWalletBalance(payout.artistId, payout.amountCents);
+    const updated = await storage.updatePayoutRequest(payout.id, {
+      status: "processing",
+      processedAt: new Date(),
+    });
+    res.json({ payout: updated, message: "Payout approved. Balance deducted." });
+  });
+
+  app.post("/api/admin/payouts/:id/reject", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    const payout = await storage.getPayoutRequest(Number(req.params.id));
+    if (!payout) return res.status(404).json({ message: "Payout request not found" });
+    if (payout.status !== "pending") return res.status(400).json({ message: `Cannot reject a ${payout.status} payout` });
+
+    const updated = await storage.updatePayoutRequest(payout.id, {
+      status: "failed",
+      failureReason: req.body.reason || "Rejected by admin",
+      processedAt: new Date(),
+    });
+    res.json({ payout: updated, message: "Payout rejected." });
+  });
+
+  app.post("/api/admin/payouts/:id/mark-paid", async (req, res) => {
+    if (!(await requireRole(req, res, "admin"))) return;
+    const payout = await storage.getPayoutRequest(Number(req.params.id));
+    if (!payout) return res.status(404).json({ message: "Payout request not found" });
+    if (payout.status !== "processing") return res.status(400).json({ message: `Cannot mark as paid: status is ${payout.status}` });
+
+    const updated = await storage.updatePayoutRequest(payout.id, {
+      status: "paid",
+      processedAt: new Date(),
+    });
+    res.json({ payout: updated, message: "Payout marked as paid." });
+  });
+
   app.get("/api/admin/meta", async (req, res) => {
     if (!(await requireRole(req, res, "super_admin"))) return;
     res.json({

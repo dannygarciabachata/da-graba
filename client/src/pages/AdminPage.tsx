@@ -39,7 +39,7 @@ import type { ApiProvider, ApiEndpoint, CloudServer } from "@shared/schema";
 import { TrainingDatasetsTab } from "@/components/admin/TrainingDatasetsTab";
 import { GenreStylesTab } from "@/components/admin/GenreStylesTab";
 
-type Tab = "dashboard" | "analytics" | "users" | "subscriptions" | "support" | "settings" | "email" | "style-kits" | "genre-styles" | "providers" | "endpoints" | "cloud-servers" | "gpu" | "blog" | "billing" | "training-data";
+type Tab = "dashboard" | "analytics" | "users" | "subscriptions" | "support" | "settings" | "email" | "style-kits" | "genre-styles" | "providers" | "endpoints" | "cloud-servers" | "gpu" | "blog" | "billing" | "training-data" | "payouts";
 
 export default function AdminPage() {
   const [, setLocation] = useLocation();
@@ -72,8 +72,8 @@ export default function AdminPage() {
 }
 
 const TAB_ROLE_ACCESS: Record<string, Tab[]> = {
-  super_admin: ["dashboard", "analytics", "users", "subscriptions", "blog", "billing", "support", "settings", "email", "style-kits", "genre-styles", "training-data", "gpu", "cloud-servers", "providers", "endpoints"],
-  admin: ["dashboard", "analytics", "users", "subscriptions", "blog", "support", "style-kits", "genre-styles", "training-data", "gpu"],
+  super_admin: ["dashboard", "analytics", "users", "subscriptions", "payouts", "blog", "billing", "support", "settings", "email", "style-kits", "genre-styles", "training-data", "gpu", "cloud-servers", "providers", "endpoints"],
+  admin: ["dashboard", "analytics", "users", "subscriptions", "payouts", "blog", "support", "style-kits", "genre-styles", "training-data", "gpu"],
   moderator: ["support"],
 };
 
@@ -99,6 +99,7 @@ function AdminDashboard({ role }: { role: string }) {
     { id: "genre-styles" as Tab, label: "Tocadas", icon: Music },
     { id: "training-data" as Tab, label: "Training Data", icon: Database },
     { id: "blog" as Tab, label: t('admin.tabs.blog'), icon: FileText },
+    { id: "payouts" as Tab, label: "Pagos Artistas", icon: Send },
     { id: "billing" as Tab, label: t('admin.tabs.billing'), icon: CreditCard },
     { id: "gpu" as Tab, label: t('admin.tabs.gpu'), icon: Cpu },
     { id: "cloud-servers" as Tab, label: t('admin.tabs.cloudServers'), icon: Cloud },
@@ -151,6 +152,7 @@ function AdminDashboard({ role }: { role: string }) {
       {activeTab === "genre-styles" && <GenreStylesTab />}
       {activeTab === "training-data" && <TrainingDatasetsTab />}
       {activeTab === "blog" && <BlogAdminTab />}
+      {activeTab === "payouts" && <PayoutsAdminTab />}
       {activeTab === "billing" && <BillingAdminTab />}
       {activeTab === "gpu" && <GpuTab role={role} />}
       {activeTab === "cloud-servers" && <CloudServersTab />}
@@ -2823,6 +2825,227 @@ function BlogAdminTab() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function PayoutsAdminTab() {
+  const { toast } = useToast();
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const queryUrl = statusFilter === "all" ? "/api/admin/payouts" : `/api/admin/payouts?status=${statusFilter}`;
+  const { data: payouts, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/payouts", statusFilter],
+    queryFn: async () => {
+      const res = await fetch(queryUrl, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch payouts");
+      return res.json();
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/admin/payouts/${id}/approve`, {});
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Pago aprobado", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/payouts"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
+      const res = await apiRequest("POST", `/api/admin/payouts/${id}/reject`, { reason });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Pago rechazado", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/payouts"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const markPaidMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/admin/payouts/${id}/mark-paid`, {});
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Marcado como pagado", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/payouts"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const getStatusBadge = (status: string) => {
+    const map: Record<string, { variant: "default" | "secondary" | "outline" | "destructive"; label: string }> = {
+      pending: { variant: "outline", label: "Pendiente" },
+      processing: { variant: "secondary", label: "Procesando" },
+      paid: { variant: "default", label: "Pagado" },
+      failed: { variant: "destructive", label: "Fallido" },
+    };
+    const s = map[status] || { variant: "outline" as const, label: status };
+    return <Badge variant={s.variant} data-testid={`badge-payout-status-${status}`}>{s.label}</Badge>;
+  };
+
+  const getMethodLabel = (method: string) => {
+    const map: Record<string, string> = {
+      bank_account: "Cuenta Bancaria",
+      instant_card: "Tarjeta Instantánea",
+      stripe_connect: "Stripe Connect",
+      paypal: "PayPal",
+    };
+    return map[method] || method;
+  };
+
+  const pendingCount = payouts?.filter(p => p.status === "pending").length || 0;
+  const processingCount = payouts?.filter(p => p.status === "processing").length || 0;
+  const totalPaid = payouts?.filter(p => p.status === "paid").reduce((sum: number, p: any) => sum + p.amountCents, 0) || 0;
+
+  return (
+    <div className="space-y-6" data-testid="admin-payouts-tab">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-semibold" data-testid="text-payouts-title">Gestión de Pagos a Artistas</h2>
+          <p className="text-sm text-muted-foreground">Administra solicitudes de pago y aprobaciones PayPal</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/payouts"] })} data-testid="button-refresh-payouts">
+          <Activity className="h-4 w-4 mr-1" /> Actualizar
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card className="bg-white/[0.03] border-white/[0.06]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+              <Clock className="h-3.5 w-3.5" />
+              Pendientes
+            </div>
+            <p className="text-2xl font-bold text-amber-400" data-testid="text-pending-count">{pendingCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white/[0.03] border-white/[0.06]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+              <Loader2 className="h-3.5 w-3.5" />
+              Procesando
+            </div>
+            <p className="text-2xl font-bold text-blue-400" data-testid="text-processing-count">{processingCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white/[0.03] border-white/[0.06]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+              <CheckCircle className="h-3.5 w-3.5" />
+              Total Pagado
+            </div>
+            <p className="text-2xl font-bold text-green-400" data-testid="text-total-paid">${(totalPaid / 100).toFixed(2)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex gap-2 flex-wrap">
+        {["all", "pending", "processing", "paid", "failed"].map((s) => (
+          <Button
+            key={s}
+            variant={statusFilter === s ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter(s)}
+            data-testid={`filter-${s}`}
+          >
+            {s === "all" ? "Todos" : s === "pending" ? "Pendientes" : s === "processing" ? "Procesando" : s === "paid" ? "Pagados" : "Fallidos"}
+          </Button>
+        ))}
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      ) : !payouts || payouts.length === 0 ? (
+        <Card className="bg-white/[0.03] border-white/[0.06] p-8 text-center">
+          <Send className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-40" />
+          <p className="text-muted-foreground">No hay solicitudes de pago {statusFilter !== "all" ? `con estado "${statusFilter}"` : ""}</p>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {payouts.map((p: any) => (
+            <Card key={p.id} className="bg-white/[0.03] border-white/[0.06]" data-testid={`payout-row-${p.id}`}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between flex-wrap gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold" data-testid={`text-artist-name-${p.id}`}>{p.artistName || `Artist #${p.artistId}`}</span>
+                      {getStatusBadge(p.status)}
+                      <Badge variant="outline" className="text-xs" data-testid={`badge-method-${p.id}`}>{getMethodLabel(p.method)}</Badge>
+                    </div>
+                    <p className="text-xl font-bold text-green-400" data-testid={`text-amount-${p.id}`}>
+                      ${(p.amountCents / 100).toFixed(2)}
+                    </p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>Solicitud: {p.createdAt ? new Date(p.createdAt).toLocaleDateString("es-DO", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</span>
+                      {p.processedAt && (
+                        <span>Procesado: {new Date(p.processedAt).toLocaleDateString("es-DO", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                      )}
+                    </div>
+                    {p.stripeTransferId && <p className="text-xs text-muted-foreground">Transfer: {p.stripeTransferId}</p>}
+                    {p.failureReason && <p className="text-xs text-red-400">Razón: {p.failureReason}</p>}
+                  </div>
+
+                  <div className="flex gap-2 flex-wrap">
+                    {p.status === "pending" && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => approveMutation.mutate(p.id)}
+                          disabled={approveMutation.isPending}
+                          data-testid={`button-approve-${p.id}`}
+                        >
+                          {approveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <CheckCircle className="h-4 w-4 mr-1" />}
+                          Aprobar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive"
+                          onClick={() => {
+                            const reason = prompt("Razón del rechazo:");
+                            if (reason !== null) rejectMutation.mutate({ id: p.id, reason: reason || "Rechazado por admin" });
+                          }}
+                          disabled={rejectMutation.isPending}
+                          data-testid={`button-reject-${p.id}`}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Rechazar
+                        </Button>
+                      </>
+                    )}
+                    {p.status === "processing" && (
+                      <Button
+                        size="sm"
+                        onClick={() => markPaidMutation.mutate(p.id)}
+                        disabled={markPaidMutation.isPending}
+                        data-testid={`button-mark-paid-${p.id}`}
+                      >
+                        {markPaidMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <CheckCircle className="h-4 w-4 mr-1" />}
+                        Marcar Pagado
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
