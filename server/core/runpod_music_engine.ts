@@ -106,12 +106,45 @@ def convert_to_mp3(wav_file, mp3_file):
         print(f"[SAO Music] MP3 conversion failed: {e}")
     return wav_file
 
+def upload_audio(audio_file):
+    upload_secret = os.environ.get("RUNPOD_UPLOAD_SECRET", "")
+    upload_url_env = os.environ.get("RUNPOD_UPLOAD_URL", "")
+    if upload_url_env:
+        upload_url = upload_url_env
+    else:
+        base_url = webhook_url.rsplit("/api/", 1)[0]
+        upload_url = f"{base_url}/api/upload/runpod-audio"
+    file_size = os.path.getsize(audio_file) / 1024 / 1024
+    print(f"[SAO Music] Uploading {file_size:.1f}MB to {upload_url}")
+    for attempt in range(3):
+        try:
+            with open(audio_file, "rb") as f:
+                data = {"song_id": str(song_id), "duration": str(duration_seconds), "engine": "sao"}
+                if upload_secret:
+                    data["upload_secret"] = upload_secret
+                resp = requests.post(upload_url, files={"audio": (os.path.basename(audio_file), f, "audio/mpeg")}, data=data, timeout=180)
+            if resp.status_code < 400:
+                print(f"[SAO Music] Upload success: {resp.text[:200]}")
+                return True
+        except Exception as e:
+            print(f"[SAO Music] Upload attempt {attempt+1} failed: {e}")
+        if attempt < 2:
+            time.sleep(5)
+    return False
+
 def send_result(audio_file, gen_time, device, sample_rate):
+    if upload_audio(audio_file):
+        print(f"[SAO Music] Delivered via file upload")
+        return
+    
     import base64
+    file_size = os.path.getsize(audio_file)
+    if file_size > 20 * 1024 * 1024:
+        print(f"[SAO Music] File too large for base64 ({file_size / 1024 / 1024:.1f}MB) and upload failed")
+        return
     with open(audio_file, "rb") as f:
         audio_b64 = base64.b64encode(f.read()).decode("utf-8")
     
-    file_size = os.path.getsize(audio_file)
     is_mp3 = audio_file.endswith(".mp3")
     
     result = {
@@ -127,7 +160,7 @@ def send_result(audio_file, gen_time, device, sample_rate):
         "engine": "sao"
     }
     
-    print(f"[SAO Music] Sending webhook ({file_size / 1024 / 1024:.1f}MB, {'mp3' if is_mp3 else 'wav'})...")
+    print(f"[SAO Music] Fallback: sending base64 ({file_size / 1024 / 1024:.1f}MB)...")
     for attempt in range(3):
         try:
             resp = requests.post(webhook_url, json=result, timeout=120, headers={"Content-Type": "application/json"})
@@ -138,7 +171,7 @@ def send_result(audio_file, gen_time, device, sample_rate):
             print(f"[SAO Music] Webhook attempt {attempt+1} failed: {e}")
         if attempt < 2:
             time.sleep(5)
-    print("[SAO Music] WARNING: All webhook attempts failed, audio saved locally at: " + audio_file)
+    print("[SAO Music] WARNING: All delivery attempts failed, audio saved locally at: " + audio_file)
 
 def send_error(error_msg):
     for attempt in range(3):
@@ -372,11 +405,44 @@ output_dir = "/workspace/generated_music"
 os.makedirs(output_dir, exist_ok=True)
 output_path = os.path.join(output_dir, f"song_{song_id}_{int(time.time())}.mp3")
 
+def upload_audio(audio_file):
+    upload_secret = os.environ.get("RUNPOD_UPLOAD_SECRET", "")
+    upload_url_env = os.environ.get("RUNPOD_UPLOAD_URL", "")
+    if upload_url_env:
+        upload_url = upload_url_env
+    else:
+        base_url = webhook_url.rsplit("/api/", 1)[0]
+        upload_url = f"{base_url}/api/upload/runpod-audio"
+    file_size = os.path.getsize(audio_file) / 1024 / 1024
+    print(f"[HeartMuLa] Uploading {file_size:.1f}MB to {upload_url}")
+    for attempt in range(3):
+        try:
+            with open(audio_file, "rb") as f:
+                data = {"song_id": str(song_id), "duration": str(duration_ms // 1000), "engine": "heartmula"}
+                if upload_secret:
+                    data["upload_secret"] = upload_secret
+                resp = requests.post(upload_url, files={"audio": (os.path.basename(audio_file), f, "audio/mpeg")}, data=data, timeout=180)
+            if resp.status_code < 400:
+                print(f"[HeartMuLa] Upload success: {resp.text[:200]}")
+                return True
+        except Exception as e:
+            print(f"[HeartMuLa] Upload attempt {attempt+1} failed: {e}")
+        if attempt < 2:
+            time.sleep(5)
+    return False
+
 def send_result(audio_file, gen_time, device):
+    if upload_audio(audio_file):
+        print(f"[HeartMuLa] Delivered via file upload")
+        return
+    
     import base64
+    file_size = os.path.getsize(audio_file)
+    if file_size > 20 * 1024 * 1024:
+        print(f"[HeartMuLa] File too large for base64 ({file_size / 1024 / 1024:.1f}MB) and upload failed")
+        return
     with open(audio_file, "rb") as f:
         audio_b64 = base64.b64encode(f.read()).decode("utf-8")
-    file_size = os.path.getsize(audio_file)
     result = {
         "songId": song_id,
         "status": "completed",
@@ -389,7 +455,7 @@ def send_result(audio_file, gen_time, device):
         "device": device,
         "engine": "heartmula"
     }
-    print(f"[HeartMuLa] Sending webhook ({file_size / 1024 / 1024:.1f}MB)...")
+    print(f"[HeartMuLa] Fallback: sending base64 ({file_size / 1024 / 1024:.1f}MB)...")
     for attempt in range(3):
         try:
             resp = requests.post(webhook_url, json=result, timeout=120, headers={"Content-Type": "application/json"})
@@ -400,7 +466,7 @@ def send_result(audio_file, gen_time, device):
             print(f"[HeartMuLa] Webhook attempt {attempt+1} failed: {e}")
         if attempt < 2:
             time.sleep(5 * (attempt + 1))
-    print("[HeartMuLa] WARNING: All webhook attempts failed, audio saved locally at: " + audio_file)
+    print("[HeartMuLa] WARNING: All delivery attempts failed, audio saved locally at: " + audio_file)
 
 def send_error(error_msg):
     for attempt in range(3):

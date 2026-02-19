@@ -97,9 +97,27 @@ async function checkSongJob(song: any) {
 
   if (jobResult.status === "COMPLETED") {
     const output = jobResult.output;
+
+    const freshSong = await storage.getSong(song.id);
+    if (freshSong?.status === "completed") {
+      console.log(`[RunPod Watchdog] Song ${song.id} already completed (likely via file upload), skipping`);
+      return;
+    }
+
     if (!output) {
       console.log(`[RunPod Watchdog] Song ${song.id} COMPLETED but no output`);
       await storage.updateSongStatus(song.id, "failed", undefined, "Job completed but no output returned");
+      return;
+    }
+
+    if (output.delivered) {
+      console.log(`[RunPod Watchdog] Song ${song.id} was delivered via file upload, checking DB...`);
+      const uploadedSong = await storage.getSong(song.id);
+      if (uploadedSong?.status === "completed" && uploadedSong?.audioUrl) {
+        console.log(`[RunPod Watchdog] Song ${song.id} confirmed completed via upload: ${uploadedSong.audioUrl}`);
+      } else {
+        console.log(`[RunPod Watchdog] Song ${song.id} marked delivered but not in DB yet, waiting...`);
+      }
       return;
     }
 
@@ -116,8 +134,13 @@ async function checkSongJob(song: any) {
 
       console.log(`[RunPod Watchdog] Song ${song.id} recovered and saved: ${localUrl}`);
     } else if (output.status === "completed" || output.audio_path) {
-      console.log(`[RunPod Watchdog] Song ${song.id} completed on RunPod but no base64 audio in result (file too large?). Audio path: ${output.audio_path}`);
-      await storage.updateSongStatus(song.id, "failed", undefined, "Audio file too large for transfer. Try shorter duration.");
+      console.log(`[RunPod Watchdog] Song ${song.id} completed on RunPod but no audio delivered. Audio path: ${output.audio_path}`);
+      const age = Date.now() - new Date(song.createdAt).getTime();
+      if (age > 600000) {
+        await storage.updateSongStatus(song.id, "failed", undefined, "Audio generated but could not be delivered to server. Try again.");
+      } else {
+        console.log(`[RunPod Watchdog] Song ${song.id} waiting for upload delivery (age: ${(age / 60000).toFixed(0)}min)`);
+      }
     } else {
       console.log(`[RunPod Watchdog] Song ${song.id} COMPLETED but unexpected output:`, JSON.stringify(output).substring(0, 200));
       await storage.updateSongStatus(song.id, "failed", undefined, "Unexpected output format from generation");

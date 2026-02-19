@@ -98,6 +98,52 @@ def send_webhook(url: str, data: dict, retries: int = 2):
                 time.sleep(5)
 
 
+def upload_audio_file(webhook_url: str, audio_path: str, song_id: int, duration: int, engine: str, retries: int = 3) -> bool:
+    """Upload audio file directly to server via multipart POST (like Kie.ai pattern).
+    This avoids base64 size limits in RunPod output and webhook payloads."""
+    if not requests or not webhook_url:
+        return False
+    
+    upload_url = os.environ.get("RUNPOD_UPLOAD_URL", "")
+    if not upload_url:
+        base_url = webhook_url.rsplit("/api/", 1)[0]
+        upload_url = f"{base_url}/api/upload/runpod-audio"
+    
+    upload_secret = os.environ.get("RUNPOD_UPLOAD_SECRET", "")
+    
+    file_size = os.path.getsize(audio_path) / 1024 / 1024
+    print(f"[Upload] Uploading {file_size:.1f}MB audio file for song {song_id} to {upload_url}")
+    
+    for attempt in range(retries):
+        try:
+            with open(audio_path, "rb") as f:
+                files = {"audio": (os.path.basename(audio_path), f, "audio/mpeg")}
+                data = {
+                    "song_id": str(song_id),
+                    "duration": str(duration),
+                    "engine": engine,
+                }
+                if upload_secret:
+                    data["upload_secret"] = upload_secret
+                resp = requests.post(upload_url, files=files, data=data, timeout=180)
+            
+            print(f"[Upload] Response: {resp.status_code} - {resp.text[:200]}")
+            if resp.status_code < 400:
+                result = resp.json()
+                if result.get("status") in ("ok", "already_completed"):
+                    print(f"[Upload] Song {song_id} audio delivered successfully")
+                    return True
+            print(f"[Upload] Attempt {attempt + 1} failed: HTTP {resp.status_code}")
+        except Exception as e:
+            print(f"[Upload] Attempt {attempt + 1} error: {e}")
+        
+        if attempt < retries - 1:
+            time.sleep(5 * (attempt + 1))
+    
+    print(f"[Upload] All {retries} upload attempts failed for song {song_id}")
+    return False
+
+
 def get_device():
     if not TORCH_AVAILABLE:
         print("[GPU] PyTorch not available, cannot use GPU")
@@ -396,6 +442,7 @@ def handle_generate_music(job_input: dict) -> dict:
         final_path = mp3_path if os.path.exists(mp3_path) else wav_path
 
         audio_format = "mp3" if final_path.endswith(".mp3") else "wav"
+        file_size = os.path.getsize(final_path)
 
         result_data = {
             "status": "completed",
@@ -403,32 +450,42 @@ def handle_generate_music(job_input: dict) -> dict:
             "audio_path": final_path,
             "engine": engine,
             "audioFormat": audio_format,
+            "fileSize": file_size,
         }
 
-        import base64
-        file_size = os.path.getsize(final_path)
-        max_b64_size = 50 * 1024 * 1024
-        if file_size < max_b64_size:
-            with open(final_path, "rb") as f:
-                audio_bytes = f.read()
-            audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
-            result_data["audioBase64"] = audio_b64
-            print(f"[Music] Including base64 audio ({file_size / 1024:.0f} KB)")
+        uploaded = upload_audio_file(webhook_url, final_path, song_id, duration, engine)
+
+        if uploaded:
+            print(f"[Music] Song {song_id} delivered via file upload ({file_size / 1024 / 1024:.1f}MB)")
+            result_data["delivered"] = True
         else:
-            print(f"[Music] File too large for base64 ({file_size / 1024 / 1024:.1f} MB)")
-            audio_b64 = None
-
-        webhook_data = {
-            "songId": song_id,
-            "status": "completed",
-            "audioPath": final_path,
-            "engine": engine,
-            "duration": duration,
-            "audioFormat": audio_format,
-        }
-        if audio_b64:
-            webhook_data["audioBase64"] = audio_b64
-        send_webhook(webhook_url, webhook_data)
+            print(f"[Music] File upload failed, trying base64 fallback...")
+            import base64
+            max_b64_size = 20 * 1024 * 1024
+            if file_size < max_b64_size:
+                with open(final_path, "rb") as f:
+                    audio_b64 = base64.b64encode(f.read()).decode("utf-8")
+                result_data["audioBase64"] = audio_b64
+                send_webhook(webhook_url, {
+                    "songId": song_id,
+                    "status": "completed",
+                    "audioBase64": audio_b64,
+                    "engine": engine,
+                    "duration": duration,
+                    "audioFormat": audio_format,
+                })
+                print(f"[Music] Fallback: sent base64 via webhook ({file_size / 1024:.0f} KB)")
+            else:
+                send_webhook(webhook_url, {
+                    "songId": song_id,
+                    "status": "completed",
+                    "audioPath": final_path,
+                    "engine": engine,
+                    "duration": duration,
+                    "audioFormat": audio_format,
+                    "needsUpload": True,
+                })
+                print(f"[Music] WARNING: File too large for both upload and base64 ({file_size / 1024 / 1024:.1f}MB)")
 
         return result_data
 

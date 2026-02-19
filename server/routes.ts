@@ -1098,6 +1098,76 @@ export async function registerRoutes(
     }
   });
 
+  // ========== RUNPOD AUDIO FILE UPLOAD (from handler.py) ==========
+
+  const runpodAudioUpload = multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => {
+        const dir = path.join(process.cwd(), "public", "audio", "songs");
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+      },
+      filename: (_req, file, cb) => {
+        const ext = path.extname(file.originalname) || ".mp3";
+        cb(null, `${uuidv4()}_runpod_song${ext}`);
+      },
+    }),
+    limits: { fileSize: 100 * 1024 * 1024 },
+  });
+
+  app.post("/api/upload/runpod-audio", runpodAudioUpload.single("audio"), async (req, res) => {
+    try {
+      const uploadSecret = process.env.RUNPOD_UPLOAD_SECRET;
+      if (uploadSecret) {
+        const incomingSecret = req.headers["x-upload-secret"] as string || req.body?.upload_secret;
+        if (incomingSecret !== uploadSecret) {
+          console.log("[Upload] Rejected: invalid or missing upload secret");
+          return res.status(403).json({ error: "Forbidden" });
+        }
+      }
+
+      const songId = parseInt(req.body?.song_id || req.body?.songId || "0", 10);
+      const duration = parseInt(req.body?.duration || "0", 10) || null;
+      const engine = req.body?.engine || "sao";
+
+      console.log(`[Upload] RunPod audio upload received: songId=${songId}, file=${req.file?.filename}, size=${req.file?.size ? (req.file.size / 1024 / 1024).toFixed(1) + 'MB' : 'none'}`);
+
+      if (!songId || !req.file) {
+        console.log("[Upload] Missing songId or file");
+        return res.status(400).json({ error: "Missing song_id or audio file" });
+      }
+
+      const song = await storage.getSong(songId);
+      if (!song) {
+        console.log(`[Upload] Song ${songId} not found`);
+        return res.status(404).json({ error: "Song not found" });
+      }
+
+      if (song.status === "completed") {
+        console.log(`[Upload] Song ${songId} already completed, skipping`);
+        return res.json({ status: "already_completed" });
+      }
+
+      const localUrl = `/audio/songs/${req.file.filename}`;
+      await storage.updateSongStatus(songId, "completed", localUrl);
+
+      if (duration) {
+        try {
+          const { db } = await import("./db");
+          const { songs: songsTable } = await import("@shared/schema");
+          const { eq } = await import("drizzle-orm");
+          await db.update(songsTable).set({ duration }).where(eq(songsTable.id, songId));
+        } catch {}
+      }
+
+      console.log(`[Upload] Song ${songId} saved successfully: ${localUrl} (engine: ${engine})`);
+      res.json({ status: "ok", audioUrl: localUrl });
+    } catch (err: any) {
+      console.error("[Upload] Error processing RunPod audio upload:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ========== RUNPOD STEMS WEBHOOK ==========
 
   app.post("/api/webhooks/runpod-stems", async (req, res) => {
