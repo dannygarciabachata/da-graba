@@ -9,7 +9,7 @@ import {
   blogPosts, blogCategories, blogComments, blogLikes, blogStars, blogShares, pricingPlans, coverDesigns, songLikes,
   artistProfiles, artistSubscriptions, songEarnings, proRegistrations, artistFollowers,
   discographyAlbums, discographyTracks,
-  artistGifts, artistWallets, walletTransactions,
+  artistGifts, artistWallets, walletTransactions, payoutRequests,
   artistProfileLikes, artistProfileComments, artistProfileShares,
   copyrightWorks, copyrightContributors, publisherEntities,
   userPlaylists, userPlaylistSongs,
@@ -48,6 +48,7 @@ import {
   type ArtistGift, type InsertArtistGift,
   type ArtistWallet, type InsertArtistWallet,
   type WalletTransaction, type InsertWalletTransaction,
+  type PayoutRequest, type InsertPayoutRequest,
   type ArtistProfileLike, type InsertArtistProfileLike,
   type ArtistProfileComment, type InsertArtistProfileComment,
   type ArtistProfileShare, type InsertArtistProfileShare,
@@ -302,6 +303,13 @@ export interface IStorage {
 
   createWalletTransaction(tx: InsertWalletTransaction): Promise<WalletTransaction>;
   getWalletTransactions(artistId: number, limit?: number): Promise<WalletTransaction[]>;
+
+  createPayoutRequest(req: InsertPayoutRequest): Promise<PayoutRequest>;
+  updatePayoutRequest(id: number, data: Partial<PayoutRequest>): Promise<PayoutRequest>;
+  getPayoutRequests(artistId: number, limit?: number): Promise<PayoutRequest[]>;
+  getPayoutRequest(id: number): Promise<PayoutRequest | undefined>;
+  updateArtistConnectStatus(artistId: number, data: { stripeConnectAccountId?: string; stripeConnectStatus?: string; stripeConnectDetailsSubmitted?: boolean; stripeConnectPayoutsEnabled?: boolean }): Promise<ArtistProfile>;
+  deductWalletBalance(artistId: number, amountCents: number): Promise<ArtistWallet>;
 
   getCopyrightWorks(userId: string): Promise<CopyrightWork[]>;
   getCopyrightWork(id: number): Promise<CopyrightWork | undefined>;
@@ -1749,6 +1757,45 @@ export class DatabaseStorage implements IStorage {
       .where(eq(walletTransactions.artistId, artistId))
       .orderBy(desc(walletTransactions.createdAt))
       .limit(limit);
+  }
+
+  async createPayoutRequest(req: InsertPayoutRequest): Promise<PayoutRequest> {
+    const [created] = await db.insert(payoutRequests).values(req).returning();
+    return created;
+  }
+
+  async updatePayoutRequest(id: number, data: Partial<PayoutRequest>): Promise<PayoutRequest> {
+    const [updated] = await db.update(payoutRequests).set(data).where(eq(payoutRequests.id, id)).returning();
+    return updated;
+  }
+
+  async getPayoutRequests(artistId: number, limit = 50): Promise<PayoutRequest[]> {
+    return db.select().from(payoutRequests)
+      .where(eq(payoutRequests.artistId, artistId))
+      .orderBy(desc(payoutRequests.createdAt))
+      .limit(limit);
+  }
+
+  async getPayoutRequest(id: number): Promise<PayoutRequest | undefined> {
+    const [request] = await db.select().from(payoutRequests).where(eq(payoutRequests.id, id));
+    return request;
+  }
+
+  async updateArtistConnectStatus(artistId: number, data: { stripeConnectAccountId?: string; stripeConnectStatus?: string; stripeConnectDetailsSubmitted?: boolean; stripeConnectPayoutsEnabled?: boolean }): Promise<ArtistProfile> {
+    const [updated] = await db.update(artistProfiles).set({ ...data, updatedAt: new Date() }).where(eq(artistProfiles.id, artistId)).returning();
+    return updated;
+  }
+
+  async deductWalletBalance(artistId: number, amountCents: number): Promise<ArtistWallet> {
+    const wallet = await this.getOrCreateArtistWallet(artistId);
+    const newBalance = (wallet.balanceCents || 0) - amountCents;
+    const newPending = (wallet.pendingBalanceCents || 0) + amountCents;
+    const [updated] = await db.update(artistWallets).set({
+      balanceCents: newBalance,
+      pendingBalanceCents: newPending,
+      updatedAt: new Date(),
+    }).where(eq(artistWallets.artistId, artistId)).returning();
+    return updated;
   }
 
   async getArtistProfileLikes(artistId: number): Promise<ArtistProfileLike[]> {

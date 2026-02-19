@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -36,6 +36,11 @@ import {
   Upload,
   Trash2,
   Loader2,
+  CreditCard,
+  Building,
+  Send,
+  RefreshCw,
+  LinkIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -69,7 +74,9 @@ export default function ArtistDashboardPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState("overview");
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialTab = urlParams.get("tab") || "overview";
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [spotifySearch, setSpotifySearch] = useState("");
   const [importingSpotify, setImportingSpotify] = useState(false);
   const [showAddAlbum, setShowAddAlbum] = useState(false);
@@ -129,6 +136,76 @@ export default function ArtistDashboardPage() {
     },
     onError: () => setImportingSpotify(false),
   });
+
+  const { data: connectStatus, isLoading: connectLoading, refetch: refetchConnect } = useQuery<any>({
+    queryKey: ["/api/artist/connect/status"],
+  });
+
+  const { data: payoutsData, isLoading: payoutsLoading, refetch: refetchPayouts } = useQuery<any>({
+    queryKey: ["/api/artist/payouts"],
+  });
+
+  const connectMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/artist/connect/create"),
+    onSuccess: async (res) => {
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const refreshConnectMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/artist/connect/refresh"),
+    onSuccess: async (res) => {
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    },
+  });
+
+  const dashboardLinkMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/artist/connect/login-link"),
+    onSuccess: async (res) => {
+      const data = await res.json();
+      if (data.url) window.open(data.url, "_blank");
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const [payoutAmount, setPayoutAmount] = useState("");
+  const [payoutMethod, setPayoutMethod] = useState("bank_account");
+
+  const payoutMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/artist/payouts", { 
+      amountCents: Math.round(parseFloat(payoutAmount) * 100),
+      method: payoutMethod
+    }),
+    onSuccess: async () => {
+      toast({ title: "Payout Requested", description: "Your payout is being processed." });
+      setPayoutAmount("");
+      queryClient.invalidateQueries({ queryKey: ["/api/artist/payouts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/artist/connect/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/artist/dashboard"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "Payout Failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("connect") === "complete") {
+      refetchConnect();
+      setActiveTab("payouts");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    if (params.get("connect") === "refresh") {
+      refreshConnectMutation.mutate();
+    }
+  }, []);
 
   if (isLoading) {
     return (
@@ -301,6 +378,9 @@ export default function ArtistDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="discography" data-testid="tab-discography">
               <Disc className="h-4 w-4 mr-1" /> {t('artist.dashboard.tabs.discography')}
+            </TabsTrigger>
+            <TabsTrigger value="payouts" data-testid="tab-payouts">
+              <Wallet className="h-4 w-4 mr-1" /> Payouts
             </TabsTrigger>
           </TabsList>
 
@@ -732,6 +812,196 @@ export default function ArtistDashboardPage() {
                   <Disc className="h-8 w-8 mx-auto mb-2 opacity-40" />
                   <p className="text-sm">{t('artist.discography.noAlbums')}</p>
                   <p className="text-xs mt-1">{t('artist.discography.noAlbumsDesc')}</p>
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="payouts" className="space-y-4 mt-4">
+            <Card className="bg-white/[0.03] border-white/[0.06] p-5">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <LinkIcon className="h-4 w-4 text-primary" />
+                Stripe Connect Account
+              </h3>
+              {connectLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading...
+                </div>
+              ) : connectStatus?.connected ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant={connectStatus.payoutsEnabled ? "default" : "secondary"} data-testid="badge-connect-status">
+                      {connectStatus.payoutsEnabled ? "Active" : connectStatus.detailsSubmitted ? "Restricted" : "Pending"}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">Account: {connectStatus.accountId?.slice(0, 12)}...</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Details Submitted</span>
+                      <p className={connectStatus.detailsSubmitted ? "text-green-400" : "text-amber-400"}>
+                        {connectStatus.detailsSubmitted ? "Yes" : "No"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Payouts Enabled</span>
+                      <p className={connectStatus.payoutsEnabled ? "text-green-400" : "text-amber-400"}>
+                        {connectStatus.payoutsEnabled ? "Yes" : "No"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Charges Enabled</span>
+                      <p className={connectStatus.chargesEnabled ? "text-green-400" : "text-amber-400"}>
+                        {connectStatus.chargesEnabled ? "Yes" : "No"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {!connectStatus.payoutsEnabled && (
+                      <Button size="sm" onClick={() => refreshConnectMutation.mutate()} disabled={refreshConnectMutation.isPending} data-testid="button-complete-onboarding">
+                        {refreshConnectMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+                        Complete Onboarding
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" onClick={() => dashboardLinkMutation.mutate()} disabled={dashboardLinkMutation.isPending} data-testid="button-stripe-dashboard">
+                      <ExternalLink className="h-4 w-4 mr-1" /> Stripe Dashboard
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Connect your Stripe account to receive payouts from gifts, subscriptions, and platform earnings.
+                  </p>
+                  <Button onClick={() => connectMutation.mutate()} disabled={connectMutation.isPending} data-testid="button-connect-stripe">
+                    {connectMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <LinkIcon className="h-4 w-4 mr-1" />}
+                    Connect Stripe Account
+                  </Button>
+                </div>
+              )}
+            </Card>
+
+            {connectStatus?.connected && (
+              <Card className="bg-white/[0.03] border-white/[0.06] p-5">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Send className="h-4 w-4 text-primary" />
+                  Request Payout
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                  <Card className="bg-white/[0.03] border-white/[0.06] p-3">
+                    <p className="text-xs text-muted-foreground">Available Balance</p>
+                    <p className="text-lg font-bold text-green-400" data-testid="text-available-balance">
+                      {formatCents(payoutsData?.wallet?.balanceCents || 0)}
+                    </p>
+                  </Card>
+                  <Card className="bg-white/[0.03] border-white/[0.06] p-3">
+                    <p className="text-xs text-muted-foreground">Pending Payouts</p>
+                    <p className="text-lg font-bold text-amber-400" data-testid="text-pending-payouts">
+                      {formatCents(payoutsData?.wallet?.pendingBalanceCents || 0)}
+                    </p>
+                  </Card>
+                  <Card className="bg-white/[0.03] border-white/[0.06] p-3">
+                    <p className="text-xs text-muted-foreground">Lifetime Payouts</p>
+                    <p className="text-lg font-bold" data-testid="text-lifetime-payouts">
+                      {formatCents(payoutsData?.wallet?.lifetimePayoutsCents || 0)}
+                    </p>
+                  </Card>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 items-end">
+                  <div className="flex-1">
+                    <label className="text-xs text-muted-foreground mb-1 block">Amount (USD)</label>
+                    <Input
+                      type="number"
+                      placeholder="5.00"
+                      min="5"
+                      step="0.01"
+                      value={payoutAmount}
+                      onChange={(e) => setPayoutAmount(e.target.value)}
+                      data-testid="input-payout-amount"
+                    />
+                  </div>
+                  <div className="w-full sm:w-48">
+                    <label className="text-xs text-muted-foreground mb-1 block">Payout Method</label>
+                    <Select value={payoutMethod} onValueChange={setPayoutMethod}>
+                      <SelectTrigger data-testid="select-payout-method">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bank_account">
+                          <span className="flex items-center gap-1"><Building className="h-3 w-3" /> Bank Account</span>
+                        </SelectItem>
+                        <SelectItem value="card_instant">
+                          <span className="flex items-center gap-1"><CreditCard className="h-3 w-3" /> Instant Card</span>
+                        </SelectItem>
+                        <SelectItem value="stripe_connect">
+                          <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" /> Stripe Connect</span>
+                        </SelectItem>
+                        <SelectItem value="paypal">
+                          <span className="flex items-center gap-1"><Wallet className="h-3 w-3" /> PayPal (Manual)</span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    onClick={() => payoutMutation.mutate()}
+                    disabled={payoutMutation.isPending || !payoutAmount || parseFloat(payoutAmount) < 5 || (payoutMethod !== "paypal" && !connectStatus?.payoutsEnabled)}
+                    data-testid="button-request-payout"
+                  >
+                    {payoutMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}
+                    Request Payout
+                  </Button>
+                </div>
+                {!connectStatus.payoutsEnabled && (
+                  <p className="text-xs text-amber-400 mt-2">
+                    Complete Stripe onboarding above to enable payouts.
+                  </p>
+                )}
+              </Card>
+            )}
+
+            <Card className="bg-white/[0.03] border-white/[0.06] p-5">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                Payout History
+              </h3>
+              {payoutsLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading...
+                </div>
+              ) : !payoutsData?.payouts?.length ? (
+                <p className="text-sm text-muted-foreground">No payout requests yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {payoutsData.payouts.map((p: any) => (
+                    <div key={p.id} className="flex items-center justify-between p-3 rounded-md bg-white/[0.02] border border-white/[0.04]" data-testid={`payout-row-${p.id}`}>
+                      <div className="flex items-center gap-3">
+                        {p.status === "paid" ? (
+                          <CheckCircle className="h-4 w-4 text-green-400" />
+                        ) : p.status === "failed" ? (
+                          <AlertCircle className="h-4 w-4 text-red-400" />
+                        ) : p.status === "processing" ? (
+                          <Loader2 className="h-4 w-4 text-amber-400 animate-spin" />
+                        ) : (
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <div>
+                          <p className="text-sm font-medium">{formatCents(p.amountCents)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {p.method === "bank_account" ? "Bank Account" : p.method === "card_instant" ? "Instant Card" : p.method === "paypal" ? "PayPal" : "Stripe Connect"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge
+                          variant={p.status === "paid" ? "default" : p.status === "failed" ? "destructive" : "secondary"}
+                          data-testid={`badge-payout-status-${p.id}`}
+                        >
+                          {p.status}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground mt-1">{p.createdAt ? timeAgo(p.createdAt) : ""}</p>
+                        {p.failureReason && <p className="text-xs text-red-400">{p.failureReason}</p>}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </Card>

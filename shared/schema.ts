@@ -941,6 +941,10 @@ export const artistProfiles = pgTable("artist_profiles", {
   artistType: text("artist_type").default("independent"),
   youtubeUrls: jsonb("youtube_urls").$type<string[]>().default([]),
   spotifyArtistId: text("spotify_artist_id"),
+  stripeConnectAccountId: text("stripe_connect_account_id"),
+  stripeConnectStatus: text("stripe_connect_status").default("not_connected"),
+  stripeConnectDetailsSubmitted: boolean("stripe_connect_details_submitted").default(false),
+  stripeConnectPayoutsEnabled: boolean("stripe_connect_payouts_enabled").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1273,6 +1277,44 @@ export type InsertWalletTransaction = z.infer<typeof insertWalletTransactionSche
 
 export const TRANSACTION_TYPES = ["gift_received", "subscription_income", "payout", "platform_fee", "adjustment"] as const;
 export type TransactionType = typeof TRANSACTION_TYPES[number];
+
+export const PAYOUT_METHODS = ["bank_account", "card_instant", "stripe_connect", "paypal"] as const;
+export type PayoutMethod = typeof PAYOUT_METHODS[number];
+
+export const PAYOUT_STATUSES = ["pending", "processing", "paid", "failed", "canceled"] as const;
+export type PayoutStatus = typeof PAYOUT_STATUSES[number];
+
+export const payoutRequests = pgTable("payout_requests", {
+  id: serial("id").primaryKey(),
+  artistId: integer("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  amountCents: integer("amount_cents").notNull(),
+  method: text("method").notNull(),
+  status: text("status").notNull().default("pending"),
+  stripeTransferId: text("stripe_transfer_id"),
+  stripePayoutId: text("stripe_payout_id"),
+  failureReason: text("failure_reason"),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const payoutRequestsRelations = relations(payoutRequests, ({ one }) => ({
+  artist: one(artistProfiles, {
+    fields: [payoutRequests.artistId],
+    references: [artistProfiles.id],
+  }),
+}));
+
+export const insertPayoutRequestSchema = createInsertSchema(payoutRequests).omit({
+  id: true,
+  createdAt: true,
+  processedAt: true,
+});
+
+export type PayoutRequest = typeof payoutRequests.$inferSelect;
+export type InsertPayoutRequest = z.infer<typeof insertPayoutRequestSchema>;
+
+export const STRIPE_CONNECT_STATUSES = ["not_connected", "pending", "active", "restricted", "disabled"] as const;
+export type StripeConnectStatus = typeof STRIPE_CONNECT_STATUSES[number];
 
 export const artistProfileLikes = pgTable("artist_profile_likes", {
   id: serial("id").primaryKey(),

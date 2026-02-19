@@ -5613,6 +5613,241 @@ export async function registerRoutes(
     }
   });
 
+  // ========== STRIPE CONNECT: ARTIST PAYOUTS ==========
+
+  app.post("/api/artist/connect/create", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const profile = await storage.getArtistProfile(userId);
+      if (!profile) return res.status(404).json({ message: "Artist profile not found. Register as an artist first." });
+
+      const stripe = await getUncachableStripeClient();
+      let accountId = profile.stripeConnectAccountId;
+
+      if (!accountId) {
+        const user = await storage.getUser(userId);
+        const account = await stripe.accounts.create({
+          type: "express",
+          email: user?.email || undefined,
+          metadata: { artistId: String(profile.id), userId },
+          capabilities: {
+            transfers: { requested: true },
+            card_payments: { requested: true },
+          },
+          business_profile: {
+            name: profile.artistName,
+            product_description: "Music artist on DAGRABA Studio",
+          },
+        });
+        accountId = account.id;
+        await storage.updateArtistConnectStatus(profile.id, {
+          stripeConnectAccountId: accountId,
+          stripeConnectStatus: "pending",
+        });
+      }
+
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const accountLink = await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: `${baseUrl}/artist-dashboard?tab=payouts&connect=refresh`,
+        return_url: `${baseUrl}/artist-dashboard?tab=payouts&connect=complete`,
+        type: "account_onboarding",
+      });
+
+      res.json({ url: accountLink.url, accountId });
+    } catch (err: any) {
+      console.error("[Connect] Create error:", err.message);
+      res.status(500).json({ message: "Failed to create Connect account" });
+    }
+  });
+
+  app.post("/api/artist/connect/refresh", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const profile = await storage.getArtistProfile(userId);
+      if (!profile?.stripeConnectAccountId) return res.status(400).json({ message: "No Connect account found" });
+
+      const stripe = await getUncachableStripeClient();
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const accountLink = await stripe.accountLinks.create({
+        account: profile.stripeConnectAccountId,
+        refresh_url: `${baseUrl}/artist-dashboard?tab=payouts&connect=refresh`,
+        return_url: `${baseUrl}/artist-dashboard?tab=payouts&connect=complete`,
+        type: "account_onboarding",
+      });
+      res.json({ url: accountLink.url });
+    } catch (err: any) {
+      console.error("[Connect] Refresh error:", err.message);
+      res.status(500).json({ message: "Failed to refresh Connect link" });
+    }
+  });
+
+  app.get("/api/artist/connect/status", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const profile = await storage.getArtistProfile(userId);
+      if (!profile) return res.json({ connected: false, status: "not_connected" });
+
+      if (profile.stripeConnectAccountId) {
+        try {
+          const stripe = await getUncachableStripeClient();
+          const account = await stripe.accounts.retrieve(profile.stripeConnectAccountId);
+          const detailsSubmitted = account.details_submitted || false;
+          const payoutsEnabled = account.payouts_enabled || false;
+          let status = "pending";
+          if (detailsSubmitted && payoutsEnabled) status = "active";
+          else if (detailsSubmitted) status = "restricted";
+          else status = "pending";
+
+          if (status !== profile.stripeConnectStatus || detailsSubmitted !== profile.stripeConnectDetailsSubmitted || payoutsEnabled !== profile.stripeConnectPayoutsEnabled) {
+            await storage.updateArtistConnectStatus(profile.id, {
+              stripeConnectStatus: status,
+              stripeConnectDetailsSubmitted: detailsSubmitted,
+              stripeConnectPayoutsEnabled: payoutsEnabled,
+            });
+          }
+
+          res.json({
+            connected: true,
+            status,
+            accountId: profile.stripeConnectAccountId,
+            detailsSubmitted,
+            payoutsEnabled,
+            chargesEnabled: account.charges_enabled || false,
+          });
+        } catch {
+          res.json({ connected: true, status: profile.stripeConnectStatus || "pending", accountId: profile.stripeConnectAccountId });
+        }
+      } else {
+        res.json({ connected: false, status: "not_connected" });
+      }
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/artist/connect/login-link", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const profile = await storage.getArtistProfile(userId);
+      if (!profile?.stripeConnectAccountId) return res.status(400).json({ message: "No Connect account found" });
+
+      const stripe = await getUncachableStripeClient();
+      const loginLink = await stripe.accounts.createLoginLink(profile.stripeConnectAccountId);
+      res.json({ url: loginLink.url });
+    } catch (err: any) {
+      console.error("[Connect] Login link error:", err.message);
+      res.status(500).json({ message: "Failed to create dashboard link" });
+    }
+  });
+
+  app.post("/api/artist/payouts", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const { amountCents, method } = req.body;
+
+    try {
+      const profile = await storage.getArtistProfile(userId);
+      if (!profile) return res.status(404).json({ message: "Artist profile not found" });
+
+      const validMethods = ["bank_account", "card_instant", "stripe_connect", "paypal"];
+      if (!validMethods.includes(method)) return res.status(400).json({ message: "Invalid payout method" });
+      if (!amountCents || amountCents < 500) return res.status(400).json({ message: "Minimum payout is $5.00" });
+
+      const wallet = await storage.getOrCreateArtistWallet(profile.id);
+      if ((wallet.balanceCents || 0) < amountCents) {
+        return res.status(400).json({ message: "Insufficient wallet balance" });
+      }
+
+      if (method === "paypal") {
+        const payoutReq = await storage.createPayoutRequest({
+          artistId: profile.id,
+          amountCents,
+          method,
+          status: "pending",
+        });
+        return res.json({ payout: payoutReq, message: "PayPal payout request submitted for admin review. Balance will be deducted upon approval." });
+      }
+
+      if (!profile.stripeConnectAccountId) {
+        return res.status(400).json({ message: "Please connect your Stripe account first to receive payouts" });
+      }
+
+      if (!profile.stripeConnectPayoutsEnabled) {
+        return res.status(400).json({ message: "Please complete Stripe onboarding first. Your payouts are not yet enabled." });
+      }
+
+      const stripe = await getUncachableStripeClient();
+
+      const transfer = await stripe.transfers.create({
+        amount: amountCents,
+        currency: "usd",
+        destination: profile.stripeConnectAccountId,
+        metadata: {
+          artistId: String(profile.id),
+          artistName: profile.artistName,
+          method,
+        },
+      });
+
+      const payoutReq = await storage.createPayoutRequest({
+        artistId: profile.id,
+        amountCents,
+        method,
+        status: "processing",
+        stripeTransferId: transfer.id,
+      });
+
+      await storage.deductWalletBalance(profile.id, amountCents);
+
+      await storage.createWalletTransaction({
+        artistId: profile.id,
+        type: "payout",
+        description: `Payout via ${method === "card_instant" ? "Instant Card" : method === "bank_account" ? "Bank Account" : "Stripe Connect"} - $${(amountCents / 100).toFixed(2)}`,
+        grossAmountCents: amountCents,
+        platformFeeCents: 0,
+        netAmountCents: -amountCents,
+        balanceAfterCents: (wallet.balanceCents || 0) - amountCents,
+      });
+
+      if (method === "card_instant") {
+        try {
+          const payout = await stripe.payouts.create({
+            amount: amountCents,
+            currency: "usd",
+            method: "instant",
+          }, { stripeAccount: profile.stripeConnectAccountId });
+          await storage.updatePayoutRequest(payoutReq.id, { stripePayoutId: payout.id });
+        } catch (instantErr: any) {
+          console.log("[Payout] Instant card not available, standard transfer will process:", instantErr.message);
+        }
+      }
+
+      res.json({ payout: payoutReq, transfer: { id: transfer.id } });
+    } catch (err: any) {
+      console.error("[Payout] Error:", err.message);
+      res.status(500).json({ message: err.message || "Failed to process payout" });
+    }
+  });
+
+  app.get("/api/artist/payouts", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    try {
+      const profile = await storage.getArtistProfile(userId);
+      if (!profile) return res.json({ payouts: [], wallet: null });
+      const payouts = await storage.getPayoutRequests(profile.id);
+      const wallet = await storage.getOrCreateArtistWallet(profile.id);
+      res.json({ payouts, wallet });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // ========== STRIPE: PUBLIC ROUTES ==========
 
   app.get("/api/stripe/publishable-key", async (_req, res) => {
