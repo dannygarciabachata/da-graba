@@ -40,7 +40,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans overflow-hidden">
       <header className="h-14 md:h-16 border-b border-white/5 bg-black/85 backdrop-blur-md px-4 md:px-6 flex items-center justify-between gap-2 z-50 sticky top-0">
         <div className="flex items-center gap-2 md:gap-3">
-          <img src={daGrabaLogo} alt="DA GRABA Studio" className="h-8 w-[122px] md:h-9 md:w-[140px] drop-shadow-[0_0_15px_rgba(255,117,31,0.3)]" />
+          <img src={daGrabaLogo} alt="DA GRABA Studio" className="h-[80px] w-[225px] drop-shadow-[0_0_15px_rgba(255,117,31,0.3)]" />
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">

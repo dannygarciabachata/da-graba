@@ -345,7 +345,7 @@ export default function Landing() {
       <nav className="relative z-20 border-b border-white/[0.06] backdrop-blur-xl bg-background/70 sticky top-0" data-testid="nav-landing">
         <div className="container mx-auto px-4 md:px-6 py-3 flex justify-between items-center">
           <div className="flex items-center cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-            <img src={daGrabaLogo} alt="DA GRABA Studio" className="h-8 w-[122px] sm:h-9 sm:w-[140px] object-contain drop-shadow-[0_0_15px_rgba(255,117,31,0.3)]" data-testid="img-landing-logo" />
+            <img src={daGrabaLogo} alt="DA GRABA Studio" className="h-[80px] w-[225px] object-contain drop-shadow-[0_0_15px_rgba(255,117,31,0.3)]" data-testid="img-landing-logo" />
           </div>
 
           <div className="hidden md:flex items-center gap-1">
@@ -909,7 +909,7 @@ export default function Landing() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
             <div className="col-span-2 md:col-span-1">
               <div className="mb-4">
-                <img src={daGrabaLogo} alt="DA GRABA Studio" className="h-8 w-[122px] object-contain drop-shadow-[0_0_12px_rgba(255,117,31,0.25)]" data-testid="img-footer-logo" />
+                <img src={daGrabaLogo} alt="DA GRABA Studio" className="h-[80px] w-[225px] object-contain drop-shadow-[0_0_12px_rgba(255,117,31,0.25)]" data-testid="img-footer-logo" />
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {t('landing.footer.footerDescription')}

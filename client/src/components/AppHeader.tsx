@@ -69,7 +69,7 @@ export function AppHeader() {
               onClick={() => setLocation("/home")}
               data-testid="link-header-logo"
             >
-              <img src={daGrabaLogo} alt="DA GRABA" className="h-8 w-[122px] sm:h-9 sm:w-[140px] object-contain drop-shadow-[0_0_12px_rgba(255,117,31,0.4)]" />
+              <img src={daGrabaLogo} alt="DA GRABA" className="h-[80px] w-[225px] object-contain drop-shadow-[0_0_12px_rgba(255,117,31,0.4)]" />
             </div>
 
             <nav className="hidden md:flex items-center gap-1" data-testid="nav-main">
