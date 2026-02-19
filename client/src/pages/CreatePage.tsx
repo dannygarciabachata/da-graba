@@ -733,6 +733,9 @@ export default function CreatePage() {
       else if (activeCreationMode === "sound") handleSoundGenerate();
       else if (activeCreationMode === "speak") handleTTSGenerate();
     }
+    if (window.innerWidth < 1024) {
+      setMobileView("songs");
+    }
   };
 
   const handleSongClick = (song: any) => {
@@ -1531,7 +1534,7 @@ export default function CreatePage() {
           )}
 
           {mobileView === "create" && (
-            <div className="p-4 sm:p-6 space-y-4 pb-28">
+            <div className="p-4 sm:p-6 space-y-4 pb-36">
               <div className="flex items-center gap-2 mb-2">
                 <CheckSquare className="h-5 w-5 text-primary" />
                 <h2 className="text-base font-bold">{t('create.pageTitle')}</h2>
@@ -1719,7 +1722,7 @@ export default function CreatePage() {
         </ScrollArea>
 
         {mobileView === "create" && (
-          <div className="lg:hidden fixed bottom-[72px] left-0 right-0 z-30 px-4 pb-3 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent" data-testid="mobile-sticky-create">
+          <div className="lg:hidden fixed bottom-[64px] sm:bottom-[72px] left-0 right-0 z-30 px-4 pb-3 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent" data-testid="mobile-sticky-create">
             <Button
               onClick={handleSubmit}
               disabled={isAnyPending || !canCreate}

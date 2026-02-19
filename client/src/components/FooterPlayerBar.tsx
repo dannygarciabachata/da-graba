@@ -76,15 +76,15 @@ export function FooterPlayerBar({ onOpenStudio }: FooterPlayerBarProps) {
 
   return (
     <div
-      className="h-[72px] bg-[#0a0a0a]/95 backdrop-blur-lg border-t border-white/10 flex items-center px-3 gap-3"
+      className="h-[64px] sm:h-[72px] bg-[#0a0a0a]/95 backdrop-blur-lg border-t border-white/10 flex items-center px-2 sm:px-3 gap-2 sm:gap-3"
       data-testid="footer-player-bar"
     >
-      <div className="flex items-center gap-3 w-[240px] min-w-0 flex-shrink-0">
-        <div className="relative w-12 h-12 rounded-md bg-white/5 flex-shrink-0 flex items-center justify-center overflow-hidden">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-auto sm:w-[240px] flex-shrink-0 max-w-[40%] sm:max-w-none">
+        <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-md bg-white/5 flex-shrink-0 flex items-center justify-center overflow-hidden">
           {state.currentSong.imageUrl ? (
             <img src={state.currentSong.imageUrl} alt={state.currentSong.title} className="w-full h-full object-cover" />
           ) : (
-            <Music className="w-5 h-5 text-primary/40" />
+            <Music className="w-4 h-4 sm:w-5 sm:h-5 text-primary/40" />
           )}
           {state.isPlaying && (
             <div className="absolute inset-0 bg-black/40 flex items-end justify-center pb-1">
@@ -93,52 +93,52 @@ export function FooterPlayerBar({ onOpenStudio }: FooterPlayerBarProps) {
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium truncate" data-testid="footer-player-title">{state.currentSong.title || state.currentSong.prompt || "Untitled"}</p>
+          <p className="text-xs sm:text-sm font-medium truncate" data-testid="footer-player-title">{state.currentSong.title || state.currentSong.prompt || "Untitled"}</p>
           {state.currentSong.genre && (
-            <p className="text-[11px] text-muted-foreground truncate">{state.currentSong.genre}</p>
+            <p className="text-[10px] text-muted-foreground truncate hidden sm:block">{state.currentSong.genre}</p>
           )}
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col items-center gap-1 max-w-[600px] mx-auto">
-        <div className="flex items-center gap-2">
+      <div className="flex-1 flex flex-col items-center gap-0.5 sm:gap-1 max-w-[600px] mx-auto min-w-0">
+        <div className="flex items-center gap-0.5 sm:gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleShuffle}
-            className={state.isShuffled ? "text-primary" : "text-muted-foreground"}
+            className={`h-7 w-7 sm:h-9 sm:w-9 ${state.isShuffled ? "text-primary" : "text-muted-foreground"} hidden sm:flex`}
             data-testid="button-shuffle"
           >
-            <Shuffle className="w-3.5 h-3.5" />
+            <Shuffle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={prev} className="text-muted-foreground" data-testid="button-prev">
-            <SkipBack className="w-4 h-4" />
+          <Button variant="ghost" size="icon" onClick={prev} className="h-7 w-7 sm:h-9 sm:w-9 text-muted-foreground" data-testid="button-prev">
+            <SkipBack className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </Button>
           <Button
             size="icon"
             onClick={togglePlayPause}
             disabled={!state.isReady}
-            className="rounded-full bg-white text-black"
+            className="rounded-full bg-white text-black h-8 w-8 sm:h-9 sm:w-9"
             data-testid="button-footer-play"
           >
-            {state.isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+            {state.isPlaying ? <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" /> : <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current ml-0.5" />}
           </Button>
-          <Button variant="ghost" size="icon" onClick={next} className="text-muted-foreground" data-testid="button-next">
-            <SkipForward className="w-4 h-4" />
+          <Button variant="ghost" size="icon" onClick={next} className="h-7 w-7 sm:h-9 sm:w-9 text-muted-foreground" data-testid="button-next">
+            <SkipForward className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleRepeat}
-            className={state.isRepeating ? "text-primary" : "text-muted-foreground"}
+            className={`h-7 w-7 sm:h-9 sm:w-9 ${state.isRepeating ? "text-primary" : "text-muted-foreground"} hidden sm:flex`}
             data-testid="button-repeat"
           >
-            <Repeat className="w-3.5 h-3.5" />
+            <Repeat className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           </Button>
         </div>
 
-        <div className="flex items-center gap-2 w-full">
-          <span className="text-[10px] text-muted-foreground w-8 text-right tabular-nums">{formatTime(state.currentTime)}</span>
+        <div className="flex items-center gap-1 sm:gap-2 w-full">
+          <span className="text-[9px] sm:text-[10px] text-muted-foreground w-6 sm:w-8 text-right tabular-nums">{formatTime(state.currentTime)}</span>
           <Slider
             value={[progress]}
             max={1}
@@ -147,11 +147,11 @@ export function FooterPlayerBar({ onOpenStudio }: FooterPlayerBarProps) {
             className="flex-1"
             data-testid="slider-footer-seek"
           />
-          <span className="text-[10px] text-muted-foreground w-8 tabular-nums">{formatTime(state.duration)}</span>
+          <span className="text-[9px] sm:text-[10px] text-muted-foreground w-6 sm:w-8 tabular-nums">{formatTime(state.duration)}</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-1 w-[200px] justify-end flex-shrink-0">
+      <div className="hidden sm:flex items-center gap-1 w-[200px] justify-end flex-shrink-0">
         {onOpenStudio && (
           <Button variant="ghost" size="icon" onClick={onOpenStudio} className="text-muted-foreground" data-testid="button-footer-studio">
             <Scissors className="w-4 h-4" />

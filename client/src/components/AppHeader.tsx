@@ -62,18 +62,18 @@ export function AppHeader() {
 
   return (
     <header className="border-b border-white/10 backdrop-blur-xl bg-black/20 sticky top-0 z-50" data-testid="app-header">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-6">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-3">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-6 min-w-0 flex-1">
             <div
-              className="flex items-center gap-3 cursor-pointer group"
+              className="flex items-center gap-2 cursor-pointer group flex-shrink-0"
               onClick={() => setLocation("/home")}
               data-testid="link-header-logo"
             >
-              <img src={daGrabaLogo} alt="DA GRABA" className="h-[80px] w-[225px] object-contain drop-shadow-[0_0_12px_rgba(255,117,31,0.4)]" />
+              <img src={daGrabaLogo} alt="DA GRABA" className="h-[50px] w-[140px] sm:h-[80px] sm:w-[225px] object-contain drop-shadow-[0_0_12px_rgba(255,117,31,0.4)]" />
             </div>
 
-            <div className="hidden sm:block" data-testid="header-spectrum-container">
+            <div className="flex-1 min-w-0 max-w-[200px] sm:max-w-none" data-testid="header-spectrum-container">
               <HeaderSpectrum />
             </div>
 
