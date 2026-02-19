@@ -1,0 +1,73 @@
+1.1.0
+@tresf tresf released this Dec 23, 2014
+ v1.1.0
+ 122b845
+Features and fixes: (2014-12-23)
+
+New FX Mixer
+New chainable FX channels
+Unlimited FX channels
+Better labeling of dummy effects
+Improved performance
+New temposyncable delay FX plugin
+New Instruments:
+Nescaline - Nintendo Entertainment System(R) sound emulator
+Watsyn - Advanced wavetable synth
+Monstro - Advanced triple oscillator synth
+Carla - Audio plugin host (Linux only)
+Instrument Enhancements:
+AudioFileProcessor - Adjustable loop points
+Kicker - Temposyncable envelope, higher max; distortion enhancements
+LB302 - Fix note sticking, playback bugs
+Demos/Presets
+Cleaned up dated demo tracks
+Updated ZynAddSubFX instrument presets from Zyn team
+Added, removed and updated presets for TripleOsc, LB302, Organic and SID, Monstro, Watsyn, BitInvader
+UI Improvements
+Piano Roll:
+Ctrl + Left/Right Arrow keys now moves selected notes by one bar
+Shift + Up/Down now moves selected notes by one semitone
+Fixed theme artifacts caused by improper uninstall/upgrade
+Added /Volumes to sidebar and open dialog for Mac
+Added Chinese/Japanese, updated Italian and German translations
+Enabled toggling of knob scale in context menu (Linear/Logarithmic)
+Added ability to record automations
+Added support for undo/redo in Piano Roll
+Bug Fixes
+Fixed various memory leaks
+Misc branding fixes
+Autosave/save prompt fixes
+Better cursor positioning (hand, automation tracks, loop markers)
+Fixed soundfont chorus/reverb settings
+Fixed a bug that caused the pitch range being ignored on project load
+Minor UI fixes
+Added build support for OSX 10.7 "Lion"
+Known issues with this release:
+
+Windows
+Software fails to load on some systems (Please see bug #1173)
+No sound/distorted sound on some systems (Forum topics #604 #283)
+Apple
+Runs on OS X 10.7 "Lion" and higher only (Please see bug #1270)
+MIDI controllers do not work on Apple (Please see bug #1153)
+VST plugins (.dll) do not work on Apple (Please see bug #698)
+SoundFonts (.sf2) do not work on Apple (Please see bug #649)
+Projects open to a blank project every time when opened from Finder or Desktop (Please see bug #665)
+ZynAddSubFX "Show GUI" button does not work on Apple (Please see bug #703)
+Assets
+5
+lmms-1.1.0-mac10.7.dmg
+26.1 MB
+Dec 23, 2014
+lmms-1.1.0-win32.exe
+27.5 MB
+Dec 23, 2014
+lmms-1.1.0-win64.exe
+29.6 MB
+Dec 23, 2014
+Source code
+(zip)
+Dec 23, 2014
+Source code
+(tar.gz)
+Dec 23, 2014
