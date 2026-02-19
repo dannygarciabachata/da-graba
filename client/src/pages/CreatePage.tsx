@@ -1568,7 +1568,7 @@ export default function CreatePage() {
           {mobileView !== "player" && (
             <div className="flex border-b border-white/5 bg-background/80 sticky top-0 z-20">
               <button
-                className={cn("flex-1 py-3 text-sm font-medium text-center transition-colors relative", mobileView === "create" ? "text-primary" : "text-muted-foreground")}
+                className={cn("flex-1 py-3.5 text-sm font-semibold text-center transition-colors relative", mobileView === "create" ? "text-primary" : "text-muted-foreground")}
                 onClick={() => setMobileView("create")}
                 data-testid="tab-create"
               >
@@ -1578,7 +1578,7 @@ export default function CreatePage() {
                 {mobileView === "create" && <div className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary rounded-full" />}
               </button>
               <button
-                className={cn("flex-1 py-3 text-sm font-medium text-center transition-colors relative", mobileView === "songs" ? "text-primary" : "text-muted-foreground")}
+                className={cn("flex-1 py-3.5 text-sm font-semibold text-center transition-colors relative", mobileView === "songs" ? "text-primary" : "text-muted-foreground")}
                 onClick={() => setMobileView("songs")}
                 data-testid="tab-songs"
               >
@@ -1592,26 +1592,28 @@ export default function CreatePage() {
           )}
 
           {mobileView === "create" && (
-            <div className="p-4 sm:p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 pb-28">
               <div className="flex items-center gap-2 mb-2">
-                <CheckSquare className="h-4 w-4 text-primary" />
-                <h2 className="text-sm font-semibold">{t('create.pageTitle')}</h2>
+                <CheckSquare className="h-5 w-5 text-primary" />
+                <h2 className="text-base font-bold">{t('create.pageTitle')}</h2>
               </div>
 
-              <div className="grid grid-cols-2 gap-2" data-testid="mobile-dna-flows">
+              <div className="grid grid-cols-2 gap-3" data-testid="mobile-dna-flows">
                 <button
-                  className={cn("rounded-lg p-2.5 text-left transition-all border", dnaFlow === "bachata" ? "border-primary bg-primary/10" : "border-white/10 bg-white/[0.03]")}
+                  className={cn("rounded-xl p-3 text-left transition-all border", dnaFlow === "bachata" ? "border-primary bg-primary/10" : "border-white/10 bg-white/[0.03]")}
                   onClick={() => { if (dnaFlow === "bachata") { setDnaFlow(null); setSelectedSubStyle(null); setSelectedStyleKit(undefined); } else { setDnaFlow("bachata"); setSelectedSubStyle(null); setSelectedGenre("Bachata"); const k = styleKits?.find(k => k.genre === "bachata"); if (k) setSelectedStyleKit(k.id); } }}
                   data-testid="mobile-dna-bachata"
                 >
-                  <div className="flex items-center gap-2"><Guitar className="h-4 w-4 text-primary" /><span className="text-xs font-bold">DAGRABACHATA</span></div>
+                  <div className="flex items-center gap-2"><Guitar className="h-5 w-5 text-primary" /><span className="text-sm font-bold">DAGRABACHATA</span></div>
+                  <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{t('create.dnaFlow.bachataDesc')}</p>
                 </button>
                 <button
-                  className={cn("rounded-lg p-2.5 text-left transition-all border", dnaFlow === "bolero" ? "border-orange-400 bg-orange-500/10" : "border-white/10 bg-white/[0.03]")}
+                  className={cn("rounded-xl p-3 text-left transition-all border", dnaFlow === "bolero" ? "border-orange-400 bg-orange-500/10" : "border-white/10 bg-white/[0.03]")}
                   onClick={() => { if (dnaFlow === "bolero") { setDnaFlow(null); setSelectedSubStyle(null); setSelectedStyleKit(undefined); } else { setDnaFlow("bolero"); setSelectedSubStyle(null); setSelectedGenre("Bolero"); const k = styleKits?.find(k => k.genre === "dgb_bolero"); if (k) setSelectedStyleKit(k.id); } }}
                   data-testid="mobile-dna-bolero"
                 >
-                  <div className="flex items-center gap-2"><Music className="h-4 w-4 text-orange-400" /><span className="text-xs font-bold">DAGRABOLERO</span></div>
+                  <div className="flex items-center gap-2"><Music className="h-5 w-5 text-orange-400" /><span className="text-sm font-bold">DAGRABOLERO</span></div>
+                  <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{t('create.dnaFlow.boleroDesc')}</p>
                 </button>
               </div>
 
@@ -1667,22 +1669,6 @@ export default function CreatePage() {
                   <Dices className="h-3 w-3 text-orange-400" />{t('create.random')}
                 </button>
               </div>
-
-              <Button
-                onClick={handleSubmit}
-                disabled={isAnyPending || !canCreate}
-                className={cn(
-                  "w-full font-semibold text-sm",
-                  canCreate && !isAnyPending
-                    ? "bg-gradient-to-r from-primary to-pink-500 text-white border-primary shadow-[0_0_20px_rgba(255,20,147,0.25)]"
-                    : ""
-                )}
-                size="lg"
-                data-testid="mobile-btn-submit"
-              >
-                {isAnyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {isAnyPending ? t('create.generating', 'Creating...') : t('create.createButton', 'Create')}
-              </Button>
 
               {activeCreationMode === "song" && (
                 <div>
@@ -1792,6 +1778,26 @@ export default function CreatePage() {
           )}
         </div>
         </ScrollArea>
+
+        {mobileView === "create" && (
+          <div className="lg:hidden fixed bottom-[72px] left-0 right-0 z-30 px-4 pb-3 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent" data-testid="mobile-sticky-create">
+            <Button
+              onClick={handleSubmit}
+              disabled={isAnyPending || !canCreate}
+              className={cn(
+                "w-full font-bold text-base h-12",
+                canCreate && !isAnyPending
+                  ? "bg-gradient-to-r from-primary to-pink-500 text-white border-primary shadow-[0_0_25px_rgba(255,20,147,0.3)]"
+                  : ""
+              )}
+              size="lg"
+              data-testid="mobile-btn-submit"
+            >
+              {isAnyPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+              {isAnyPending ? t('create.generating', 'Creating...') : t('create.createButton', 'Create')}
+            </Button>
+          </div>
+        )}
 
         {activeSong && (activeSong.status === "processing" || activeSong.status === "pending") && (
           <div className="h-[72px] bg-[#0a0a0a] border-t border-white/10 flex items-center px-4 gap-3 flex-shrink-0" data-testid="footer-player-processing">
