@@ -237,7 +237,7 @@ export async function registerRoutes(
           lyrics,
           instrumental: makeInstrumental,
         });
-      }, 20000);
+      }, 90000);
 
       const remainingCredits = isUnlimited ? -1 : await storage.getUserCredits(userId);
       res.status(202).json({ ...song1, pairId, remainingCredits });

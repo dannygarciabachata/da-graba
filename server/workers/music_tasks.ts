@@ -199,7 +199,7 @@ export async function processMusicGeneration(
     if (submitResult.taskId && !submitResult.needsPolling && !submitResult.audioUrl) {
       console.log(`[Worker] ${submitResult.providerName} job ${submitResult.taskId} submitted for song ${songId} (webhook-based, awaiting callback)`);
       generateSongCoverImage(songId, safePrompt, style).catch(() => {});
-      startRunPodWatchdog(songId, submitResult.taskId, 300000);
+      startRunPodWatchdog(songId, submitResult.taskId, 600000);
       return;
     }
 
