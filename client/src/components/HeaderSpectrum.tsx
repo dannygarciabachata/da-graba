@@ -161,7 +161,7 @@ export function HeaderSpectrum() {
   return (
     <canvas
       ref={canvasRef}
-      className="h-[50px] w-[120px] opacity-90"
+      className="h-[28px] w-[80px] sm:h-[36px] sm:w-[100px] opacity-80"
       style={{ imageRendering: "auto" }}
       data-testid="header-spectrum"
     />

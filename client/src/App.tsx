@@ -33,6 +33,7 @@ import LegalPage from "@/pages/LegalPage";
 import MyPlaylistsPage from "@/pages/MyPlaylistsPage";
 import MyPlaylistDetailPage from "@/pages/MyPlaylistDetailPage";
 import PublicPlaylistViewPage from "@/pages/PublicPlaylistViewPage";
+import ProfilePage from "@/pages/ProfilePage";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
 import { useTranslation } from "react-i18next";
@@ -91,6 +92,7 @@ function AuthenticatedLayout() {
           <Route path="/discography" component={DiscographyPage} />
           <Route path="/playlist/:id" component={PublicPlaylistViewPage} />
           <Route path="/artist/:id" component={ArtistProfilePage} />
+          <Route path="/profile" component={ProfilePage} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/terms">{() => <LegalPage section="terms" />}</Route>
           <Route path="/privacy">{() => <LegalPage section="privacy" />}</Route>

@@ -42,6 +42,8 @@ import {
   ChevronDown,
   FileText,
   Lock,
+  User,
+  Receipt,
 } from "lucide-react";
 import daGrabaLogo from "@assets/Logomobil2_1771526285843.png";
 import { HeaderSpectrum } from "@/components/HeaderSpectrum";
@@ -62,22 +64,22 @@ export function AppHeader() {
 
   return (
     <header className="border-b border-white/10 backdrop-blur-xl bg-black/20 sticky top-0 z-50" data-testid="app-header">
-      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-3">
-        <div className="flex items-center justify-between gap-2 sm:gap-4">
-          <div className="flex items-center gap-2 sm:gap-6 min-w-0 flex-1">
+      <div className="px-2 sm:px-4 lg:px-6 py-1.5 sm:py-2">
+        <div className="flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
             <div
-              className="flex items-center gap-2 cursor-pointer group flex-shrink-0"
+              className="flex items-center gap-0 cursor-pointer group flex-shrink-0"
               onClick={() => setLocation("/home")}
               data-testid="link-header-logo"
             >
-              <img src={daGrabaLogo} alt="DA GRABA" className="h-[50px] w-[140px] sm:h-[80px] sm:w-[225px] object-contain drop-shadow-[0_0_12px_rgba(255,117,31,0.4)]" />
+              <img src={daGrabaLogo} alt="DA GRABA" className="h-[56px] w-[155px] sm:h-[70px] sm:w-[195px] lg:h-[80px] lg:w-[225px] object-contain drop-shadow-[0_0_12px_rgba(255,117,31,0.4)]" />
             </div>
 
-            <div className="flex-1 min-w-0 max-w-[200px] sm:max-w-none" data-testid="header-spectrum-container">
+            <div className="flex-shrink-0 opacity-70" data-testid="header-spectrum-container">
               <HeaderSpectrum />
             </div>
 
-            <nav className="hidden md:flex items-center gap-1" data-testid="nav-main">
+            <nav className="hidden md:flex items-center gap-1 ml-2" data-testid="nav-main">
               <button
                 onClick={() => setLocation("/home")}
                 className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
@@ -196,7 +198,7 @@ export function AppHeader() {
             </nav>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {creditsData && (
               <div
                 className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors"
@@ -224,7 +226,7 @@ export function AppHeader() {
 
             <button
               onClick={toggleLanguage}
-              className="p-1.5 rounded-full text-orange-300/60 hover:text-orange-300 transition-colors"
+              className="hidden sm:block p-1.5 rounded-full text-orange-300/60 hover:text-orange-300 transition-colors"
               data-testid="button-language"
             >
               <Globe className="w-4 h-4" />
@@ -233,29 +235,59 @@ export function AppHeader() {
             {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 rounded-full hover:bg-white/5 transition-colors p-1" data-testid="button-user-menu">
-                    <Avatar className="h-8 w-8 ring-1 ring-orange-500/30">
+                  <button className="flex items-center gap-1.5 rounded-full hover:bg-white/5 transition-colors p-0.5 pr-1 sm:pr-2" data-testid="button-user-menu">
+                    <Avatar className="h-8 w-8 sm:h-9 sm:w-9 ring-2 ring-orange-500/40 shadow-lg shadow-orange-500/10">
                       <AvatarImage src={user.profileImageUrl || undefined} />
                       <AvatarFallback className="text-xs bg-gradient-to-br from-orange-500 to-orange-600 text-white font-bold">
                         {user.firstName?.[0]}{user.lastName?.[0]}
                       </AvatarFallback>
                     </Avatar>
+                    <ChevronDown className="w-3 h-3 text-white/40 hidden sm:block" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 bg-slate-950/95 backdrop-blur-xl border-white/10">
-                  <DropdownMenuLabel className="text-xs">
-                    <span className="font-medium">{user.firstName} {user.lastName}</span>
-                  </DropdownMenuLabel>
+                <DropdownMenuContent align="end" className="w-56 bg-slate-950/95 backdrop-blur-xl border-white/10">
+                  <div className="px-3 py-2.5 flex items-center gap-3">
+                    <Avatar className="h-10 w-10 ring-2 ring-orange-500/30">
+                      <AvatarImage src={user.profileImageUrl || undefined} />
+                      <AvatarFallback className="text-sm bg-gradient-to-br from-orange-500 to-orange-600 text-white font-bold">
+                        {user.firstName?.[0]}{user.lastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{user.firstName} {user.lastName}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{user.email || t("profile.noEmail", "Sin email")}</p>
+                    </div>
+                  </div>
                   <DropdownMenuSeparator className="bg-white/10" />
-                  <DropdownMenuItem onClick={() => setLocation("/pricing")} data-testid="user-menu-pricing">
-                    <CreditCard className="w-4 h-4 mr-2" />{t("nav.pricing", "Pricing")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation("/artist-dashboard")} data-testid="user-menu-artist">
-                    <Crown className="w-4 h-4 mr-2" />{t("nav.artistDashboard", "Artist")}
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="text-orange-400/70 text-[10px] uppercase tracking-wider">{t("profile.account", "Cuenta")}</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setLocation("/profile")} data-testid="user-menu-profile">
+                      <User className="w-4 h-4 mr-2 text-orange-400/60" />{t("profile.myProfile", "Mi Perfil")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLocation("/profile?tab=billing")} data-testid="user-menu-billing">
+                      <Receipt className="w-4 h-4 mr-2 text-orange-400/60" />{t("profile.billing", "Facturación")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLocation("/pricing")} data-testid="user-menu-pricing">
+                      <CreditCard className="w-4 h-4 mr-2 text-orange-400/60" />{t("nav.pricing", "Plan & Precios")}
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="text-orange-400/70 text-[10px] uppercase tracking-wider">{t("nav.artist", "Artista")}</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setLocation("/profile?tab=artist")} data-testid="user-menu-artist-profile">
+                      <Crown className="w-4 h-4 mr-2 text-orange-400/60" />{t("profile.artistProfile", "Perfil Artístico")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLocation("/artist-dashboard")} data-testid="user-menu-artist-dashboard">
+                      <Music className="w-4 h-4 mr-2 text-orange-400/60" />{t("nav.artistDashboard", "Dashboard Artista")}
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuItem onClick={toggleLanguage} data-testid="user-menu-language">
+                    <Globe className="w-4 h-4 mr-2 text-orange-400/60" />{i18n.language === "es" ? "English" : "Español"}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-white/10" />
-                  <DropdownMenuItem onClick={() => logout()} data-testid="user-menu-logout">
-                    <LogOut className="w-4 h-4 mr-2" />{t("common.logout", "Logout")}
+                  <DropdownMenuItem onClick={() => logout()} className="text-red-400 focus:text-red-400" data-testid="user-menu-logout">
+                    <LogOut className="w-4 h-4 mr-2" />{t("common.logout", "Cerrar Sesión")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -289,6 +321,13 @@ export function AppHeader() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setLocation("/pricing")} data-testid="mobile-pricing">
                   <CreditCard className="w-4 h-4 mr-2" />{t("nav.pricing", "Plan")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuItem onClick={() => setLocation("/profile")} data-testid="mobile-profile">
+                  <User className="w-4 h-4 mr-2" />{t("profile.myProfile", "Mi Perfil")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={toggleLanguage} data-testid="mobile-language">
+                  <Globe className="w-4 h-4 mr-2" />{i18n.language === "es" ? "English" : "Español"}
                 </DropdownMenuItem>
                 {adminCheck?.isAdmin && (
                   <DropdownMenuItem onClick={() => setLocation("/admin")} data-testid="mobile-admin">
