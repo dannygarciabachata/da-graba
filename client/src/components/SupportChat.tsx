@@ -140,11 +140,11 @@ export default function SupportChat({ serviceContext }: SupportChatProps) {
           data-testid="support-chat-panel"
         >
           <Card className="flex flex-col h-[500px] max-h-[70vh] shadow-xl border-primary/20">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 py-3 px-4 border-b space-y-0">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 py-3 px-4 border-b border-primary/10 space-y-0" style={{ background: "linear-gradient(135deg, hsl(247, 82%, 18%) 0%, hsl(247, 79%, 24%) 100%)" }}>
               <div>
-                <CardTitle className="text-sm flex items-center gap-2">
+                <CardTitle className="text-sm flex items-center gap-2 text-white">
                   <MessageCircle className="h-4 w-4 text-primary" />
-                  {t('support.title')}
+                  <span><span className="text-primary font-bold">DA</span> <span className="text-[#d9d9d9] font-bold">GRABA</span> <span className="text-white/80 font-normal">Support</span></span>
                 </CardTitle>
                 {contextLabel && (
                   <Badge variant="outline" className="text-[10px] mt-1 text-primary/70 border-primary/20">
@@ -156,6 +156,7 @@ export default function SupportChat({ serviceContext }: SupportChatProps) {
                 <Button
                   size="icon"
                   variant="ghost"
+                  className="text-white/70"
                   onClick={() => { setMessages([]); setTicketId(null); localStorage.removeItem("dgb_support_ticket_id"); }}
                   title={t('support.newConversation')}
                   data-testid="button-new-chat"
@@ -165,6 +166,7 @@ export default function SupportChat({ serviceContext }: SupportChatProps) {
                 <Button
                   size="icon"
                   variant="ghost"
+                  className="text-white/70"
                   onClick={() => setIsOpen(false)}
                   data-testid="button-close-chat"
                 >

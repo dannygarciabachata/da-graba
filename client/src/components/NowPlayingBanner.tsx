@@ -199,7 +199,7 @@ export function NowPlayingBanner({ song, onClose, onTogglePublish, onDownload }:
   if (!song.audioUrl) return null;
 
   const artistDisplay = song.artistName || "Unknown Artist";
-  const copyrightDisplay = song.copyrightHolder || "DA GRABA Studio";
+  const copyrightDisplay = song.copyrightHolder || "Da Graba LLC";
 
   return (
     <motion.div

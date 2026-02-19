@@ -463,7 +463,7 @@ export default function CreatePage() {
   const [activeCreationMode, setActiveCreationMode] = useState<CreationMode>("song");
   const [selectedStyleKit, setSelectedStyleKit] = useState<number | undefined>(undefined);
   const [artistName, setArtistName] = useState("");
-  const [copyrightHolder, setCopyrightHolder] = useState("DA GRABA");
+  const [copyrightHolder, setCopyrightHolder] = useState("Da Graba LLC");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [attachPopoverOpen, setAttachPopoverOpen] = useState(false);
 
@@ -1300,7 +1300,7 @@ export default function CreatePage() {
                         </div>
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2"><Copyright className="h-3.5 w-3.5 text-muted-foreground" /><Label className="text-sm font-medium">{t('create.copyrightHolder')}</Label></div>
-                          <Input placeholder="DA GRABA" value={copyrightHolder} onChange={(e) => setCopyrightHolder(e.target.value)} className="bg-background/50 border-white/10" data-testid="input-copyright-holder" />
+                          <Input placeholder="Da Graba LLC" value={copyrightHolder} onChange={(e) => setCopyrightHolder(e.target.value)} className="bg-background/50 border-white/10" data-testid="input-copyright-holder" />
                         </div>
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2"><Clock className="h-3.5 w-3.5 text-muted-foreground" /><Label className="text-sm font-medium">{t('create.songDuration')}</Label></div>

@@ -227,7 +227,7 @@
       }
     },
     "footer": {
-      "copyright": "DA GRABA. Todos los derechos reservados.",
+      "copyright": "Da Graba LLC. Todos los derechos reservados.",
       "builtWith": "Construido con IA para creadores de música latina.",
       "product": "Producto",
       "tools": "Herramientas",
@@ -535,7 +535,7 @@
     "beFirstToComment": "Sé el primero en comentar"
   },
   "support": {
-    "title": "Soporte DGB",
+    "title": "Soporte DA GRABA",
     "greeting": "¿Cómo podemos ayudarte hoy?",
     "greetingSubtitle": "Pregunta sobre funciones, planes o soporte técnico.",
     "placeholder": "Escribe un mensaje...",
