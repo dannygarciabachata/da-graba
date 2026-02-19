@@ -64,7 +64,6 @@ except ImportError:
     requests = None
 
 print(f"[Init] Worker ready | torch={TORCH_AVAILABLE} | numpy={NUMPY_AVAILABLE}")
-print(f"[Init] HF_TOKEN configured: {'yes' if HF_TOKEN else 'no'}")
 print(f"[Init] Workspace: {WORKSPACE} | Models: {MODELS_DIR}")
 
 existing_models = list(MODELS_DIR.glob("kit_*"))
