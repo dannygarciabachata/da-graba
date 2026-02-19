@@ -22,7 +22,7 @@ DAGRABA Studio employs a microservices-oriented architecture with a clear separa
 - **Database:** PostgreSQL on Neon.
 - **Authentication:** Replit Auth (OpenID Connect).
 - **Admin Role System:** Role-based access control (`super_admin`, `admin`, `moderator`, `user`).
-- **Payments:** Stripe integration for subscriptions, fan gifts, and artist monetization.
+- **Payments:** Stripe integration for subscriptions, fan gifts, and artist monetization. Stripe Connect Express for artist payouts (bank account, instant card, PayPal manual review). Payout requests tracked in `payout_requests` table with status lifecycle (pending→processing→paid/failed). Artist profiles store Connect account ID and onboarding status.
 - **Generic API Provider System:** An API-agnostic engine for dynamic configuration of various API providers, including fallback mechanisms.
 - **AI Engines (Music Generation Pipeline - priority order):**
     - **RunPod Serverless GPU (Priority 1):** Primary engine using SAO Instrumental Finetune (santifiorino/SAO-Instrumental-Finetune) + HeartMuLa on private GPU. Default model is `instrumental_finetune` with improved instrument control, tempo accuracy (~88%), and genre adherence over base SAO. Zero third-party API cost. Requires `RUNPOD_ENDPOINT_MUSIC` env var. Webhook-based delivery.
