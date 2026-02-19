@@ -376,10 +376,20 @@ def handle_generate_music(job_input: dict) -> dict:
             try:
                 subprocess.run(
                     ["ffmpeg", "-i", wav_path, "-codec:a", "libmp3lame", "-b:a", "192k", "-y", mp3_path],
-                    capture_output=True, text=True, timeout=60
+                    capture_output=True, text=True, timeout=120
                 )
                 if os.path.exists(mp3_path):
-                    print(f"[Music] MP3 converted: {mp3_path}")
+                    mp3_size = os.path.getsize(mp3_path) / 1024 / 1024
+                    print(f"[Music] MP3 converted: {mp3_path} ({mp3_size:.1f} MB)")
+                    if mp3_size > 45:
+                        mp3_path_lo = wav_path.replace(".wav", "_lo.mp3")
+                        subprocess.run(
+                            ["ffmpeg", "-i", wav_path, "-codec:a", "libmp3lame", "-b:a", "128k", "-y", mp3_path_lo],
+                            capture_output=True, text=True, timeout=120
+                        )
+                        if os.path.exists(mp3_path_lo):
+                            os.replace(mp3_path_lo, mp3_path)
+                            print(f"[Music] Re-encoded at 128k ({os.path.getsize(mp3_path) / 1024 / 1024:.1f} MB)")
             except Exception as e:
                 print(f"[Music] MP3 conversion failed: {e}")
 
@@ -395,24 +405,30 @@ def handle_generate_music(job_input: dict) -> dict:
             "audioFormat": audio_format,
         }
 
+        import base64
         file_size = os.path.getsize(final_path)
-        max_b64_size = 20 * 1024 * 1024
+        max_b64_size = 50 * 1024 * 1024
         if file_size < max_b64_size:
-            import base64
             with open(final_path, "rb") as f:
                 audio_bytes = f.read()
-            result_data["audioBase64"] = base64.b64encode(audio_bytes).decode("utf-8")
+            audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+            result_data["audioBase64"] = audio_b64
             print(f"[Music] Including base64 audio ({file_size / 1024:.0f} KB)")
         else:
-            print(f"[Music] File too large for base64 ({file_size / 1024 / 1024:.1f} MB), using webhook only")
+            print(f"[Music] File too large for base64 ({file_size / 1024 / 1024:.1f} MB)")
+            audio_b64 = None
 
-        send_webhook(webhook_url, {
+        webhook_data = {
             "songId": song_id,
             "status": "completed",
             "audioPath": final_path,
             "engine": engine,
             "duration": duration,
-        })
+            "audioFormat": audio_format,
+        }
+        if audio_b64:
+            webhook_data["audioBase64"] = audio_b64
+        send_webhook(webhook_url, webhook_data)
 
         return result_data
 

@@ -975,7 +975,38 @@ export async function registerRoutes(
       const payload = req.body;
       const { output, status: jobStatus, error: topLevelError, input: jobInput } = payload;
 
-      console.log(`[Webhook] RunPod Serverless webhook: status=${jobStatus}, hasOutput=${!!output}, hasError=${!!topLevelError}`);
+      const isCustomWebhook = !output && payload.songId && payload.status;
+      console.log(`[Webhook] RunPod Serverless webhook: status=${jobStatus || payload.status}, hasOutput=${!!output}, isCustom=${isCustomWebhook}`);
+
+      if (isCustomWebhook) {
+        const songId = payload.songId;
+        const song = await storage.getSong(songId);
+        if (!song || song.status === "completed") {
+          return res.sendStatus(200);
+        }
+
+        if (payload.status === "failed") {
+          const errorMsg = payload.error || "Generation failed";
+          console.error(`[Webhook] Custom webhook: song ${songId} FAILED: ${errorMsg}`);
+          await storage.updateSongStatus(songId, "failed", undefined, errorMsg.substring(0, 300));
+        } else if (payload.status === "completed" && payload.audioBase64) {
+          const audioFormat = payload.audioFormat || "mp3";
+          const localUrl = await saveRunPodAudio(payload.audioBase64, songId, audioFormat);
+          await storage.updateSongStatus(songId, "completed", localUrl);
+          if (payload.duration) {
+            try {
+              const { db } = await import("./db");
+              const { songs: songsTable } = await import("@shared/schema");
+              const { eq } = await import("drizzle-orm");
+              await db.update(songsTable).set({ duration: payload.duration }).where(eq(songsTable.id, songId));
+            } catch {}
+          }
+          console.log(`[Webhook] Custom webhook: song ${songId} saved: ${localUrl}`);
+        } else if (payload.status === "completed") {
+          console.log(`[Webhook] Custom webhook: song ${songId} completed but no audioBase64 (watchdog will handle)`);
+        }
+        return res.sendStatus(200);
+      }
 
       if (!output && (jobStatus === "FAILED" || jobStatus === "TIMED_OUT" || jobStatus === "CANCELLED")) {
         const errorMsg = topLevelError || `Job ${jobStatus}`;
@@ -1001,9 +1032,15 @@ export async function registerRoutes(
       const action = output.action || jobInput?.action;
       console.log(`[Webhook] RunPod Serverless processing: action=${action}, jobStatus=${jobStatus}`);
 
-      if (action === "generate_music" || output.songId) {
+      if (action === "generate_music" || output.songId || output.song_id) {
         const songId = output.songId || output.song_id;
         if (!songId) return res.sendStatus(200);
+
+        const existingSong = await storage.getSong(songId);
+        if (existingSong?.status === "completed") {
+          console.log(`[Webhook] Song ${songId} already completed, skipping`);
+          return res.sendStatus(200);
+        }
 
         if (jobStatus === "FAILED" || output.status === "failed") {
           const errorMsg = output.error || payload.error || "Serverless generation failed";
