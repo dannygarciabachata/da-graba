@@ -1162,15 +1162,9 @@ export async function registerRoutes(
           console.log(`[Upload] Rejected: song ${songId} not in processing state (status: ${song?.status || 'not found'})`);
           return res.status(403).json({ error: "Forbidden" });
         }
-        if (song.taskId) {
-          if (!incomingTaskId) {
-            console.log(`[Upload] Rejected: song ${songId} has taskId but none provided in upload`);
-            return res.status(403).json({ error: "Forbidden" });
-          }
-          if (song.taskId !== incomingTaskId) {
-            console.log(`[Upload] Rejected: taskId mismatch for song ${songId} (expected: ${song.taskId}, got: ${incomingTaskId})`);
-            return res.status(403).json({ error: "Forbidden" });
-          }
+        if (incomingTaskId && song.taskId && song.taskId !== incomingTaskId) {
+          console.log(`[Upload] Rejected: taskId mismatch for song ${songId} (expected: ${song.taskId}, got: ${incomingTaskId})`);
+          return res.status(403).json({ error: "Forbidden" });
         }
         const songAge = Date.now() - new Date(song.createdAt).getTime();
         if (songAge > 30 * 60 * 1000) {
