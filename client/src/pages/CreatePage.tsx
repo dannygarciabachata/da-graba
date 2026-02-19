@@ -86,43 +86,81 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 
-const GENRE_CARDS = [
-  { value: "Bachata", label: "DA GRABACHATA", likes: "97K", accent: true },
-  { value: "Bolero", label: "DA GRABOLERO", likes: "42K", accent: true },
-  { value: "Salsa", label: "Salsa", likes: "72K" },
-  { value: "Merengue", label: "Merengue", likes: "58K" },
-  { value: "Cumbia", label: "Cumbia", likes: "54K" },
-  { value: "Vallenato", label: "Vallenato", likes: "36K" },
-  { value: "Reggaeton", label: "Reggaeton", likes: "65K" },
-  { value: "Latin Pop", label: "Latin Pop", likes: "34K" },
-  { value: "Son", label: "Son", likes: "22K" },
-  { value: "Mambo", label: "Mambo", likes: "28K" },
-  { value: "Cha-Cha-Chá", label: "Cha-Cha-Chá", likes: "24K" },
-  { value: "Guaracha", label: "Guaracha", likes: "19K" },
-  { value: "Dembow", label: "Dembow", likes: "31K" },
-  { value: "Plena", label: "Plena", likes: "15K" },
-  { value: "Bomba", label: "Bomba", likes: "14K" },
-  { value: "Punta", label: "Punta", likes: "11K" },
-  { value: "Champeta", label: "Champeta", likes: "13K" },
-  { value: "Tropical", label: "Tropical", likes: "26K" },
-  { value: "R&B", label: "R&B", likes: "48K" },
-  { value: "Hip Hop", label: "Hip Hop", likes: "45K" },
-  { value: "Pop", label: "Pop", likes: "32K" },
-  { value: "EDM", label: "EDM", likes: "31K" },
-  { value: "K-pop", label: "K-pop", likes: "38K" },
-  { value: "Afrobeat", label: "Afrobeat", likes: "41K" },
-  { value: "Jazz", label: "Jazz", likes: "13K" },
-  { value: "Rock", label: "Rock", likes: "25K" },
-  { value: "Synthwave", label: "Synthwave", likes: "27K" },
-  { value: "House", label: "House", likes: "18K" },
-  { value: "Soul", label: "Soul", likes: "23K" },
-  { value: "Country", label: "Country", likes: "15K" },
-  { value: "Blues", label: "Blues", likes: "12K" },
-  { value: "Indie", label: "Indie", likes: "21K" },
-  { value: "Classical", label: "Classical", likes: "9K" },
-  { value: "Funk", label: "Funk", likes: "17K" },
-  { value: "Drum & Bass", label: "Drum & Bass", likes: "14K" },
+const GENRE_CATEGORIES = [
+  {
+    category: "DA GRABA",
+    icon: "🎸",
+    genres: [
+      { value: "Bachata", label: "DA GRABACHATA", likes: "97K", accent: true },
+      { value: "Bolero", label: "DA GRABOLERO", likes: "42K", accent: true },
+    ],
+  },
+  {
+    category: "Latino & Caribeño",
+    icon: "🌴",
+    genres: [
+      { value: "Salsa", label: "Salsa", likes: "72K" },
+      { value: "Merengue", label: "Merengue", likes: "58K" },
+      { value: "Cumbia", label: "Cumbia", likes: "54K" },
+      { value: "Vallenato", label: "Vallenato", likes: "36K" },
+      { value: "Son", label: "Son", likes: "22K" },
+      { value: "Mambo", label: "Mambo", likes: "28K" },
+      { value: "Cha-Cha-Chá", label: "Cha-Cha-Chá", likes: "24K" },
+      { value: "Guaracha", label: "Guaracha", likes: "19K" },
+      { value: "Plena", label: "Plena", likes: "15K" },
+      { value: "Bomba", label: "Bomba", likes: "14K" },
+      { value: "Punta", label: "Punta", likes: "11K" },
+      { value: "Champeta", label: "Champeta", likes: "13K" },
+      { value: "Tropical", label: "Tropical", likes: "26K" },
+    ],
+  },
+  {
+    category: "Urbano",
+    icon: "🔥",
+    genres: [
+      { value: "Reggaeton", label: "Reggaeton", likes: "65K" },
+      { value: "Dembow", label: "Dembow", likes: "31K" },
+      { value: "Latin Pop", label: "Latin Pop", likes: "34K" },
+      { value: "Hip Hop", label: "Hip Hop", likes: "45K" },
+      { value: "R&B", label: "R&B", likes: "48K" },
+    ],
+  },
+  {
+    category: "Electrónica",
+    icon: "⚡",
+    genres: [
+      { value: "EDM", label: "EDM", likes: "31K" },
+      { value: "House", label: "House", likes: "18K" },
+      { value: "Synthwave", label: "Synthwave", likes: "27K" },
+      { value: "Drum & Bass", label: "Drum & Bass", likes: "14K" },
+    ],
+  },
+  {
+    category: "Pop & Global",
+    icon: "🌍",
+    genres: [
+      { value: "Pop", label: "Pop", likes: "32K" },
+      { value: "K-pop", label: "K-pop", likes: "38K" },
+      { value: "Afrobeat", label: "Afrobeat", likes: "41K" },
+      { value: "Indie", label: "Indie", likes: "21K" },
+    ],
+  },
+  {
+    category: "Clásicos",
+    icon: "🎷",
+    genres: [
+      { value: "Jazz", label: "Jazz", likes: "13K" },
+      { value: "Blues", label: "Blues", likes: "12K" },
+      { value: "Soul", label: "Soul", likes: "23K" },
+      { value: "Funk", label: "Funk", likes: "17K" },
+      { value: "Rock", label: "Rock", likes: "25K" },
+      { value: "Country", label: "Country", likes: "15K" },
+      { value: "Classical", label: "Classical", likes: "9K" },
+    ],
+  },
 ];
+
+const GENRE_CARDS = GENRE_CATEGORIES.flatMap((cat) => cat.genres);
 
 const PROMPT_SUGGESTIONS = [
   "R&B with female vocals about Los Angeles",
@@ -176,14 +214,14 @@ type CreationMode = "song" | "sound" | "speak";
 
 function GenreCarousel({ selectedGenre, onSelect }: { selectedGenre: string; onSelect: (v: string) => void }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(true);
 
   const checkScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 2);
-    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 2);
+    setCanScrollUp(el.scrollTop > 2);
+    setCanScrollDown(el.scrollTop < el.scrollHeight - el.clientHeight - 2);
   }, []);
 
   useEffect(() => {
@@ -198,58 +236,61 @@ function GenreCarousel({ selectedGenre, onSelect }: { selectedGenre: string; onS
     };
   }, [checkScroll]);
 
-  const scroll = (dir: "left" | "right") => {
+  const scroll = (dir: "up" | "down") => {
     const el = scrollRef.current;
     if (!el) return;
-    const amount = el.clientWidth * 0.6;
-    el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
+    const amount = 120;
+    el.scrollBy({ top: dir === "up" ? -amount : amount, behavior: "smooth" });
   };
 
   return (
-    <div className="relative group" data-testid="genre-carousel">
-      {canScrollLeft && (
-        <button
-          onClick={() => scroll("left")}
-          className="absolute left-0 top-0 bottom-0 z-10 w-10 flex items-center justify-center bg-gradient-to-r from-background via-background/80 to-transparent"
-          data-testid="genre-scroll-left"
-        >
-          <div className="h-8 w-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm">
-            <ChevronLeft className="h-4 w-4" />
-          </div>
-        </button>
+    <div className="relative" data-testid="genre-carousel">
+      {canScrollUp && (
+        <div className="absolute top-0 left-0 right-0 z-10 h-8 bg-gradient-to-b from-background via-background/80 to-transparent flex items-start justify-center pt-0.5 pointer-events-none">
+          <button onClick={() => scroll("up")} className="pointer-events-auto h-6 w-6 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm" data-testid="genre-scroll-up">
+            <ChevronDown className="h-3 w-3 rotate-180" />
+          </button>
+        </div>
       )}
-      {canScrollRight && (
-        <button
-          onClick={() => scroll("right")}
-          className="absolute right-0 top-0 bottom-0 z-10 w-10 flex items-center justify-center bg-gradient-to-l from-background via-background/80 to-transparent"
-          data-testid="genre-scroll-right"
-        >
-          <div className="h-8 w-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm">
-            <ChevronRight className="h-4 w-4" />
-          </div>
-        </button>
+      {canScrollDown && (
+        <div className="absolute bottom-0 left-0 right-0 z-10 h-8 bg-gradient-to-t from-background via-background/80 to-transparent flex items-end justify-center pb-0.5 pointer-events-none">
+          <button onClick={() => scroll("down")} className="pointer-events-auto h-6 w-6 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm" data-testid="genre-scroll-down">
+            <ChevronDown className="h-3 w-3" />
+          </button>
+        </div>
       )}
       <div
         ref={scrollRef}
-        className="flex gap-2 overflow-x-auto scrollbar-hide py-1 px-1"
+        className="max-h-[280px] sm:max-h-[320px] overflow-y-auto space-y-3 py-1 px-0.5"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        {GENRE_CARDS.map((genre) => (
-          <button
-            key={genre.value}
-            className={cn(
-              "flex-shrink-0 px-4 py-2 rounded-full border text-sm font-medium transition-all whitespace-nowrap",
-              selectedGenre === genre.value
-                ? (genre as any).accent
-                  ? "border-primary bg-primary/15 text-primary shadow-[0_0_12px_rgba(255,20,147,0.15)]"
-                  : "border-primary bg-primary/10 text-primary"
-                : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground"
-            )}
-            onClick={() => onSelect(genre.value)}
-            data-testid={`genre-chip-${genre.value}`}
-          >
-            {genre.label}
-          </button>
+        {GENRE_CATEGORIES.map((cat) => (
+          <div key={cat.category} data-testid={`genre-category-${cat.category}`}>
+            <div className="flex items-center gap-1.5 mb-1.5 px-1">
+              <span className="text-sm">{cat.icon}</span>
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{cat.category}</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {cat.genres.map((genre) => (
+                <button
+                  key={genre.value}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full border text-xs font-medium transition-all whitespace-nowrap",
+                    selectedGenre === genre.value
+                      ? (genre as any).accent
+                        ? "border-primary bg-primary/15 text-primary shadow-[0_0_12px_rgba(255,117,31,0.2)]"
+                        : "border-primary bg-primary/10 text-primary"
+                      : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground hover:bg-white/[0.04]"
+                  )}
+                  onClick={() => onSelect(genre.value)}
+                  data-testid={`genre-chip-${genre.value}`}
+                >
+                  {genre.label}
+                  <span className="ml-1 text-[9px] opacity-50">{genre.likes}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>
