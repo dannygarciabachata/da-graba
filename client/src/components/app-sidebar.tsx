@@ -113,7 +113,7 @@ export function AppSidebar() {
           <img
             src={daGrabaLogo}
             alt="DA GRABA Studio"
-            className="h-28 w-auto max-w-[180px] drop-shadow-[0_0_25px_rgba(255,117,31,0.4)] group-hover:drop-shadow-[0_0_35px_rgba(255,117,31,0.6)] transition-all duration-300 object-contain"
+            className="h-36 w-auto max-w-[210px] drop-shadow-[0_0_25px_rgba(255,117,31,0.4)] group-hover:drop-shadow-[0_0_35px_rgba(255,117,31,0.6)] transition-all duration-300 object-contain"
           />
         </div>
         <div className="h-px mt-2 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
