@@ -72,7 +72,7 @@ export function AppHeader() {
               onClick={() => setLocation("/home")}
               data-testid="link-header-logo"
             >
-              <img src={daGrabaLogo} alt="DA GRABA" className="h-[56px] w-[155px] sm:h-[70px] sm:w-[195px] lg:h-[80px] lg:w-[225px] object-contain drop-shadow-[0_0_12px_rgba(255,117,31,0.4)]" />
+              <img src={daGrabaLogo} alt="DA GRABA" className="h-[64px] w-[180px] sm:h-[80px] sm:w-[220px] lg:h-[90px] lg:w-[260px] object-contain drop-shadow-[0_0_14px_rgba(255,117,31,0.45)]" />
             </div>
 
             <div className="flex-shrink-0 opacity-70" data-testid="header-spectrum-container">

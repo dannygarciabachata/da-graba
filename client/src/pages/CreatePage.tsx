@@ -76,6 +76,8 @@ import {
   LayoutDashboard,
   Settings,
   TrendingUp,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -222,22 +224,28 @@ const GENRE_VALUE_TO_SLUG: Record<string, string> = Object.fromEntries(
 
 type CreationMode = "song" | "sound" | "speak";
 
-function SidebarNavItem({ icon: Icon, label, href, active }: { icon: any; label: string; href: string; active?: boolean }) {
+function SidebarNavItem({ icon: Icon, label, href, active, collapsed }: { icon: any; label: string; href: string; active?: boolean; collapsed?: boolean }) {
   const [, setLocation] = useLocation();
   return (
-    <button
-      onClick={() => setLocation(href)}
-      className={cn(
-        "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all",
-        active
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-      )}
-      data-testid={`nav-${href.replace("/", "")}`}
-    >
-      <Icon className="h-4 w-4 flex-shrink-0" />
-      {label}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={() => setLocation(href)}
+          className={cn(
+            "w-full flex items-center rounded-lg font-medium transition-all",
+            collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2 text-[13px]",
+            active
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+          )}
+          data-testid={`nav-${href.replace("/", "")}`}
+        >
+          <Icon className={cn("flex-shrink-0", collapsed ? "h-5 w-5" : "h-4 w-4")} />
+          {!collapsed && label}
+        </button>
+      </TooltipTrigger>
+      {collapsed && <TooltipContent side="right">{label}</TooltipContent>}
+    </Tooltip>
   );
 }
 
@@ -519,6 +527,7 @@ export default function CreatePage() {
 
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [mobileView, setMobileView] = useState<"create" | "songs" | "player">("create");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const { mutate: generate, isPending } = useGenerateSong();
   const { data: songs, isLoading: songsLoading } = useSongs();
@@ -823,32 +832,49 @@ export default function CreatePage() {
         <div className="hidden lg:flex flex-1 overflow-hidden" data-testid="desktop-layout">
 
           {/* ===== NAV SIDEBAR ===== */}
-          <nav className="w-[200px] flex-shrink-0 border-r border-white/5 bg-black/20 overflow-y-auto py-6 px-3" data-testid="create-nav-sidebar">
-            <div className="space-y-1 mb-6">
-              <SidebarNavItem icon={Home} label={t('nav.home', 'Inicio')} href="/home" />
-              <SidebarNavItem icon={Sparkles} label={t('nav.create', 'Crear')} href="/create" active />
-              <SidebarNavItem icon={Library} label={t('nav.library', 'Biblioteca')} href="/library" />
-              <SidebarNavItem icon={Disc3} label={t('nav.discover', 'Descubrir')} href="/discover" />
-              <SidebarNavItem icon={ListMusic} label={t('nav.playlists', 'Playlists')} href="/my-playlists" />
+          <motion.nav
+            animate={{ width: sidebarCollapsed ? 64 : 200 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="flex-shrink-0 border-r border-white/5 bg-black/20 overflow-y-auto overflow-x-hidden flex flex-col"
+            data-testid="create-nav-sidebar"
+          >
+            <div className="flex items-center justify-center py-3 px-2 border-b border-white/5 mb-3">
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+                data-testid="button-toggle-sidebar"
+              >
+                {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+              </button>
             </div>
-            <div className="text-[9px] uppercase tracking-widest text-muted-foreground/40 px-3 mb-2">{t('nav.tools', 'Herramientas')}</div>
-            <div className="space-y-1 mb-6">
-              <SidebarNavItem icon={Headphones} label="Studio DAW" href="/studio" />
-              <SidebarNavItem icon={Mic2} label="Sample Lab" href="/sample-lab" />
-              <SidebarNavItem icon={Wand2} label={t('nav.lyrics', 'Letras AI')} href="/lyrics" />
-              <SidebarNavItem icon={Radio} label={t('nav.audioTools', 'Audio Tools')} href="/audio-tools" />
+
+            <div className="flex-1 px-2 space-y-5">
+              <div className="space-y-1">
+                <SidebarNavItem icon={Home} label={t('nav.home', 'Inicio')} href="/home" collapsed={sidebarCollapsed} />
+                <SidebarNavItem icon={Sparkles} label={t('nav.create', 'Crear')} href="/create" active collapsed={sidebarCollapsed} />
+                <SidebarNavItem icon={Library} label={t('nav.library', 'Biblioteca')} href="/library" collapsed={sidebarCollapsed} />
+                <SidebarNavItem icon={Disc3} label={t('nav.discover', 'Descubrir')} href="/discover" collapsed={sidebarCollapsed} />
+                <SidebarNavItem icon={ListMusic} label={t('nav.playlists', 'Playlists')} href="/my-playlists" collapsed={sidebarCollapsed} />
+              </div>
+              {!sidebarCollapsed && <div className="text-[9px] uppercase tracking-widest text-muted-foreground/40 px-3">{t('nav.tools', 'Herramientas')}</div>}
+              <div className="space-y-1">
+                <SidebarNavItem icon={Headphones} label="Studio DAW" href="/studio" collapsed={sidebarCollapsed} />
+                <SidebarNavItem icon={Mic2} label="Sample Lab" href="/sample-lab" collapsed={sidebarCollapsed} />
+                <SidebarNavItem icon={Wand2} label={t('nav.lyrics', 'Letras AI')} href="/lyrics" collapsed={sidebarCollapsed} />
+                <SidebarNavItem icon={Radio} label={t('nav.audioTools', 'Audio Tools')} href="/audio-tools" collapsed={sidebarCollapsed} />
+              </div>
+              {!sidebarCollapsed && <div className="text-[9px] uppercase tracking-widest text-muted-foreground/40 px-3">{t('nav.artist', 'Artista')}</div>}
+              <div className="space-y-1">
+                <SidebarNavItem icon={TrendingUp} label="Dashboard" href="/artist-dashboard" collapsed={sidebarCollapsed} />
+                <SidebarNavItem icon={Store} label={t('nav.store', 'Tienda')} href="/producer-store" collapsed={sidebarCollapsed} />
+                <SidebarNavItem icon={LayoutDashboard} label={t('nav.styleKits', 'Style Kits')} href="/style-kits" collapsed={sidebarCollapsed} />
+              </div>
+              {!sidebarCollapsed && <div className="text-[9px] uppercase tracking-widest text-muted-foreground/40 px-3">{t('nav.more', 'Más')}</div>}
+              <div className="space-y-1">
+                <SidebarNavItem icon={Settings} label={t('nav.pricing', 'Planes')} href="/pricing" collapsed={sidebarCollapsed} />
+              </div>
             </div>
-            <div className="text-[9px] uppercase tracking-widest text-muted-foreground/40 px-3 mb-2">{t('nav.artist', 'Artista')}</div>
-            <div className="space-y-1 mb-6">
-              <SidebarNavItem icon={TrendingUp} label="Dashboard" href="/artist-dashboard" />
-              <SidebarNavItem icon={Store} label={t('nav.store', 'Tienda')} href="/producer-store" />
-              <SidebarNavItem icon={LayoutDashboard} label={t('nav.styleKits', 'Style Kits')} href="/style-kits" />
-            </div>
-            <div className="text-[9px] uppercase tracking-widest text-muted-foreground/40 px-3 mb-2">{t('nav.more', 'Más')}</div>
-            <div className="space-y-1">
-              <SidebarNavItem icon={Settings} label={t('nav.pricing', 'Planes')} href="/pricing" />
-            </div>
-          </nav>
+          </motion.nav>
 
           {/* ===== MAIN CONTENT ===== */}
           <div className="flex-1 overflow-y-auto">
