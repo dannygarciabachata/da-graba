@@ -150,19 +150,19 @@ export default function LibraryPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex">
+      <div className="flex-1 overflow-hidden flex" style={{ minHeight: 0 }}>
 
-        {/* ===== LEFT: Trending Carousel ===== */}
-        <div className="hidden lg:flex flex-col w-[140px] flex-shrink-0 border-r border-white/5 bg-black/10 overflow-hidden" data-testid="library-trending-panel">
-          <div className="flex items-center gap-1.5 px-3 py-3 border-b border-white/5">
+        {/* ===== LEFT: Trending Carousel (fixed position, own scroll) ===== */}
+        <div className="hidden lg:flex flex-col w-[140px] flex-shrink-0 border-r border-white/5 bg-black/10" style={{ overflow: "hidden", height: "100%" }} data-testid="library-trending-panel">
+          <div className="flex items-center gap-1.5 px-3 py-3 border-b border-white/5 flex-shrink-0">
             <TrendingUp className="h-3.5 w-3.5 text-primary" />
             <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">Top</span>
           </div>
           <TrendingCarousel songs={trendingSongs} onPlay={playSong} currentId={playerState.currentSong?.id} />
         </div>
 
-        {/* ===== CENTER: Song List ===== */}
-        <div className="flex-1 overflow-auto min-w-0" style={{ scrollbarWidth: "none" }} data-testid="library-song-list">
+        {/* ===== CENTER: Song List (only this scrolls) ===== */}
+        <div className="flex-1 min-w-0" style={{ overflowY: "auto", overflowX: "hidden", scrollbarWidth: "none", height: "100%" }} data-testid="library-song-list">
           <div className="px-3 md:px-4 py-2 space-y-1">
             {isLoading ? (
               <div className="flex justify-center py-16">
@@ -274,7 +274,8 @@ export default function LibraryPage() {
               animate={{ width: 340, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="hidden md:flex flex-col flex-shrink-0 border-l border-white/5 bg-black/20 overflow-hidden"
+              className="hidden md:flex flex-col flex-shrink-0 border-l border-white/5 bg-black/20"
+              style={{ overflow: "hidden", height: "100%" }}
               data-testid="library-now-playing-panel"
             >
               <NowPlayingPanel
