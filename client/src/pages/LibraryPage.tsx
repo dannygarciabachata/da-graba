@@ -307,27 +307,80 @@ export default function LibraryPage() {
 
 function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: (s: any) => void; currentId?: number }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [rangeValue, setRangeValue] = useState(0);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [thumbTop, setThumbTop] = useState(0);
+  const isDragging = useRef(false);
+  const dragStartY = useRef(0);
+  const dragStartThumb = useRef(0);
+
+  const getScrollRatio = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return 0;
+    const max = el.scrollHeight - el.clientHeight;
+    return max > 0 ? el.scrollTop / max : 0;
+  }, []);
+
+  const getTrackHeight = useCallback(() => {
+    const track = trackRef.current;
+    if (!track) return 0;
+    const thumbH = 40;
+    return track.clientHeight - thumbH;
+  }, []);
+
+  const syncThumbFromScroll = useCallback(() => {
+    setThumbTop(getScrollRatio() * getTrackHeight());
+  }, [getScrollRatio, getTrackHeight]);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const onScroll = () => {
-      const max = el.scrollHeight - el.clientHeight;
-      if (max <= 0) return;
-      setRangeValue(Math.round((el.scrollTop / max) * 100));
-    };
-    el.addEventListener("scroll", onScroll);
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [songs]);
+    el.addEventListener("scroll", syncThumbFromScroll);
+    syncThumbFromScroll();
+    return () => el.removeEventListener("scroll", syncThumbFromScroll);
+  }, [syncThumbFromScroll, songs]);
 
-  const handleRange = (val: number) => {
-    setRangeValue(val);
+  const scrollToRatio = useCallback((ratio: number) => {
     const el = scrollRef.current;
     if (!el) return;
-    const max = el.scrollHeight - el.clientHeight;
-    el.scrollTop = (val / 100) * max;
-  };
+    const clamped = Math.max(0, Math.min(1, ratio));
+    el.scrollTop = clamped * (el.scrollHeight - el.clientHeight);
+  }, []);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isDragging.current = true;
+    dragStartY.current = e.clientY;
+    dragStartThumb.current = thumbTop;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [thumbTop]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isDragging.current) return;
+    e.preventDefault();
+    const dy = e.clientY - dragStartY.current;
+    const trackH = getTrackHeight();
+    if (trackH <= 0) return;
+    const newTop = Math.max(0, Math.min(trackH, dragStartThumb.current + dy));
+    setThumbTop(newTop);
+    scrollToRatio(newTop / trackH);
+  }, [getTrackHeight, scrollToRatio]);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    isDragging.current = false;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+  }, []);
+
+  const handleTrackClick = useCallback((e: React.MouseEvent) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    const clickY = e.clientY - rect.top - 20;
+    const trackH = getTrackHeight();
+    if (trackH <= 0) return;
+    const ratio = Math.max(0, Math.min(1, clickY / trackH));
+    scrollToRatio(ratio);
+  }, [getTrackHeight, scrollToRatio]);
 
   if (!songs.length) return (
     <div className="flex-1 flex items-center justify-center p-3">
@@ -335,9 +388,15 @@ function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: 
     </div>
   );
 
+  const showSlider = songs.length > 2;
+
   return (
-    <div className="flex-1 flex overflow-hidden">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain py-2 px-2 space-y-2.5" style={{ scrollbarWidth: "none" } as any}>
+    <div className="flex-1 flex overflow-hidden" style={{ minHeight: 0 }}>
+      <div
+        ref={scrollRef}
+        className="flex-1 overscroll-contain py-2 px-2 space-y-2.5"
+        style={{ overflowY: "auto", overflowX: "hidden", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as any}
+      >
         {songs.map((song: any, i: number) => (
           <motion.div
             key={song.id}
@@ -382,16 +441,21 @@ function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: 
         ))}
       </div>
 
-      {songs.length > 2 && (
-        <div className="w-5 flex-shrink-0 flex items-center justify-center">
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={rangeValue}
-            onChange={(e) => handleRange(Number(e.target.value))}
-            className="trending-range-slider"
-            data-testid="trending-range-slider"
+      {showSlider && (
+        <div
+          ref={trackRef}
+          className="w-4 flex-shrink-0 relative my-2 mr-0.5"
+          onClick={handleTrackClick}
+          data-testid="trending-scrollbar-track"
+        >
+          <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[3px] rounded-full bg-white/10" />
+          <div
+            className="absolute left-1/2 -translate-x-1/2 w-[10px] h-[40px] rounded-full bg-primary shadow-lg shadow-primary/30 hover:bg-primary/90 transition-colors select-none touch-none"
+            style={{ top: `${thumbTop}px`, cursor: isDragging.current ? "grabbing" : "grab" }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            data-testid="trending-scrollbar-thumb"
           />
         </div>
       )}
