@@ -909,7 +909,7 @@ export default function Landing() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
             <div className="col-span-2 md:col-span-1">
               <div className="mb-4">
-                <img src={daGrabaLogo} alt="DA GRABA Studio" className="h-[80px] w-[225px] object-contain drop-shadow-[0_0_12px_rgba(255,117,31,0.25)]" data-testid="img-footer-logo" />
+                <img src={daGrabaLogo} alt="DA GRABA Studio" className="h-14 w-auto max-w-[160px] object-contain drop-shadow-[0_0_12px_rgba(255,117,31,0.25)]" data-testid="img-footer-logo" />
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {t('landing.footer.footerDescription')}

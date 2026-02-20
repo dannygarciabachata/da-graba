@@ -34,6 +34,7 @@ import MyPlaylistsPage from "@/pages/MyPlaylistsPage";
 import MyPlaylistDetailPage from "@/pages/MyPlaylistDetailPage";
 import PublicPlaylistViewPage from "@/pages/PublicPlaylistViewPage";
 import ProfilePage from "@/pages/ProfilePage";
+import StemSplitterPage from "@/pages/StemSplitterPage";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
 import { useTranslation } from "react-i18next";
@@ -45,6 +46,7 @@ function useServiceContext(): string | undefined {
   if (location.startsWith("/create")) return "create";
   if (location.startsWith("/library")) return "library";
   if (location.startsWith("/my-playlists")) return "my-playlists";
+  if (location.startsWith("/stem-splitter")) return "stem_splitter";
   if (location.startsWith("/studio")) return "studio";
   if (location.startsWith("/sample-lab")) return "sample_lab";
   if (location.startsWith("/artist-dashboard")) return "artist_dashboard";
@@ -79,6 +81,7 @@ function AuthenticatedLayout() {
           <Route path="/quiz" component={QuizPage} />
           <Route path="/studio" component={StudioPage} />
           <Route path="/sample-lab" component={SampleLab} />
+          <Route path="/stem-splitter" component={StemSplitterPage} />
           <Route path="/audio-tools" component={AudioToolsPage} />
           <Route path="/style-kits" component={StyleKitsPage} />
           <Route path="/producer-store" component={ProducerStorePage} />

@@ -21,6 +21,7 @@ import {
   Disc,
   Sparkles,
   Library,
+  Layers,
   PenLine,
   HelpCircle,
   Scissors,
@@ -76,6 +77,7 @@ const ARTIST_ITEMS = [
 
 const TOOLS_ITEMS = [
   { titleKey: "nav.studio", url: "/studio", icon: Scissors },
+  { titleKey: "nav.stemSplitter", url: "/stem-splitter", icon: Layers },
   { titleKey: "nav.sampleLab", url: "/sample-lab", icon: Music },
   { titleKey: "nav.audioTools", url: "/audio-tools", icon: Wrench },
   { titleKey: "nav.coverDesigner", url: "/cover-designer", icon: Palette },
@@ -113,7 +115,7 @@ export function AppSidebar() {
           <img
             src={daGrabaLogo}
             alt="DA GRABA Studio"
-            className="h-36 w-auto max-w-[210px] drop-shadow-[0_0_25px_rgba(255,117,31,0.4)] group-hover:drop-shadow-[0_0_35px_rgba(255,117,31,0.6)] transition-all duration-300 object-contain"
+            className="h-14 w-auto max-w-[160px] drop-shadow-[0_0_15px_rgba(255,117,31,0.3)] group-hover:drop-shadow-[0_0_25px_rgba(255,117,31,0.5)] transition-all duration-300 object-contain"
           />
         </div>
         <div className="h-px mt-2 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
