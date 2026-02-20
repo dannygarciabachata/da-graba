@@ -214,43 +214,66 @@ type CreationMode = "song" | "sound" | "speak";
 
 function GenreCarousel({ selectedGenre, onSelect }: { selectedGenre: string; onSelect: (v: string) => void }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const max = el.scrollHeight - el.clientHeight;
+    setScrollProgress(max > 0 ? el.scrollTop / max : 0);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    handleScroll();
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [handleScroll]);
 
   return (
     <div className="relative" data-testid="genre-carousel">
       <div
         ref={scrollRef}
-        className="overflow-x-auto pb-2"
+        className="max-h-[300px] overflow-y-auto pr-3 space-y-3 py-1"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        <div className="flex gap-3 min-w-max px-0.5">
-          {GENRE_CATEGORIES.map((cat) => (
-            <div key={cat.category} className="flex-shrink-0" data-testid={`genre-category-${cat.category}`}>
-              <div className="flex items-center gap-1.5 mb-2 px-1">
-                <span className="text-sm">{cat.icon}</span>
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{cat.category}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-                {cat.genres.map((genre) => (
-                  <button
-                    key={genre.value}
-                    className={cn(
-                      "px-3 py-2 rounded-lg border text-xs font-medium transition-all whitespace-nowrap text-center min-w-[90px]",
-                      selectedGenre === genre.value
-                        ? (genre as any).accent
-                          ? "border-primary bg-primary/15 text-primary shadow-[0_0_12px_rgba(255,117,31,0.2)]"
-                          : "border-primary bg-primary/10 text-primary"
-                        : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground hover:bg-white/[0.04]"
-                    )}
-                    onClick={() => onSelect(genre.value)}
-                    data-testid={`genre-chip-${genre.value}`}
-                  >
-                    {genre.label}
-                  </button>
-                ))}
-              </div>
+        {GENRE_CATEGORIES.map((cat) => (
+          <div key={cat.category} data-testid={`genre-category-${cat.category}`}>
+            <div className="flex items-center gap-1.5 mb-2 px-1 sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-1 -mt-1">
+              <span className="text-sm">{cat.icon}</span>
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{cat.category}</span>
             </div>
-          ))}
-        </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {cat.genres.map((genre) => (
+                <button
+                  key={genre.value}
+                  className={cn(
+                    "px-2 py-2 rounded-lg border text-[11px] font-medium transition-all text-center truncate",
+                    selectedGenre === genre.value
+                      ? (genre as any).accent
+                        ? "border-primary bg-primary/15 text-primary shadow-[0_0_12px_rgba(255,117,31,0.2)]"
+                        : "border-primary bg-primary/10 text-primary"
+                      : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground hover:bg-white/[0.04]"
+                  )}
+                  onClick={() => onSelect(genre.value)}
+                  data-testid={`genre-chip-${genre.value}`}
+                >
+                  {genre.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="absolute top-1 right-0 bottom-1 w-1.5 rounded-full bg-white/5">
+        <motion.div
+          className="w-full rounded-full bg-primary/40"
+          style={{ height: "20%" }}
+          animate={{ top: `${scrollProgress * 80}%` }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        />
       </div>
     </div>
   );
