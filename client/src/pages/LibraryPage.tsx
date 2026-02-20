@@ -61,7 +61,16 @@ export default function LibraryPage() {
   const completedSongs = (songs || []).filter((s: any) => s.status === "completed" && s.audioUrl);
 
   const trendingSongs = [...completedSongs]
-    .sort((a: any, b: any) => (b.likes || 0) - (a.likes || 0))
+    .map((s: any) => {
+      const likes = s.likes || 0;
+      const plays = s.playCount || 0;
+      const shared = s.isPublic ? 1 : 0;
+      const ageHours = s.createdAt ? Math.max(1, (Date.now() - new Date(s.createdAt).getTime()) / 3600000) : 1;
+      const trendScore = (likes * 5) + (plays * 2) + (shared * 3);
+      const decayFactor = Math.pow(0.95, ageHours / 24);
+      return { ...s, _trendScore: trendScore * decayFactor };
+    })
+    .sort((a: any, b: any) => b._trendScore - a._trendScore)
     .slice(0, 10);
 
   const selectSong = (song: any) => {
@@ -337,7 +346,7 @@ function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: 
           <ChevronUp className="h-4 w-4 text-white/80" />
         </button>
       )}
-      <div ref={scrollRef} className="h-full overflow-auto py-2 px-3 space-y-2.5" style={{ scrollbarWidth: "none" }}>
+      <div ref={scrollRef} className="h-full overflow-auto py-2 px-3 space-y-2.5 trending-scroll" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,117,31,0.4) transparent" }}>
         {songs.map((song: any, i: number) => (
           <motion.div
             key={song.id}
@@ -364,6 +373,14 @@ function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: 
               <span className="text-[10px] text-white font-semibold truncate block leading-tight drop-shadow-lg">
                 {song.title || song.prompt?.substring(0, 20)}
               </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {(song.likes > 0 || song.playCount > 0) && (
+                  <>
+                    {song.likes > 0 && <span className="text-[8px] text-white/70 flex items-center gap-0.5"><Heart className="h-2 w-2" />{song.likes}</span>}
+                    {song.playCount > 0 && <span className="text-[8px] text-white/70 flex items-center gap-0.5"><Eye className="h-2 w-2" />{song.playCount}</span>}
+                  </>
+                )}
+              </div>
             </div>
             {i < 3 && (
               <div className="absolute top-1 left-1 bg-primary/90 text-[8px] font-bold text-white rounded px-1">
@@ -439,15 +456,13 @@ function NowPlayingPanel({
               <Music className="h-16 w-16 text-white/20" />
             </div>
           )}
+          <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-full px-2.5 py-1 z-10">
+            <Eye className="h-3.5 w-3.5 text-white/90" />
+            <span className="text-xs font-semibold text-white">{(song.playCount ?? 0).toLocaleString()}</span>
+          </div>
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
             <h3 className="text-sm font-bold text-white truncate">{songTitle}</h3>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-white/60">{song.artistName || song.genre || "DA GRABA"}</p>
-              <span className="flex items-center gap-1 text-[10px] text-white/40">
-                <Eye className="h-3 w-3" />
-                {song.playCount ?? 0}
-              </span>
-            </div>
+            <p className="text-xs text-white/60">{song.artistName || song.genre || "DA GRABA"}</p>
           </div>
         </div>
       </div>
