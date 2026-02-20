@@ -309,6 +309,8 @@ export function useAudioEngine() {
     const ctx = getContext();
     if (ctx.state === "suspended") ctx.resume();
 
+    window.dispatchEvent(new CustomEvent("dagraba:audio-exclusive", { detail: { source: "studio-daw" } }));
+
     const offset = fromTime ?? offsetRef.current;
 
     Array.from(tracksRef.current.values()).forEach((track) => {
@@ -638,6 +640,17 @@ export function useAudioEngine() {
       recorder.stop();
     });
   }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.source !== "studio-daw") {
+        pausePlayback();
+      }
+    };
+    window.addEventListener("dagraba:audio-exclusive", handler);
+    return () => window.removeEventListener("dagraba:audio-exclusive", handler);
+  }, [pausePlayback]);
 
   return {
     tracks,

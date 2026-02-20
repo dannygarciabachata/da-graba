@@ -118,10 +118,22 @@ export function NowPlayingBanner({ song, onClose, onTogglePublish, onDownload }:
     }
   }, [currentLineIndex]);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.source !== "now-playing-banner") {
+        audioRef.current?.pause();
+      }
+    };
+    window.addEventListener("dagraba:audio-exclusive", handler);
+    return () => window.removeEventListener("dagraba:audio-exclusive", handler);
+  }, []);
+
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) {
+      window.dispatchEvent(new CustomEvent("dagraba:audio-exclusive", { detail: { source: "now-playing-banner" } }));
       audio.play().catch(console.error);
     } else {
       audio.pause();

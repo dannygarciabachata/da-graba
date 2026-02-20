@@ -136,6 +136,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [ensureAudioContext]);
 
   const loadAndPlay = useCallback((song: PlayerSong) => {
+    window.dispatchEvent(new CustomEvent("dagraba:audio-exclusive", { detail: { source: "global-player" } }));
+
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.removeAttribute("src");
@@ -217,6 +219,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) {
+      window.dispatchEvent(new CustomEvent("dagraba:audio-exclusive", { detail: { source: "global-player" } }));
       ensureAudioContext();
       audio.play().catch(console.error);
     } else {
@@ -226,6 +229,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const pause = useCallback(() => { audioRef.current?.pause(); }, []);
   const resume = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("dagraba:audio-exclusive", { detail: { source: "global-player" } }));
     ensureAudioContext();
     audioRef.current?.play().catch(console.error);
   }, [ensureAudioContext]);
@@ -284,6 +288,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const toggleRepeat = useCallback(() => {
     setState(prev => ({ ...prev, isRepeating: !prev.isRepeating }));
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.source !== "global-player") {
+        audioRef.current?.pause();
+      }
+    };
+    window.addEventListener("dagraba:audio-exclusive", handler);
+    return () => window.removeEventListener("dagraba:audio-exclusive", handler);
   }, []);
 
   useEffect(() => {
