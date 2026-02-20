@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useSongs, useTogglePublish, useToggleSongLike } from "@/hooks/use-songs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { usePlayer, type PlayerSong } from "@/contexts/PlayerContext";
@@ -24,13 +25,19 @@ import {
   ChevronDown,
   Clock,
   TrendingUp,
+  ListPlus,
+  Plus,
+  Check,
+  ListMusic,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MashupDialog } from "@/components/MashupDialog";
 import { CoverArtDesigner } from "@/components/CoverArtDesigner";
-import { AudioSpectrum } from "@/components/AudioSpectrum";
 import { SongActionMenu } from "@/components/SongActionMenu";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function LibraryPage() {
   const { user } = useAuth();
@@ -472,6 +479,7 @@ function NowPlayingPanel({
         >
           {song.isPublic ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
         </Button>
+        <AddToPlaylistButton songId={song.id} />
       </div>
 
       {/* Synced Lyrics */}
@@ -595,4 +603,165 @@ function getCurrentLyricLine(lyrics: LyricLine[], currentTime: number): number {
     if (currentTime >= lyrics[i].time) return i;
   }
   return -1;
+}
+
+function AddToPlaylistButton({ songId }: { songId: number }) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+
+  const { data: playlists = [] } = useQuery<any[]>({
+    queryKey: ["/api/playlists"],
+    enabled: open,
+  });
+
+  const { data: allPlaylistSongs = {} } = useQuery<Record<number, number[]>>({
+    queryKey: ["/api/playlists", "song-membership", songId],
+    enabled: open && playlists.length > 0,
+    queryFn: async () => {
+      const map: Record<number, number[]> = {};
+      for (const pl of playlists) {
+        const res = await fetch(`/api/playlists/${pl.id}/songs`, { credentials: "include" });
+        if (res.ok) {
+          const songs = await res.json();
+          map[pl.id] = songs.map((s: any) => s.songId ?? s.id);
+        }
+      }
+      return map;
+    },
+  });
+
+  const addMut = useMutation({
+    mutationFn: async ({ playlistId }: { playlistId: number }) => {
+      await apiRequest("POST", `/api/playlists/${playlistId}/songs`, { songId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/playlists"] });
+      toast({ title: t('playlist.added', 'Agregado a playlist') });
+    },
+  });
+
+  const removeMut = useMutation({
+    mutationFn: async ({ playlistId }: { playlistId: number }) => {
+      await apiRequest("DELETE", `/api/playlists/${playlistId}/songs/${songId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/playlists"] });
+      toast({ title: t('playlist.removed', 'Removido de playlist') });
+    },
+  });
+
+  const createMut = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await apiRequest("POST", "/api/playlists", { name });
+      return res.json();
+    },
+    onSuccess: async (pl: any) => {
+      await apiRequest("POST", `/api/playlists/${pl.id}/songs`, { songId });
+      queryClient.invalidateQueries({ queryKey: ["/api/playlists"] });
+      setNewName("");
+      setShowCreate(false);
+      toast({ title: t('playlist.createdAndAdded', 'Playlist creada y canción agregada') });
+    },
+  });
+
+  const isSongIn = (plId: number) => (allPlaylistSongs[plId] || []).includes(songId);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 w-9 rounded-full text-muted-foreground hover:bg-white/5"
+          data-testid={`button-add-playlist-${songId}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <ListPlus className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-56 p-0 bg-black/95 border-white/10"
+        side="top"
+        align="center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-3 py-2 border-b border-white/5 flex items-center justify-between">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            {t('playlist.addTo', 'Agregar a Playlist')}
+          </span>
+          <button
+            onClick={() => setShowCreate(!showCreate)}
+            className="text-primary hover:text-primary/80 transition-colors"
+            data-testid="button-new-playlist"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+
+        {showCreate && (
+          <div className="px-3 py-2 border-b border-white/5 flex gap-2">
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder={t('playlist.newName', 'Nombre...')}
+              className="h-7 text-xs bg-white/5 border-white/10"
+              data-testid="input-new-playlist-name"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newName.trim()) createMut.mutate(newName.trim());
+              }}
+            />
+            <Button
+              size="sm"
+              className="h-7 px-2"
+              disabled={!newName.trim() || createMut.isPending}
+              onClick={() => createMut.mutate(newName.trim())}
+              data-testid="button-create-playlist-confirm"
+            >
+              {createMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+            </Button>
+          </div>
+        )}
+
+        <div className="max-h-[200px] overflow-auto py-1" style={{ scrollbarWidth: "thin" }}>
+          {playlists.length === 0 ? (
+            <div className="px-3 py-4 text-center">
+              <ListMusic className="h-5 w-5 text-muted-foreground/30 mx-auto mb-1" />
+              <p className="text-[11px] text-muted-foreground/50">{t('playlist.noPlaylists', 'Sin playlists aún')}</p>
+            </div>
+          ) : (
+            playlists.map((pl: any) => {
+              const inPlaylist = isSongIn(pl.id);
+              return (
+                <button
+                  key={pl.id}
+                  className={cn(
+                    "w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-white/5 transition-colors text-xs",
+                    inPlaylist && "text-primary"
+                  )}
+                  onClick={() => {
+                    if (inPlaylist) {
+                      removeMut.mutate({ playlistId: pl.id });
+                    } else {
+                      addMut.mutate({ playlistId: pl.id });
+                    }
+                  }}
+                  data-testid={`playlist-option-${pl.id}`}
+                >
+                  {inPlaylist ? (
+                    <Check className="h-3.5 w-3.5 flex-shrink-0" />
+                  ) : (
+                    <ListMusic className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/50" />
+                  )}
+                  <span className="truncate">{pl.name}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 }
