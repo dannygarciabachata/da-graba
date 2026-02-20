@@ -29,6 +29,8 @@ import {
   Plus,
   Check,
   ListMusic,
+  X,
+  Eye,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MashupDialog } from "@/components/MashupDialog";
@@ -275,6 +277,7 @@ export default function LibraryPage() {
                 onTogglePublish={() => togglePublishMut(activeSong.id)}
                 playHistory={playHistory}
                 onPlayFromHistory={playSong}
+                onRemoveFromHistory={(id: number) => setPlayHistory(prev => prev.filter((s: any) => s.id !== id))}
                 currentPlayingId={playerState.currentSong?.id}
                 currentTime={playerState.currentTime || 0}
               />
@@ -357,9 +360,9 @@ function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: 
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
               <Play className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity fill-current" />
             </div>
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1">
-              <span className="text-[8px] text-white/90 font-medium truncate block leading-tight">
-                {song.title || song.prompt?.substring(0, 15)}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-1.5">
+              <span className="text-[10px] text-white font-semibold truncate block leading-tight drop-shadow-lg">
+                {song.title || song.prompt?.substring(0, 20)}
               </span>
             </div>
             {i < 3 && (
@@ -392,6 +395,7 @@ function NowPlayingPanel({
   onTogglePublish,
   playHistory,
   onPlayFromHistory,
+  onRemoveFromHistory,
   currentPlayingId,
   currentTime,
 }: {
@@ -403,6 +407,7 @@ function NowPlayingPanel({
   onTogglePublish: () => void;
   playHistory: any[];
   onPlayFromHistory: (s: any) => void;
+  onRemoveFromHistory: (songId: number) => void;
   currentPlayingId?: number;
   currentTime: number;
 }) {
@@ -436,7 +441,13 @@ function NowPlayingPanel({
           )}
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
             <h3 className="text-sm font-bold text-white truncate">{songTitle}</h3>
-            <p className="text-xs text-white/60">{song.artistName || song.genre || "DA GRABA"}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-white/60">{song.artistName || song.genre || "DA GRABA"}</p>
+              <span className="flex items-center gap-1 text-[10px] text-white/40">
+                <Eye className="h-3 w-3" />
+                {song.playCount ?? 0}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -531,7 +542,7 @@ function NowPlayingPanel({
                 <div
                   key={s.id}
                   className={cn(
-                    "flex items-center gap-2 p-1.5 rounded-lg cursor-pointer transition-all",
+                    "flex items-center gap-2 p-1.5 rounded-lg cursor-pointer transition-all group",
                     isCurr ? "bg-primary/10" : "hover:bg-white/5"
                   )}
                   onClick={() => onPlayFromHistory(s)}
@@ -552,6 +563,13 @@ function NowPlayingPanel({
                     </p>
                     <p className="text-[9px] text-muted-foreground/40">{s.genre || "DA GRABA"}</p>
                   </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onRemoveFromHistory(s.id); }}
+                    className="flex-shrink-0 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-white/10 transition-all text-muted-foreground/40 hover:text-destructive"
+                    data-testid={`button-remove-history-${s.id}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
                 </div>
               );
             })
