@@ -269,3 +269,58 @@
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* Vertical range slider for trending carousel */
+.trending-range-slider {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 100%;
+  background: transparent;
+  cursor: pointer;
+}
+.trending-range-slider::-webkit-slider-runnable-track {
+  width: 4px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+.trending-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 28px;
+  background: #ff751f;
+  border-radius: 7px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  margin-left: -5px;
+  cursor: grab;
+  box-shadow: 0 2px 6px rgba(255, 117, 31, 0.4);
+}
+.trending-range-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  background: #ff8f4f;
+  transform: scale(1.1);
+}
+.trending-range-slider::-moz-range-track {
+  width: 4px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  border: none;
+}
+.trending-range-slider::-moz-range-thumb {
+  width: 14px;
+  height: 28px;
+  background: #ff751f;
+  border-radius: 7px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  cursor: grab;
+  box-shadow: 0 2px 6px rgba(255, 117, 31, 0.4);
+}
+.trending-range-slider::-moz-range-thumb:active {
+  cursor: grabbing;
+  background: #ff8f4f;
+}

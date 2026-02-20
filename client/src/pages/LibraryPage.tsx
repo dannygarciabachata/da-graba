@@ -306,50 +306,27 @@ export default function LibraryPage() {
 
 function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: (s: any) => void; currentId?: number }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrollPercent, setScrollPercent] = useState(0);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
-
-  const updateScrollPercent = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el || el.scrollHeight <= el.clientHeight) { setScrollPercent(0); return; }
-    setScrollPercent(el.scrollTop / (el.scrollHeight - el.clientHeight));
-  }, []);
+  const [rangeValue, setRangeValue] = useState(0);
 
   useEffect(() => {
     const el = scrollRef.current;
-    el?.addEventListener("scroll", updateScrollPercent);
-    return () => el?.removeEventListener("scroll", updateScrollPercent);
-  }, [updateScrollPercent, songs]);
+    if (!el) return;
+    const onScroll = () => {
+      const max = el.scrollHeight - el.clientHeight;
+      if (max <= 0) return;
+      setRangeValue(Math.round((el.scrollTop / max) * 100));
+    };
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [songs]);
 
-  const handleTrackInteraction = useCallback((clientY: number) => {
-    const track = trackRef.current;
+  const handleRange = (val: number) => {
+    setRangeValue(val);
     const el = scrollRef.current;
-    if (!track || !el) return;
-    const rect = track.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
-    el.scrollTop = pct * (el.scrollHeight - el.clientHeight);
-  }, []);
-
-  const onThumbMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    dragging.current = true;
-    const onMove = (ev: MouseEvent) => { if (dragging.current) handleTrackInteraction(ev.clientY); };
-    const onUp = () => { dragging.current = false; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }, [handleTrackInteraction]);
-
-  const onThumbTouchStart = useCallback((e: React.TouchEvent) => {
-    dragging.current = true;
-    const onMove = (ev: TouchEvent) => { if (dragging.current) handleTrackInteraction(ev.touches[0].clientY); };
-    const onEnd = () => { dragging.current = false; window.removeEventListener("touchmove", onMove); window.removeEventListener("touchend", onEnd); };
-    window.addEventListener("touchmove", onMove, { passive: true });
-    window.addEventListener("touchend", onEnd);
-  }, [handleTrackInteraction]);
-
-  const hasOverflow = songs.length > 2;
-  const thumbHeight = hasOverflow ? Math.max(20, 100 / songs.length) : 0;
+    if (!el) return;
+    const max = el.scrollHeight - el.clientHeight;
+    el.scrollTop = (val / 100) * max;
+  };
 
   if (!songs.length) return (
     <div className="flex-1 flex items-center justify-center p-3">
@@ -359,7 +336,7 @@ function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: 
 
   return (
     <div className="flex-1 flex overflow-hidden">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain py-2 px-2 space-y-2.5" style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as any}>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain py-2 px-2 space-y-2.5" style={{ scrollbarWidth: "none" } as any}>
         {songs.map((song: any, i: number) => (
           <motion.div
             key={song.id}
@@ -404,23 +381,16 @@ function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: 
         ))}
       </div>
 
-      {hasOverflow && (
-        <div
-          ref={trackRef}
-          className="w-3 flex-shrink-0 relative cursor-pointer my-2"
-          onClick={(e) => handleTrackInteraction(e.clientY)}
-          data-testid="trending-scrollbar-track"
-        >
-          <div className="absolute inset-x-[3px] inset-y-0 rounded-full bg-white/10" />
-          <div
-            className="absolute inset-x-[2px] rounded-full bg-primary/70 hover:bg-primary transition-colors cursor-grab active:cursor-grabbing"
-            style={{
-              height: `${thumbHeight}%`,
-              top: `${scrollPercent * (100 - thumbHeight)}%`,
-            }}
-            onMouseDown={onThumbMouseDown}
-            onTouchStart={onThumbTouchStart}
-            data-testid="trending-scrollbar-thumb"
+      {songs.length > 2 && (
+        <div className="w-5 flex-shrink-0 flex items-center justify-center">
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={rangeValue}
+            onChange={(e) => handleRange(Number(e.target.value))}
+            className="trending-range-slider"
+            data-testid="trending-range-slider"
           />
         </div>
       )}
