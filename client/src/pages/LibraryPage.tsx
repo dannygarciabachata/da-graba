@@ -304,17 +304,11 @@ function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: 
     return () => el?.removeEventListener("scroll", checkScroll);
   }, [checkScroll, songs]);
 
-  useEffect(() => {
+  const scrollBy = (dir: number) => {
     const el = scrollRef.current;
-    if (!el || songs.length < 3) return;
-    let pos = 0;
-    const interval = setInterval(() => {
-      pos += 130;
-      if (pos >= el.scrollHeight - el.clientHeight) pos = 0;
-      el.scrollTo({ top: pos, behavior: "smooth" });
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [songs]);
+    if (!el) return;
+    el.scrollBy({ top: dir * 130, behavior: "smooth" });
+  };
 
   if (!songs.length) return (
     <div className="flex-1 flex items-center justify-center p-3">
@@ -325,9 +319,13 @@ function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: 
   return (
     <div className="flex-1 relative">
       {canScrollUp && (
-        <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-black/40 to-transparent z-10 flex items-center justify-center">
-          <ChevronUp className="h-3 w-3 text-white/60" />
-        </div>
+        <button
+          onClick={() => scrollBy(-1)}
+          className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-black/60 to-transparent z-10 flex items-center justify-center cursor-pointer hover:from-black/80 transition-all"
+          data-testid="trending-scroll-up"
+        >
+          <ChevronUp className="h-4 w-4 text-white/80" />
+        </button>
       )}
       <div ref={scrollRef} className="h-full overflow-auto py-2 px-3 space-y-2.5" style={{ scrollbarWidth: "none" }}>
         {songs.map((song: any, i: number) => (
@@ -366,9 +364,13 @@ function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: 
         ))}
       </div>
       {canScrollDown && (
-        <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-black/40 to-transparent z-10 flex items-center justify-center">
-          <ChevronDown className="h-3 w-3 text-white/60" />
-        </div>
+        <button
+          onClick={() => scrollBy(1)}
+          className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/60 to-transparent z-10 flex items-center justify-center cursor-pointer hover:from-black/80 transition-all"
+          data-testid="trending-scroll-down"
+        >
+          <ChevronDown className="h-4 w-4 text-white/80" />
+        </button>
       )}
     </div>
   );
