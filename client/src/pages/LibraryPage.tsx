@@ -23,6 +23,8 @@ import {
   Lock,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   TrendingUp,
   ListPlus,
@@ -150,19 +152,18 @@ export default function LibraryPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex" style={{ minHeight: 0 }}>
+      <div className="flex-1 overflow-hidden flex flex-col" style={{ minHeight: 0 }}>
 
-        {/* ===== LEFT: Trending Carousel (header fixed, covers scroll independently) ===== */}
-        <div className="hidden lg:flex flex-col w-[140px] flex-shrink-0 border-r border-white/5 bg-black/10" style={{ minHeight: 0 }} data-testid="library-trending-panel">
-          <div className="flex items-center gap-1.5 px-3 py-3 border-b border-white/5 flex-shrink-0">
-            <TrendingUp className="h-3.5 w-3.5 text-primary" />
-            <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">Top</span>
-          </div>
+        {/* ===== TOP: Trending Horizontal Carousel ===== */}
+        {trendingSongs.length > 0 && (
           <TrendingCarousel songs={trendingSongs} onPlay={playSong} currentId={playerState.currentSong?.id} />
-        </div>
+        )}
 
-        {/* ===== CENTER: Song List (only this scrolls) ===== */}
-        <div className="flex-1 min-w-0" style={{ overflowY: "auto", overflowX: "hidden", scrollbarWidth: "none", height: "100%" }} data-testid="library-song-list">
+        {/* ===== BOTTOM: Song List + Now Playing ===== */}
+        <div className="flex-1 overflow-hidden flex" style={{ minHeight: 0 }}>
+
+          {/* ===== Song List ===== */}
+          <div className="flex-1 min-w-0" style={{ overflowY: "auto", overflowX: "hidden", scrollbarWidth: "none", height: "100%" }} data-testid="library-song-list">
           <div className="px-3 md:px-4 py-2 space-y-1">
             {isLoading ? (
               <div className="flex justify-center py-16">
@@ -294,6 +295,7 @@ export default function LibraryPage() {
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </div>
 
       <MashupDialog
@@ -306,60 +308,75 @@ export default function LibraryPage() {
 }
 
 function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: (s: any) => void; currentId?: number }) {
-  if (!songs.length) return (
-    <div className="flex-1 flex items-center justify-center p-3">
-      <span className="text-[10px] text-muted-foreground/50 text-center">Sin tendencias aún</span>
-    </div>
-  );
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (dir: number) => {
+    scrollRef.current?.scrollBy({ left: dir * 200, behavior: "smooth" });
+  };
+
+  if (!songs.length) return null;
 
   return (
-    <div
-      className="flex-1 overscroll-contain py-2 px-2 space-y-2.5"
-      style={{ overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin", minHeight: 0 }}
-      data-testid="trending-scroll-container"
-    >
-      {songs.map((song: any, i: number) => (
-        <motion.div
-          key={song.id}
-          className={cn(
-            "relative w-[110px] h-[110px] rounded-lg overflow-hidden cursor-pointer mx-auto group",
-            currentId === song.id && "ring-2 ring-primary"
-          )}
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => onPlay(song)}
-          data-testid={`trending-cover-${song.id}`}
-        >
-          {song.imageUrl ? (
-            <img src={song.imageUrl} alt={song.title} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-primary/30 to-indigo-900/60 flex items-center justify-center">
-              <Music className="h-5 w-5 text-white/50" />
+    <div className="flex-shrink-0 border-b border-white/5 bg-black/10 px-3 md:px-4 py-3" data-testid="library-trending-panel">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-primary" />
+          <span className="text-xs font-bold uppercase tracking-wider text-primary">Top</span>
+        </div>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-white/10" onClick={() => scroll(-1)} data-testid="button-trending-left">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-white/10" onClick={() => scroll(1)} data-testid="button-trending-right">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      <div
+        ref={scrollRef}
+        className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
+        style={{ scrollbarWidth: "none" }}
+        data-testid="trending-scroll-container"
+      >
+        {songs.map((song: any, i: number) => (
+          <motion.div
+            key={song.id}
+            className={cn(
+              "relative min-w-[120px] w-[120px] h-[120px] rounded-xl overflow-hidden cursor-pointer snap-start group flex-shrink-0",
+              currentId === song.id && "ring-2 ring-primary"
+            )}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => onPlay(song)}
+            data-testid={`trending-cover-${song.id}`}
+          >
+            {song.imageUrl ? (
+              <img src={song.imageUrl} alt={song.title} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-primary/30 to-indigo-900/60 flex items-center justify-center">
+                <Music className="h-6 w-6 text-white/40" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+              <Play className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity fill-current" />
             </div>
-          )}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
-            <Play className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity fill-current" />
-          </div>
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-1.5">
-            <span className="text-[10px] text-white font-semibold truncate block leading-tight drop-shadow-lg">
-              {song.title || song.prompt?.substring(0, 20)}
-            </span>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              {(song.likes > 0 || song.playCount > 0) && (
-                <>
-                  {song.likes > 0 && <span className="text-[8px] text-white/70 flex items-center gap-0.5"><Heart className="h-2 w-2" />{song.likes}</span>}
-                  {song.playCount > 0 && <span className="text-[8px] text-white/70 flex items-center gap-0.5"><Eye className="h-2 w-2" />{song.playCount}</span>}
-                </>
-              )}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">
+              <span className="text-[11px] text-white font-semibold truncate block leading-tight drop-shadow-lg">
+                {song.title || song.prompt?.substring(0, 20)}
+              </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {song.likes > 0 && <span className="text-[9px] text-white/70 flex items-center gap-0.5"><Heart className="h-2.5 w-2.5" />{song.likes}</span>}
+                {song.playCount > 0 && <span className="text-[9px] text-white/70 flex items-center gap-0.5"><Eye className="h-2.5 w-2.5" />{song.playCount}</span>}
+              </div>
             </div>
-          </div>
-          {i < 3 && (
-            <div className="absolute top-1 left-1 bg-primary/90 text-[8px] font-bold text-white rounded px-1">
-              #{i + 1}
-            </div>
-          )}
-        </motion.div>
-      ))}
+            {i < 3 && (
+              <div className="absolute top-1.5 left-1.5 bg-primary/90 text-[9px] font-bold text-white rounded-md px-1.5 py-0.5">
+                #{i + 1}
+              </div>
+            )}
+          </motion.div>
+        ))}
+      </div>
     </div>
   );
 }
