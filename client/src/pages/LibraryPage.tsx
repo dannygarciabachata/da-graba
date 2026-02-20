@@ -306,159 +306,60 @@ export default function LibraryPage() {
 }
 
 function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: (s: any) => void; currentId?: number }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [thumbTop, setThumbTop] = useState(0);
-  const isDragging = useRef(false);
-  const dragStartY = useRef(0);
-  const dragStartThumb = useRef(0);
-
-  const getScrollRatio = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return 0;
-    const max = el.scrollHeight - el.clientHeight;
-    return max > 0 ? el.scrollTop / max : 0;
-  }, []);
-
-  const getTrackHeight = useCallback(() => {
-    const track = trackRef.current;
-    if (!track) return 0;
-    const thumbH = 40;
-    return track.clientHeight - thumbH;
-  }, []);
-
-  const syncThumbFromScroll = useCallback(() => {
-    setThumbTop(getScrollRatio() * getTrackHeight());
-  }, [getScrollRatio, getTrackHeight]);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", syncThumbFromScroll);
-    syncThumbFromScroll();
-    return () => el.removeEventListener("scroll", syncThumbFromScroll);
-  }, [syncThumbFromScroll, songs]);
-
-  const scrollToRatio = useCallback((ratio: number) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const clamped = Math.max(0, Math.min(1, ratio));
-    el.scrollTop = clamped * (el.scrollHeight - el.clientHeight);
-  }, []);
-
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    isDragging.current = true;
-    dragStartY.current = e.clientY;
-    dragStartThumb.current = thumbTop;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [thumbTop]);
-
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isDragging.current) return;
-    e.preventDefault();
-    const dy = e.clientY - dragStartY.current;
-    const trackH = getTrackHeight();
-    if (trackH <= 0) return;
-    const newTop = Math.max(0, Math.min(trackH, dragStartThumb.current + dy));
-    setThumbTop(newTop);
-    scrollToRatio(newTop / trackH);
-  }, [getTrackHeight, scrollToRatio]);
-
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    isDragging.current = false;
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-  }, []);
-
-  const handleTrackClick = useCallback((e: React.MouseEvent) => {
-    const track = trackRef.current;
-    if (!track) return;
-    const rect = track.getBoundingClientRect();
-    const clickY = e.clientY - rect.top - 20;
-    const trackH = getTrackHeight();
-    if (trackH <= 0) return;
-    const ratio = Math.max(0, Math.min(1, clickY / trackH));
-    scrollToRatio(ratio);
-  }, [getTrackHeight, scrollToRatio]);
-
   if (!songs.length) return (
     <div className="flex-1 flex items-center justify-center p-3">
       <span className="text-[10px] text-muted-foreground/50 text-center">Sin tendencias aún</span>
     </div>
   );
 
-  const showSlider = songs.length > 2;
-
   return (
-    <div className="flex-1 flex overflow-hidden" style={{ minHeight: 0 }}>
-      <div
-        ref={scrollRef}
-        className="flex-1 overscroll-contain py-2 px-2 space-y-2.5"
-        style={{ overflowY: "auto", overflowX: "hidden", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as any}
-      >
-        {songs.map((song: any, i: number) => (
-          <motion.div
-            key={song.id}
-            className={cn(
-              "relative w-[110px] h-[110px] rounded-lg overflow-hidden cursor-pointer mx-auto group",
-              currentId === song.id && "ring-2 ring-primary"
-            )}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => onPlay(song)}
-            data-testid={`trending-cover-${song.id}`}
-          >
-            {song.imageUrl ? (
-              <img src={song.imageUrl} alt={song.title} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-primary/30 to-indigo-900/60 flex items-center justify-center">
-                <Music className="h-5 w-5 text-white/50" />
-              </div>
-            )}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
-              <Play className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity fill-current" />
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-1.5">
-              <span className="text-[10px] text-white font-semibold truncate block leading-tight drop-shadow-lg">
-                {song.title || song.prompt?.substring(0, 20)}
-              </span>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                {(song.likes > 0 || song.playCount > 0) && (
-                  <>
-                    {song.likes > 0 && <span className="text-[8px] text-white/70 flex items-center gap-0.5"><Heart className="h-2 w-2" />{song.likes}</span>}
-                    {song.playCount > 0 && <span className="text-[8px] text-white/70 flex items-center gap-0.5"><Eye className="h-2 w-2" />{song.playCount}</span>}
-                  </>
-                )}
-              </div>
-            </div>
-            {i < 3 && (
-              <div className="absolute top-1 left-1 bg-primary/90 text-[8px] font-bold text-white rounded px-1">
-                #{i + 1}
-              </div>
-            )}
-          </motion.div>
-        ))}
-      </div>
-
-      {showSlider && (
-        <div
-          ref={trackRef}
-          className="w-4 flex-shrink-0 relative my-2 mr-0.5"
-          onClick={handleTrackClick}
-          data-testid="trending-scrollbar-track"
+    <div
+      className="flex-1 overscroll-contain py-2 px-2 space-y-2.5"
+      style={{ overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin", minHeight: 0 }}
+      data-testid="trending-scroll-container"
+    >
+      {songs.map((song: any, i: number) => (
+        <motion.div
+          key={song.id}
+          className={cn(
+            "relative w-[110px] h-[110px] rounded-lg overflow-hidden cursor-pointer mx-auto group",
+            currentId === song.id && "ring-2 ring-primary"
+          )}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => onPlay(song)}
+          data-testid={`trending-cover-${song.id}`}
         >
-          <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[3px] rounded-full bg-white/10" />
-          <div
-            className="absolute left-1/2 -translate-x-1/2 w-[10px] h-[40px] rounded-full bg-primary shadow-lg shadow-primary/30 hover:bg-primary/90 transition-colors select-none touch-none"
-            style={{ top: `${thumbTop}px`, cursor: isDragging.current ? "grabbing" : "grab" }}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            data-testid="trending-scrollbar-thumb"
-          />
-        </div>
-      )}
+          {song.imageUrl ? (
+            <img src={song.imageUrl} alt={song.title} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/30 to-indigo-900/60 flex items-center justify-center">
+              <Music className="h-5 w-5 text-white/50" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+            <Play className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity fill-current" />
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-1.5">
+            <span className="text-[10px] text-white font-semibold truncate block leading-tight drop-shadow-lg">
+              {song.title || song.prompt?.substring(0, 20)}
+            </span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {(song.likes > 0 || song.playCount > 0) && (
+                <>
+                  {song.likes > 0 && <span className="text-[8px] text-white/70 flex items-center gap-0.5"><Heart className="h-2 w-2" />{song.likes}</span>}
+                  {song.playCount > 0 && <span className="text-[8px] text-white/70 flex items-center gap-0.5"><Eye className="h-2 w-2" />{song.playCount}</span>}
+                </>
+              )}
+            </div>
+          </div>
+          {i < 3 && (
+            <div className="absolute top-1 left-1 bg-primary/90 text-[8px] font-bold text-white rounded px-1">
+              #{i + 1}
+            </div>
+          )}
+        </motion.div>
+      ))}
     </div>
   );
 }
