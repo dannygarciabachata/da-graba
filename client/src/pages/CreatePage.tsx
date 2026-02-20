@@ -66,6 +66,16 @@ import {
   Repeat,
   Shuffle,
   CheckSquare,
+  Home,
+  Disc3,
+  Library,
+  Headphones,
+  Store,
+  Mic2,
+  Radio,
+  LayoutDashboard,
+  Settings,
+  TrendingUp,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -212,68 +222,74 @@ const GENRE_VALUE_TO_SLUG: Record<string, string> = Object.fromEntries(
 
 type CreationMode = "song" | "sound" | "speak";
 
+function SidebarNavItem({ icon: Icon, label, href, active }: { icon: any; label: string; href: string; active?: boolean }) {
+  const [, setLocation] = useLocation();
+  return (
+    <button
+      onClick={() => setLocation(href)}
+      className={cn(
+        "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all",
+        active
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+      )}
+      data-testid={`nav-${href.replace("/", "")}`}
+    >
+      <Icon className="h-4 w-4 flex-shrink-0" />
+      {label}
+    </button>
+  );
+}
+
 function GenreCarousel({ selectedGenre, onSelect }: { selectedGenre: string; onSelect: (v: string) => void }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrollProgress, setScrollProgress] = useState(0);
-
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const max = el.scrollHeight - el.clientHeight;
-    setScrollProgress(max > 0 ? el.scrollTop / max : 0);
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    handleScroll();
-    el.addEventListener("scroll", handleScroll, { passive: true });
-    return () => el.removeEventListener("scroll", handleScroll);
-  }, [handleScroll]);
+  const [openCat, setOpenCat] = useState<string | null>(null);
 
   return (
-    <div className="relative" data-testid="genre-carousel">
-      <div
-        ref={scrollRef}
-        className="max-h-[300px] overflow-y-auto pr-3 space-y-3 py-1"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-      >
+    <div data-testid="genre-carousel">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
         {GENRE_CATEGORIES.map((cat) => (
-          <div key={cat.category} data-testid={`genre-category-${cat.category}`}>
-            <div className="flex items-center gap-1.5 mb-2 px-1 sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-1 -mt-1">
-              <span className="text-sm">{cat.icon}</span>
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{cat.category}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-1.5">
-              {cat.genres.map((genre) => (
-                <button
-                  key={genre.value}
-                  className={cn(
-                    "px-2 py-2 rounded-lg border text-[11px] font-medium transition-all text-center truncate",
-                    selectedGenre === genre.value
-                      ? (genre as any).accent
-                        ? "border-primary bg-primary/15 text-primary shadow-[0_0_12px_rgba(255,117,31,0.2)]"
-                        : "border-primary bg-primary/10 text-primary"
-                      : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground hover:bg-white/[0.04]"
-                  )}
-                  onClick={() => onSelect(genre.value)}
-                  data-testid={`genre-chip-${genre.value}`}
-                >
-                  {genre.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <Popover key={cat.category} open={openCat === cat.category} onOpenChange={(open) => setOpenCat(open ? cat.category : null)}>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  "flex-shrink-0 h-8 px-3 rounded-full border text-[11px] font-medium transition-all flex items-center gap-1.5 whitespace-nowrap",
+                  cat.genres.some((g) => selectedGenre === g.value)
+                    ? "border-primary bg-primary/15 text-primary"
+                    : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground"
+                )}
+                data-testid={`genre-category-${cat.category}`}
+              >
+                <span>{cat.icon}</span>
+                {cat.category}
+                <ChevronDown className="h-3 w-3 opacity-50" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-48 p-1.5" sideOffset={6}>
+              <div className="space-y-0.5">
+                {cat.genres.map((genre) => (
+                  <button
+                    key={genre.value}
+                    className={cn(
+                      "w-full text-left px-3 py-2 rounded-md text-xs font-medium transition-all",
+                      selectedGenre === genre.value
+                        ? (genre as any).accent
+                          ? "bg-primary/15 text-primary"
+                          : "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                    )}
+                    onClick={() => {
+                      onSelect(genre.value);
+                      setOpenCat(null);
+                    }}
+                    data-testid={`genre-chip-${genre.value}`}
+                  >
+                    {genre.label}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         ))}
-      </div>
-
-      <div className="absolute top-1 right-0 bottom-1 w-1.5 rounded-full bg-white/5">
-        <motion.div
-          className="w-full rounded-full bg-primary/40"
-          style={{ height: "20%" }}
-          animate={{ top: `${scrollProgress * 80}%` }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        />
       </div>
     </div>
   );
@@ -803,12 +819,43 @@ export default function CreatePage() {
   return (
     <div className="h-full flex flex-col">
 
-        {/* ====== DESKTOP: 2-column Figma-style layout ====== */}
-        <div className="hidden lg:block flex-1 overflow-y-auto" data-testid="desktop-layout">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="grid lg:grid-cols-2 gap-8">
+        {/* ====== DESKTOP: Nav + Create + Tracks layout ====== */}
+        <div className="hidden lg:flex flex-1 overflow-hidden" data-testid="desktop-layout">
 
-          {/* ===== LEFT: Create Panel with glow ===== */}
+          {/* ===== NAV SIDEBAR ===== */}
+          <nav className="w-[200px] flex-shrink-0 border-r border-white/5 bg-black/20 overflow-y-auto py-6 px-3" data-testid="create-nav-sidebar">
+            <div className="space-y-1 mb-6">
+              <SidebarNavItem icon={Home} label={t('nav.home', 'Inicio')} href="/home" />
+              <SidebarNavItem icon={Sparkles} label={t('nav.create', 'Crear')} href="/create" active />
+              <SidebarNavItem icon={Library} label={t('nav.library', 'Biblioteca')} href="/library" />
+              <SidebarNavItem icon={Disc3} label={t('nav.discover', 'Descubrir')} href="/discover" />
+              <SidebarNavItem icon={ListMusic} label={t('nav.playlists', 'Playlists')} href="/my-playlists" />
+            </div>
+            <div className="text-[9px] uppercase tracking-widest text-muted-foreground/40 px-3 mb-2">{t('nav.tools', 'Herramientas')}</div>
+            <div className="space-y-1 mb-6">
+              <SidebarNavItem icon={Headphones} label="Studio DAW" href="/studio" />
+              <SidebarNavItem icon={Mic2} label="Sample Lab" href="/sample-lab" />
+              <SidebarNavItem icon={Wand2} label={t('nav.lyrics', 'Letras AI')} href="/lyrics" />
+              <SidebarNavItem icon={Radio} label={t('nav.audioTools', 'Audio Tools')} href="/audio-tools" />
+            </div>
+            <div className="text-[9px] uppercase tracking-widest text-muted-foreground/40 px-3 mb-2">{t('nav.artist', 'Artista')}</div>
+            <div className="space-y-1 mb-6">
+              <SidebarNavItem icon={TrendingUp} label="Dashboard" href="/artist-dashboard" />
+              <SidebarNavItem icon={Store} label={t('nav.store', 'Tienda')} href="/producer-store" />
+              <SidebarNavItem icon={LayoutDashboard} label={t('nav.styleKits', 'Style Kits')} href="/style-kits" />
+            </div>
+            <div className="text-[9px] uppercase tracking-widest text-muted-foreground/40 px-3 mb-2">{t('nav.more', 'Más')}</div>
+            <div className="space-y-1">
+              <SidebarNavItem icon={Settings} label={t('nav.pricing', 'Planes')} href="/pricing" />
+            </div>
+          </nav>
+
+          {/* ===== MAIN CONTENT ===== */}
+          <div className="flex-1 overflow-y-auto">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-6">
+
+          {/* ===== CREATE PANEL ===== */}
           <div className="relative" data-testid="creation-panel">
             <div className="absolute -inset-1 bg-gradient-to-r from-orange-600 to-indigo-600 rounded-2xl blur-xl opacity-20" />
             <div className="relative bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-white/10 rounded-2xl p-8 overflow-y-auto max-h-[calc(100vh-180px)]">
@@ -1526,8 +1573,8 @@ export default function CreatePage() {
             </div>
           </div>
           </div>
-
-            </div>
+          </div>
+          </div>
           </div>
         </div>
 
