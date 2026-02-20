@@ -135,7 +135,7 @@ export default function LibraryPage() {
       <div className="flex-1 overflow-hidden flex">
 
         {/* ===== LEFT: Trending Carousel ===== */}
-        <div className="hidden lg:flex flex-col w-[100px] flex-shrink-0 border-r border-white/5 bg-black/10" data-testid="library-trending-panel">
+        <div className="hidden lg:flex flex-col w-[140px] flex-shrink-0 border-r border-white/5 bg-black/10" data-testid="library-trending-panel">
           <div className="flex items-center gap-1.5 px-3 py-3 border-b border-white/5">
             <TrendingUp className="h-3.5 w-3.5 text-primary" />
             <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">Top</span>
@@ -145,7 +145,7 @@ export default function LibraryPage() {
 
         {/* ===== CENTER: Song List ===== */}
         <div className="flex-1 overflow-auto min-w-0" data-testid="library-song-list">
-          <div className="px-3 md:px-4 py-4 space-y-1.5">
+          <div className="px-3 md:px-4 py-2 space-y-1">
             {isLoading ? (
               <div className="flex justify-center py-16">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -169,7 +169,7 @@ export default function LibraryPage() {
                   <Card
                     key={song.id}
                     className={cn(
-                      "p-3 cursor-pointer transition-all duration-200 border-white/5",
+                      "p-2 cursor-pointer transition-all duration-200 border-white/5",
                       isSelected
                         ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
                         : isCurrent
@@ -179,28 +179,28 @@ export default function LibraryPage() {
                     onClick={() => playSong(song)}
                     data-testid={`card-library-song-${song.id}`}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
                       <div className={cn(
-                        "relative w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden",
+                        "relative w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden",
                         song.status === "completed" ? "bg-primary/10" : "bg-white/5"
                       )}>
                         {song.imageUrl ? (
-                          <img src={song.imageUrl} alt={song.title} className="w-10 h-10 object-cover rounded-lg" />
+                          <img src={song.imageUrl} alt={song.title} className="w-8 h-8 object-cover rounded-md" />
                         ) : song.status === "completed" ? (
-                          isPlaying ? null : <Play className="h-4 w-4 text-primary fill-current" />
+                          isPlaying ? null : <Play className="h-3.5 w-3.5 text-primary fill-current" />
                         ) : song.status === "processing" ? (
-                          <Loader2 className="h-4 w-4 text-yellow-500 animate-spin" />
+                          <Loader2 className="h-3.5 w-3.5 text-yellow-500 animate-spin" />
                         ) : (
-                          <AlertCircle className="h-4 w-4 text-destructive" />
+                          <AlertCircle className="h-3.5 w-3.5 text-destructive" />
                         )}
                         <AudioSpectrum songId={song.id} barCount={4} />
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium truncate">
+                        <h4 className="text-[13px] font-medium truncate leading-tight">
                           {song.variationLabel ? `${song.title || song.prompt} (${song.variationLabel})` : (song.title || song.prompt)}
                         </h4>
-                        <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground mt-0.5">
+                        <div className="flex items-center gap-2 flex-wrap text-[10px] text-muted-foreground mt-0.5">
                           {isCurrent && (
                             <span className="text-primary font-medium flex items-center gap-1">
                               {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
@@ -309,7 +309,7 @@ function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: 
     if (!el || songs.length < 3) return;
     let pos = 0;
     const interval = setInterval(() => {
-      pos += 86;
+      pos += 130;
       if (pos >= el.scrollHeight - el.clientHeight) pos = 0;
       el.scrollTo({ top: pos, behavior: "smooth" });
     }, 4000);
@@ -329,12 +329,12 @@ function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: 
           <ChevronUp className="h-3 w-3 text-white/60" />
         </div>
       )}
-      <div ref={scrollRef} className="h-full overflow-auto py-2 px-2 space-y-2" style={{ scrollbarWidth: "none" }}>
+      <div ref={scrollRef} className="h-full overflow-auto py-2 px-3 space-y-2.5" style={{ scrollbarWidth: "none" }}>
         {songs.map((song: any, i: number) => (
           <motion.div
             key={song.id}
             className={cn(
-              "relative w-[76px] h-[76px] rounded-lg overflow-hidden cursor-pointer mx-auto group",
+              "relative w-[116px] h-[116px] rounded-lg overflow-hidden cursor-pointer mx-auto group",
               currentId === song.id && "ring-2 ring-primary"
             )}
             whileHover={{ scale: 1.08 }}
