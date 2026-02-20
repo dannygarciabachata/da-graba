@@ -162,7 +162,7 @@ export default function LibraryPage() {
         </div>
 
         {/* ===== CENTER: Song List ===== */}
-        <div className="flex-1 overflow-auto min-w-0" data-testid="library-song-list">
+        <div className="flex-1 overflow-auto min-w-0" style={{ scrollbarWidth: "none" }} data-testid="library-song-list">
           <div className="px-3 md:px-4 py-2 space-y-1">
             {isLoading ? (
               <div className="flex justify-center py-16">
@@ -456,9 +456,9 @@ function NowPlayingPanel({
               <Music className="h-16 w-16 text-white/20" />
             </div>
           )}
-          <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-full px-2.5 py-1 z-10">
-            <Eye className="h-3.5 w-3.5 text-white/90" />
-            <span className="text-xs font-semibold text-white">{(song.playCount ?? 0).toLocaleString()}</span>
+          <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/70 backdrop-blur-md rounded-full px-3 py-1.5 z-10 shadow-lg">
+            <Eye className="h-4 w-4 text-primary" />
+            <span className="text-sm font-bold text-white">{(song.playCount ?? 0).toLocaleString()}</span>
           </div>
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
             <h3 className="text-sm font-bold text-white truncate">{songTitle}</h3>
