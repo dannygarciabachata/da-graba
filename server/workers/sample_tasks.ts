@@ -15,7 +15,6 @@ import {
 import {
   canUseKie, submitKieExtend, pollKieTask,
 } from "../core/kie_engine";
-import { textToSpeech } from "../replit_integrations/audio/client";
 import fs from "fs";
 import path from "path";
 
@@ -435,50 +434,19 @@ export async function processTTS(
       if (!pollResult.audioUrl) throw new Error("TTS completed but no audio URL returned");
       localUrl = await downloadFile(pollResult.audioUrl, "tts", "speech");
     } else {
-      const voiceMap: Record<string, "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer"> = {
-        "male_1": "onyx", "male_2": "echo", "male_3": "fable",
-        "female_1": "nova", "female_2": "shimmer", "female_3": "alloy",
+      const voiceMap: Record<string, string> = {
+        "male_1": "Adam", "male_2": "Antoni", "male_3": "Josh",
+        "female_1": "Rachel", "female_2": "Bella", "female_3": "Elli",
       };
-      const voice = (voiceId && voiceMap[voiceId]) ? voiceMap[voiceId] : "nova";
+      const voice = (voiceId && voiceMap[voiceId]) ? voiceMap[voiceId] : "Rachel";
+      console.log(`[TTSWorker] Using Kie.ai ElevenLabs TTS voice: ${voice}`);
 
-      const audioDir = path.join(process.cwd(), "audio", "tts");
-      if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
-      const filename = `speech_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.mp3`;
-      const filePath = path.join(audioDir, filename);
-
-      let audioBuffer: Buffer | null = null;
-
-      // Try AI integrations (gpt-audio) first
-      try {
-        console.log(`[TTSWorker] Trying AI integrations gpt-audio TTS voice: ${voice}`);
-        audioBuffer = await textToSpeech(text, voice, "mp3");
-        if (!audioBuffer || audioBuffer.length === 0) throw new Error("Empty audio returned");
-        console.log(`[TTSWorker] AI integrations TTS succeeded (${audioBuffer.length} bytes)`);
-      } catch (aiErr: any) {
-        console.warn(`[TTSWorker] AI integrations TTS failed: ${aiErr.message}`);
-      }
-
-      // Fallback: direct OpenAI tts-1 API with user's own key
-      if (!audioBuffer || audioBuffer.length === 0) {
-        const directKey = process.env.OPENAI_API_KEY;
-        if (!directKey) throw new Error("TTS unavailable: AI integrations failed and no OPENAI_API_KEY configured");
-        console.log(`[TTSWorker] Falling back to direct OpenAI tts-1 with voice: ${voice}`);
-        const OpenAI = (await import("openai")).default;
-        const directClient = new OpenAI({ apiKey: directKey });
-        const mp3Response = await directClient.audio.speech.create({
-          model: "tts-1-hd",
-          voice: voice as any,
-          input: text,
-          response_format: "mp3",
-        });
-        audioBuffer = Buffer.from(await mp3Response.arrayBuffer());
-        if (!audioBuffer || audioBuffer.length === 0) throw new Error("Direct OpenAI TTS returned empty audio");
-        console.log(`[TTSWorker] Direct OpenAI TTS succeeded (${audioBuffer.length} bytes)`);
-      }
-
-      fs.writeFileSync(filePath, audioBuffer);
-      localUrl = `/audio/tts/${filename}`;
-      console.log(`[TTSWorker] TTS saved: ${localUrl}`);
+      const { submitKieTTS, pollKieTTSTask } = await import("../core/kie_engine");
+      const langCode = language === "Spanish" || language === "es" ? "es" : language === "English" || language === "en" ? "en" : "";
+      const { taskId } = await submitKieTTS(text, { voice, languageCode: langCode });
+      const { audioUrl } = await pollKieTTSTask(taskId);
+      localUrl = await downloadFile(audioUrl, "tts", "speech");
+      console.log(`[TTSWorker] Kie.ai TTS saved: ${localUrl}`);
     }
 
     await storage.updateSongStatus(song.id, "completed", localUrl);

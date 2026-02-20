@@ -496,6 +496,88 @@ export async function submitKieMashup(
   return { taskId };
 }
 
+export async function submitKieTTS(
+  text: string,
+  options: {
+    voice?: string;
+    speed?: number;
+    languageCode?: string;
+    callbackUrl?: string;
+  } = {}
+): Promise<{ taskId: string }> {
+  console.log(`[Kie.ai] Submitting TTS: "${text.substring(0, 60)}..."`);
+
+  const callBackUrl = options.callbackUrl || getDefaultCallbackUrl();
+  const result = await kieFetch("/jobs/createTask", {
+    method: "POST",
+    body: JSON.stringify({
+      model: "elevenlabs/text-to-speech-turbo-2-5",
+      callBackUrl,
+      input: {
+        text,
+        voice: options.voice || "Rachel",
+        speed: options.speed || 1.0,
+        stability: 0.5,
+        similarity_boost: 0.75,
+        style: 0,
+        timestamps: false,
+        language_code: options.languageCode || "",
+      },
+    }),
+  });
+
+  const taskId = result?.data?.taskId || result?.taskId;
+  if (!taskId) {
+    console.error(`[Kie.ai] TTS no taskId:`, JSON.stringify(result).substring(0, 500));
+    throw new Error("Kie.ai TTS returned no task ID");
+  }
+
+  console.log(`[Kie.ai] TTS task created: ${taskId}`);
+  return { taskId };
+}
+
+export async function pollKieTTSTask(
+  taskId: string,
+  maxWaitMs: number = 120000,
+  pollIntervalMs: number = 3000
+): Promise<{ audioUrl: string }> {
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < maxWaitMs) {
+    const result = await kieFetch(`/jobs/recordInfo?taskId=${taskId}`, { method: "GET" });
+    const state = (result?.data?.state || "").toLowerCase();
+
+    console.log(`[Kie.ai] TTS task ${taskId} state: ${state}`);
+
+    if (state === "success") {
+      let resultUrls: string[] = [];
+      try {
+        const resultJson = typeof result?.data?.resultJson === "string"
+          ? JSON.parse(result.data.resultJson)
+          : result?.data?.resultJson;
+        resultUrls = resultJson?.resultUrls || resultJson?.result_urls || [];
+      } catch {
+        console.error(`[Kie.ai] Failed to parse TTS resultJson`);
+      }
+
+      if (resultUrls.length > 0) {
+        console.log(`[Kie.ai] TTS complete: ${resultUrls[0]}`);
+        return { audioUrl: resultUrls[0] };
+      }
+      throw new Error("Kie.ai TTS completed but no audio URL in results");
+    }
+
+    if (state === "fail") {
+      const failMsg = result?.data?.failMsg || result?.data?.failCode || "Unknown error";
+      throw new Error(`Kie.ai TTS failed: ${failMsg}`);
+    }
+
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+  }
+
+  throw new Error("Kie.ai TTS timed out after 2 minutes");
+}
+
 export async function submitKieCover(
   audioUrl: string,
   style: string,
