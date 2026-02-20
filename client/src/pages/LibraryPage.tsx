@@ -153,7 +153,7 @@ export default function LibraryPage() {
       <div className="flex-1 overflow-hidden flex">
 
         {/* ===== LEFT: Trending Carousel ===== */}
-        <div className="hidden lg:flex flex-col w-[140px] flex-shrink-0 border-r border-white/5 bg-black/10" data-testid="library-trending-panel">
+        <div className="hidden lg:flex flex-col w-[140px] flex-shrink-0 border-r border-white/5 bg-black/10 overflow-hidden" data-testid="library-trending-panel">
           <div className="flex items-center gap-1.5 px-3 py-3 border-b border-white/5">
             <TrendingUp className="h-3.5 w-3.5 text-primary" />
             <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">Top</span>
@@ -346,7 +346,7 @@ function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: 
           <ChevronUp className="h-4 w-4 text-white/80" />
         </button>
       )}
-      <div ref={scrollRef} className="h-full overflow-auto py-2 px-3 space-y-2.5 trending-scroll" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,117,31,0.4) transparent" }}>
+      <div ref={scrollRef} className="h-full overflow-y-auto overscroll-contain py-2 px-3 space-y-2.5" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,117,31,0.4) transparent", WebkitOverflowScrolling: "touch" } as any}>
         {songs.map((song: any, i: number) => (
           <motion.div
             key={song.id}
@@ -456,10 +456,6 @@ function NowPlayingPanel({
               <Music className="h-16 w-16 text-white/20" />
             </div>
           )}
-          <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/70 backdrop-blur-md rounded-full px-3 py-1.5 z-10 shadow-lg">
-            <Eye className="h-4 w-4 text-primary" />
-            <span className="text-sm font-bold text-white">{(song.playCount ?? 0).toLocaleString()}</span>
-          </div>
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
             <h3 className="text-sm font-bold text-white truncate">{songTitle}</h3>
             <p className="text-xs text-white/60">{song.artistName || song.genre || "DA GRABA"}</p>
@@ -478,6 +474,10 @@ function NowPlayingPanel({
         >
           {isPlaying ? <Pause className="h-4 w-4 text-primary" /> : <Play className="h-4 w-4 text-primary fill-current" />}
         </Button>
+        <span className="flex items-center gap-1 text-xs text-muted-foreground" data-testid="text-view-count">
+          <Eye className="h-3.5 w-3.5" />
+          {(song.playCount ?? 0).toLocaleString()}
+        </span>
         <Button
           variant="ghost"
           size="sm"
