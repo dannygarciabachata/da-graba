@@ -15,6 +15,9 @@ import {
 import {
   canUseKie, submitKieExtend, pollKieTask,
 } from "../core/kie_engine";
+import { textToSpeech } from "../replit_integrations/audio/client";
+import fs from "fs";
+import path from "path";
 
 function friendlyError(msg: string, fallback: string): string {
   if (msg.includes("QUOTA_EXCEEDED")) return "AI service credits exhausted. Please contact admin to restore service.";
@@ -418,23 +421,40 @@ export async function processTTS(
 ): Promise<void> {
   let songId: number | null = null;
   try {
-    console.log(`[TTSWorker] Starting TTS generation`);
+    console.log(`[TTSWorker] Starting TTS generation via OpenAI`);
     const song = await storage.createSong({ userId, title: `TTS: ${text.substring(0, 50)}...`, prompt: text, genre: "speech", mode: "standard" });
     songId = song.id;
     await storage.updateSongStatus(song.id, "processing");
+
     const useGeneric = await hasProviderForOperation("tts");
     let localUrl: string;
+
     if (useGeneric) {
       const submitResult = await submitGenericJob("tts", { text, voice_id: voiceId, language });
       const pollResult = await pollGenericJob("tts", submitResult.taskId!, 600000, 8000, submitResult.endpointId);
       if (!pollResult.audioUrl) throw new Error("TTS completed but no audio URL returned");
       localUrl = await downloadFile(pollResult.audioUrl, "tts", "speech");
     } else {
-      const submitResult = await submitTTS(text, voiceId, { language });
-      const pollResult = await pollMusicGPTJob(submitResult.task_id, 600000, 8000, "TTS");
-      if (!pollResult.audioUrl) throw new Error("TTS completed but no audio URL returned");
-      localUrl = await downloadMusicGPTFile(pollResult.audioUrl, "tts", "speech");
+      const voiceMap: Record<string, "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer"> = {
+        "male_1": "onyx", "male_2": "echo", "male_3": "fable",
+        "female_1": "nova", "female_2": "shimmer", "female_3": "alloy",
+      };
+      const voice = (voiceId && voiceMap[voiceId]) ? voiceMap[voiceId] : "nova";
+      console.log(`[TTSWorker] Using gpt-audio TTS voice: ${voice}`);
+
+      const audioBuffer = await textToSpeech(text, voice, "mp3");
+      if (!audioBuffer || audioBuffer.length === 0) throw new Error("TTS returned empty audio");
+
+      const audioDir = path.join(process.cwd(), "audio", "tts");
+      if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
+      const filename = `speech_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.mp3`;
+      const filePath = path.join(audioDir, filename);
+
+      fs.writeFileSync(filePath, audioBuffer);
+      localUrl = `/audio/tts/${filename}`;
+      console.log(`[TTSWorker] TTS saved: ${localUrl} (${audioBuffer.length} bytes)`);
     }
+
     await storage.updateSongStatus(song.id, "completed", localUrl);
     console.log(`[TTSWorker] TTS complete: ${song.id}`);
   } catch (err: any) {
