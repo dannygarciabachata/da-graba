@@ -309,10 +309,46 @@ export default function LibraryPage() {
 
 function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: (s: any) => void; currentId?: number }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
+  const hasDragged = useRef(false);
 
   const scroll = (dir: number) => {
-    scrollRef.current?.scrollBy({ left: dir * 200, behavior: "smooth" });
+    scrollRef.current?.scrollBy({ left: dir * 250, behavior: "smooth" });
   };
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    isDragging.current = true;
+    hasDragged.current = false;
+    startX.current = e.pageX - el.offsetLeft;
+    scrollLeft.current = el.scrollLeft;
+    el.style.cursor = "grabbing";
+  }, []);
+
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging.current) return;
+    e.preventDefault();
+    const el = scrollRef.current;
+    if (!el) return;
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - startX.current) * 1.5;
+    if (Math.abs(walk) > 5) hasDragged.current = true;
+    el.scrollLeft = scrollLeft.current - walk;
+  }, []);
+
+  const onMouseUp = useCallback(() => {
+    isDragging.current = false;
+    const el = scrollRef.current;
+    if (el) el.style.cursor = "grab";
+  }, []);
+
+  const handleCoverClick = useCallback((song: any) => {
+    if (hasDragged.current) return;
+    onPlay(song);
+  }, [onPlay]);
 
   if (!songs.length) return null;
 
@@ -334,47 +370,49 @@ function TrendingCarousel({ songs, onPlay, currentId }: { songs: any[]; onPlay: 
       </div>
       <div
         ref={scrollRef}
-        className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
-        style={{ scrollbarWidth: "none" }}
+        className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory select-none"
+        style={{ scrollbarWidth: "none", cursor: "grab" }}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
         data-testid="trending-scroll-container"
       >
         {songs.map((song: any, i: number) => (
-          <motion.div
+          <div
             key={song.id}
             className={cn(
-              "relative min-w-[120px] w-[120px] h-[120px] rounded-xl overflow-hidden cursor-pointer snap-start group flex-shrink-0",
+              "relative min-w-[150px] w-[150px] h-[150px] rounded-xl overflow-hidden snap-start group flex-shrink-0 transition-transform hover:scale-[1.04] active:scale-95",
               currentId === song.id && "ring-2 ring-primary"
             )}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => onPlay(song)}
+            onClick={() => handleCoverClick(song)}
             data-testid={`trending-cover-${song.id}`}
           >
             {song.imageUrl ? (
-              <img src={song.imageUrl} alt={song.title} className="w-full h-full object-cover" />
+              <img src={song.imageUrl} alt={song.title} className="w-full h-full object-cover pointer-events-none" draggable={false} />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-primary/30 to-indigo-900/60 flex items-center justify-center">
-                <Music className="h-6 w-6 text-white/40" />
+                <Music className="h-7 w-7 text-white/40" />
               </div>
             )}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
-              <Play className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity fill-current" />
+              <Play className="h-7 w-7 text-white opacity-0 group-hover:opacity-100 transition-opacity fill-current" />
             </div>
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">
-              <span className="text-[11px] text-white font-semibold truncate block leading-tight drop-shadow-lg">
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-2.5">
+              <span className="text-[12px] text-white font-semibold truncate block leading-tight drop-shadow-lg">
                 {song.title || song.prompt?.substring(0, 20)}
               </span>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                {song.likes > 0 && <span className="text-[9px] text-white/70 flex items-center gap-0.5"><Heart className="h-2.5 w-2.5" />{song.likes}</span>}
-                {song.playCount > 0 && <span className="text-[9px] text-white/70 flex items-center gap-0.5"><Eye className="h-2.5 w-2.5" />{song.playCount}</span>}
+              <div className="flex items-center gap-2 mt-0.5">
+                {song.likes > 0 && <span className="text-[10px] text-white/70 flex items-center gap-0.5"><Heart className="h-2.5 w-2.5" />{song.likes}</span>}
+                {song.playCount > 0 && <span className="text-[10px] text-white/70 flex items-center gap-0.5"><Eye className="h-2.5 w-2.5" />{song.playCount}</span>}
               </div>
             </div>
             {i < 3 && (
-              <div className="absolute top-1.5 left-1.5 bg-primary/90 text-[9px] font-bold text-white rounded-md px-1.5 py-0.5">
+              <div className="absolute top-2 left-2 bg-primary/90 text-[10px] font-bold text-white rounded-md px-1.5 py-0.5 shadow-lg">
                 #{i + 1}
               </div>
             )}
-          </motion.div>
+          </div>
         ))}
       </div>
     </div>
