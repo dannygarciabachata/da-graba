@@ -440,19 +440,45 @@ export async function processTTS(
         "female_1": "nova", "female_2": "shimmer", "female_3": "alloy",
       };
       const voice = (voiceId && voiceMap[voiceId]) ? voiceMap[voiceId] : "nova";
-      console.log(`[TTSWorker] Using gpt-audio TTS voice: ${voice}`);
-
-      const audioBuffer = await textToSpeech(text, voice, "mp3");
-      if (!audioBuffer || audioBuffer.length === 0) throw new Error("TTS returned empty audio");
 
       const audioDir = path.join(process.cwd(), "audio", "tts");
       if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
       const filename = `speech_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.mp3`;
       const filePath = path.join(audioDir, filename);
 
+      let audioBuffer: Buffer | null = null;
+
+      // Try AI integrations (gpt-audio) first
+      try {
+        console.log(`[TTSWorker] Trying AI integrations gpt-audio TTS voice: ${voice}`);
+        audioBuffer = await textToSpeech(text, voice, "mp3");
+        if (!audioBuffer || audioBuffer.length === 0) throw new Error("Empty audio returned");
+        console.log(`[TTSWorker] AI integrations TTS succeeded (${audioBuffer.length} bytes)`);
+      } catch (aiErr: any) {
+        console.warn(`[TTSWorker] AI integrations TTS failed: ${aiErr.message}`);
+      }
+
+      // Fallback: direct OpenAI tts-1 API with user's own key
+      if (!audioBuffer || audioBuffer.length === 0) {
+        const directKey = process.env.OPENAI_API_KEY;
+        if (!directKey) throw new Error("TTS unavailable: AI integrations failed and no OPENAI_API_KEY configured");
+        console.log(`[TTSWorker] Falling back to direct OpenAI tts-1 with voice: ${voice}`);
+        const OpenAI = (await import("openai")).default;
+        const directClient = new OpenAI({ apiKey: directKey });
+        const mp3Response = await directClient.audio.speech.create({
+          model: "tts-1-hd",
+          voice: voice as any,
+          input: text,
+          response_format: "mp3",
+        });
+        audioBuffer = Buffer.from(await mp3Response.arrayBuffer());
+        if (!audioBuffer || audioBuffer.length === 0) throw new Error("Direct OpenAI TTS returned empty audio");
+        console.log(`[TTSWorker] Direct OpenAI TTS succeeded (${audioBuffer.length} bytes)`);
+      }
+
       fs.writeFileSync(filePath, audioBuffer);
       localUrl = `/audio/tts/${filename}`;
-      console.log(`[TTSWorker] TTS saved: ${localUrl} (${audioBuffer.length} bytes)`);
+      console.log(`[TTSWorker] TTS saved: ${localUrl}`);
     }
 
     await storage.updateSongStatus(song.id, "completed", localUrl);
