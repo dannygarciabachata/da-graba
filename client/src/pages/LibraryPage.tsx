@@ -193,7 +193,7 @@ export default function LibraryPage() {
                         ) : (
                           <AlertCircle className="h-3.5 w-3.5 text-destructive" />
                         )}
-                        <AudioSpectrum songId={song.id} barCount={4} />
+
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -542,7 +542,6 @@ function NowPlayingPanel({
                     </p>
                     <p className="text-[9px] text-muted-foreground/40">{s.genre || "DA GRABA"}</p>
                   </div>
-                  {isCurr && <AudioSpectrum songId={s.id} barCount={3} />}
                 </div>
               );
             })
