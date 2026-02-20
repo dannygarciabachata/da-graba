@@ -152,8 +152,8 @@ export default function LibraryPage() {
 
       <div className="flex-1 overflow-hidden flex" style={{ minHeight: 0 }}>
 
-        {/* ===== LEFT: Trending Carousel (fixed position, own scroll) ===== */}
-        <div className="hidden lg:flex flex-col w-[140px] flex-shrink-0 border-r border-white/5 bg-black/10" style={{ overflow: "hidden", height: "100%" }} data-testid="library-trending-panel">
+        {/* ===== LEFT: Trending Carousel (header fixed, covers scroll independently) ===== */}
+        <div className="hidden lg:flex flex-col w-[140px] flex-shrink-0 border-r border-white/5 bg-black/10" style={{ minHeight: 0 }} data-testid="library-trending-panel">
           <div className="flex items-center gap-1.5 px-3 py-3 border-b border-white/5 flex-shrink-0">
             <TrendingUp className="h-3.5 w-3.5 text-primary" />
             <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">Top</span>
