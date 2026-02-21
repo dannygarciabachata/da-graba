@@ -8,22 +8,9 @@ import {
   Sparkles,
   Music,
   Wand2,
-  Home,
-  Disc3,
-  Library,
-  Headphones,
-  Store,
-  Mic2,
-  Radio,
-  LayoutDashboard,
-  Settings,
-  TrendingUp,
-  PanelLeftClose,
-  PanelLeftOpen,
-  ListMusic,
   ChevronLeft,
 } from "lucide-react";
-import { motion } from "framer-motion";
+
 import { useAuth } from "@/hooks/use-auth";
 import { useDeleteSong } from "@/hooks/use-songs";
 import { usePlayer, type PlayerSong } from "@/contexts/PlayerContext";
@@ -35,7 +22,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
 import {
-  SidebarNavItem,
   HistoryNowPlaying,
   CreatePanel,
   SongListPanel,
@@ -90,7 +76,6 @@ export default function CreatePage() {
 
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [mobileView, setMobileView] = useState<"create" | "songs" | "player">("create");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const { mutate: generate, isPending } = useGenerateSong();
   const { data: songs, isLoading: songsLoading } = useSongs();
@@ -415,55 +400,8 @@ export default function CreatePage() {
   return (
     <div className="h-full flex flex-col">
 
-        {/* ====== DESKTOP: Nav + Create + Tracks layout ====== */}
+        {/* ====== DESKTOP: Create + Tracks layout ====== */}
         <div className="hidden lg:flex flex-1 overflow-hidden" data-testid="desktop-layout">
-
-          {/* ===== NAV SIDEBAR ===== */}
-          <motion.nav
-            animate={{ width: sidebarCollapsed ? 64 : 200 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="flex-shrink-0 border-r border-white/5 bg-black/20 overflow-y-auto overflow-x-hidden flex flex-col"
-            data-testid="create-nav-sidebar"
-          >
-            <div className="flex items-center justify-center py-3 px-2 border-b border-white/5 mb-3">
-              <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
-                data-testid="button-toggle-sidebar"
-              >
-                {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-              </button>
-            </div>
-
-            <div className="flex-1 px-2 space-y-5">
-              <div className="space-y-1">
-                <SidebarNavItem icon={Home} label={t('nav.home', 'Inicio')} href="/home" collapsed={sidebarCollapsed} />
-                <SidebarNavItem icon={Sparkles} label={t('nav.create', 'Crear')} href="/create" active collapsed={sidebarCollapsed} />
-                <SidebarNavItem icon={Library} label={t('nav.library', 'Biblioteca')} href="/library" collapsed={sidebarCollapsed} />
-                <SidebarNavItem icon={Disc3} label={t('nav.discover', 'Descubrir')} href="/discover" collapsed={sidebarCollapsed} />
-                <SidebarNavItem icon={ListMusic} label={t('nav.playlists', 'Playlists')} href="/my-playlists" collapsed={sidebarCollapsed} />
-              </div>
-              {!sidebarCollapsed && <div className="text-[9px] uppercase tracking-widest text-muted-foreground/40 px-3">{t('nav.tools', 'Herramientas')}</div>}
-              <div className="space-y-1">
-                <SidebarNavItem icon={Headphones} label="Studio DAW" href="/studio" collapsed={sidebarCollapsed} />
-                <SidebarNavItem icon={Mic2} label="Sample Lab" href="/sample-lab" collapsed={sidebarCollapsed} />
-                <SidebarNavItem icon={Wand2} label={t('nav.lyrics', 'Letras AI')} href="/lyrics" collapsed={sidebarCollapsed} />
-                <SidebarNavItem icon={Radio} label={t('nav.audioTools', 'Audio Tools')} href="/audio-tools" collapsed={sidebarCollapsed} />
-              </div>
-              {!sidebarCollapsed && <div className="text-[9px] uppercase tracking-widest text-muted-foreground/40 px-3">{t('nav.artist', 'Artista')}</div>}
-              <div className="space-y-1">
-                <SidebarNavItem icon={TrendingUp} label="Dashboard" href="/artist-dashboard" collapsed={sidebarCollapsed} />
-                <SidebarNavItem icon={Store} label={t('nav.store', 'Tienda')} href="/producer-store" collapsed={sidebarCollapsed} />
-                <SidebarNavItem icon={LayoutDashboard} label={t('nav.styleKits', 'Style Kits')} href="/style-kits" collapsed={sidebarCollapsed} />
-              </div>
-              {!sidebarCollapsed && <div className="text-[9px] uppercase tracking-widest text-muted-foreground/40 px-3">{t('nav.more', 'Más')}</div>}
-              <div className="space-y-1">
-                <SidebarNavItem icon={Settings} label={t('nav.pricing', 'Planes')} href="/pricing" collapsed={sidebarCollapsed} />
-              </div>
-            </div>
-          </motion.nav>
-
-          {/* ===== MAIN CONTENT ===== */}
           <div className="flex-1 overflow-y-auto">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-6">
