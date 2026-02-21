@@ -1,6 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SlidersVertical } from "lucide-react";
+import { SlidersVertical, Sparkles, Guitar } from "lucide-react";
 import { InstrumentsPanel } from "./InstrumentsPanel";
 import { EffectsPanel } from "./EffectsPanel";
 import { AIToolsPanel } from "./AIToolsPanel";
@@ -47,18 +47,32 @@ interface StudioSidebarProps {
 
 export function StudioSidebar(props: StudioSidebarProps) {
   return (
-    <div className="w-[280px] border-l border-white/10 bg-[#0d0d0d] flex flex-col overflow-hidden flex-shrink-0" data-testid="studio-sidebar">
+    <div className="w-[280px] border-l border-white/[0.06] bg-[#0b0b0b] flex flex-col overflow-hidden flex-shrink-0" data-testid="studio-sidebar">
       <Tabs value={props.sidebarTab} onValueChange={props.onTabChange} className="flex flex-col h-full">
-        <TabsList className="bg-transparent border-b border-white/10 rounded-none h-10 px-2 flex-shrink-0">
-          <TabsTrigger value="instruments" className="text-xs px-3 h-8 data-[state=active]:bg-[#ff751f]/10 data-[state=active]:text-[#ff751f]" data-testid="tab-instruments">
-            🎸 Instrumentos
+        <TabsList className="bg-transparent border-b border-white/[0.06] rounded-none px-1.5 flex-shrink-0 gap-0.5">
+          <TabsTrigger
+            value="instruments"
+            className="text-[11px] px-2.5 rounded-md gap-1.5 data-[state=active]:bg-[#ff751f]/10 data-[state=active]:text-[#ff751f] data-[state=active]:shadow-none text-zinc-500"
+            data-testid="tab-instruments"
+          >
+            <Guitar className="w-3 h-3" />
+            Instrumentos
           </TabsTrigger>
-          <TabsTrigger value="effects" className="text-xs px-3 h-8 data-[state=active]:bg-[#ff751f]/10 data-[state=active]:text-[#ff751f]" data-testid="tab-effects">
-            <SlidersVertical className="w-3.5 h-3.5 mr-1" />
+          <TabsTrigger
+            value="effects"
+            className="text-[11px] px-2.5 rounded-md gap-1.5 data-[state=active]:bg-[#ff751f]/10 data-[state=active]:text-[#ff751f] data-[state=active]:shadow-none text-zinc-500"
+            data-testid="tab-effects"
+          >
+            <SlidersVertical className="w-3 h-3" />
             FX
           </TabsTrigger>
-          <TabsTrigger value="ai" className="text-xs px-3 h-8 data-[state=active]:bg-[#ff751f]/10 data-[state=active]:text-[#ff751f]" data-testid="tab-ai-tools">
-            ✨ AI
+          <TabsTrigger
+            value="ai"
+            className="text-[11px] px-2.5 rounded-md gap-1.5 data-[state=active]:bg-[#ff751f]/10 data-[state=active]:text-[#ff751f] data-[state=active]:shadow-none text-zinc-500"
+            data-testid="tab-ai-tools"
+          >
+            <Sparkles className="w-3 h-3" />
+            AI Tools
           </TabsTrigger>
         </TabsList>
 

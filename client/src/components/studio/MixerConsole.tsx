@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronDown, Volume2, VolumeX } from "lucide-react";
+import { ChevronDown, Volume2, VolumeX, Headphones } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { STEM_COLORS } from "./constants";
@@ -22,16 +22,19 @@ export function MixerConsole({ tracks, engine, activeTrackId, onSelectTrack, onU
   return (
     <motion.div
       initial={{ height: 0 }}
-      animate={{ height: 220 }}
+      animate={{ height: 240 }}
       exit={{ height: 0 }}
-      className="border-t border-white/10 bg-[#0d0d0d] overflow-hidden"
+      className="border-t border-white/[0.08] bg-[#0a0a0a] overflow-hidden"
       data-testid="mixer-console"
     >
       <div className="h-full flex flex-col">
-        <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/10">
-          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Mixer</span>
-          <Button size="icon" variant="ghost" className="w-6 h-6" onClick={onClose} data-testid="button-hide-mixer">
-            <ChevronDown className="w-4 h-4" />
+        <div className="flex items-center justify-between px-3 py-1 border-b border-white/[0.06]">
+          <div className="flex items-center gap-2">
+            <Headphones className="w-3.5 h-3.5 text-[#ff751f]" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400">Mixer Console</span>
+          </div>
+          <Button size="icon" variant="ghost" className="w-6 h-6 rounded-md text-zinc-500" onClick={onClose} data-testid="button-hide-mixer">
+            <ChevronDown className="w-3.5 h-3.5" />
           </Button>
         </div>
         <ScrollArea className="flex-1" data-testid="mixer-scroll">
@@ -47,15 +50,15 @@ export function MixerConsole({ tracks, engine, activeTrackId, onSelectTrack, onU
                 <div
                   key={trackId}
                   className={cn(
-                    "flex flex-col items-center gap-1 px-3 border-r border-white/5 last:border-r-0 cursor-pointer transition-colors",
-                    isActive && "bg-[#ff751f]/5"
+                    "flex flex-col items-center gap-1 px-3 border-r border-white/[0.04] last:border-r-0 cursor-pointer transition-all rounded-md",
+                    isActive ? "bg-white/[0.03] ring-1 ring-white/[0.08]" : "hover:bg-white/[0.02]"
                   )}
-                  style={{ minWidth: 90 }}
+                  style={{ minWidth: 80 }}
                   onClick={() => onSelectTrack(trackId)}
                   data-testid={`mixer-strip-${track.id}`}
                 >
-                  <VUMeter getLevel={() => engine.getTrackMeter(trackId)} height={50} />
-                  <div className="flex items-center gap-1" style={{ height: 50 }}>
+                  <VUMeter getLevel={() => engine.getTrackMeter(trackId)} height={55} />
+                  <div className="flex items-center gap-1" style={{ height: 55 }}>
                     <Slider
                       orientation="vertical"
                       value={[vol * 100]}
@@ -71,8 +74,8 @@ export function MixerConsole({ tracks, engine, activeTrackId, onSelectTrack, onU
                   </div>
                   <div className="flex gap-0.5">
                     <button
-                      className={cn("w-5 h-5 rounded text-[8px] font-bold flex items-center justify-center",
-                        track.isMuted ? "bg-red-500/80 text-white" : "bg-white/5 text-muted-foreground"
+                      className={cn("w-[18px] h-[18px] rounded text-[7px] font-bold flex items-center justify-center transition-all",
+                        track.isMuted ? "bg-red-500/90 text-white" : "bg-white/[0.04] text-zinc-600 hover:bg-white/[0.08]"
                       )}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -82,8 +85,8 @@ export function MixerConsole({ tracks, engine, activeTrackId, onSelectTrack, onU
                       data-testid={`mixer-mute-${track.id}`}
                     >M</button>
                     <button
-                      className={cn("w-5 h-5 rounded text-[8px] font-bold flex items-center justify-center",
-                        track.isSolo ? "bg-yellow-500/80 text-white" : "bg-white/5 text-muted-foreground"
+                      className={cn("w-[18px] h-[18px] rounded text-[7px] font-bold flex items-center justify-center transition-all",
+                        track.isSolo ? "bg-amber-500/90 text-white" : "bg-white/[0.04] text-zinc-600 hover:bg-white/[0.08]"
                       )}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -95,18 +98,18 @@ export function MixerConsole({ tracks, engine, activeTrackId, onSelectTrack, onU
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                    <span className="text-[9px] font-medium truncate max-w-[70px]" data-testid={`mixer-track-name-${track.id}`}>
+                    <span className="text-[9px] font-medium truncate max-w-[60px] text-zinc-300" data-testid={`mixer-track-name-${track.id}`}>
                       {track.name}
                     </span>
                   </div>
-                  <span className="text-[8px] text-muted-foreground font-mono">{Math.round(vol * 100)}%</span>
+                  <span className="text-[8px] text-zinc-600 font-mono tabular-nums">{Math.round(vol * 100)}%</span>
                 </div>
               );
             })}
 
-            <div className="flex flex-col items-center gap-1 px-4 border-l-2 border-[#ff751f]/30 ml-2" style={{ minWidth: 100 }}>
-              <VUMeter getLevel={() => engine.getMasterMeter()} height={50} />
-              <div className="flex items-center gap-1" style={{ height: 50 }}>
+            <div className="flex flex-col items-center gap-1 px-4 border-l-2 border-[#ff751f]/20 ml-2 bg-[#ff751f]/[0.02] rounded-r-md" style={{ minWidth: 90 }}>
+              <VUMeter getLevel={() => engine.getMasterMeter()} height={55} />
+              <div className="flex items-center gap-1" style={{ height: 55 }}>
                 <Slider
                   orientation="vertical"
                   value={[(engine.masterSettings?.volume ?? 1) * 100]}
@@ -118,16 +121,14 @@ export function MixerConsole({ tracks, engine, activeTrackId, onSelectTrack, onU
                 />
               </div>
               <button
-                className={cn("w-5 h-5 rounded flex items-center justify-center",
-                  "bg-white/5 text-muted-foreground"
-                )}
+                className="w-[18px] h-[18px] rounded flex items-center justify-center bg-white/[0.04] text-zinc-500 transition-all"
                 onClick={() => engine.setMasterVolume((engine.masterSettings?.volume ?? 1) > 0 ? 0 : 1)}
                 data-testid="mixer-master-mute"
               >
                 {(engine.masterSettings?.volume ?? 1) === 0 ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
               </button>
-              <span className="text-[9px] font-bold text-[#ff751f]">MASTER</span>
-              <span className="text-[8px] text-muted-foreground font-mono">{Math.round((engine.masterSettings?.volume ?? 1) * 100)}%</span>
+              <span className="text-[9px] font-bold text-[#ff751f] tracking-wide">MST</span>
+              <span className="text-[8px] text-zinc-600 font-mono tabular-nums">{Math.round((engine.masterSettings?.volume ?? 1) * 100)}%</span>
             </div>
           </div>
         </ScrollArea>

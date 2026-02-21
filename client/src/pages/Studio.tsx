@@ -16,9 +16,11 @@ import { useTranslation } from "react-i18next";
 import JSZip from "jszip";
 
 import { TransportBar } from "@/components/studio/TransportBar";
+import { Toolbar } from "@/components/studio/Toolbar";
 import { TimelineRuler } from "@/components/studio/TimelineRuler";
 import { TrackLane } from "@/components/studio/TrackLane";
 import { MixerConsole } from "@/components/studio/MixerConsole";
+import { NewTrackModal } from "@/components/studio/NewTrackModal";
 import { StudioSidebar } from "@/components/studio/StudioSidebar";
 import { HEADER_WIDTH, PX_PER_MS, BACHATA_INSTRUMENTS } from "@/components/studio/constants";
 import type { BachataInstrument } from "@/components/studio/constants";
@@ -59,6 +61,8 @@ export default function StudioPage() {
   const snapMs = SNAP_VALUES[snapIndex]?.ms || 0;
   const [sidebarTab, setSidebarTab] = useState("instruments");
   const [activeTrackId, setActiveTrackId] = useState<number | null>(null);
+  const [activeTool, setActiveTool] = useState("select");
+  const [showNewTrackModal, setShowNewTrackModal] = useState(false);
 
   const completedSongs = songs?.filter((s) => s.status === "completed" && s.audioUrl) ?? [];
   const selectedSong = completedSongs.find((s) => s.id === selectedSongId);
@@ -166,6 +170,18 @@ export default function StudioPage() {
         onToggleSidePanel={() => setShowSidePanel(!showSidePanel)}
       />
 
+      {selectedSong && (
+        <Toolbar
+          activeTool={activeTool}
+          onToolChange={setActiveTool}
+          snapEnabled={snapMs > 0}
+          onToggleSnap={() => setSnapIndex(snapMs > 0 ? 0 : 3)}
+          hasSelection={!!activeTrackId}
+          onImportAudio={() => { setShowSidePanel(true); setSidebarTab("instruments"); }}
+          onExport={handleDownloadAll}
+        />
+      )}
+
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-auto" data-testid="timeline-area">
@@ -223,20 +239,20 @@ export default function StudioPage() {
                           />
                         ))}
 
-                        <div className="px-4 py-3 border-b border-white/5 flex items-center gap-3">
+                        <div className="px-4 py-2.5 border-b border-white/[0.04] flex items-center gap-2">
                           <Button
                             size="sm" variant="ghost"
-                            className="gap-2 text-xs text-muted-foreground hover:text-[#ff751f]"
-                            onClick={() => { setShowSidePanel(true); setSidebarTab("instruments"); }}
+                            className="gap-2 text-xs text-zinc-500"
+                            onClick={() => setShowNewTrackModal(true)}
                             data-testid="button-add-track"
                           >
-                            <Plus className="w-4 h-4" />
-                            Agregar Instrumento
+                            <Plus className="w-3.5 h-3.5" />
+                            Nuevo Track
                           </Button>
                           {canUseStemSeparation && (
                             <Button
                               size="sm" variant="ghost"
-                              className="gap-2 text-xs text-muted-foreground hover:text-[#ff751f]"
+                              className="gap-2 text-xs text-zinc-500"
                               onClick={handleSeparate}
                               disabled={isSeparating}
                               data-testid="button-separate-stems-inline"
@@ -252,12 +268,12 @@ export default function StudioPage() {
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: "auto" }}
                             exit={{ opacity: 0, height: 0 }}
-                            className="px-4 py-2 bg-[#ff751f]/5 border-b border-[#ff751f]/20 flex items-center gap-3"
+                            className="px-4 py-1.5 bg-[#ff751f]/[0.04] border-b border-[#ff751f]/10 flex items-center gap-2"
                             data-testid="active-track-banner"
                           >
-                            <div className="w-2 h-2 rounded-full bg-[#ff751f]" />
-                            <span className="text-xs font-medium">Track activo: <strong className="text-[#ff751f]">{activeTrack.name}</strong></span>
-                            <span className="text-[10px] text-muted-foreground">— Usa el panel derecho para aplicar efectos a este track</span>
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#ff751f] animate-pulse" />
+                            <span className="text-[11px] text-zinc-400">Track activo: <strong className="text-[#ff751f]">{activeTrack.name}</strong></span>
+                            <span className="text-[10px] text-zinc-600">— Panel FX a la derecha</span>
                           </motion.div>
                         )}
                       </>
@@ -289,6 +305,14 @@ export default function StudioPage() {
           </AnimatePresence>
         </div>
 
+        <NewTrackModal
+          open={showNewTrackModal}
+          onOpenChange={setShowNewTrackModal}
+          onAddInstrument={handleAddInstrumentTrack}
+          onStartRecording={handleStartRecording}
+          isCreatingTrack={isCreatingTrack}
+        />
+
         {showSidePanel && (
           <StudioSidebar
             sidebarTab={sidebarTab}
@@ -301,7 +325,7 @@ export default function StudioPage() {
             onGoToSampleLab={() => setLocation("/sample-lab")}
             activeTrack={activeTrack}
             activeTrackId={activeTrackId}
-            activeEngineTrack={activeEngineTrack}
+            activeEngineTrack={activeEngineTrack ?? undefined}
             engine={engine}
             onUpdateTrack={(data) => updateTrack(data)}
             onOpenMixer={() => setShowMixer(true)}
@@ -330,7 +354,7 @@ export default function StudioPage() {
             }}
             onTrim={() => {
               if (selectedSongId && trimStart && trimEnd) {
-                trimSong({ songId: selectedSongId, startTime: Number(trimStart), endTime: Number(trimEnd) });
+                trimSong({ songId: selectedSongId, startTimeMs: Number(trimStart), endTimeMs: Number(trimEnd) });
               }
             }}
             onDownloadAll={handleDownloadAll}

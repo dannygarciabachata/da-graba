@@ -1,4 +1,4 @@
-import { Loader2, Music } from "lucide-react";
+import { Loader2, Music, Volume2, VolumeX } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { STEM_COLORS, STEM_ICONS, CLIP_COLORS, LANE_HEIGHT, HEADER_WIDTH } from "./constants";
@@ -29,45 +29,54 @@ export function TrackLane({ track, clips, engine, pxPerMs, snapMs, onUpdateClip,
   const buffer = track.status === "completed" ? engine.getTrackBuffer(track.id) : null;
   const engineTrack = engine.tracks.get(track.id);
   const vol = engineTrack?.volume ?? (track.volume ?? 100) / 100;
+  const isMuted = track.isMuted || (isSoloedByOther && !track.isMuted);
 
   return (
     <div
       className={cn(
-        "flex border-b border-white/5 bg-[#111] overflow-visible relative cursor-pointer transition-colors",
-        isSoloedByOther && !track.isMuted && "opacity-40",
-        isActive && "ring-1 ring-[#ff751f]/50 bg-[#ff751f]/5"
+        "flex border-b border-white/[0.04] overflow-visible relative cursor-pointer group transition-all",
+        isSoloedByOther && !track.isMuted && "opacity-35",
+        isActive ? "bg-[#ff751f]/[0.04]" : "bg-[#0e0e0e] hover:bg-[#121212]"
       )}
       style={{ height: LANE_HEIGHT }}
       onClick={onSelect}
       data-testid={`track-lane-${track.id}`}
     >
       <div
-        className="flex flex-col items-center justify-center gap-1 px-2 border-r border-white/5 flex-shrink-0"
-        style={{ width: HEADER_WIDTH, backgroundColor: isActive ? `${color}15` : `${color}08` }}
+        className={cn(
+          "flex flex-col justify-center gap-1.5 px-2.5 border-r border-white/[0.06] flex-shrink-0 transition-colors",
+          isActive && "border-r-[#ff751f]/20"
+        )}
+        style={{ width: HEADER_WIDTH }}
       >
-        <div className="flex items-center gap-1.5 w-full">
-          <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${color}20` }}>
+        <div className="flex items-center gap-2 w-full">
+          <div
+            className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 transition-colors"
+            style={{ backgroundColor: `${color}18`, border: `1px solid ${color}25` }}
+          >
             <Icon className="w-3.5 h-3.5" style={{ color }} />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-medium truncate block" data-testid={`text-track-name-${track.id}`}>
+            <span className="text-[11px] font-medium truncate block leading-tight" data-testid={`text-track-name-${track.id}`}>
               {track.name}
             </span>
-            <span className="text-[8px] text-muted-foreground">{track.type}</span>
+            <span className="text-[9px] text-zinc-600 uppercase tracking-wide">{track.type}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-1 w-full">
           <button
-            className={cn("w-5 h-5 rounded text-[8px] font-bold flex items-center justify-center transition-colors",
-              track.isMuted ? "bg-red-500/80 text-white" : "bg-white/5 text-muted-foreground hover:bg-white/10"
+            className={cn(
+              "w-[18px] h-[18px] rounded text-[7px] font-bold flex items-center justify-center transition-all",
+              track.isMuted ? "bg-red-500/90 text-white shadow-sm shadow-red-500/20" : "bg-white/[0.04] text-zinc-600 hover:bg-white/[0.08] hover:text-zinc-400"
             )}
             onClick={(e) => { e.stopPropagation(); engine.setTrackMute(track.id, !track.isMuted); }}
             data-testid={`button-mute-${track.id}`}
           >M</button>
           <button
-            className={cn("w-5 h-5 rounded text-[8px] font-bold flex items-center justify-center transition-colors",
-              track.isSolo ? "bg-yellow-500/80 text-white" : "bg-white/5 text-muted-foreground hover:bg-white/10"
+            className={cn(
+              "w-[18px] h-[18px] rounded text-[7px] font-bold flex items-center justify-center transition-all",
+              track.isSolo ? "bg-amber-500/90 text-white shadow-sm shadow-amber-500/20" : "bg-white/[0.04] text-zinc-600 hover:bg-white/[0.08] hover:text-zinc-400"
             )}
             onClick={(e) => { e.stopPropagation(); engine.setTrackSolo(track.id, !track.isSolo); }}
             data-testid={`button-solo-${track.id}`}
@@ -82,23 +91,27 @@ export function TrackLane({ track, clips, engine, pxPerMs, snapMs, onUpdateClip,
               data-testid={`slider-track-vol-${track.id}`}
             />
           </div>
-          <VUMeter getLevel={() => engine.getTrackMeter(track.id)} height={20} />
+          <VUMeter getLevel={() => engine.getTrackMeter(track.id)} height={18} />
         </div>
       </div>
 
       <div className="flex-1 relative overflow-hidden">
+        {isActive && (
+          <div className="absolute inset-0 border-l-2 pointer-events-none z-0" style={{ borderColor: `${color}40` }} />
+        )}
+
         {isPending ? (
           <div className="h-full flex items-center justify-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Procesando...</span>
+            <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
+            <span className="text-[11px] text-zinc-500 font-medium">Procesando...</span>
           </div>
         ) : buffer ? (
-          <div className="absolute inset-0 opacity-30">
+          <div className="absolute inset-0 opacity-25">
             <MiniWaveform buffer={buffer} color={color} width={800} height={LANE_HEIGHT - 8} />
           </div>
         ) : (
           <div className="h-full flex items-center justify-center">
-            <span className="text-[10px] text-muted-foreground/50">Sin audio - Genera o graba para este track</span>
+            <span className="text-[10px] text-zinc-700">Sin audio</span>
           </div>
         )}
 
