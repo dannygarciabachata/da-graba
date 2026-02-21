@@ -27,21 +27,22 @@ export function QuickAccessTools() {
       <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider mb-4">
         {t("create.quickTools", "Herramientas Rápidas")}
       </h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="flex flex-wrap gap-3">
         {TOOLS.map((tool) => (
           <button
             key={tool.path}
-            className="flex flex-col items-center gap-2.5 p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] transition-all group cursor-pointer"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.06] bg-white/[0.02] cursor-pointer isolate"
+            style={{ position: "relative", zIndex: 1 }}
             onClick={() => setLocation(tool.path)}
             data-testid={`quick-tool-${tool.path.slice(1)}`}
           >
             <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105"
+              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
               style={{ backgroundColor: `${tool.color}15`, border: `1px solid ${tool.color}25` }}
             >
-              <tool.icon className="w-5 h-5" style={{ color: tool.color }} />
+              <tool.icon className="w-4 h-4" style={{ color: tool.color }} />
             </div>
-            <span className="text-xs font-medium text-white/70 text-center leading-tight">
+            <span className="text-xs font-medium text-white/70 whitespace-nowrap">
               {t(tool.labelKey, tool.label)}
             </span>
           </button>

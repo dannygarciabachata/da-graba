@@ -145,7 +145,7 @@ export function CreatePanel(props: CreatePanelProps) {
 
   return (
     <div className="relative" data-testid="creation-panel">
-      <div className="absolute -inset-1 bg-gradient-to-r from-orange-600 to-indigo-600 rounded-2xl blur-xl opacity-20" />
+      <div className="absolute -inset-1 bg-gradient-to-r from-orange-600 to-indigo-600 rounded-2xl blur-xl opacity-20 pointer-events-none" />
       <div className="relative bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-white/10 rounded-2xl p-8 overflow-y-auto max-h-[calc(100vh-180px)]">
         <div className="flex items-center gap-2 mb-6">
           <Wand2 className="h-5 w-5 text-orange-400" />
