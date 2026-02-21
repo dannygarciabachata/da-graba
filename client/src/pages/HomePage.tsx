@@ -24,6 +24,8 @@ import {
   ListPlus,
   ListMusic,
   ArrowRight,
+  Library,
+  Crown,
 } from "lucide-react";
 import {
   Popover,
@@ -65,44 +67,103 @@ function getGenreColor(genre: string): string {
 
 function HeroBanner() {
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className="relative overflow-hidden rounded-2xl"
+      className="text-center py-10 sm:py-14"
       data-testid="hero-banner"
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-[#160a72] via-[#1a0e8a] to-orange-900/60" />
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iYSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIxIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0idXJsKCNhKSIvPjwvc3ZnPg==')] opacity-40" />
-
-      <div className="relative px-6 sm:px-10 py-10 sm:py-14">
-        <div className="max-w-2xl">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="h-1.5 w-8 bg-orange-500 rounded-full" />
-            <span className="text-orange-400 text-sm font-medium tracking-wide uppercase">La Pura Sangre de la Bachata</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight mb-4" data-testid="text-hero-title">
-            Crea Música Latina<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-300">con Inteligencia Artificial</span>
-          </h1>
-          <p className="text-white/70 text-base sm:text-lg mb-6 max-w-lg" data-testid="text-hero-subtitle">
-            Bachata, Bolero, Salsa, Merengue y más. Genera pistas profesionales con nuestros instrumentos exclusivos DA GRABA.
-          </p>
-          <Button
-            size="lg"
-            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl px-8 h-12 text-base shadow-lg shadow-orange-500/25"
-            onClick={() => setLocation("/create")}
-            data-testid="button-start-creating"
-          >
-            <Sparkles className="w-5 h-5 mr-2" />
-            Empieza a Crear
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
-      </div>
+      <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight mb-3" data-testid="text-hero-title">
+        {t("home.welcome", "Bienvenido a")} <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-500">DA GRABA</span>
+      </h1>
+      <p className="text-white/60 text-base sm:text-lg mb-2" data-testid="text-hero-subtitle">
+        {t("home.subtitle", "Crea música profesional con Inteligencia Artificial")}
+      </p>
+      <p className="text-white/40 text-sm mb-8">
+        Create professional music with AI
+      </p>
+      <Button
+        size="lg"
+        className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl px-8 h-12 text-base shadow-lg shadow-orange-500/25"
+        onClick={() => setLocation("/create")}
+        data-testid="button-start-creating"
+      >
+        <Sparkles className="w-5 h-5 mr-2" />
+        {t("home.startNow", "Comenzar Ahora")}
+      </Button>
     </motion.div>
+  );
+}
+
+function ActionCards() {
+  const [, setLocation] = useLocation();
+  const { t } = useTranslation();
+
+  const cards = [
+    {
+      icon: Sparkles,
+      title: t("home.card.create", "Crear Música IA"),
+      subtitle: t("home.card.createSub", "Genera canciones profesionales con sólo texto"),
+      color: "from-orange-600 to-red-600",
+      path: "/create",
+      testId: "card-create-music",
+    },
+    {
+      icon: Music,
+      title: t("home.card.explore", "Explorar"),
+      subtitle: t("home.card.exploreSub", "Descubre música de la comunidad"),
+      color: "from-emerald-600 to-teal-600",
+      path: "/discover",
+      testId: "card-explore",
+    },
+    {
+      icon: Library,
+      title: t("home.card.library", "Tu Biblioteca"),
+      subtitle: t("home.card.librarySub", "Accede a todas tus creaciones"),
+      color: "from-blue-600 to-indigo-600",
+      path: "/library",
+      testId: "card-library",
+    },
+    {
+      icon: Crown,
+      title: "Upgrade PRO",
+      subtitle: t("home.card.proSub", "Desbloquea todas las funciones"),
+      color: "from-purple-600 to-pink-600",
+      path: "/pricing",
+      testId: "card-upgrade-pro",
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="action-cards">
+      <h2 className="col-span-full text-lg font-semibold text-white/80 mb-1" data-testid="text-action-title">
+        {t("home.whatToDo", "¿Qué quieres hacer hoy?")} / What do you want to do today?
+      </h2>
+      {cards.map((card) => (
+        <motion.div
+          key={card.testId}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="cursor-pointer"
+          onClick={() => setLocation(card.path)}
+          data-testid={card.testId}
+        >
+          <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${card.color} p-5 h-[140px] flex flex-col justify-between`}>
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+              <card.icon className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-base">{card.title}</h3>
+              <p className="text-white/70 text-xs mt-0.5">{card.subtitle}</p>
+            </div>
+          </div>
+        </motion.div>
+      ))}
+    </div>
   );
 }
 
@@ -370,6 +431,8 @@ export default function HomePage() {
     <div className="h-full overflow-auto" data-testid="home-page">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 space-y-8">
         <HeroBanner />
+
+        <ActionCards />
 
         <GenreCarousel />
 
