@@ -81,6 +81,36 @@ export function useSeparateStems() {
   });
 }
 
+export function useDeleteTrack() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, songId }: { id: number; songId: number }) => {
+      const res = await fetch(`/api/tracks/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete track");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/songs", data.songId, "tracks"] });
+      toast({
+        title: "Track eliminado",
+        description: "El track ha sido eliminado correctamente.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error al eliminar track",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
 export function useUpdateTrack() {
   const queryClient = useQueryClient();
 

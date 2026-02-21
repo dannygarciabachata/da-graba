@@ -1511,6 +1511,23 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/tracks/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const trackId = Number(req.params.id);
+
+    const track = await storage.getTrack(trackId);
+    if (!track) return res.sendStatus(404);
+    if (track.userId !== userId) return res.sendStatus(403);
+
+    try {
+      const deleted = await storage.deleteTrack(trackId);
+      res.json(deleted);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete track" });
+    }
+  });
+
   // ========== DAW CLIPS ROUTES ==========
 
   app.get("/api/songs/:id/clips", async (req, res) => {

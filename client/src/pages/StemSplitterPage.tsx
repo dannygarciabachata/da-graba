@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSongs } from "@/hooks/use-songs";
-import { useSongTracks, useSeparateStems } from "@/hooks/use-tracks";
+import { useSongTracks, useSeparateStems, useDeleteTrack } from "@/hooks/use-tracks";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Play, Pause, Square, SkipBack, SkipForward, Loader2, Download,
   Music, Mic, Layers, FileAudio, Share2, Upload, RefreshCw, Check,
-  ChevronDown, Volume2, Drum, Guitar, Headphones, Waves,
+  ChevronDown, Volume2, Drum, Guitar, Headphones, Waves, Trash2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -46,6 +46,7 @@ export default function StemSplitterPage() {
   const [activeTab, setActiveTab] = useState<"splitter" | "workspace">("splitter");
   const { data: tracks = [], isLoading: tracksLoading } = useSongTracks(selectedSongId);
   const { mutate: separateStems, isPending: isSeparating } = useSeparateStems();
+  const { mutate: deleteTrack, isPending: isDeleting } = useDeleteTrack();
 
   const [playingTrackId, setPlayingTrackId] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -305,6 +306,22 @@ export default function StemSplitterPage() {
                                 data-testid={`button-share-${track.type}`}
                               >
                                 <Share2 className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-white/40 hover:text-red-400"
+                                onClick={() => {
+                                  if (playingTrackId === track.id) {
+                                    audioRef.current?.pause();
+                                    setPlayingTrackId(null);
+                                  }
+                                  deleteTrack({ id: track.id, songId: track.songId });
+                                }}
+                                disabled={isDeleting}
+                                data-testid={`button-delete-${track.type}`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
                               </Button>
                             </div>
                           </div>

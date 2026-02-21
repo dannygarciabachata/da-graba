@@ -87,6 +87,7 @@ export interface IStorage {
   getUserTracks(userId: string): Promise<Track[]>;
   updateTrackStatus(id: number, status: string, audioUrl?: string, error?: string): Promise<Track>;
   updateTrackSettings(id: number, settings: { volume?: number; isMuted?: boolean; isSolo?: boolean }): Promise<Track>;
+  deleteTrack(id: number): Promise<Track>;
   deleteTracksBySongId(songId: number): Promise<void>;
 
   createDawClip(clip: InsertDawClip): Promise<DawClip>;
@@ -494,6 +495,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tracks.id, id))
       .returning();
     return updated;
+  }
+
+  async deleteTrack(id: number): Promise<Track> {
+    const [deleted] = await db.delete(tracks).where(eq(tracks.id, id)).returning();
+    if (!deleted) throw new Error("Track not found");
+    return deleted;
   }
 
   async deleteTracksBySongId(songId: number): Promise<void> {
