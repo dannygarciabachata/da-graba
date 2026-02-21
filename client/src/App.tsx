@@ -35,6 +35,7 @@ import MyPlaylistDetailPage from "@/pages/MyPlaylistDetailPage";
 import PublicPlaylistViewPage from "@/pages/PublicPlaylistViewPage";
 import ProfilePage from "@/pages/ProfilePage";
 import StemSplitterPage from "@/pages/StemSplitterPage";
+import VoiceLab from "@/pages/VoiceLab";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
 import { useTranslation } from "react-i18next";
@@ -58,6 +59,7 @@ function useServiceContext(): string | undefined {
   if (location.startsWith("/admin")) return "admin";
   if (location.startsWith("/style-kits")) return "style_kits";
   if (location.startsWith("/producer-store")) return "producer_store";
+  if (location.startsWith("/voice-lab")) return "voice_lab";
   return undefined;
 }
 
@@ -83,6 +85,7 @@ function AuthenticatedLayout() {
           <Route path="/sample-lab" component={SampleLab} />
           <Route path="/stem-splitter" component={StemSplitterPage} />
           <Route path="/audio-tools" component={AudioToolsPage} />
+          <Route path="/voice-lab" component={VoiceLab} />
           <Route path="/style-kits" component={StyleKitsPage} />
           <Route path="/producer-store" component={ProducerStorePage} />
           <Route path="/pricing" component={PricingPage} />

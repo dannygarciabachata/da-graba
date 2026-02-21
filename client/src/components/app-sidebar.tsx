@@ -49,6 +49,7 @@ import {
   Megaphone,
   Info,
   MessageSquare,
+  Mic,
 } from "lucide-react";
 import {
   Popover,
@@ -79,6 +80,7 @@ const TOOLS_ITEMS = [
   { titleKey: "nav.studio", url: "/studio", icon: Scissors },
   { titleKey: "nav.stemSplitter", url: "/stem-splitter", icon: Layers },
   { titleKey: "nav.sampleLab", url: "/sample-lab", icon: Music },
+  { titleKey: "nav.voiceLab", url: "/voice-lab", icon: Mic },
   { titleKey: "nav.audioTools", url: "/audio-tools", icon: Wrench },
   { titleKey: "nav.coverDesigner", url: "/cover-designer", icon: Palette },
   { titleKey: "nav.styleKits", url: "/style-kits", icon: Disc },

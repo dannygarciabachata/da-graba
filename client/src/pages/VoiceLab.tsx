@@ -464,21 +464,23 @@ function VoiceModelCard({
   const fileRef = useRef<HTMLInputElement>(null);
   const { data: modelDetail } = useVoiceModel(isSelected ? model.id : 0);
 
-  const statusColor = {
+  const statusColorMap: Record<string, string> = {
     ready: "bg-green-500/15 text-green-400 border-green-500/20",
     pending: "bg-yellow-500/15 text-yellow-400 border-yellow-500/20",
     training: "bg-blue-500/15 text-blue-400 border-blue-500/20",
     failed: "bg-red-500/15 text-red-400 border-red-500/20",
-  }[model.trainingStatus] || "bg-muted text-muted-foreground";
+  };
+  const statusColor = statusColorMap[model.trainingStatus as string] || "bg-muted text-muted-foreground";
 
-  const providerLabel = {
+  const providerLabelMap: Record<string, string> = {
     custom: "Custom",
     elevenlabs: "ElevenLabs",
     rvc: "RVC",
     "so-vits": "So-VITS",
     openvoice: "OpenVoice",
     cloud_gpu: "Cloud GPU",
-  }[model.provider] || model.provider;
+  };
+  const providerLabel = providerLabelMap[model.provider as string] || model.provider;
 
   return (
     <Card
