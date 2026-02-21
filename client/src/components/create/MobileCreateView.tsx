@@ -73,7 +73,7 @@ export function MobileCreateView(props: MobileCreateViewProps) {
     ttsText, setTtsText,
     placeholderIdx, activePromptSuggestions,
     currentGenreSlug, currentGenreStyles,
-    styleKits, setSelectedStyleKit,
+    styleKits, selectedStyleKit, setSelectedStyleKit,
     handleSubmit, handleRandomPrompt,
   } = props;
 
