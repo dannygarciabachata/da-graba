@@ -3,15 +3,15 @@ import { Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Footer } from "@/components/Footer";
 import daGrabaLogo from "@assets/Logomobil2_1771526285843.png";
 
-import palettaBg from "@assets/palettabg_1771282011333.png";
 import {
   Play, Pause, Mic2, Wand2, Music, Headphones, Sparkles, Scissors, Zap,
   Crown, Shield, Globe, Layers, ArrowRight, CheckCircle2, Star,
   Radio, Volume2, SlidersHorizontal, Palette, Upload, BookOpen, Clock, Heart,
   Church, Cake, Baby, Film, Megaphone, Youtube, Smartphone, Store,
-  ChevronLeft, ChevronRight, Menu, X, MessageCircle, HelpCircle
+  ChevronLeft, ChevronRight, Menu, X, MessageCircle, HelpCircle, Users, TrendingUp
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -349,17 +349,17 @@ export default function Landing() {
           </div>
 
           <div className="hidden md:flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="text-sm text-white/70 hover:text-white hover:bg-white/5" onClick={() => scrollTo("about")} data-testid="link-about">
-              {t('landing.aboutTitle')}
-            </Button>
-            <Button variant="ghost" size="sm" className="text-sm text-white/70 hover:text-white hover:bg-white/5" onClick={() => scrollTo("use-cases")} data-testid="link-use-cases">
-              {t('landing.useCases.title')}
-            </Button>
             <Button variant="ghost" size="sm" className="text-sm text-white/70 hover:text-white hover:bg-white/5" onClick={() => scrollTo("features")} data-testid="link-features">
               {t('nav.features')}
             </Button>
             <Button variant="ghost" size="sm" className="text-sm text-white/70 hover:text-white hover:bg-white/5" onClick={() => scrollTo("pricing")} data-testid="link-pricing">
               {t('nav.pricing')}
+            </Button>
+            <Button variant="ghost" size="sm" className="text-sm text-white/70 hover:text-white hover:bg-white/5" onClick={() => window.location.href = "/about"} data-testid="link-about">
+              {t('landing.aboutTitle')}
+            </Button>
+            <Button variant="ghost" size="sm" className="text-sm text-white/70 hover:text-white hover:bg-white/5" onClick={() => window.location.href = "/pro"} data-testid="link-pro">
+              PRO
             </Button>
             <div className="w-px h-5 bg-white/10 mx-1" />
             <Button
@@ -895,90 +895,7 @@ export default function Landing() {
         </section>
       </main>
 
-      <footer
-        className="border-t border-white/5 py-8 md:py-12 px-4 relative overflow-hidden"
-        style={{
-          backgroundImage: `url(${palettaBg})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center right",
-        }}
-        data-testid="footer-landing"
-      >
-        <div className="absolute inset-0 bg-background/95 pointer-events-none" />
-        <div className="container mx-auto relative z-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
-            <div className="col-span-2 md:col-span-1">
-              <div className="mb-4">
-                <img src={daGrabaLogo} alt="DA GRABA Studio" className="h-14 w-auto max-w-[160px] object-contain drop-shadow-[0_0_12px_rgba(255,117,31,0.25)]" data-testid="img-footer-logo" />
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {t('landing.footer.footerDescription')}
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm mb-3">{t('landing.footer.product')}</h4>
-              <ul className="space-y-2 text-xs text-muted-foreground">
-                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => scrollTo("features")}>{t('nav.features')}</li>
-                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => scrollTo("pricing")}>{t('nav.pricing')}</li>
-                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => handleLogin()}>{t('landing.footer.producerStore')}</li>
-                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => handleLogin()}>{t('landing.footer.styleKits')}</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm mb-3">{t('landing.footer.tools')}</h4>
-              <ul className="space-y-2 text-xs text-muted-foreground">
-                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => handleLogin()}>{t('landing.footer.aiMusicGenerator')}</li>
-                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => handleLogin()}>{t('landing.footer.stemSeparator')}</li>
-                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => handleLogin()}>{t('landing.footer.aiLyricsWriter')}</li>
-                <li className="hover:text-foreground cursor-pointer transition-colors" onClick={() => handleLogin()}>{t('landing.footer.sampleLab')}</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm mb-3">{t('landing.footer.genres')}</h4>
-              <ul className="space-y-2 text-xs text-muted-foreground">
-                <li>{t('create.genres.bachata')}</li>
-                <li>{t('create.genres.latinPop')}</li>
-                <li>{t('create.genres.reggaeton')}</li>
-                <li>{t('create.genres.bolero')} & {t('create.genres.salsa')}</li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-white/5 pt-8 mb-8">
-            <h4 className="font-semibold text-sm mb-5 text-center">{t('landing.footer.faqTitle')}</h4>
-            <div className="grid md:grid-cols-2 gap-4 max-w-4xl mx-auto">
-              {(t('landing.footer.faq', { returnObjects: true }) as {q: string, a: string}[]).map((item, i) => (
-                <div key={i} className="p-4 rounded-xl bg-white/[0.03] border border-white/5" data-testid={`faq-item-${i}`}>
-                  <p className="text-sm font-medium text-foreground mb-1.5">{item.q}</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{item.a}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="text-center mb-6">
-            <p className="text-xs text-muted-foreground mb-2">{t('landing.footer.needHelp')}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 border-primary/30 text-primary hover:bg-primary/10"
-              onClick={handleLogin}
-              data-testid="button-footer-support"
-            >
-              <MessageCircle className="h-4 w-4" />
-              {t('landing.footer.chatSupport')}
-            </Button>
-          </div>
-          <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} {t('landing.footer.copyright')}</p>
-            <div className="flex items-center gap-4">
-              <a href="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors" data-testid="link-terms">{t('landing.footer.termsLink')}</a>
-              <span className="text-white/10">|</span>
-              <a href="/privacy" className="text-xs text-muted-foreground hover:text-foreground transition-colors" data-testid="link-privacy">{t('landing.footer.privacyLink')}</a>
-              <span className="text-white/10">|</span>
-              <a href="/cookies" className="text-xs text-muted-foreground hover:text-foreground transition-colors" data-testid="link-cookies">{t('landing.footer.cookiesLink')}</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer onLogin={handleLogin} variant="landing" />
     </div>
   );
 }

@@ -255,6 +255,15 @@
   .font-mono {
     font-family: 'JetBrains Mono', monospace;
   }
+
+  [data-sidebar="sidebar"] {
+    background: linear-gradient(180deg, hsl(247 85% 12%) 0%, hsl(247 80% 8%) 100%) !important;
+  }
+
+  [data-sidebar="menu-button"][data-active="true"] {
+    background: linear-gradient(90deg, rgba(255,117,31,0.15) 0%, rgba(255,117,31,0.05) 100%) !important;
+    border-left: 2px solid hsl(23 100% 56%);
+  }
 }
 
 @keyframes spin-slow {

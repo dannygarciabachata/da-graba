@@ -3,7 +3,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AppHeader } from "@/components/AppHeader";
+import { AppSidebar } from "@/components/AppSidebar";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { FooterPlayerBar } from "@/components/FooterPlayerBar";
@@ -36,6 +37,9 @@ import PublicPlaylistViewPage from "@/pages/PublicPlaylistViewPage";
 import ProfilePage from "@/pages/ProfilePage";
 import StemSplitterPage from "@/pages/StemSplitterPage";
 import VoiceLab from "@/pages/VoiceLab";
+import AboutPage from "@/pages/AboutPage";
+import AffiliatePage from "@/pages/AffiliatePage";
+import ProPage from "@/pages/ProPage";
 import NotFound from "@/pages/not-found";
 import SupportChat from "@/components/SupportChat";
 import { useTranslation } from "react-i18next";
@@ -66,51 +70,66 @@ function useServiceContext(): string | undefined {
 function AuthenticatedLayout() {
   const serviceContext = useServiceContext();
 
+  const sidebarStyle = {
+    "--sidebar-width": "15rem",
+    "--sidebar-width-icon": "3rem",
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 flex flex-col">
-      <AppHeader />
-      <main className="flex-1 overflow-auto pb-[80px]">
-        <Switch>
-          <Route path="/home" component={HomePage} />
-          <Route path="/create" component={CreatePage} />
-          <Route path="/dashboard"><Redirect to="/home" /></Route>
-          <Route path="/discover/:genre" component={PlaylistPage} />
-          <Route path="/discover" component={DiscoverPage} />
-          <Route path="/library" component={LibraryPage} />
-          <Route path="/my-playlists/:id" component={MyPlaylistDetailPage} />
-          <Route path="/my-playlists" component={MyPlaylistsPage} />
-          <Route path="/lyrics" component={LyricsPage} />
-          <Route path="/quiz" component={QuizPage} />
-          <Route path="/studio" component={StudioPage} />
-          <Route path="/sample-lab" component={SampleLab} />
-          <Route path="/stem-splitter" component={StemSplitterPage} />
-          <Route path="/audio-tools" component={AudioToolsPage} />
-          <Route path="/voice-lab" component={VoiceLab} />
-          <Route path="/style-kits" component={StyleKitsPage} />
-          <Route path="/producer-store" component={ProducerStorePage} />
-          <Route path="/pricing" component={PricingPage} />
-          <Route path="/blog/:slug" component={BlogPage} />
-          <Route path="/blog" component={BlogPage} />
-          <Route path="/cover-designer" component={CoverDesignerPage} />
-          <Route path="/copyright" component={CopyrightHubPage} />
-          <Route path="/artist-dashboard" component={ArtistDashboardPage} />
-          <Route path="/artist-onboarding" component={ArtistOnboardingPage} />
-          <Route path="/discography" component={DiscographyPage} />
-          <Route path="/playlist/:id" component={PublicPlaylistViewPage} />
-          <Route path="/artist/:id" component={ArtistProfilePage} />
-          <Route path="/profile" component={ProfilePage} />
-          <Route path="/admin" component={AdminPage} />
-          <Route path="/terms">{() => <LegalPage section="terms" />}</Route>
-          <Route path="/privacy">{() => <LegalPage section="privacy" />}</Route>
-          <Route path="/cookies">{() => <LegalPage section="cookies" />}</Route>
-          <Route component={NotFound} />
-        </Switch>
-        <SupportChat serviceContext={serviceContext} />
-      </main>
-      <div className="fixed bottom-0 left-0 right-0 z-50">
-        <FooterPlayerBar onOpenStudio={() => window.location.href = "/studio"} />
+    <SidebarProvider style={sidebarStyle as React.CSSProperties} defaultOpen={true}>
+      <div className="flex min-h-screen w-full bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950">
+        <AppSidebar />
+        <SidebarInset className="flex flex-col flex-1 min-w-0">
+          <header className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.06] bg-black/20 backdrop-blur-sm sticky top-0 z-40">
+            <SidebarTrigger data-testid="button-sidebar-toggle" className="text-orange-300/60 hover:text-orange-300" />
+          </header>
+          <main className="flex-1 overflow-auto pb-[80px]">
+            <Switch>
+              <Route path="/home" component={HomePage} />
+              <Route path="/create" component={CreatePage} />
+              <Route path="/dashboard"><Redirect to="/home" /></Route>
+              <Route path="/discover/:genre" component={PlaylistPage} />
+              <Route path="/discover" component={DiscoverPage} />
+              <Route path="/library" component={LibraryPage} />
+              <Route path="/my-playlists/:id" component={MyPlaylistDetailPage} />
+              <Route path="/my-playlists" component={MyPlaylistsPage} />
+              <Route path="/lyrics" component={LyricsPage} />
+              <Route path="/quiz" component={QuizPage} />
+              <Route path="/studio" component={StudioPage} />
+              <Route path="/sample-lab" component={SampleLab} />
+              <Route path="/stem-splitter" component={StemSplitterPage} />
+              <Route path="/audio-tools" component={AudioToolsPage} />
+              <Route path="/voice-lab" component={VoiceLab} />
+              <Route path="/style-kits" component={StyleKitsPage} />
+              <Route path="/producer-store" component={ProducerStorePage} />
+              <Route path="/pricing" component={PricingPage} />
+              <Route path="/blog/:slug" component={BlogPage} />
+              <Route path="/blog" component={BlogPage} />
+              <Route path="/cover-designer" component={CoverDesignerPage} />
+              <Route path="/copyright" component={CopyrightHubPage} />
+              <Route path="/artist-dashboard" component={ArtistDashboardPage} />
+              <Route path="/artist-onboarding" component={ArtistOnboardingPage} />
+              <Route path="/discography" component={DiscographyPage} />
+              <Route path="/playlist/:id" component={PublicPlaylistViewPage} />
+              <Route path="/artist/:id" component={ArtistProfilePage} />
+              <Route path="/profile" component={ProfilePage} />
+              <Route path="/admin" component={AdminPage} />
+              <Route path="/about" component={AboutPage} />
+              <Route path="/affiliate" component={AffiliatePage} />
+              <Route path="/pro" component={ProPage} />
+              <Route path="/terms">{() => <LegalPage section="terms" />}</Route>
+              <Route path="/privacy">{() => <LegalPage section="privacy" />}</Route>
+              <Route path="/cookies">{() => <LegalPage section="cookies" />}</Route>
+              <Route component={NotFound} />
+            </Switch>
+            <SupportChat serviceContext={serviceContext} />
+          </main>
+          <div className="fixed bottom-0 left-0 right-0 z-50">
+            <FooterPlayerBar onOpenStudio={() => window.location.href = "/studio"} />
+          </div>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }
 
@@ -139,6 +158,9 @@ function Router() {
         <Route path="/blog/:slug" component={BlogPage} />
         <Route path="/blog" component={BlogPage} />
         <Route path="/discography" component={DiscographyPage} />
+        <Route path="/about" component={AboutPage} />
+        <Route path="/affiliate" component={AffiliatePage} />
+        <Route path="/pro" component={ProPage} />
         <Route path="/terms">{() => <LegalPage section="terms" />}</Route>
         <Route path="/privacy">{() => <LegalPage section="privacy" />}</Route>
         <Route path="/cookies">{() => <LegalPage section="cookies" />}</Route>
