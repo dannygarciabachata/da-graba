@@ -38,7 +38,7 @@ export function SongListPanel({
 
   return (
     <div className="relative" data-testid="song-list-panel">
-      <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-orange-600 rounded-2xl blur-xl opacity-20" />
+      <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-orange-600 rounded-2xl blur-xl opacity-20 pointer-events-none" />
       <div className="relative bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-white/10 rounded-2xl p-8 max-h-[calc(100vh-180px)] flex flex-col">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">{t('create.yourCreations', 'Tus Creaciones')}</h2>

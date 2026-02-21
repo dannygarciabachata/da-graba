@@ -1,0 +1,314 @@
+import React, { useState, useEffect } from 'react';
+import { CreatePanel } from '../components/CreatePanel';
+import { TrackList } from '../components/TrackList';
+import { QuickAccessTools } from '../components/QuickAccessTools';
+import { kieApi } from '../services/kieApi';
+import { tracksService } from '../services/tracksService';
+import { useApp } from '../contexts/AppContext';
+import { toast } from 'sonner';
+
+interface Track {
+  id: string;
+  title: string;
+  description: string;
+  genre: string;
+  duration: string;
+  imageUrl: string;
+  audioUrl: string;
+  isPlaying: boolean;
+  isGenerating?: boolean;
+}
+
+export function CreatePage() {
+  const { playTrack, pauseTrack, addToLibrary, user, useCredits } = useApp();
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadTracks();
+  }, []);
+
+  const loadTracks = async () => {
+    setIsLoading(true);
+    try {
+      console.log('🔄 Loading tracks from backend...');
+      const loadedTracks = await tracksService.loadTracks();
+      setTracks(loadedTracks);
+      
+      if (loadedTracks.length > 0) {
+        console.log(`✅ Loaded ${loadedTracks.length} tracks`);
+        toast.success(`📚 ${loadedTracks.length} canciones cargadas`, {
+          description: 'Tus creaciones están listas',
+          duration: 2000,
+        });
+      } else {
+        console.log('ℹ️ No tracks found');
+      }
+    } catch (error) {
+      console.error('❌ Error loading tracks:', error);
+      toast.error('Error al cargar canciones', {
+        description: 'Se usará el caché local',
+        duration: 3000,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveTracks = async (newTracks: Track[]) => {
+    console.log('💾 Saving tracks to backend...');
+    const success = await tracksService.saveTracks(newTracks);
+    
+    if (success) {
+      toast.success('🎵 Canción guardada exitosamente', {
+        description: 'Tu música está segura y sincronizada',
+        duration: 3000,
+      });
+    }
+    
+    // Also save to user library via context
+    newTracks.forEach(track => {
+      if (!track.isGenerating && track.audioUrl) {
+        addToLibrary(track);
+      }
+    });
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleGenerate = async (
+    prompt: string,
+    genre: string,
+    mood: string,
+    duration: string,
+    mode: 'standard' | 'custom',
+    title?: string,
+    lyrics?: string
+  ) => {
+    setIsGenerating(true);
+
+    try {
+      const genreMap: Record<string, string> = {
+        'pop': 'Pop',
+        'rock': 'Rock',
+        'electronic': 'Electronic',
+        'hiphop': 'Hip Hop',
+        'jazz': 'Jazz',
+        'classical': 'Classical',
+        'ambient': 'Ambient',
+        'synthwave': 'Synthwave',
+        'lofi': 'Lo-Fi',
+        'bachata': 'Bachata',
+        'salsa': 'Salsa',
+        'merengue': 'Merengue',
+        'merengue-tipico': 'Merengue Típico',
+        'bolero': 'Bolero',
+        'vallenato': 'Vallenato',
+        'cumbia': 'Cumbia',
+        'reggaeton': 'Reggaeton',
+        'dembow': 'Dembow',
+      };
+
+      const moodMap: Record<string, string> = {
+        'upbeat': 'upbeat and energetic',
+        'chill': 'chill and relaxed',
+        'dark': 'dark and moody',
+        'energetic': 'energetic and powerful',
+        'melancholic': 'melancholic and emotional',
+        'dreamy': 'dreamy and atmospheric'
+      };
+
+      const placeholderId = `generating-${Date.now()}`;
+      const placeholderTrack: Track = {
+        id: placeholderId,
+        title: title || 'Generando...',
+        description: prompt,
+        genre: genreMap[genre] || genre,
+        duration: '0:00',
+        imageUrl: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400',
+        audioUrl: '',
+        isPlaying: false,
+        isGenerating: true,
+      };
+
+      setTracks([placeholderTrack, ...tracks]);
+
+      let requestParams;
+
+      if (mode === 'standard') {
+        const enhancedPrompt = `${prompt}. Style: ${genreMap[genre] || genre}, Mood: ${moodMap[mood] || mood}. IMPORTANTE: Cantar completamente en español, letras en español.`;
+
+        console.log('🎼 Generating music (Standard Mode) with prompt:', enhancedPrompt);
+
+        requestParams = {
+          prompt: enhancedPrompt,
+          customMode: false,
+          instrumental: false,
+          model: 'V4_5' as const
+        };
+      } else {
+        const style = `${genreMap[genre] || genre}, ${moodMap[mood] || mood}, Spanish language, lyrics in Spanish`;
+
+        console.log('🎼 Generating music (Custom Mode):', { title, style });
+
+        const spanishLyrics = lyrics ? `[Español/Spanish]\n${lyrics}` : prompt;
+
+        requestParams = {
+          prompt: spanishLyrics,
+          customMode: true,
+          instrumental: false,
+          model: 'V4_5' as const,
+          style: style,
+          title: title || 'Untitled Track'
+        };
+      }
+
+      const generateResult = await kieApi.generateMusic(requestParams);
+
+      if (generateResult.code !== 200) {
+        setTracks(prevTracks => prevTracks.filter(t => t.id !== placeholderId));
+        throw new Error(generateResult.msg || 'Error al generar música');
+      }
+
+      const taskId = generateResult.data.taskId;
+      console.log('✅ Task created:', taskId);
+
+      const result = await kieApi.waitForCompletion(taskId);
+
+      if (result && result.sunoData && result.sunoData.length > 0) {
+        console.log('✅ Generation complete:', result.sunoData.length, 'tracks');
+
+        // Filter out tracks without audio URLs and map to Track interface
+        const newTracks: Track[] = result.sunoData
+          .filter(track => {
+            if (!track.audioUrl) {
+              console.warn('⚠️ Track without audio URL:', track.id, track.title);
+              return false;
+            }
+            return true;
+          })
+          .map((track) => ({
+            id: track.id,
+            title: track.title || title || 'Sin título',
+            description: track.prompt || prompt,
+            genre: track.tags?.split(',')[0] || genre,
+            duration: formatDuration(track.duration),
+            imageUrl: track.imageUrl || 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400',
+            audioUrl: track.audioUrl,
+            isPlaying: false,
+            isGenerating: false,
+          }));
+
+        if (newTracks.length === 0) {
+          setTracks(prevTracks => prevTracks.filter(t => t.id !== placeholderId));
+          throw new Error('No se generaron pistas con audio válido. Por favor intenta de nuevo.');
+        }
+
+        console.log(`✅ ${newTracks.length} track(s) with valid audio ready`);
+
+        const updatedTracks = [
+          ...newTracks,
+          ...tracks.filter(t => t.id !== placeholderId)
+        ];
+
+        setTracks(updatedTracks);
+        saveTracks(updatedTracks);
+
+        if (newTracks.length > 0 && newTracks[0].audioUrl) {
+          setTimeout(() => {
+            playTrack(newTracks[0]);
+          }, 500);
+        }
+      } else {
+        setTracks(prevTracks => prevTracks.filter(t => t.id !== placeholderId));
+        throw new Error('La generación se completó pero no se recibieron pistas de audio');
+      }
+
+    } catch (error: any) {
+      console.error('❌ Generation error:', error);
+
+      let errorMessage = 'Error: ';
+      if (error.message.includes('API key')) {
+        errorMessage += 'API key no configurada. Por favor configura KIE_API_KEY.';
+      } else if (error.message.includes('Créditos insuficientes')) {
+        errorMessage += 'Créditos insuficientes. Visita kie.ai para agregar créditos.';
+      } else if (error.message.includes('timeout') || error.message.includes('timed out')) {
+        errorMessage += 'Tiempo de espera agotado. Intenta de nuevo.';
+      } else {
+        errorMessage += error.message;
+      }
+
+      toast.error(errorMessage);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handlePlayTrack = (id: string) => {
+    const track = tracks.find(t => t.id === id);
+    if (track && !track.isGenerating) {
+      playTrack(track);
+    }
+  };
+
+  const handleDeleteTrack = async (trackId: string) => {
+    try {
+      console.log('🗑️ Deleting track:', trackId);
+      
+      // Primero eliminar del estado local
+      const updatedTracks = tracks.filter(t => t.id !== trackId);
+      setTracks(updatedTracks);
+      
+      // Guardar en el backend
+      await tracksService.saveTracks(updatedTracks);
+      
+      console.log('✅ Track deleted successfully');
+    } catch (error) {
+      console.error('❌ Error deleting track:', error);
+      // Recargar tracks en caso de error
+      loadTracks();
+    }
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+        {/* Left Panel - Create */}
+        <div>
+          <CreatePanel onGenerate={handleGenerate} isGenerating={isGenerating} />
+        </div>
+
+        {/* Right Panel - Track List */}
+        <div>
+          <TrackList tracks={tracks} onPlay={handlePlayTrack} onPause={pauseTrack} onDelete={handleDeleteTrack} />
+        </div>
+      </div>
+      <div className="mt-8">
+        <QuickAccessTools />
+      </div>
+    </div>
+  );
+}
+
+export default CreatePage;
+📋 Para importar en Replit:
+
+Copia todo el código de arriba
+Crea el archivo en: /src/app/pages/CreatePage.tsx
+Pega el código completo
+⚠️ Dependencias necesarias:
+
+CreatePanel component
+TrackList component
+QuickAccessTools component
+kieApi service
+tracksService service
+AppContext
+sonner (toast notifications)
+¿Necesitas que te proporcione también alguno de estos componentes o servicios? 🚀
+

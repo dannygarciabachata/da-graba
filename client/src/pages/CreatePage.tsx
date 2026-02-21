@@ -25,6 +25,7 @@ import {
   HistoryNowPlaying,
   CreatePanel,
   SongListPanel,
+  QuickAccessTools,
   MobileCreateView,
   MobileSongsView,
   MobilePlayerView,
@@ -403,35 +404,39 @@ export default function CreatePage() {
         {/* ====== DESKTOP: Create + Tracks layout ====== */}
         <div className="hidden lg:flex flex-1 overflow-hidden" data-testid="desktop-layout">
           <div className="flex-1 overflow-y-auto">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-6">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                <div>
+                  <CreatePanel {...sharedCreatePanelProps} />
+                </div>
 
-          <CreatePanel {...sharedCreatePanelProps} />
+                <div className="space-y-6">
+                  {activeSong && (
+                    <div className="relative" data-testid="now-playing-panel">
+                      <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-orange-600 rounded-2xl blur-xl opacity-20 pointer-events-none" />
+                      <div className="relative bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+                        <HistoryNowPlaying song={activeSong as PlayerSong} isPlaying={playerState.isPlaying} />
+                      </div>
+                    </div>
+                  )}
 
-          {/* ===== RIGHT: Now Playing + Track List ===== */}
-          <div className="space-y-6">
-            {activeSong && (
-              <div className="relative" data-testid="now-playing-panel">
-                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-orange-600 rounded-2xl blur-xl opacity-20" />
-                <div className="relative bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
-                  <HistoryNowPlaying song={activeSong as PlayerSong} isPlaying={playerState.isPlaying} />
+                  <SongListPanel
+                    groupedSongs={groupedSongs}
+                    allSongs={allSongs}
+                    songsLoading={songsLoading}
+                    isPending={isPending}
+                    playerState={playerState}
+                    onSongClick={handleSongClick}
+                    onDeleteSong={(id) => deleteSong(id)}
+                    onViewAll={() => setLocation("/library")}
+                  />
                 </div>
               </div>
-            )}
 
-          <SongListPanel
-            groupedSongs={groupedSongs}
-            allSongs={allSongs}
-            songsLoading={songsLoading}
-            isPending={isPending}
-            playerState={playerState}
-            onSongClick={handleSongClick}
-            onDeleteSong={(id) => deleteSong(id)}
-            onViewAll={() => setLocation("/library")}
-          />
-          </div>
-          </div>
-          </div>
+              <div className="mt-8 relative z-10">
+                <QuickAccessTools />
+              </div>
+            </div>
           </div>
         </div>
 

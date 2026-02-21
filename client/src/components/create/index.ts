@@ -3,6 +3,7 @@ export { GenreCarousel } from "./GenreCarousel";
 export { HistoryNowPlaying } from "./HistoryNowPlaying";
 export { CreatePanel } from "./CreatePanel";
 export { SongListPanel } from "./SongListPanel";
+export { QuickAccessTools } from "./QuickAccessTools";
 export { MobileCreateView } from "./MobileCreateView";
 export { MobileSongsView, MobilePlayerView } from "./MobileSongsView";
 export {
