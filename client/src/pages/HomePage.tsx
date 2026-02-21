@@ -434,15 +434,13 @@ function HowItWorks() {
 export default function HomePage() {
   const { user } = useAuth();
 
-  if (!user) return null;
-
   return (
     <div className="h-full overflow-auto" data-testid="home-page">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
         <HeroSection />
-        <StatsCards />
+        {user && <StatsCards />}
         <FeatureCards />
-        <RecentTracks />
+        {user && <RecentTracks />}
         <HowItWorks />
       </div>
     </div>
