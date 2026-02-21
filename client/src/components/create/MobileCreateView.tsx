@@ -9,6 +9,7 @@ import {
   Dices,
   Guitar,
   MessageSquare,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,8 @@ interface MobileCreateViewProps {
   setSelectedStyleKit: (v: number | undefined) => void;
   handleSubmit: () => void;
   handleRandomPrompt: () => void;
+  isAnyPending?: boolean;
+  canCreate?: boolean;
 }
 
 export function MobileCreateView(props: MobileCreateViewProps) {
@@ -75,6 +78,7 @@ export function MobileCreateView(props: MobileCreateViewProps) {
     currentGenreSlug, currentGenreStyles,
     styleKits, selectedStyleKit, setSelectedStyleKit,
     handleSubmit, handleRandomPrompt,
+    isAnyPending, canCreate,
   } = props;
 
   return (
@@ -199,6 +203,34 @@ export function MobileCreateView(props: MobileCreateViewProps) {
         <span className="text-[11px] text-muted-foreground flex-shrink-0">{Math.floor(songDuration / 60)}:{String(songDuration % 60).padStart(2, "0")}</span>
         <Slider value={[songDuration]} onValueChange={(v) => setSongDuration(v[0])} min={30} max={300} step={10} className="flex-1" data-testid="mobile-slider-duration" />
       </div>
+
+      <button
+        onClick={handleSubmit}
+        disabled={isAnyPending || !canCreate}
+        className={cn(
+          "w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all",
+          canCreate && !isAnyPending
+            ? "bg-gradient-to-r from-orange-600 to-orange-500 text-white shadow-lg shadow-orange-500/25"
+            : "bg-white/10 text-muted-foreground cursor-not-allowed"
+        )}
+        data-testid="mobile-btn-generate"
+      >
+        {isAnyPending ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t('create.generating', 'Generando...')}
+          </>
+        ) : (
+          <>
+            <Sparkles className="h-4 w-4" />
+            {activeCreationMode === "song"
+              ? t('create.generateSong', 'Generar Canción')
+              : activeCreationMode === "sound"
+              ? t('create.generateSound', 'Crear Sonido')
+              : t('create.generateSpeech', 'Generar Voz')}
+          </>
+        )}
+      </button>
     </div>
   );
 }

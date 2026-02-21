@@ -499,6 +499,8 @@ export default function CreatePage() {
               setSelectedStyleKit={setSelectedStyleKit}
               handleSubmit={handleSubmit}
               handleRandomPrompt={handleRandomPrompt}
+              isAnyPending={isAnyPending}
+              canCreate={canCreate}
             />
           )}
 
