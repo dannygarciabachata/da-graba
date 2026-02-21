@@ -78,8 +78,8 @@ function AuthenticatedLayout() {
 
   return (
     <div className="flex flex-col min-h-screen w-full bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950">
-      <TopHeaderBar />
       <SidebarProvider style={sidebarStyle as React.CSSProperties} defaultOpen={true}>
+        <TopHeaderBar />
         <div className="flex flex-1 w-full">
           <AppSidebar />
           <SidebarInset className="flex flex-col flex-1 min-w-0">

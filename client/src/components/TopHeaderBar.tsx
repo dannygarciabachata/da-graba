@@ -25,6 +25,7 @@ import {
   BadgeCheck,
   Command,
 } from "lucide-react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAdminCheck } from "@/hooks/use-admin";
 import daGrabaLogo from "@assets/Logomobil2_1771526285843.png";
 
@@ -44,16 +45,19 @@ export function TopHeaderBar() {
       className="h-14 border-b border-white/[0.06] bg-[hsl(247,85%,8%)] flex items-center justify-between px-4 gap-4 sticky top-0 z-50"
       data-testid="top-header-bar"
     >
-      <div
-        className="flex items-center gap-2 cursor-pointer flex-shrink-0"
-        onClick={() => setLocation("/home")}
-        data-testid="header-logo"
-      >
-        <img
-          src={daGrabaLogo}
-          alt="DA GRABA"
-          className="h-[40px] w-[140px] object-contain drop-shadow-[0_0_14px_rgba(255,117,31,0.45)]"
-        />
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <SidebarTrigger className="md:hidden text-white/70" data-testid="mobile-menu-trigger" />
+        <div
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={() => setLocation("/home")}
+          data-testid="header-logo"
+        >
+          <img
+            src={daGrabaLogo}
+            alt="DA GRABA"
+            className="h-[40px] w-[140px] object-contain drop-shadow-[0_0_14px_rgba(255,117,31,0.45)]"
+          />
+        </div>
       </div>
 
       <div className="flex-1 max-w-md mx-4 hidden md:block">
