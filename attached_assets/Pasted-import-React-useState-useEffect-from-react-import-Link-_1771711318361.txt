@@ -1,0 +1,313 @@
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { Play, Pause, Music, TrendingUp, Sparkles, Mic2, Clock, Heart } from 'lucide-react';
+import { motion } from 'motion/react';
+import { useApp } from '../contexts/AppContext';
+import { ImageWithFallback } from '../components/figma/ImageWithFallback';
+import { useAuth } from '../contexts/AuthContext';
+
+export function HomePage() {
+  const { user, playTrack, pauseTrack, currentTrack, getLibraryTracks, getLikedTracks } = useApp();
+  const { isAdmin } = useAuth();
+  const [recentTracks, setRecentTracks] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    tracks: 0,
+    liked: 0,
+    credits: 0
+  });
+
+  useEffect(() => {
+    // Load recent tracks
+    const tracks = getLibraryTracks().slice(0, 4);
+    setRecentTracks(tracks);
+
+    // Update stats
+    setStats({
+      tracks: getLibraryTracks().length,
+      liked: getLikedTracks().length,
+      credits: user?.credits || 0
+    });
+  }, [user]);
+
+  const features = [
+    {
+      icon: <Mic2 className="w-6 h-6" />,
+      title: 'Crear Música IA',
+      description: 'Genera canciones profesionales con solo texto',
+      action: '/create',
+      color: 'from-orange-500 to-orange-600'
+    },
+    {
+      icon: <TrendingUp className="w-6 h-6" />,
+      title: 'Explorar',
+      description: 'Descubre música de la comunidad',
+      action: '/explore',
+      color: 'from-indigo-500 to-indigo-600'
+    },
+    {
+      icon: <Music className="w-6 h-6" />,
+      title: 'Tu Biblioteca',
+      description: 'Accede a todas tus creaciones',
+      action: '/library',
+      color: 'from-purple-500 to-purple-600'
+    },
+    {
+      icon: <Heart className="w-6 h-6" />,
+      title: 'Upgrade PRO',
+      description: 'Desbloquea todas las funciones',
+      action: '/pricing',
+      color: 'from-yellow-500 to-yellow-600'
+    }
+  ];
+
+  const handlePlayPause = (track: any) => {
+    if (currentTrack?.id === track.id) {
+      pauseTrack();
+    } else {
+      playTrack(track);
+    }
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Hero Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-12"
+      >
+        <div className="text-center mb-8">
+          <motion.div
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4">
+              Bienvenido a{' '}
+              <span className="bg-gradient-to-r from-orange-400 to-orange-300 text-transparent bg-clip-text">
+                DA GRABA
+              </span>
+            </h1>
+            <p className="text-xl text-orange-300/80 mb-2">
+              Crea música profesional con Inteligencia Artificial
+            </p>
+            <p className="text-lg text-orange-300/60">
+              Create professional music with AI
+            </p>
+          </motion.div>
+        </div>
+
+        {/* Stats Cards */}
+        {user && (
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-orange-500/20 rounded-xl p-6 text-center"
+            >
+              <Music className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+              <div className="text-3xl font-bold text-white mb-1">{stats.tracks}</div>
+              <div className="text-sm text-orange-300/60">Pistas Creadas</div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-orange-500/20 rounded-xl p-6 text-center"
+            >
+              <Sparkles className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+              <div className="text-3xl font-bold text-white mb-1">{stats.credits}</div>
+              <div className="text-sm text-orange-300/60">Créditos</div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-orange-500/20 rounded-xl p-6 text-center"
+            >
+              <TrendingUp className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+              <div className="text-3xl font-bold text-white mb-1">{stats.liked}</div>
+              <div className="text-sm text-orange-300/60">Me Gusta</div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* CTA Button */}
+        <div className="text-center">
+          <Link
+            to="/create"
+            className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-xl hover:shadow-lg hover:shadow-orange-500/50 transition-all font-semibold text-lg"
+          >
+            <Mic2 className="w-6 h-6" />
+            {user ? 'Crear Nueva Pista' : 'Comenzar Ahora'}
+          </Link>
+        </div>
+      </motion.div>
+
+      {/* Features Grid */}
+      <div className="mb-12">
+        <h2 className="text-2xl font-bold text-white mb-6">
+          ¿Qué quieres hacer hoy? / What do you want to do today?
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {features.map((feature, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 * index }}
+            >
+              <Link
+                to={feature.action}
+                className="block group"
+              >
+                <div className="bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-white/10 rounded-xl p-6 hover:border-orange-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/20 h-full">
+                  <div className={`p-3 rounded-xl bg-gradient-to-br ${feature.color} w-fit mb-4 group-hover:scale-110 transition-transform`}>
+                    {feature.icon}
+                  </div>
+                  <h3 className="text-white font-semibold mb-2 text-lg">{feature.title}</h3>
+                  <p className="text-orange-300/60 text-sm">{feature.description}</p>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent Tracks */}
+      {user && recentTracks.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mb-12"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-white">
+              Tus Creaciones Recientes / Recent Creations
+            </h2>
+            <Link
+              to="/library"
+              className="text-orange-400 hover:text-orange-300 transition-colors text-sm font-medium"
+            >
+              Ver Todas →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {recentTracks.map((track, index) => {
+              const isPlaying = currentTrack?.id === track.id;
+
+              return (
+                <motion.div
+                  key={track.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 * index }}
+                  className="group bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden hover:border-orange-500/50 transition-all duration-300"
+                >
+                  <div className="relative aspect-square">
+                    <ImageWithFallback
+                      src={track.imageUrl}
+                      alt={track.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handlePlayPause(track)}
+                        disabled={!track.audioUrl}
+                        className="p-4 rounded-full bg-orange-500 hover:bg-orange-600 transition-colors disabled:opacity-50 shadow-lg"
+                      >
+                        {isPlaying ? (
+                          <Pause className="w-6 h-6 text-white" fill="white" />
+                        ) : (
+                          <Play className="w-6 h-6 text-white" fill="white" />
+                        )}
+                      </motion.button>
+                    </div>
+                  </div>
+
+                  <div className="p-4">
+                    <h3 className="text-white font-semibold mb-1 truncate">{track.title}</h3>
+                    <p className="text-orange-300/60 text-sm truncate">{track.genre}</p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
+      {/* How It Works */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="bg-gradient-to-br from-slate-900/90 to-indigo-900/30 backdrop-blur-xl border border-white/10 rounded-2xl p-8"
+      >
+        <h2 className="text-2xl font-bold text-white mb-6 text-center">
+          Cómo Funciona / How It Works
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
+              1
+            </div>
+            <h3 className="text-white font-semibold mb-2">Describe tu Canción</h3>
+            <p className="text-orange-300/60 text-sm">
+              Escribe en texto qué tipo de música quieres crear
+            </p>
+          </div>
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
+              2
+            </div>
+            <h3 className="text-white font-semibold mb-2">Genera con IA</h3>
+            <p className="text-orange-300/60 text-sm">
+              Nuestra IA crea música profesional en segundos
+            </p>
+          </div>
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
+              3
+            </div>
+            <h3 className="text-white font-semibold mb-2">Descarga y Usa</h3>
+            <p className="text-orange-300/60 text-sm">
+              Descarga tu música y úsala en tus proyectos
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+export default HomePage;
+📋 Para importar en Replit:
+
+Copia todo el código
+Crea/actualiza el archivo: /src/app/pages/HomePage.tsx
+Pega el código completo
+⚠️ Dependencias necesarias:
+
+motion package (framer-motion)
+lucide-react (iconos)
+react-router (Link, useNavigate)
+AppContext (useApp hook)
+AuthContext (useAuth hook)
+ImageWithFallback component
+🎨 Características del Home:
+
+✅ Hero section animado con Motion
+✅ Stats cards (tracks, créditos, me gusta)
+✅ Grid de features (crear, explorar, biblioteca, upgrade)
+✅ Tracks recientes con reproductor
+✅ Sección "Cómo funciona" con 3 pasos
+✅ Diseño bilingüe (español/inglés)
+✅ Glassmorphism con colores naranja/índigo

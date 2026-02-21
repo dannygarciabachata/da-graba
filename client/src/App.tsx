@@ -4,8 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppSidebar } from "@/components/AppSidebar";
-import { TopHeaderBar } from "@/components/TopHeaderBar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { FooterPlayerBar } from "@/components/FooterPlayerBar";
@@ -79,10 +78,12 @@ function AuthenticatedLayout() {
   return (
     <div className="flex flex-col min-h-screen w-full bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950">
       <SidebarProvider style={sidebarStyle as React.CSSProperties} defaultOpen={true}>
-        <TopHeaderBar />
         <div className="flex flex-1 w-full">
           <AppSidebar />
           <SidebarInset className="flex flex-col flex-1 min-w-0">
+            <div className="md:hidden flex items-center h-10 px-3 border-b border-white/[0.06] bg-[hsl(247,85%,8%)] sticky top-0 z-50">
+              <SidebarTrigger className="text-white/70" data-testid="mobile-menu-trigger" />
+            </div>
             <main className="flex-1 overflow-auto pb-[80px]">
               <Switch>
                 <Route path="/home" component={HomePage} />
